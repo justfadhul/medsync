@@ -21,3 +21,6 @@ export * from "./audit-log";
 export * from "./consent-versions";
 export * from "./reference-data";
 export * from "./signup-drafts";
+
+// ─── Onboarding GATE C (patient signup) ─────────────────────────────────
+export * from "./patient-profiles";

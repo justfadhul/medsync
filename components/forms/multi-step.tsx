@@ -109,27 +109,43 @@ export function MultiStepForm({
     <div className="mx-auto flex w-full max-w-2xl flex-col gap-7">
       <ProgressRail steps={steps} activeIndex={index} flowLabel={flowLabel} />
 
-      <section
-        aria-labelledby={`${current.key}-heading`}
-        className="border-border bg-card rounded-lg border p-5 sm:p-7"
-      >
-        <header className="mb-5 flex flex-col gap-1.5">
-          <h2
-            id={`${current.key}-heading`}
-            ref={stepHeadingRef}
-            tabIndex={-1}
-            className="font-display text-foreground text-[22px] leading-tight tracking-[-0.015em] outline-none sm:text-[26px]"
-            style={{ fontWeight: 400 }}
+      {/*
+       * All steps render into the DOM at once, with non-current ones
+       * hidden via the `hidden` attribute (and an inert flag so they
+       * neither receive focus nor count for SR step traversal). This
+       * is required when the parent form posts a single FormData blob
+       * to a Server Action — fields from earlier steps must still be
+       * present in the DOM so they show up in the submission.
+       */}
+      {steps.map((s, i) => {
+        const isActive = i === index;
+        return (
+          <section
+            key={s.key}
+            aria-labelledby={`${s.key}-heading`}
+            hidden={!isActive}
+            inert={!isActive}
+            className="border-border bg-card rounded-lg border p-5 sm:p-7"
           >
-            {current.heading}
-          </h2>
-          {current.intro ? (
-            <p className="text-muted-foreground text-[13.5px] leading-snug">{current.intro}</p>
-          ) : null}
-        </header>
+            <header className="mb-5 flex flex-col gap-1.5">
+              <h2
+                id={`${s.key}-heading`}
+                ref={isActive ? stepHeadingRef : undefined}
+                tabIndex={-1}
+                className="font-display text-foreground text-[22px] leading-tight tracking-[-0.015em] outline-none sm:text-[26px]"
+                style={{ fontWeight: 400 }}
+              >
+                {s.heading}
+              </h2>
+              {s.intro ? (
+                <p className="text-muted-foreground text-[13.5px] leading-snug">{s.intro}</p>
+              ) : null}
+            </header>
 
-        <div className="flex flex-col gap-4">{current.render({ setCanContinue })}</div>
-      </section>
+            <div className="flex flex-col gap-4">{s.render({ setCanContinue })}</div>
+          </section>
+        );
+      })}
 
       <div className="flex flex-col-reverse items-stretch gap-3 sm:flex-row sm:items-center sm:justify-between">
         <Button variant="secondary" size="md" onClick={handleBack} disabled={isFirst} type="button">
