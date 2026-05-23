@@ -56,7 +56,15 @@ export function StubPanel({
         </ul>
         <p className="text-muted-foreground border-border mt-2 border-t pt-3 text-[11.5px] italic">
           The real multi-step form lands in GATE {gate}. Shared form primitives (Combobox,
-          SegmentedControl, FileUpload, OtpInput, DatePicker, etc.) ship in GATE B.
+          SegmentedControl, RadioCards, ConsentCheckbox, PhoneInput, DatePicker, OtpInput,
+          FileUpload, MultiStepForm) shipped in GATE B —{" "}
+          <Link
+            href="/signup/preview/primitives"
+            className="text-foreground underline-offset-4 hover:underline"
+          >
+            preview them here
+          </Link>
+          .
         </p>
       </div>
 
