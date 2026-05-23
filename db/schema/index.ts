@@ -30,3 +30,6 @@ export * from "./clinician-profiles";
 
 // ─── Onboarding GATE E (hospital onboarding) ────────────────────────────
 export * from "./hospital-applications";
+
+// ─── Onboarding GATE F (approvals + superadmin audit) ───────────────────
+export * from "./sa-audit-log";
