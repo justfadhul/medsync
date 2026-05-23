@@ -14,7 +14,7 @@ export function SubBanner() {
   return (
     <section aria-label="Pilot recruitment" className="flex w-full justify-center pt-4 pb-2">
       <Link
-        href="mailto:hello@medsync.health?subject=Hospital%20pilot%20interest"
+        href="/signup/hospital"
         className={cn(
           "group inline-flex items-center gap-2 rounded-full",
           "border border-teal-200 bg-teal-50 px-3 py-1.5 text-[12.5px] text-teal-900 hover:bg-teal-100",
