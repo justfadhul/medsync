@@ -24,3 +24,6 @@ export * from "./signup-drafts";
 
 // ─── Onboarding GATE C (patient signup) ─────────────────────────────────
 export * from "./patient-profiles";
+
+// ─── Onboarding GATE D (clinical staff signup) ──────────────────────────
+export * from "./clinician-profiles";

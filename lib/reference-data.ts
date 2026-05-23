@@ -17,6 +17,8 @@
 
 import "server-only";
 
+import type { HospitalDepartment } from "@/db/schema/hospital-departments";
+import type { Hospital } from "@/db/schema/hospitals";
 import type {
   Cadre,
   CadreGrade,
@@ -30,6 +32,8 @@ import type {
 import { and, asc, eq, isNull } from "drizzle-orm";
 
 import { db } from "@/db";
+import { hospitalDepartments } from "@/db/schema/hospital-departments";
+import { hospitals } from "@/db/schema/hospitals";
 import {
   cadreGrades,
   cadres,
@@ -117,4 +121,35 @@ export async function listRoles(opts?: {
 
   if (wheres.length === 0) return q;
   return q.where(wheres.length === 1 ? wheres[0]! : and(...wheres));
+}
+
+// ─── Hospitals + departments ───────────────────────────────────────────
+
+/**
+ * Hospitals listed for the staff-affiliation step (GATE D) and the
+ * patient primary-facility chooser (GATE C). No filter today — Phase 1
+ * has a small list (Mulago + onboarded pilots). Add a state filter
+ * here once `hospitals.state` lands.
+ */
+export async function listHospitals(): Promise<Hospital[]> {
+  return db.select().from(hospitals).orderBy(asc(hospitals.name));
+}
+
+/**
+ * Top-level departments at a hospital. Sub-departments hang off
+ * `parent_id` (Phase 0.11 seeded e.g. Cardiology under Internal
+ * Medicine at Mulago). For the affiliation form we surface the
+ * top-level only and let the role combobox carry the sub-specialty.
+ */
+export async function listDepartments(opts: { hospitalId: string }): Promise<HospitalDepartment[]> {
+  return db
+    .select()
+    .from(hospitalDepartments)
+    .where(
+      and(
+        eq(hospitalDepartments.hospitalId, opts.hospitalId),
+        isNull(hospitalDepartments.parentId),
+      ),
+    )
+    .orderBy(asc(hospitalDepartments.name));
 }
