@@ -160,7 +160,7 @@ export function TrustGovernance() {
             </span>
           </div>
           <Link
-            href="/signup/hospital"
+            href="mailto:hello@medsync.health?subject=Hospital%20pilot%20interest"
             className={cn(
               "group inline-flex items-center gap-1.5 rounded-md px-4 py-2 text-[13px] font-medium",
               "bg-foreground text-background hover:bg-foreground/90",

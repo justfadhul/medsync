@@ -2,7 +2,7 @@
 
 > Digital hospital operating system for Uganda. Built for hospitals up to national-referral scale.
 
-**Status:** Phase 1 onboarding — `/signup/{patient,clinical,hospital}` are end-to-end (account → email OTP → lifecycle transition → MS-ID for patients, pending-review for staff + hospitals). The superadmin and hospital-admin review queues live at [`/admin`](app/admin/). Phase 0 (foundation rebuild) shipped the public landing page at `/` (17-section Attio-archetype, see [`components/landing/`](components/landing/)), the audience-funnel express-interest routes at `/onboarding/{patient,clinical,hospital}`, and the authentication scaffold with mandatory MFA for clinical roles. No actual clinical features yet — Phase 2 begins after Phase 1 sign-off.
+**Status:** Phase 0 foundation — the empty, audited, secured shell that clinical features will land on. Includes the public landing page at `/` (17-section Attio-archetype, see [`components/landing/`](components/landing/)), the authentication scaffold with mandatory MFA for clinical roles, and the bare `/sign-up` + `/sign-in` flow. The earlier Phase 1 onboarding pass (multi-step signup forms, approval queues, reference catalog) was rolled back on 2026-05-23 to redesign the flow from scratch; the rollback SQL is in [`scripts/rollback-phase-1.sql`](scripts/rollback-phase-1.sql). Onboarding restart is in progress.
 
 **Designated Clinical Safety Officer:** Usama Fadhul (founder).
 
@@ -22,28 +22,6 @@
 - **Vercel** hosting + CI/CD; production domain `medsync.health` (live in Phase 0.12)
 
 See [`docs/adr/0001-stack-choice.md`](docs/adr/0001-stack-choice.md) for rationale and trade-offs.
-
-## Onboarding (Phase 1)
-
-Four audiences enter through `/get-started`. Each path enforces a different verification gradient.
-
-| Path               | Approval gate              | Lifecycle ladder                                               | MFA       |
-| ------------------ | -------------------------- | -------------------------------------------------------------- | --------- |
-| `/signup/patient`  | Email OTP                  | `unverified → verified → active` (MS-YYYY-NNNNN issued)        | Optional  |
-| `/signup/clinical` | Email OTP + hospital admin | `unverified → verified → pending_approval → approved → active` | Mandatory |
-| `/signup/hospital` | Email OTP + superadmin     | `unverified → verified → pending_approval → approved → active` | Mandatory |
-| Superadmin         | seeded by migration        | n/a                                                            | Mandatory |
-
-The lifecycle state machine lives in [`db/schema/lifecycle.ts`](db/schema/lifecycle.ts); the valid transitions are enforced by [`lib/lifecycle.ts`](lib/lifecycle.ts) which is the only sanctioned mutator for state columns. The end-to-end shape (PHI handling, draft cookies, approval flow, form primitives) is recorded in [`docs/adr/0013-onboarding-architecture.md`](docs/adr/0013-onboarding-architecture.md).
-
-Reviewers approve from [`/admin`](app/admin/):
-
-- `/admin/applications` — superadmin queue of hospital applications
-- `/admin/affiliations` — staff affiliations (superadmin sees all; hospital_admin sees their hospital's queue)
-
-Reference catalogs (councils, cadres, specialties, roles, geography) are seeded via migrations `0010` and `0011`. Status of every catalog + outstanding upstream pulls in [`docs/reference-data-sources.md`](docs/reference-data-sources.md).
-
-The seven shared form primitives that power every signup path live in [`components/form/`](components/form/) and are interactive on `/styleguide §14`.
 
 ## Local development
 

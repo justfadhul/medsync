@@ -191,12 +191,12 @@ export function Faq() {
             </h2>
             <p className="text-muted-foreground mt-4 max-w-[44ch] text-[14.5px] leading-[1.55]">
               Honest answers. If your question isn&rsquo;t here, the form on{" "}
-              <Link
-                href="/onboarding/hospital"
+              <a
+                href="mailto:hello@medsync.health?subject=MedSync%20question"
                 className="text-teal-700 underline-offset-2 hover:underline dark:text-teal-300"
               >
-                the hospital door
-              </Link>{" "}
+                hello@medsync.health
+              </a>{" "}
               goes to a real inbox.
             </p>
           </header>

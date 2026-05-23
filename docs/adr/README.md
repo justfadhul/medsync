@@ -6,21 +6,20 @@ Each ADR is immutable once accepted. To revise, write a new ADR that supersedes 
 
 ## Index
 
-| #                                         | Title                                                                   | Status                                                                     | Date       | Phase    |
-| ----------------------------------------- | ----------------------------------------------------------------------- | -------------------------------------------------------------------------- | ---------- | -------- |
-| [0001](./0001-stack-choice.md)            | Stack choice                                                            | Accepted                                                                   | 2026-05-21 | 0.1      |
-| [0002](./0002-design-system.md)           | Design system adoption (warm-palette pivot to teal monochrome)          | Accepted (no-dark-mode part superseded by [ADR-0003](./0003-dark-mode.md)) | 2026-05-21 | 0.2      |
-| [0003](./0003-dark-mode.md)               | Dark mode adoption                                                      | Accepted                                                                   | 2026-05-21 | 0.2-dark |
-| [0004](./0004-env-and-drizzle-setup.md)   | Environment validation, Supabase clients, Drizzle setup                 | Accepted                                                                   | 2026-05-21 | 0.3      |
-| [0005](./0005-phase-0-schema.md)          | Phase 0 schema + pooler-friendly migrator                               | Accepted                                                                   | 2026-05-22 | 0.4      |
-| [0006](./0006-rls-and-tests.md)           | RLS strategy + test infrastructure                                      | Accepted                                                                   | 2026-05-22 | 0.5      |
-| [0007](./0007-audit-infrastructure.md)    | Audit infrastructure (log_changes trigger + append-only lockdown)       | Accepted                                                                   | 2026-05-22 | 0.6      |
-| [0008](./0008-phi-encryption.md)          | PHI encryption — AES-256-GCM, `iv:authTag:ciphertext` format            | Accepted                                                                   | 2026-05-22 | 0.7      |
-| [0009](./0009-logging-sentry.md)          | PII-redacted logging + Sentry wiring                                    | Accepted                                                                   | 2026-05-22 | 0.8      |
-| [0010](./0010-auth-mfa-proxy.md)          | Auth + MFA + Next.js 16 proxy route protection                          | Accepted                                                                   | 2026-05-22 | 0.9      |
-| [0011](./0011-edge-functions.md)          | Edge Functions foundation + `assign-role` reference                     | Accepted                                                                   | 2026-05-22 | 0.10     |
-| [0012](./0012-vercel-deployment.md)       | Vercel deployment                                                       | Accepted                                                                   | 2026-05-22 | 0.12     |
-| [0013](./0013-onboarding-architecture.md) | Onboarding architecture — lifecycle, drafts, approvals, form primitives | Accepted                                                                   | 2026-05-23 | 1.0      |
+| #                                       | Title                                                             | Status                                                                     | Date       | Phase    |
+| --------------------------------------- | ----------------------------------------------------------------- | -------------------------------------------------------------------------- | ---------- | -------- |
+| [0001](./0001-stack-choice.md)          | Stack choice                                                      | Accepted                                                                   | 2026-05-21 | 0.1      |
+| [0002](./0002-design-system.md)         | Design system adoption (warm-palette pivot to teal monochrome)    | Accepted (no-dark-mode part superseded by [ADR-0003](./0003-dark-mode.md)) | 2026-05-21 | 0.2      |
+| [0003](./0003-dark-mode.md)             | Dark mode adoption                                                | Accepted                                                                   | 2026-05-21 | 0.2-dark |
+| [0004](./0004-env-and-drizzle-setup.md) | Environment validation, Supabase clients, Drizzle setup           | Accepted                                                                   | 2026-05-21 | 0.3      |
+| [0005](./0005-phase-0-schema.md)        | Phase 0 schema + pooler-friendly migrator                         | Accepted                                                                   | 2026-05-22 | 0.4      |
+| [0006](./0006-rls-and-tests.md)         | RLS strategy + test infrastructure                                | Accepted                                                                   | 2026-05-22 | 0.5      |
+| [0007](./0007-audit-infrastructure.md)  | Audit infrastructure (log_changes trigger + append-only lockdown) | Accepted                                                                   | 2026-05-22 | 0.6      |
+| [0008](./0008-phi-encryption.md)        | PHI encryption — AES-256-GCM, `iv:authTag:ciphertext` format      | Accepted                                                                   | 2026-05-22 | 0.7      |
+| [0009](./0009-logging-sentry.md)        | PII-redacted logging + Sentry wiring                              | Accepted                                                                   | 2026-05-22 | 0.8      |
+| [0010](./0010-auth-mfa-proxy.md)        | Auth + MFA + Next.js 16 proxy route protection                    | Accepted                                                                   | 2026-05-22 | 0.9      |
+| [0011](./0011-edge-functions.md)        | Edge Functions foundation + `assign-role` reference               | Accepted                                                                   | 2026-05-22 | 0.10     |
+| [0012](./0012-vercel-deployment.md)     | Vercel deployment                                                 | Accepted                                                                   | 2026-05-22 | 0.12     |
 
 ## Template
 

@@ -163,14 +163,14 @@ export function Nav() {
             </Link>
             <ThemeToggle />
             <Link
-              href="/get-started"
+              href="mailto:hello@medsync.health?subject=MedSync%20%E2%80%94%20early%20access"
               className={cn(
                 "hidden items-center gap-1 rounded-md px-3 py-1.5 text-[13px] font-medium md:inline-flex",
                 "bg-foreground text-background hover:bg-foreground/90",
                 "transition-colors duration-150",
               )}
             >
-              Get started
+              Email a founder
             </Link>
             <button
               type="button"
@@ -353,28 +353,12 @@ function MobileDrawer({ open, onClose }: { open: boolean; onClose: () => void })
 
         <div className="mt-auto flex flex-col gap-2 pt-4">
           <Link
-            href="/get-started"
+            href="mailto:hello@medsync.health?subject=MedSync%20%E2%80%94%20early%20access"
             onClick={onClose}
             className="bg-foreground text-background rounded-md px-4 py-2.5 text-center text-[14px] font-medium"
           >
-            Get started
+            Email a founder
           </Link>
-          <div className="grid grid-cols-2 gap-2">
-            <Link
-              href="/signup/patient"
-              onClick={onClose}
-              className="border-border rounded-md border px-3 py-2 text-center text-[13px]"
-            >
-              I&apos;m a patient
-            </Link>
-            <Link
-              href="/signup/clinical"
-              onClick={onClose}
-              className="border-border rounded-md border px-3 py-2 text-center text-[13px]"
-            >
-              I&apos;m a clinician
-            </Link>
-          </div>
           <Link
             href="/sign-in"
             onClick={onClose}

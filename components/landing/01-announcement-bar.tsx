@@ -70,13 +70,13 @@ export function AnnouncementBar() {
         <p className="text-[12.5px] leading-snug sm:text-[13px]">
           MedSync is open to founding hospital partners in Uganda for 2026.{" "}
           <Link
-            href="/signup/hospital"
+            href="mailto:hello@medsync.health?subject=Hospital%20pilot%20interest"
             className={cn(
               "group inline-flex items-center gap-1 font-medium underline-offset-[3px] hover:underline",
               "decoration-teal-400/70 dark:decoration-teal-600/70",
             )}
           >
-            Apply for a pilot
+            Email a founder
             <ArrowRightIcon
               className="ease-expo-out size-3 transition-transform duration-200 group-hover:translate-x-0.5"
               strokeWidth={2}

@@ -8,10 +8,10 @@ import { cn } from "@/lib/utils";
  * Single source of truth for the three audience doors. Edit copy here and
  * every CTA on the page updates: hero, mid-band, final CTA band, footer.
  *
- * Routes match app/signup/{patient,clinical,hospital} — the Phase 1
- * multi-step signup flow. The older /onboarding/{path} email-capture
- * forms remain reachable as a softer ask (linked from a few specific
- * sub-banner / FAQ surfaces) but are no longer the primary CTAs.
+ * MedSync is mid-rebuild of the onboarding flow — these doors point at
+ * a real founder inbox until the new flow lands. Honest "early access"
+ * framing per spec: no fake forms, no waitlist sign-ups that disappear
+ * into the void.
  */
 export const ONBOARDING_DOORS: ReadonlyArray<{
   audience: "patient" | "clinical" | "hospital";
@@ -23,22 +23,22 @@ export const ONBOARDING_DOORS: ReadonlyArray<{
   {
     audience: "patient",
     label: "I'm a patient",
-    sub: "Sign up · ~3 minutes",
-    href: "/signup/patient",
+    sub: "Email a founder",
+    href: "mailto:hello@medsync.health?subject=Patient%20%E2%80%94%20early%20access",
     Icon: UserIcon,
   },
   {
     audience: "clinical",
     label: "I'm a clinician",
-    sub: "Sign up · approval-gated",
-    href: "/signup/clinical",
+    sub: "Email a founder",
+    href: "mailto:hello@medsync.health?subject=Clinician%20%E2%80%94%20early%20access",
     Icon: StethoscopeIcon,
   },
   {
     audience: "hospital",
     label: "I represent a hospital",
-    sub: "Apply for a pilot",
-    href: "/signup/hospital",
+    sub: "Email a founder",
+    href: "mailto:hello@medsync.health?subject=Hospital%20pilot%20interest",
     Icon: BuildingIcon,
   },
 ];

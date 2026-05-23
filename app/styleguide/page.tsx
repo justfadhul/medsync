@@ -7,7 +7,6 @@ import { ClinicalBadge } from "@/components/medsync/clinical-badge";
 import { ClinicalPath } from "@/components/medsync/clinical-path";
 import { SectionNumber } from "@/components/medsync/section-number";
 import { VitalStat } from "@/components/medsync/vital-stat";
-import { FormPrimitivesDemo } from "@/components/styleguide/form-primitives-demo";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -562,18 +561,9 @@ export default function StyleguidePage() {
             </div>
           </Section>
 
-          {/* 14 — Form primitives (onboarding GATE B) */}
+          {/* 14 — Landing patient mock (addendum GATE PA review) */}
           <Section
             n={14}
-            title="Form primitives — onboarding"
-            subtitle="Shared form widgets that power /signup. Combobox is the default for any list >15 items. Segmented for 2–4 atomic choices. RadioCards when each choice needs a description. FileUpload, OtpInput, and DatePicker complete the kit. All client-state lives here so you can interact with each one."
-          >
-            <FormPrimitivesDemo />
-          </Section>
-
-          {/* 15 — Landing patient mock (addendum GATE PA review) */}
-          <Section
-            n={15}
             title="Patient-experience mock — “MedSync · My Health”"
             subtitle="Patient-end twin of the §05b Clinician Home. Static composition; same Amina N. (MS-00184), same date/time, same medications, same glucose values. Renderable as the full device or as fragments for embedding inside §07 scenes and the new patient chapter."
           >

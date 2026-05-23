@@ -30,8 +30,8 @@ export function SignInForm() {
       footer={
         <p className="text-body-s text-muted-foreground">
           New here?{" "}
-          <Link href="/get-started" className="text-primary hover:underline">
-            Get started
+          <Link href="/sign-up" className="text-primary hover:underline">
+            Create an account
           </Link>
         </p>
       }
