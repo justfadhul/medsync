@@ -52,22 +52,9 @@ ALTER TABLE public.clinician_profiles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.clinician_profiles FORCE ROW LEVEL SECURITY;
 
 -- SELECT: own row + superadmin + any hospital_admin who has an
--- affiliation referencing this clinician (allows the approval queue UI
--- to see the clinician's anchor row).
-DROP POLICY IF EXISTS clinician_profiles_select_own ON public.clinician_profiles;
-CREATE POLICY clinician_profiles_select_own
-  ON public.clinician_profiles
-  FOR SELECT
-  TO authenticated
-  USING (
-    id = auth.uid()
-    OR public.user_has_role('superadmin')
-    OR EXISTS (
-      SELECT 1 FROM public.staff_affiliations sa
-      WHERE sa.user_id = clinician_profiles.id
-        AND public.user_has_role('hospital_admin', sa.hospital_id)
-    )
-  );
+-- affiliation referencing this clinician. Created AFTER staff_affiliations
+-- below — moved there because the EXISTS subquery references that table
+-- and CREATE POLICY validates referenced relations at creation time.
 
 DROP POLICY IF EXISTS clinician_profiles_insert_own ON public.clinician_profiles;
 CREATE POLICY clinician_profiles_insert_own
@@ -168,6 +155,26 @@ CREATE POLICY staff_affiliations_insert_own
 
 -- No UPDATE policy for authenticated — state transitions are
 -- service-role only (Edge Functions in GATE F).
+
+-- ─── clinician_profiles SELECT policy ───────────────────────────────────
+--
+-- Created here (not above next to the other clinician_profiles policies)
+-- because the EXISTS subquery references staff_affiliations which CREATE
+-- POLICY validates at creation time.
+DROP POLICY IF EXISTS clinician_profiles_select_own ON public.clinician_profiles;
+CREATE POLICY clinician_profiles_select_own
+  ON public.clinician_profiles
+  FOR SELECT
+  TO authenticated
+  USING (
+    id = auth.uid()
+    OR public.user_has_role('superadmin')
+    OR EXISTS (
+      SELECT 1 FROM public.staff_affiliations sa
+      WHERE sa.user_id = clinician_profiles.id
+        AND public.user_has_role('hospital_admin', sa.hospital_id)
+    )
+  );
 
 -- ─── Storage bucket policy stub ──────────────────────────────────────────
 --

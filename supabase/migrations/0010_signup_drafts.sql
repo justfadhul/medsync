@@ -44,6 +44,7 @@ CREATE INDEX IF NOT EXISTS signup_drafts_expires_idx
   ON public.signup_drafts(expires_at);
 
 -- ─── set_updated_at trigger (Phase 0 helper from 0001) ──────────────────
+DROP TRIGGER IF EXISTS signup_drafts_set_updated_at ON public.signup_drafts;
 CREATE TRIGGER signup_drafts_set_updated_at
   BEFORE UPDATE ON public.signup_drafts
   FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
