@@ -40,15 +40,21 @@ export function V2Hospitals() {
         </p>
       </header>
 
-      <div className="grid gap-10 md:gap-12 lg:grid-cols-12 lg:gap-16">
-        {/* Primary surface — the clinician dashboard, reused from the hero. */}
-        <div className="lg:col-span-7">
+      {/* Stacked layout: the dashboard mock wants horizontal room
+          (the patient-detail panel + schedule list crowd inside a 7-col
+          slot and wrap awkwardly). Give it the full width here, then
+          drop the three sub-points into a 3-column row below where
+          they have room to breathe at their natural reading width. */}
+      <div className="flex flex-col gap-10 md:gap-12">
+        {/* Primary surface — the clinician dashboard, full bleed of
+            the container width so the sample data isn't squeezed. */}
+        <div className="w-full">
           <ClinicianHomeMock />
         </div>
 
         {/* Three sub-points distilled from the [02] adaptive-model
             insight + the clinician-flavoured loop scenes. */}
-        <ul className="flex flex-col gap-6 lg:col-span-5">
+        <ul className="grid gap-4 sm:gap-5 md:grid-cols-3">
           {SUB_POINTS.map(({ icon: Icon, eyebrow, title, body }) => (
             <li
               key={eyebrow}

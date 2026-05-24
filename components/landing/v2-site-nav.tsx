@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { MenuIcon, XIcon } from "lucide-react";
 
+import { ThemeToggle } from "@/components/theme-toggle";
 import { cn } from "@/lib/utils";
 
 /**
@@ -195,14 +196,15 @@ export function V2SiteNav({ sections = DEFAULT_LANDING_SECTIONS }: V2SiteNavProp
             </ul>
           </nav>
 
-          {/* CTA + Sign in — right */}
-          <div className="flex items-center gap-3">
+          {/* Theme toggle + CTA + Sign in — right */}
+          <div className="flex items-center gap-2 sm:gap-3">
             <Link
               href="/sign-in"
               className="text-muted-foreground hover:text-foreground hidden text-[12.5px] transition-colors sm:inline-flex"
             >
               Sign in
             </Link>
+            <ThemeToggle className="hidden sm:inline-flex" />
             <Link
               href="/get-started"
               className={cn(
@@ -290,6 +292,10 @@ export function V2SiteNav({ sections = DEFAULT_LANDING_SECTIONS }: V2SiteNavProp
                 >
                   Sign in
                 </Link>
+                <div className="text-muted-foreground flex items-center justify-between px-3 py-2.5 text-[14px]">
+                  <span>Theme</span>
+                  <ThemeToggle />
+                </div>
                 <Link
                   href="/get-started"
                   onClick={() => setDrawerOpen(false)}
