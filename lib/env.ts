@@ -44,6 +44,15 @@ export const env = createEnv({
     AFRICASTALKING_API_KEY: z.string().optional(),
     AFRICASTALKING_SENDER_ID: z.string().optional(),
 
+    /**
+     * Phase 1 GATE G — shared secret the Vercel Cron hook supplies as
+     * `Authorization: Bearer ${CRON_SECRET}` so only the scheduler can
+     * trigger the cleanup route. Generate with
+     *   openssl rand -hex 32
+     * and set in Vercel project env (and .env.local for dev).
+     */
+    CRON_SECRET: z.string().min(16, "CRON_SECRET should be ≥ 16 chars.").optional(),
+
     NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
   },
   client: {
@@ -67,6 +76,7 @@ export const env = createEnv({
     AFRICASTALKING_USERNAME: process.env.AFRICASTALKING_USERNAME,
     AFRICASTALKING_API_KEY: process.env.AFRICASTALKING_API_KEY,
     AFRICASTALKING_SENDER_ID: process.env.AFRICASTALKING_SENDER_ID,
+    CRON_SECRET: process.env.CRON_SECRET,
     NODE_ENV: process.env.NODE_ENV,
     NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL,
     NEXT_PUBLIC_SUPABASE_ANON_KEY: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
