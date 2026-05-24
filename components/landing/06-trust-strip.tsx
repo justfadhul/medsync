@@ -9,10 +9,14 @@ import { cn } from "@/lib/utils";
  * the framing unambiguous.
  *
  * Councils (full names for accessibility, abbreviations on screen):
- *   - UMDPC: Uganda Medical and Dental Practitioners Council
- *   - UNMC:  Uganda Nurses and Midwives Council
- *   - AHPC:  Allied Health Professionals Council
- *   - PSU:   Pharmaceutical Society of Uganda
+ *   - UMDPC:         Uganda Medical and Dental Practitioners Council
+ *   - UNMC:          Uganda Nurses and Midwives Council
+ *   - AHPC:          Allied Health Professionals Council
+ *   - Pharmacy Board: National Pharmacy Board (statutory regulator;
+ *                    works alongside the National Drug Authority).
+ *                    Previously labelled PSU here — corrected because
+ *                    the Pharmaceutical Society of Uganda is a
+ *                    professional association, not the statutory regulator.
  */
 const COUNCILS = [
   {
@@ -28,8 +32,8 @@ const COUNCILS = [
     full: "Allied Health Professionals Council",
   },
   {
-    abbr: "PSU",
-    full: "Pharmaceutical Society of Uganda",
+    abbr: "Pharmacy Board",
+    full: "National Pharmacy Board",
   },
 ] as const;
 

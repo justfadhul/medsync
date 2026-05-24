@@ -469,6 +469,24 @@
     color-scheme: light;
   }
 
+  /* Landing-page wayfinding: smooth anchor jumps + leave room for the
+   * sticky nav at the top so smooth-scroll lands on the section title,
+   * not under the nav. Reduced-motion users opt out of smooth scrolling
+   * automatically — the @media query covers both CSS smooth-scroll and
+   * window.scrollTo({ behavior: "smooth" }). */
+  @media (prefers-reduced-motion: no-preference) {
+    html {
+      scroll-behavior: smooth;
+    }
+  }
+
+  /* Every section the v2 nav can link to should clear the sticky nav
+   * when scrolled into view. ~80px matches the dense-state nav height
+   * with a little breathing room. */
+  [data-section-anchor] {
+    scroll-margin-top: 80px;
+  }
+
   html.dark {
     color-scheme: dark;
   }

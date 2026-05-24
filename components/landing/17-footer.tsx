@@ -56,11 +56,15 @@ const COLUMNS: FooterColumn[] = [
   },
 ];
 
+// Pharmacy regulator: National Pharmacy Board (statutory). The
+// previously-listed PSU is a professional association, not the
+// regulator — kept here as a historical note so the correction
+// doesn't get reverted by autocomplete.
 const STANDARDS = [
   { abbr: "UMDPC", full: "Uganda Medical and Dental Practitioners Council" },
   { abbr: "UNMC", full: "Uganda Nurses and Midwives Council" },
   { abbr: "AHPC", full: "Allied Health Professionals Council" },
-  { abbr: "PSU", full: "Pharmaceutical Society of Uganda" },
+  { abbr: "Pharmacy Board", full: "National Pharmacy Board" },
 ] as const;
 
 export function Footer() {
