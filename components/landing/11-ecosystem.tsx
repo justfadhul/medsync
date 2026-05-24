@@ -44,7 +44,11 @@ const CATEGORIES: EcoCategory[] = [
       { name: "MoH HMIS2 (DHIS2)", detail: "Routine HMIS reporting" },
       { name: "NIRA", detail: "National ID verification" },
       { name: "NDA registries", detail: "Drug & practitioner registries" },
-      { name: "UMDPC / UNMC / AHPC / PSU", detail: "Clinician licence lookups" },
+      // Pharmacy regulator: National Pharmacy Board (statutory). PSU
+      // (the Pharmaceutical Society of Uganda) is a professional
+      // association, not the licence-lookup authority — keeping this
+      // note so the chip doesn't get autocompleted back to "PSU".
+      { name: "UMDPC / UNMC / AHPC / Pharmacy Board", detail: "Clinician licence lookups" },
     ],
   },
   {
