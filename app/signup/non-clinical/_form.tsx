@@ -164,7 +164,7 @@ export function NonClinicalSignupForm({
           <Input name="staff_number" defaultValue={values.staff_number} />
         </Field>
 
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <div className="grid grid-cols-1 items-end gap-3 sm:grid-cols-2">
           <Field
             name="authorising_officer_name"
             label="Authorising officer (optional)"
@@ -172,12 +172,12 @@ export function NonClinicalSignupForm({
           >
             <Input name="authorising_officer_name" defaultValue={values.authorising_officer_name} />
           </Field>
-          <Field name="authorising_officer_role" label="Their role (optional)">
-            <Input
-              name="authorising_officer_role"
-              defaultValue={values.authorising_officer_role}
-              placeholder="e.g. Records HOD"
-            />
+          <Field
+            name="authorising_officer_role"
+            label="Their role (optional)"
+            description="E.g. Records HOD, Front-Desk Lead."
+          >
+            <Input name="authorising_officer_role" defaultValue={values.authorising_officer_role} />
           </Field>
         </div>
 
