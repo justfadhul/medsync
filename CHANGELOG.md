@@ -5,6 +5,10 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); version
 
 ## [Unreleased]
 
+### Proposed (awaiting CSO sign-off) — Examination shared-parameter QC registry — 2026-06-12
+
+GATE A of the cross-exam consistency layer ([ADR 0073, proposed](docs/adr/0073-examination-shared-parameter-qc.md)): an exhaustive 9-module audit produced the **shared-parameter registry** (`docs/clinical/examination-shared-parameter-registry.md`) — **107 findings that appear in ≥2 examination modules** (77 static · 27 structured · 13 time-series · 8 derived), each with its canonical id, sync type, presentation points, granularity reconciliation, sync rule, and (96 of them) an explicit CSO equivalence decision. No code/data change yet — this is the CSO-signed source-of-truth for the single-record-many-views sync (GATE B+).
+
 ### Added — Clerkship: Endocrine · Vascular · Diabetic-Foot exam pack (NCD) — 2026-06-12
 
 The NCD-focused exam pack ([ADR 0072](docs/adr/0072-clerkship-endocrine-vascular-foot-examination.md)) — one card, three sub-tabs (Thyroid status / Peripheral vascular / **Diabetic foot**). Catalog supplied in full. **No migration.**
