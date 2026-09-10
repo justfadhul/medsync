@@ -208,3 +208,18 @@ sections are appended at the end. British English throughout, and no em dashes.
   concentric, so their bounding boxes nest, and a pointer aimed at the middle
   hit whichever ring happened to be on top. The decorative centre now ignores
   the pointer, and each ring is hit through its own line.
+
+## 2026-09-10: Phase 6, packaging
+
+- **The README documents the content file as the editing surface.** It lists
+  every export, the house rules that govern anything written into it, and what
+  to do if a count genuinely changes: change the assertion in the same commit
+  and say why, rather than weakening a test to make it pass.
+- **`dist/` stays out of version control.** It is a build artefact and it is in
+  the app's `.gitignore`. The static bundle is produced by `npm run build` and
+  the packaged archive carries a copy of it alongside the source, so a reviewer
+  can open the built application without installing anything.
+- **The packaged archive holds the application only, not the whole MedSync
+  repository.** The explorer is self-contained and everything it needs to build
+  and run is inside `apps/islet-sensor-explorer`, apart from `DECISIONS.md` and
+  `DESIGN-medsync.md`, which are copied in so the archive is readable on its own.
