@@ -68,8 +68,10 @@
   --color-status-stable-fg: var(--status-stable-fg);
   --color-status-critical-bg: var(--status-critical-bg);
   --color-status-critical-fg: var(--status-critical-fg);
+  --color-status-critical-text: var(--status-critical-text);
   --color-status-caution-bg: var(--status-caution-bg);
   --color-status-caution-fg: var(--status-caution-fg);
+  --color-status-caution-text: var(--status-caution-text);
   --color-status-admitted-bg: var(--status-admitted-bg);
   --color-status-admitted-fg: var(--status-admitted-fg);
   --color-status-discharged-bg: var(--status-discharged-bg);
@@ -258,8 +260,14 @@
   --status-stable-fg: #15803d;
   --status-critical-bg: #fee2e2;
   --status-critical-fg: #dc2626;
+  /* Text-only. #dc2626 measures 3.95:1 on its own tint and 4.83:1 on white,
+     so small text uses a darker red. The base stays for strokes and fills,
+     which are graphics and answer to the 3:1 threshold. */
+  --status-critical-text: #991b1b;
   --status-caution-bg: #fef3c7;
   --status-caution-fg: #d97706;
+  /* Text-only. #d97706 measures 2.86:1 on its own tint and 3.19:1 on white. */
+  --status-caution-text: #92400e;
   --status-admitted-bg: #ccfbf1;
   --status-admitted-fg: #0f766e;
   --status-discharged-bg: #f3e8ff;
@@ -355,8 +363,10 @@
   --status-stable-fg: #4ade80;
   --status-critical-bg: #450a0a;
   --status-critical-fg: #fca5a5;
+  --status-critical-text: #fca5a5;
   --status-caution-bg: #451a03;
   --status-caution-fg: #fcd34d;
+  --status-caution-text: #fcd34d;
   --status-admitted-bg: #042f2e;
   --status-admitted-fg: #5eead4;
   --status-discharged-bg: #2e1065;

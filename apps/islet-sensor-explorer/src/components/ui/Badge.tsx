@@ -20,8 +20,8 @@ export interface BadgeProps {
 
 const TONES: Record<BadgeTone, string> = {
   stable: "bg-status-stable-bg text-status-stable-fg",
-  critical: "bg-status-critical-bg text-status-critical-fg",
-  caution: "bg-status-caution-bg text-status-caution-fg",
+  critical: "bg-status-critical-bg text-status-critical-text",
+  caution: "bg-status-caution-bg text-status-caution-text",
   admitted: "bg-status-admitted-bg text-status-admitted-fg",
   discharged: "bg-status-discharged-bg text-status-discharged-fg",
   pending: "bg-status-pending-bg text-status-pending-fg",

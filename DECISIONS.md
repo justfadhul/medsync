@@ -142,3 +142,37 @@ sections are appended at the end. British English throughout, and no em dashes.
 - **Screen [05] keeps its own playback state, apart from screen [02]'s.** Both
   play something in cadence order, but they play different things, and moving
   one must not move the other.
+
+## 2026-09-10: Phase 4, the playground
+
+- **Trust ratchets, and the ratchet lives in code rather than in a caption.**
+  The brief asks that no combination of inputs produce a state whose allowed
+  action exceeds the previous state's when trust falls. The instantaneous model
+  cannot promise that on its own: at 40 per cent fouling the two sensors
+  disagree with no health flag to arbitrate, which is invalid, while at 70 per
+  cent the flag appears, the good sensor can be trusted alone, and the reading
+  is merely doubtful. More evidence genuinely does allow more action. What must
+  never happen is autonomy climbing back once the picture has been bad, so the
+  screen holds a separate ratcheted state: it follows the sensors down and never
+  up. The one exception is bridging, which lifts a suspended controller to basal
+  only. A clinician review button stands in for the human release, because
+  without one the screen would be a dead end.
+- **Which impairments leave health evidence is the model's one judgement call.**
+  Fouling does: the hourly impedance sweep sees it, so it flags the
+  electrochemical sensor. Mannitol does: it binds where glucose binds and the
+  optical module's two channels carry the signature, so it flags the optical
+  sensor once the two have actually pulled apart. Paracetamol does not: it makes
+  an ordinary looking current with nothing to mark it, which is exactly why a
+  disagreement it causes cannot be arbitrated and the system stands down. This
+  is what makes the brief's four required cases come out as they do.
+- **Two text-only status colours were added.** The design system's caution
+  foreground measures 2.86:1 on its own tint and its critical foreground 3.95:1,
+  both under AA for small text. `--status-caution-text` and
+  `--status-critical-text` carry darker values for text; the original tokens
+  stay for strokes, bars and dots, which are graphics and answer to the 3:1
+  threshold. Red is still red and amber still amber.
+- **The playground controls use labelled groups rather than fieldsets.** A
+  fieldset shrink-wraps to min-content in the user agent stylesheet, and with a
+  floated full-width legend it pushed the toggle rows 119px past the right edge
+  at 390px. `role="group"` with `aria-labelledby` reads the same to a screen
+  reader and lays out correctly.

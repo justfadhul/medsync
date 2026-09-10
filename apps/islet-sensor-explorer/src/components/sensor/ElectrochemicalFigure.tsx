@@ -235,7 +235,7 @@ export function ElectrochemicalFigure({
           <text
             x={STACK.x + STACK.w + 12}
             y={INNER_Y - 4}
-            className="text-caption fill-status-caution-fg font-medium"
+            className="text-caption fill-status-caution-text font-medium"
           >
             {interferentName}
           </text>
