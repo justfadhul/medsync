@@ -87,3 +87,31 @@ sections are appended at the end. British English throughout, and no em dashes.
   for `/favicon.ico` on every page load and logged a 404, which would have
   counted against the Best Practices score. The mark is an outlined teal-600
   sensor tip on a teal-50 ground, drawn to the design system's icon rules.
+
+## 2026-09-10: Phase 2, the two maps
+
+- **The primary colour moved one step down the teal scale, from teal-600 to
+  teal-700.** White text on teal-600 measures 3.74:1, below the 4.5:1 that AA
+  asks of body text, so the design system's own primary call to action fails the
+  brief's contrast rule. The light-mode `--primary`, `--primary-hover` and
+  `--primary-active` now run teal-700, teal-800, teal-900, and
+  `--accent-foreground` follows. Dark mode is unchanged: there the primary is a
+  bright teal carrying dark text, which already passes.
+- **The insulin banner sits on white rather than on the pink alert fill.** The
+  red label on `alert-bg` measures 4.41:1, just under AA. On white it is 4.83:1.
+  The red border and the red dot still carry the alert reading.
+- **Vertical lanes in a gutter are allocated from one shared pool.** Same-column
+  lanes and crossing lanes were allocated separately and landed 3.8px apart in
+  the housing gutter, so two distinct signals read as one thick line. One pool
+  per gutter guarantees at least 12px between any two lanes, with same-column
+  lanes nearer their column and crossing lanes further out.
+- **Two parts that talk to each other both ways are drawn as two lines.** The
+  optical module and the optical tip sit on the same row, so both routes were
+  the same straight line: one line with an arrow at each end, and two focus
+  targets on the same pixels. Each line now moves half of a fixed separation to
+  its own side of the shared route.
+- **Every part on the insulin path is drawn the same way on both maps.** Parts
+  12 and 20 carry the insulin path in the content file, as the pump does, so all
+  three take the red stroke and the written "Insulin" tag on the Parts map and on
+  the link map alike. The link map keeps a grey node fill against the Parts
+  map's white, deliberately: there the node is the subject, here the link is.

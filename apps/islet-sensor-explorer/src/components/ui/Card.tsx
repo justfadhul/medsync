@@ -33,7 +33,7 @@ export function Card({
         "rounded-lg border p-6",
         TONES[tone],
         interactive &&
-          "ease-expo-out cursor-pointer transition-colors duration-150 hover:border-teal-100 hover:bg-teal-50",
+          "ease-expo-out cursor-pointer transition-colors duration-150 hover:border-teal-100 hover:bg-teal-50 motion-reduce:transition-none",
         selected && "ring-ring/40 border-teal-600 ring-2",
         className,
       )}

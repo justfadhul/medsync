@@ -20,7 +20,7 @@ export function SafetyStrip() {
             className="bg-status-critical-fg size-1.5 shrink-0 self-center rounded-full"
           />
           <span>
-            <span className="font-semibold text-gray-900">Insulin path.</span> {SAFETY.onlyRedDoses}
+            <span className="font-medium text-gray-900">Insulin path.</span> {SAFETY.onlyRedDoses}
           </span>
         </li>
         <li className="lg:border-l lg:border-gray-200 lg:pl-5">{SAFETY.trustFallsOnly}</li>

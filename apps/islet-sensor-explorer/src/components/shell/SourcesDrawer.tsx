@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/Button";
 import { CloseIcon, LinkIcon } from "@/components/ui/icons";
 import { META } from "@/content/sensor";
 import { asText, describeSource } from "@/lib/content";
+import { DURATION_MS, EASE_EXPO_OUT, seconds } from "@/lib/motion";
 import { useReducedMotion } from "@/lib/use-reduced-motion";
 
 const FOCUSABLE = [
@@ -16,12 +17,8 @@ const FOCUSABLE = [
   '[tabindex]:not([tabindex="-1"])',
 ].join(", ");
 
-/**
- * Panel motion, from the design system: 250ms on the expo-out curve. Framer
- * Motion takes seconds, and an easing as four numbers.
- */
-const PANEL_SECONDS = 0.25;
-const EASE_EXPO_OUT: [number, number, number, number] = [0.16, 1, 0.3, 1];
+/** Panel motion, from the design system: the 250ms step on the expo-out curve. */
+const PANEL_SECONDS = seconds(DURATION_MS.slow);
 
 export interface SourcesDrawerProps {
   open: boolean;
