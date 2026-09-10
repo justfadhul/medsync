@@ -115,3 +115,30 @@ sections are appended at the end. British English throughout, and no em dashes.
   three take the red stroke and the written "Insulin" tag on the Parts map and on
   the link map alike. The link map keeps a grey node fill against the Parts
   map's white, deliberately: there the node is the subject, here the link is.
+
+## 2026-09-10: Phase 3, the two sensor stories and the cycle
+
+- **The four steps of each sensor story were written into `sensor.ts` as
+  content.** Section 1 of the brief does not carry them, only section 2's
+  description of the screens, so they had to be authored. They live in the
+  content file with everything else rather than in the screens, and every figure
+  they quote (375 nm, 20 ms, the bias, 1 to 100 nA) is read out of `LINKS` at
+  render time through a link reference rather than retyped, so no number exists
+  in two places. A test asserts each step reference resolves to a real link.
+- **What can fool each sensor and what wears it out reuse the playground's own
+  wording.** A test asserts each `effect` string appears verbatim in
+  `PHYSICS.controls`, so screen [03] and screen [04] can never drift from what
+  screen [06] does when the same toggle is switched on.
+- **The interferent on screen [04] is drawn in the caution colour, never red.**
+  Red means the insulin path everywhere in this app, and paracetamol is not on
+  it. Caution is also the state a false high leads to, so the colour is
+  consistent with screen [06]. Every shape in the figure is named in a written
+  key, so shape and colour never stand alone.
+- **The cycle screen shows the itemised sum and the stated figure side by side.**
+  The ten steps add up to 201 ms of awake time while the source states about
+  250 ms. Neither is adjusted to fit the other. The screen prints both and says
+  which is which, because quietly reconciling two figures from the source would
+  be inventing a third.
+- **Screen [05] keeps its own playback state, apart from screen [02]'s.** Both
+  play something in cadence order, but they play different things, and moving
+  one must not move the other.

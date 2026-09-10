@@ -21,6 +21,7 @@ import {
   PHYSICS,
   PUMP_NODE,
   SCREENS,
+  SENSOR_STORIES,
   STATES,
   TRUST_RULE,
 } from "./sensor";
@@ -511,5 +512,56 @@ describe("house copy rules across every exported string", () => {
         .map((found) => `${found.at} = ${JSON.stringify(found.value)}`)
         .join(" | ")}`,
     ).toEqual([]);
+  });
+});
+
+describe("SENSOR_STORIES", () => {
+  it("tells exactly two stories, one per sensor", () => {
+    expect(SENSOR_STORIES.map((story) => story.id)).toEqual(["optical", "electrochemical"]);
+  });
+
+  it("gives each story exactly four steps, numbered 1 to 4", () => {
+    for (const story of SENSOR_STORIES) {
+      expect(
+        story.steps.map((step) => step.n),
+        story.id,
+      ).toEqual([1, 2, 3, 4]);
+    }
+  });
+
+  it("names something that can fool each sensor and something that wears it out", () => {
+    for (const story of SENSOR_STORIES) {
+      expect(story.fooledBy.length, story.id).toBeGreaterThan(0);
+      expect(story.wearsOut.length, story.id).toBeGreaterThan(0);
+    }
+  });
+
+  it("points every story at real parts", () => {
+    const ids = new Set(PARTS.map((part) => part.id));
+    for (const story of SENSOR_STORIES) {
+      expect(ids.has(story.tipPartId), story.id).toBe(true);
+      expect(ids.has(story.modulePartId), story.id).toBe(true);
+    }
+  });
+
+  it("points every step reference at a real link, so the numbers are never retyped", () => {
+    for (const story of SENSOR_STORIES) {
+      for (const step of story.steps) {
+        if (!step.linkRef) continue;
+        const link = LINKS.find(
+          (candidate) => candidate.from === step.linkRef?.from && candidate.to === step.linkRef?.to,
+        );
+        expect(link, `${story.id} step ${step.n}`).toBeDefined();
+      }
+    }
+  });
+
+  it("repeats the playground wording for what fools each sensor, rather than inventing a second version", () => {
+    const effects = Object.values(PHYSICS.controls).map((control) => control.effect);
+    for (const story of SENSOR_STORIES) {
+      for (const influence of [...story.fooledBy, ...story.wearsOut]) {
+        expect(effects, `${story.id}: ${influence.name}`).toContain(influence.effect);
+      }
+    }
   });
 });

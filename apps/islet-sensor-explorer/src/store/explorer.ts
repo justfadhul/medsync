@@ -30,8 +30,17 @@ export interface ExplorerState {
   activePaths: PathFilter;
   /** True while the measurement cycle is running on its own. */
   playing: boolean;
-  /** Which cadence step is showing, counted from zero. */
+  /** Which cadence step is showing on the link map, counted from zero. */
   cycleIndex: number;
+
+  /**
+   * Which of the ten measurement-cycle steps screen [05] is showing, counted
+   * from zero, and whether that screen is running. Held apart from the link
+   * map's own playback: the two screens play different things, and moving one
+   * must not move the other.
+   */
+  cycleStep: number;
+  cycleStepPlaying: boolean;
 
   setSelectedPart: (id: number | null) => void;
   togglePart: (id: number) => void;
@@ -43,6 +52,13 @@ export interface ExplorerState {
   stepForward: () => void;
   stepBack: () => void;
   reset: () => void;
+
+  setCycleStep: (index: number) => void;
+  playCycle: () => void;
+  pauseCycle: () => void;
+  cycleForward: () => void;
+  cycleBack: () => void;
+  resetCycle: () => void;
 }
 
 export const useExplorerStore = create<ExplorerState>((set) => ({
@@ -50,6 +66,8 @@ export const useExplorerStore = create<ExplorerState>((set) => ({
   activePaths: allPathsOn(),
   playing: false,
   cycleIndex: 0,
+  cycleStep: 0,
+  cycleStepPlaying: false,
 
   setSelectedPart: (id) => set({ selectedPartId: id }),
   togglePart: (id) => set((state) => ({ selectedPartId: state.selectedPartId === id ? null : id })),
@@ -65,4 +83,18 @@ export const useExplorerStore = create<ExplorerState>((set) => ({
   stepBack: () =>
     set((state) => ({ cycleIndex: (state.cycleIndex - 1 + CYCLE_LENGTH) % CYCLE_LENGTH })),
   reset: () => set({ playing: false, cycleIndex: 0 }),
+
+  setCycleStep: (index) => set({ cycleStep: Math.min(Math.max(index, 0), CYCLE_LENGTH - 1) }),
+  playCycle: () => set({ cycleStepPlaying: true }),
+  pauseCycle: () => set({ cycleStepPlaying: false }),
+  // The cycle screen walks one measurement cycle from wake to sleep and stops
+  // at the end rather than looping, so the awake-time total is never reset out
+  // from under the reader mid-count.
+  cycleForward: () =>
+    set((state) => ({
+      cycleStep: Math.min(state.cycleStep + 1, CYCLE_LENGTH - 1),
+      cycleStepPlaying: state.cycleStep + 1 >= CYCLE_LENGTH - 1 ? false : state.cycleStepPlaying,
+    })),
+  cycleBack: () => set((state) => ({ cycleStep: Math.max(state.cycleStep - 1, 0) })),
+  resetCycle: () => set({ cycleStep: 0, cycleStepPlaying: false }),
 }));

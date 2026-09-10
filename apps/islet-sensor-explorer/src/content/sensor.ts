@@ -77,6 +77,42 @@ export interface JourneyStation {
   path: Path;
 }
 
+export interface SensorStoryStep {
+  n: number;
+  title: string;
+  detail: string;
+  /**
+   * The link whose wording carries the measured quantity for this step. The
+   * screen reads the numbers off LINKS rather than repeating them here, so a
+   * figure lives in exactly one place.
+   */
+  linkRef?: { from: number; to: number };
+}
+
+export interface SensorInfluence {
+  name: string;
+  /** What it does to the reading, in the wording the playground uses. */
+  effect: string;
+  /** Why it does it, in plain language. */
+  why: string;
+}
+
+export interface SensorStory {
+  id: "optical" | "electrochemical";
+  title: string;
+  /** The part in the peritoneal cavity this story is about. */
+  tipPartId: number;
+  /** The part in the housing that drives it. */
+  modulePartId: number;
+  path: Path;
+  summary: string;
+  steps: SensorStoryStep[];
+  fooledBy: SensorInfluence[];
+  wearsOut: SensorInfluence[];
+  /** The one thing the reader can switch on, and what it shows. */
+  demo?: { label: string; on: string; off: string };
+}
+
 export interface Source {
   code: string;
   title: string;
@@ -832,6 +868,131 @@ export const PHYSICS = {
 
 export const ARBITRATION_NOTE =
   "When the two sensors disagree and no health flag points at one of them, the system has no way to tell which one is wrong. It goes to invalid and asks for a finger-prick rather than guessing which value to believe.";
+
+/* ------------------------------------------------------------------ */
+/* Sensor stories: how each tip turns glucose into a number            */
+/* ------------------------------------------------------------------ */
+
+export const OPTICAL_STORY: SensorStory = {
+  id: "optical",
+  title: "How the optical tip makes a number",
+  tipPartId: 1,
+  modulePartId: 8,
+  path: "optical",
+  summary:
+    "The optical tip does not measure glucose directly. It measures how brightly a cap on the end of the tip glows, against a second glow that glucose cannot touch, and reads the glucose from the ratio of the two.",
+  steps: [
+    {
+      n: 1,
+      title: "Flash",
+      detail:
+        "The optical module in the housing sends a short flash of ultraviolet light down the excitation fibre in Lead A to the tip in the peritoneal cavity.",
+      linkRef: { from: 8, to: 1 },
+    },
+    {
+      n: 2,
+      title: "Glow",
+      detail:
+        "A cap on the end of the tip absorbs the flash and glows. It glows in two colours at once: a glow channel that answers to glucose, and a reference channel that does not.",
+    },
+    {
+      n: 3,
+      title: "Dock",
+      detail:
+        "Glucose molecules in the peritoneal fluid dock onto binding sites in the cap. The more of them are docked when the flash arrives, the brighter the glow channel comes back. The reference channel is unmoved.",
+    },
+    {
+      n: 4,
+      title: "Split and read",
+      detail:
+        "The collection fibre carries both colours back to the housing, where a splitter separates them and the module counts each. Glucose is read from the ratio of the two counts, never from the brightness of one on its own.",
+      linkRef: { from: 1, to: 8 },
+    },
+  ],
+  fooledBy: [
+    {
+      name: "Mannitol",
+      effect: "Reads falsely high on the optical sensor.",
+      why: "Mannitol binds where glucose binds, so the cap glows as though more glucose had arrived than really has. The tip has no way to tell the two apart.",
+    },
+  ],
+  wearsOut: [
+    {
+      name: "Photobleaching",
+      effect: "Dims both optical channels equally, so the ratio is unchanged.",
+      why: "The dye in the cap fades a little with every flash, so the counts fall over months. Because both colours fade together, the ratio the glucose is read from holds: the tip grows dimmer without drifting.",
+    },
+  ],
+  demo: {
+    label: "Show photobleaching",
+    on: "Both channels are dimmed together. The counts drop and the ratio, and so the reading, stays where it was.",
+    off: "Both channels are at full strength.",
+  },
+};
+
+export const ELECTROCHEMICAL_STORY: SensorStory = {
+  id: "electrochemical",
+  title: "How the electrochemical tip makes a number",
+  tipPartId: 3,
+  modulePartId: 9,
+  path: "electrical",
+  summary:
+    "The electrochemical tip is a stack of layers. Glucose goes in at the top, an enzyme turns it into something the electrode can read, and what comes out at the bottom is a current.",
+  steps: [
+    {
+      n: 1,
+      title: "Through the outer membrane",
+      detail:
+        "The outer membrane lets only a small, steady share of the glucose through. Holding the amount down is what keeps the enzyme underneath working in step with the fluid rather than being swamped by it.",
+    },
+    {
+      n: 2,
+      title: "The enzyme converts it",
+      detail:
+        "In the enzyme layer, glucose oxidase converts the glucose that got through. Hydrogen peroxide is the product that matters, because the electrode below can read it.",
+    },
+    {
+      n: 3,
+      title: "Two electrons at the platinum",
+      detail:
+        "The peroxide crosses the inner membrane to the platinum electrode, which the front end holds at a fixed bias. Each peroxide molecule gives up two electrons there.",
+      linkRef: { from: 9, to: 3 },
+    },
+    {
+      n: 4,
+      title: "Current becomes a number",
+      detail:
+        "Those electrons are a current, and the current rises and falls with the glucose. The front end measures it and hands a number to the sensor-management microcontroller.",
+      linkRef: { from: 3, to: 9 },
+    },
+  ],
+  fooledBy: [
+    {
+      name: "Paracetamol",
+      effect: "Reads falsely high on the enzymatic sensor.",
+      why: "Paracetamol gives up electrons at the platinum on its own account, so the front end sees a current that no glucose produced. The inner membrane is what holds most of it back.",
+    },
+    {
+      name: "Low oxygen",
+      effect: "Reads falsely low at high glucose.",
+      why: "The enzyme needs oxygen as well as glucose. Where glucose is high and oxygen is short, the reaction runs slower than the glucose on its own would suggest, and the current understates it.",
+    },
+  ],
+  wearsOut: [
+    {
+      name: "Fouling",
+      effect: "Reduces current and adds lag.",
+      why: "Protein and cells settle on the outer membrane over months. Less glucose reaches the enzyme, so the current falls, and what does reach it arrives late, so the reading follows the blood more slowly.",
+    },
+  ],
+  demo: {
+    label: "Add paracetamol",
+    on: "Paracetamol arrives at the outer membrane. Most of it is held at the inner membrane and never reaches the platinum, but what does get through adds current that no glucose produced.",
+    off: "Only glucose and its peroxide are crossing the layers.",
+  },
+};
+
+export const SENSOR_STORIES: SensorStory[] = [OPTICAL_STORY, ELECTROCHEMICAL_STORY];
 
 /* ------------------------------------------------------------------ */
 /* Programme metadata, screens, labels, safety lines                   */
