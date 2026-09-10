@@ -1,0 +1,681 @@
+@import "tailwindcss";
+
+/* Explicit source globs so class detection does not depend on where the build
+   is started from. This app sits inside the MedSync repository. */
+@source "../../index.html";
+@source "../**/*.{ts,tsx}";
+
+/* ==========================================================================
+   MedSync design tokens, ported from app/globals.css of the MedSync app.
+   See DESIGN-medsync.md for the authoritative spec. Tokens live as CSS
+   variables in :root / .dark so they flip with the theme class on <html>.
+   "@theme inline" tells Tailwind v4 to generate utilities that *reference*
+   those variables at runtime (not inline at build time), so a single class
+   like "bg-primary" flips automatically.
+
+   Differences from the MedSync copy, and only these:
+     1. one "@import tailwindcss" (no shadcn, no tw-animate-css),
+     2. fonts come from self-hosted @fontsource-variable packages instead of
+        next/font variables,
+     3. utilities that needed shadcn or tw-animate-css are dropped,
+     4. the animation utilities are held to the four durations the design
+        system names (100, 150, 250 and 400ms) and to the 40ms sibling
+        stagger. The MedSync copy carries 200, 240, 450 and 500ms values and
+        a 60ms stagger. DESIGN-medsync.md is authoritative, so those are
+        corrected here rather than copied across,
+     5. the two purely decorative loops (a floating card, a pulsing dot) are
+        not ported. This is a clinical tool, so motion has to carry meaning,
+     6. a reduced-motion safety net closes the base layer.
+   Every token name and every token value is unchanged, so bg-teal-600,
+   text-heading-m, shadow-card, bg-status-critical-bg, rounded-lg and tap all
+   behave exactly as they do in MedSync.
+   ========================================================================== */
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme inline {
+  /* Spacing base (4px grid) */
+  --spacing: 0.25rem;
+
+  /* Neutral scale */
+  --color-gray-50: var(--gray-50);
+  --color-gray-100: var(--gray-100);
+  --color-gray-150: var(--gray-150);
+  --color-gray-200: var(--gray-200);
+  --color-gray-300: var(--gray-300);
+  --color-gray-400: var(--gray-400);
+  --color-gray-500: var(--gray-500);
+  --color-gray-600: var(--gray-600);
+  --color-gray-700: var(--gray-700);
+  --color-gray-800: var(--gray-800);
+  --color-gray-900: var(--gray-900);
+  --color-gray-950: var(--gray-950);
+
+  /* Teal scale */
+  --color-teal-50: var(--teal-50);
+  --color-teal-100: var(--teal-100);
+  --color-teal-200: var(--teal-200);
+  --color-teal-300: var(--teal-300);
+  --color-teal-400: var(--teal-400);
+  --color-teal-500: var(--teal-500);
+  --color-teal-600: var(--teal-600);
+  --color-teal-700: var(--teal-700);
+  --color-teal-800: var(--teal-800);
+  --color-teal-900: var(--teal-900);
+
+  /* Clinical status pairs */
+  --color-status-stable-bg: var(--status-stable-bg);
+  --color-status-stable-fg: var(--status-stable-fg);
+  --color-status-critical-bg: var(--status-critical-bg);
+  --color-status-critical-fg: var(--status-critical-fg);
+  --color-status-caution-bg: var(--status-caution-bg);
+  --color-status-caution-fg: var(--status-caution-fg);
+  --color-status-admitted-bg: var(--status-admitted-bg);
+  --color-status-admitted-fg: var(--status-admitted-fg);
+  --color-status-discharged-bg: var(--status-discharged-bg);
+  --color-status-discharged-fg: var(--status-discharged-fg);
+  --color-status-pending-bg: var(--status-pending-bg);
+  --color-status-pending-fg: var(--status-pending-fg);
+
+  /* Alert (soft red; dark mode switches to outline) */
+  --color-alert-bg: var(--alert-bg);
+  --color-alert-border: var(--alert-border);
+  --color-alert-fg: var(--alert-fg);
+
+  /* Semantic */
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary-hover: var(--primary-hover);
+  --color-primary-active: var(--primary-active);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  /* Sidebar */
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+
+  /* Charts */
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+
+  /* Fonts, self-hosted variable faces:
+       Geist Variable      : body and interface text
+       Geist Mono Variable : labels, codes, units, numbers
+       Fraunces Variable   : display headings */
+  --font-sans: "Geist Variable", ui-sans-serif, system-ui, "Segoe UI", sans-serif;
+  --font-display: "Fraunces Variable", "Iowan Old Style", "Apple Garamond", Georgia, serif;
+  --font-heading: var(--font-display);
+  --font-mono: "Geist Mono Variable", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+
+  /* Type scale */
+  --text-display-xl: 72px;
+  --text-display-xl--line-height: 1;
+  --text-display-xl--letter-spacing: -0.04em;
+  --text-display-xl--font-weight: 500;
+
+  --text-display-l: 56px;
+  --text-display-l--line-height: 1.05;
+  --text-display-l--letter-spacing: -0.035em;
+  --text-display-l--font-weight: 500;
+
+  --text-display-m: 44px;
+  --text-display-m--line-height: 1.1;
+  --text-display-m--letter-spacing: -0.03em;
+  --text-display-m--font-weight: 500;
+
+  --text-display-s: 36px;
+  --text-display-s--line-height: 1.15;
+  --text-display-s--letter-spacing: -0.025em;
+  --text-display-s--font-weight: 500;
+
+  --text-heading-l: 28px;
+  --text-heading-l--line-height: 1.2;
+  --text-heading-l--letter-spacing: -0.02em;
+  --text-heading-l--font-weight: 500;
+
+  --text-heading-m: 22px;
+  --text-heading-m--line-height: 1.3;
+  --text-heading-m--letter-spacing: -0.015em;
+  --text-heading-m--font-weight: 500;
+
+  --text-heading-s: 18px;
+  --text-heading-s--line-height: 1.4;
+  --text-heading-s--letter-spacing: -0.01em;
+  --text-heading-s--font-weight: 500;
+
+  --text-body-l: 17px;
+  --text-body-l--line-height: 1.6;
+  --text-body-l--letter-spacing: -0.006em;
+  --text-body-l--font-weight: 400;
+
+  --text-body-m: 15px;
+  --text-body-m--line-height: 1.6;
+  --text-body-m--letter-spacing: -0.004em;
+  --text-body-m--font-weight: 400;
+
+  --text-body-s: 13px;
+  --text-body-s--line-height: 1.5;
+  --text-body-s--letter-spacing: 0;
+  --text-body-s--font-weight: 400;
+
+  --text-caption: 11px;
+  --text-caption--line-height: 1.4;
+  --text-caption--letter-spacing: 0.02em;
+  --text-caption--font-weight: 500;
+
+  --text-overline: 11px;
+  --text-overline--line-height: 1.4;
+  --text-overline--letter-spacing: 0.08em;
+  --text-overline--font-weight: 600;
+
+  /* Radii */
+  --radius-xs: 4px;
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+  --radius-2xl: 20px;
+  --radius-3xl: 24px;
+  --radius: 8px;
+
+  /* Shadows (also flip via vars) */
+  --shadow-xs: var(--shadow-xs-value);
+  --shadow-sm: var(--shadow-sm-value);
+  --shadow-md: var(--shadow-md-value);
+  --shadow-lg: var(--shadow-lg-value);
+  --shadow-card: var(--shadow-card-value);
+  --shadow-popover: var(--shadow-popover-value);
+  --shadow-focus: var(--shadow-focus-value);
+
+  /* Easing and duration */
+  --ease-expo-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-symmetric: cubic-bezier(0.45, 0, 0.55, 1);
+  /* Spring with a touch of overshoot. Kept so the token set matches MedSync
+     exactly, but nothing in this app uses it: the design system rules out
+     bounce and overshoot on a clinical surface. */
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+
+  --duration-fast: 100ms;
+  --duration-normal: 150ms;
+  --duration-slow: 250ms;
+  --duration-reveal: 400ms;
+}
+
+/* Light mode (default) */
+:root {
+  /* Neutrals */
+  --gray-50: #fafafa;
+  --gray-100: #f5f5f5;
+  --gray-150: #efefef;
+  --gray-200: #e5e5e5;
+  --gray-300: #d4d4d4;
+  --gray-400: #a3a3a3;
+  --gray-500: #737373;
+  --gray-600: #525252;
+  --gray-700: #404040;
+  --gray-800: #262626;
+  --gray-900: #171717;
+  --gray-950: #0a0a0a;
+
+  /* Teal */
+  --teal-50: #f0fdfa;
+  --teal-100: #ccfbf1;
+  --teal-200: #99f6e4;
+  --teal-300: #5eead4;
+  --teal-400: #2dd4bf;
+  --teal-500: #14b8a6;
+  --teal-600: #0d9488;
+  --teal-700: #0f766e;
+  --teal-800: #115e59;
+  --teal-900: #134e4a;
+
+  /* Clinical status */
+  --status-stable-bg: #dcfce7;
+  --status-stable-fg: #15803d;
+  --status-critical-bg: #fee2e2;
+  --status-critical-fg: #dc2626;
+  --status-caution-bg: #fef3c7;
+  --status-caution-fg: #d97706;
+  --status-admitted-bg: #ccfbf1;
+  --status-admitted-fg: #0f766e;
+  --status-discharged-bg: #f3e8ff;
+  --status-discharged-fg: #7c3aed;
+  --status-pending-bg: #f5f5f5;
+  --status-pending-fg: #525252;
+
+  /* Alert */
+  --alert-bg: #fef2f2;
+  --alert-border: #fee2e2;
+  --alert-fg: #dc2626;
+
+  /* Semantic */
+  --background: #ffffff;
+  --foreground: #171717;
+  --card: #ffffff;
+  --card-foreground: #171717;
+  --popover: #ffffff;
+  --popover-foreground: #171717;
+  --primary: #0d9488;
+  --primary-foreground: #ffffff;
+  --primary-hover: #0f766e;
+  --primary-active: #115e59;
+  --secondary: #ffffff;
+  --secondary-foreground: #171717;
+  --muted: #fafafa;
+  --muted-foreground: #737373;
+  --accent: #f0fdfa;
+  --accent-foreground: #0d9488;
+  --destructive: #dc2626;
+  --destructive-foreground: #ffffff;
+  --border: #e5e5e5;
+  --input: #e5e5e5;
+  --ring: #14b8a6;
+
+  /* Sidebar */
+  --sidebar: #fafafa;
+  --sidebar-foreground: #171717;
+  --sidebar-primary: #0d9488;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #f0fdfa;
+  --sidebar-accent-foreground: #0d9488;
+  --sidebar-border: #e5e5e5;
+  --sidebar-ring: #14b8a6;
+
+  /* Charts */
+  --chart-1: #0d9488;
+  --chart-2: #2dd4bf;
+  --chart-3: #5eead4;
+  --chart-4: #525252;
+  --chart-5: #171717;
+
+  /* Shadows (light) */
+  --shadow-xs-value: 0 1px 2px rgba(0, 0, 0, 0.04);
+  --shadow-sm-value: 0 1px 3px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.04);
+  --shadow-md-value: 0 4px 6px -1px rgba(0, 0, 0, 0.06), 0 2px 4px -2px rgba(0, 0, 0, 0.04);
+  --shadow-lg-value: 0 10px 15px -3px rgba(0, 0, 0, 0.06), 0 4px 6px -4px rgba(0, 0, 0, 0.04);
+  --shadow-card-value: 0 0 0 1px rgba(0, 0, 0, 0.06), 0 1px 3px rgba(0, 0, 0, 0.04);
+  --shadow-popover-value: 0 0 0 1px rgba(0, 0, 0, 0.06), 0 12px 24px -4px rgba(0, 0, 0, 0.12);
+  --shadow-focus-value: 0 0 0 2px rgba(20, 184, 166, 0.4);
+}
+
+/* Dark mode */
+.dark {
+  /* Neutrals (same role positions, inverted hex) */
+  --gray-50: #111111;
+  --gray-100: #171717;
+  --gray-150: #1e1e1e;
+  --gray-200: #262626;
+  --gray-300: #404040;
+  --gray-400: #525252;
+  --gray-500: #737373;
+  --gray-600: #a3a3a3;
+  --gray-700: #d4d4d4;
+  --gray-800: #e5e5e5;
+  --gray-900: #f5f5f5;
+  --gray-950: #fafafa;
+
+  /* Teal */
+  --teal-50: #042f2e;
+  --teal-100: #064e45;
+  --teal-200: #0f766e;
+  --teal-300: #0d9488;
+  --teal-400: #14b8a6;
+  --teal-500: #2dd4bf;
+  --teal-600: #5eead4;
+  --teal-700: #99f6e4;
+  --teal-800: #ccfbf1;
+  --teal-900: #f0fdfa;
+
+  /* Clinical status */
+  --status-stable-bg: #052e16;
+  --status-stable-fg: #4ade80;
+  --status-critical-bg: #450a0a;
+  --status-critical-fg: #fca5a5;
+  --status-caution-bg: #451a03;
+  --status-caution-fg: #fcd34d;
+  --status-admitted-bg: #042f2e;
+  --status-admitted-fg: #5eead4;
+  --status-discharged-bg: #2e1065;
+  --status-discharged-fg: #c4b5fd;
+  --status-pending-bg: #262626;
+  --status-pending-fg: #a3a3a3;
+
+  /* Alert: dark mode uses outline (transparent fill, red border, soft red text) */
+  --alert-bg: transparent;
+  --alert-border: #7f1d1d;
+  --alert-fg: #fca5a5;
+
+  /* Semantic */
+  --background: #0a0a0a;
+  --foreground: #e5e5e5;
+  --card: #171717;
+  --card-foreground: #e5e5e5;
+  --popover: #171717;
+  --popover-foreground: #e5e5e5;
+  --primary: #2dd4bf;
+  --primary-foreground: #042f2e;
+  --primary-hover: #5eead4;
+  --primary-active: #99f6e4;
+  --secondary: #262626;
+  --secondary-foreground: #e5e5e5;
+  --muted: #111111;
+  --muted-foreground: #a3a3a3;
+  --accent: #042f2e;
+  --accent-foreground: #5eead4;
+  --destructive: #fca5a5;
+  --destructive-foreground: #042f2e;
+  --border: #262626;
+  --input: #262626;
+  --ring: #2dd4bf;
+
+  /* Sidebar */
+  --sidebar: #111111;
+  --sidebar-foreground: #e5e5e5;
+  --sidebar-primary: #2dd4bf;
+  --sidebar-primary-foreground: #042f2e;
+  --sidebar-accent: #042f2e;
+  --sidebar-accent-foreground: #5eead4;
+  --sidebar-border: #262626;
+  --sidebar-ring: #2dd4bf;
+
+  /* Charts (brighter to read on dark) */
+  --chart-1: #2dd4bf;
+  --chart-2: #5eead4;
+  --chart-3: #99f6e4;
+  --chart-4: #a3a3a3;
+  --chart-5: #e5e5e5;
+
+  /* Shadows (dark: stronger, plus a faint white inner edge) */
+  --shadow-xs-value: 0 1px 2px rgba(0, 0, 0, 0.3);
+  --shadow-sm-value: 0 1px 3px rgba(0, 0, 0, 0.4), 0 1px 2px rgba(0, 0, 0, 0.3);
+  --shadow-md-value: 0 4px 6px -1px rgba(0, 0, 0, 0.4), 0 2px 4px -2px rgba(0, 0, 0, 0.3);
+  --shadow-lg-value: 0 10px 15px -3px rgba(0, 0, 0, 0.5), 0 4px 6px -4px rgba(0, 0, 0, 0.3);
+  --shadow-card-value: 0 0 0 1px rgba(255, 255, 255, 0.06), 0 1px 3px rgba(0, 0, 0, 0.4);
+  --shadow-popover-value: 0 0 0 1px rgba(255, 255, 255, 0.08), 0 12px 24px -4px rgba(0, 0, 0, 0.6);
+  --shadow-focus-value: 0 0 0 2px rgba(45, 212, 191, 0.3);
+}
+
+/* Reveal animations, used for staggered entrances. Reduced-motion users get
+   the final state instantly via the motion-reduce variants at the call site. */
+@keyframes medsync-reveal-up {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes medsync-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@utility reveal-up {
+  animation: medsync-reveal-up var(--duration-reveal) var(--ease-expo-out) both;
+}
+
+@utility fade-in-slow {
+  animation: medsync-fade-in var(--duration-reveal) var(--ease-expo-out) both;
+}
+
+/* Interaction layer: the system-wide motion vocabulary.
+     tap              : tactile press on tap-first controls (chips, segments)
+     card-lift        : surfaces rise to meet the pointer
+     scale-in         : things pop into existence (badges, chips, panels)
+     select-flare     : a one-shot teal ring flare confirming a selection
+     skeleton-shimmer : loading surfaces breathe
+     stagger-children : lists and sections cascade in
+   All gated for reduced motion at the utility level, so call sites stay clean. */
+
+@keyframes medsync-scale-in {
+  from {
+    opacity: 0;
+    transform: scale(0.92);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes medsync-select-flare {
+  0% {
+    box-shadow: 0 0 0 0 rgba(20, 184, 166, 0.45);
+  }
+  100% {
+    box-shadow: 0 0 0 6px rgba(20, 184, 166, 0);
+  }
+}
+
+@keyframes medsync-shimmer {
+  from {
+    background-position: 200% 0;
+  }
+  to {
+    background-position: -200% 0;
+  }
+}
+
+/* Tactile press for tap-first controls. Composes with existing transition
+   classes (it only adds transform). */
+@utility tap {
+  @media (prefers-reduced-motion: no-preference) {
+    transition-property: transform, background-color, border-color, color, box-shadow;
+    transition-duration: var(--duration-normal);
+    transition-timing-function: var(--ease-expo-out);
+    &:active {
+      transform: scale(0.96);
+    }
+  }
+  /* Keyboard focus ring (always shown, never motion-gated). The shadow token
+     is used rather than a fixed colour so the ring flips with the theme. */
+  &:focus-visible {
+    outline: none;
+    box-shadow: var(--shadow-focus);
+  }
+}
+
+/* Surfaces rise to meet the pointer. Border sharpens, shadow deepens. */
+@utility card-lift {
+  transition:
+    transform var(--duration-fast) var(--ease-expo-out),
+    box-shadow var(--duration-fast) var(--ease-expo-out),
+    border-color var(--duration-fast) var(--ease-expo-out);
+  @media (prefers-reduced-motion: no-preference) {
+    &:hover {
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-md);
+    }
+  }
+  &:hover {
+    border-color: var(--gray-300);
+  }
+}
+
+@utility scale-in {
+  @media (prefers-reduced-motion: no-preference) {
+    animation: medsync-scale-in var(--duration-slow) var(--ease-expo-out) both;
+  }
+}
+
+/* One-shot confirmation flare, re-triggers via key change or class toggle. */
+@utility select-flare {
+  @media (prefers-reduced-motion: no-preference) {
+    animation: medsync-select-flare var(--duration-reveal) var(--ease-expo-out) 1;
+  }
+}
+
+@utility skeleton-shimmer {
+  background: linear-gradient(
+    100deg,
+    var(--gray-100) 40%,
+    var(--gray-150) 50%,
+    var(--gray-100) 60%
+  );
+  background-size: 200% 100%;
+  @media (prefers-reduced-motion: no-preference) {
+    animation: medsync-shimmer 1.6s linear infinite;
+  }
+}
+
+/* Cascading entrance for lists and sections: the parent gets
+   .stagger-children, each direct child reveals with an incremental delay.
+   Capped at 10. */
+@utility stagger-children {
+  @media (prefers-reduced-motion: no-preference) {
+    & > * {
+      animation: medsync-reveal-up var(--duration-reveal) var(--ease-expo-out) both;
+    }
+    & > *:nth-child(1) {
+      animation-delay: 0ms;
+    }
+    & > *:nth-child(2) {
+      animation-delay: 40ms;
+    }
+    & > *:nth-child(3) {
+      animation-delay: 80ms;
+    }
+    & > *:nth-child(4) {
+      animation-delay: 120ms;
+    }
+    & > *:nth-child(5) {
+      animation-delay: 160ms;
+    }
+    & > *:nth-child(6) {
+      animation-delay: 200ms;
+    }
+    & > *:nth-child(7) {
+      animation-delay: 240ms;
+    }
+    & > *:nth-child(8) {
+      animation-delay: 280ms;
+    }
+    & > *:nth-child(9) {
+      animation-delay: 320ms;
+    }
+    & > *:nth-child(n + 10) {
+      animation-delay: 360ms;
+    }
+  }
+}
+
+/* Frosted sticky-bar surface. */
+@utility glass {
+  background-color: color-mix(in srgb, var(--background) 86%, transparent);
+  @supports (backdrop-filter: blur(8px)) {
+    backdrop-filter: blur(8px) saturate(1.4);
+  }
+}
+
+/* Forced-dark sections: the teal token scale flips between modes
+   (teal-50 is #f0fdfa light, #042f2e dark), so any teal utility on an
+   always-dark surface would invert in dark mode and the text would vanish.
+   This utility locks every teal variable to its light-mode value within the
+   scoped element and its descendants. */
+@utility medsync-forced-dark {
+  --teal-50: #f0fdfa;
+  --teal-100: #ccfbf1;
+  --teal-200: #99f6e4;
+  --teal-300: #5eead4;
+  --teal-400: #2dd4bf;
+  --teal-500: #14b8a6;
+  --teal-600: #0d9488;
+  --teal-700: #0f766e;
+  --teal-800: #115e59;
+  --teal-900: #134e4a;
+}
+
+/* Base layer: minimal global rules. Components own their styles. */
+@layer base {
+  *,
+  *::before,
+  *::after {
+    border-color: var(--color-border);
+  }
+
+  html {
+    font-family: var(--font-sans);
+    font-feature-settings: "ss01", "cv01", "cv11";
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+    color-scheme: light;
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    html {
+      scroll-behavior: smooth;
+    }
+  }
+
+  [data-section-anchor] {
+    scroll-margin-top: 80px;
+  }
+
+  html.dark {
+    color-scheme: dark;
+  }
+
+  body {
+    background-color: var(--color-background);
+    color: var(--color-foreground);
+  }
+
+  /* Uniform keyboard-focus ring for any interactive element that does not
+     opt out (links, bare buttons, summary and so on). Pointer and touch
+     focus are left alone via :focus-visible. */
+  :where(a, button, summary, [role="button"], [tabindex]):focus-visible {
+    outline: 2px solid var(--color-ring);
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+
+  .tabular {
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* Safety net. Every animation here is gated at its own call site as well,
+     but a reader who has asked for less motion must never be given it, not
+     even by a library that writes styles straight onto an element. */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 1ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 1ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+}

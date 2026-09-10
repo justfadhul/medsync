@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="en-GB">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Bionic Islet Sensor Explorer</title>
+    <meta
+      name="description"
+      content="An interactive design of the MedSync bionic islet glucose-sensing subsystem. Document MS-BI-B3-APP-001. An illustrative model, not a medical device, and not connected to any device."
+    />
+    <script>
+      // Set the theme before first paint so the page never flashes the wrong
+      // one. Reads the stored choice, else the operating system preference.
+      // Keep the storage key in step with src/lib/use-theme.ts.
+      (function () {
+        try {
+          var stored = window.localStorage.getItem("islet-sensor-explorer.theme");
+          var prefersDark =
+            typeof window.matchMedia === "function" &&
+            window.matchMedia("(prefers-color-scheme: dark)").matches;
+          var dark = stored === "dark" || (stored !== "light" && prefersDark);
+          document.documentElement.classList.toggle("dark", dark);
+        } catch (error) {
+          // Storage can be blocked. The light theme is a safe default.
+        }
+      })();
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

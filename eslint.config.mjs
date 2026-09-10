@@ -24,7 +24,7 @@ const eslintConfig = defineConfig([
       eqeqeq: ["error", "smart"],
     },
   },
-  globalIgnores([".next/**", "out/**", "build/**", "node_modules/**", "next-env.d.ts"]),
+  globalIgnores([".next/**", "out/**", "build/**", "node_modules/**", "apps/**", "next-env.d.ts"]),
 ]);
 
 export default eslintConfig;
