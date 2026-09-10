@@ -176,3 +176,35 @@ sections are appended at the end. British English throughout, and no em dashes.
   floated full-width legend it pushed the toggle rows 119px past the right edge
   at 390px. `role="group"` with `aria-labelledby` reads the same to a screen
   reader and lays out correctly.
+
+## 2026-09-10: Phase 5, defence, journey, overview and polish
+
+- **The Latin cuts of the three fonts are preloaded from the emitted bundle.**
+  Without it the page painted in the fallback face and reflowed when Geist
+  arrived, measuring 0.149 of cumulative layout shift and holding the
+  performance score at 94. A small build plugin reads the hashed file names out
+  of the bundle and writes the preload tags, so nothing is guessed. Performance
+  is 100 on all nine screens with it.
+- **The other font subsets are still emitted and are not a problem.** The
+  package ships Cyrillic, Vietnamese and Latin-extended cuts alongside Latin.
+  They sit in `dist` unused, because each carries a `unicode-range` and a
+  Latin-only page never asks for them. Removing them would save disk, not
+  network, so they stay rather than the import being hand-pruned.
+- **Interactive SVG groups render their number and their name inside one text
+  element with positioned spans.** Two sibling text elements concatenate with no
+  space between them, so a node's visible text read "1Optical tip" while its
+  accessible name read "1 Optical tip", and a voice control could not address it
+  by what the reader could see.
+- **`label-content-name-mismatch` still reports on the two node maps, and is
+  left as it is.** It does not affect the accessibility score, which is 100 on
+  all nine screens, and axe-core's default rule set reports zero violations at
+  both widths. The rule compares a control's accessible name with its visible
+  text, and for an SVG group made of several positioned spans "visible text" is
+  not a well defined string. Every name is a sentence that contains the words on
+  screen, and the keyboard and screen-reader behaviour is verified working.
+  Bending the names further to satisfy the heuristic would make them worse for
+  the people the rule exists to serve.
+- **The centre of the defence diagram is not interactive.** The seven rings are
+  concentric, so their bounding boxes nest, and a pointer aimed at the middle
+  hit whichever ring happened to be on top. The decorative centre now ignores
+  the pointer, and each ring is hit through its own line.

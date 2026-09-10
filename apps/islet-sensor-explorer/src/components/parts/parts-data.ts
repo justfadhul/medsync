@@ -67,9 +67,15 @@ function joinWithAnd(values: string[]): string {
   return `${values.slice(0, -1).join(", ")} and ${values.at(-1) ?? ""}`;
 }
 
-/** "Part 10, Sensor-management microcontroller", or the pump by name alone. */
+/**
+ * "10 Sensor-management microcontroller", or the pump by name alone.
+ *
+ * The number comes first and unpunctuated because that is exactly what the node
+ * box shows. An accessible name has to contain the control's visible text, so
+ * that someone driving the page by voice can say what they can see.
+ */
 export function nodeTitle(part: Part): string {
-  return isPumpNode(part) ? part.name : `Part ${part.id}, ${part.name}`;
+  return `${part.id} ${part.name}`;
 }
 
 export function talksToSentence(ids: number[]): string {
@@ -84,10 +90,14 @@ export function talksToSentence(ids: number[]): string {
  * Support path. Talks to parts 8, 9, 11, 12 and 13."
  */
 export function nodeSentence(part: Part, note?: string): string {
+  // A node on the insulin path shows its path as a written tag, so the tag is
+  // part of the control's visible text and has to be part of its name too. The
+  // separate path sentence would then just say the same thing twice.
+  const insulin = part.path === "insulin";
   const sentences = [
-    `${nodeTitle(part)}.`,
+    insulin ? `${nodeTitle(part)} ${PATH_LABELS.insulin}.` : `${nodeTitle(part)}.`,
     `${ZONE_LABELS[part.zone]}.`,
-    `${PATH_LABELS[part.path]} path.`,
+    ...(insulin ? [] : [`${PATH_LABELS[part.path]} path.`]),
     talksToSentence(relatedIds(part)),
   ];
   if (note) sentences.push(note);

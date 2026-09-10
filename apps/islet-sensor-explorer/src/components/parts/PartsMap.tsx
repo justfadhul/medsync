@@ -191,38 +191,44 @@ function MapNode({
         rx={4}
         className="fill-gray-100"
       />
-      <text
-        x={node.x + ID_CHIP_X + ID_CHIP_W / 2}
-        y={node.cy}
-        textAnchor="middle"
-        dominantBaseline="central"
-        className="text-caption tabular fill-gray-600 font-mono"
-      >
-        {part.id}
+      {/* One text element with positioned spans. Separate text elements
+          concatenate with no space between them, so the node's visible text
+          would read "1Optical tip" and would not match its accessible name. */}
+      <text className="text-body-s fill-gray-900">
+        <tspan
+          x={node.x + ID_CHIP_X + ID_CHIP_W / 2}
+          y={node.cy}
+          textAnchor="middle"
+          dominantBaseline="central"
+          className="text-caption tabular fill-gray-600 font-mono"
+        >
+          {part.id}
+        </tspan>
+
+        {lines.map((line, index) => (
+          <tspan
+            key={`${index}-${line}`}
+            x={node.x + LABEL_X}
+            y={firstY + index * LABEL_LINE_H}
+            dominantBaseline="central"
+          >
+            {" "}
+            {line}
+          </tspan>
+        ))}
+
+        {insulin ? (
+          <tspan
+            x={node.x + LABEL_X}
+            y={firstY + lines.length * LABEL_LINE_H}
+            dominantBaseline="central"
+            className="text-caption fill-status-critical-fg"
+          >
+            {" "}
+            {PATH_LABELS.insulin}
+          </tspan>
+        ) : null}
       </text>
-
-      {lines.map((line, index) => (
-        <text
-          key={`${index}-${line}`}
-          x={node.x + LABEL_X}
-          y={firstY + index * LABEL_LINE_H}
-          dominantBaseline="central"
-          className="text-body-s fill-gray-900"
-        >
-          {line}
-        </text>
-      ))}
-
-      {insulin ? (
-        <text
-          x={node.x + LABEL_X}
-          y={firstY + lines.length * LABEL_LINE_H}
-          dominantBaseline="central"
-          className="text-caption fill-status-critical-fg"
-        >
-          {PATH_LABELS.insulin}
-        </text>
-      ) : null}
     </g>
   );
 }

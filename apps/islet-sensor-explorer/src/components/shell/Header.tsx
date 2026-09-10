@@ -34,7 +34,11 @@ export function Header({ onOpenSources }: HeaderProps) {
             size="sm"
             onClick={toggleTheme}
             aria-pressed={isDark}
-            aria-label={isDark ? "Switch to the light theme" : "Switch to the dark theme"}
+            aria-label={
+              isDark
+                ? "Dark theme. Switch to the light theme."
+                : "Light theme. Switch to the dark theme."
+            }
           >
             {isDark ? <MoonIcon className="size-4" /> : <SunIcon className="size-4" />}
             <span className="hidden sm:inline">{isDark ? "Dark" : "Light"}</span>
