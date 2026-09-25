@@ -23,7 +23,7 @@ export const ONBOARDING_DOORS: ReadonlyArray<{
   {
     audience: "patient",
     label: "I'm a patient",
-    sub: "Sign up — active immediately",
+    sub: "Sign up — register now",
     href: "/signup/patient",
     Icon: UserIcon,
   },

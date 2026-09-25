@@ -96,7 +96,9 @@ export function MobileTabBar({
     <nav
       aria-label="Patient navigation"
       className={cn(
-        "border-border bg-background/95 supports-backdrop-filter:bg-background/80 fixed inset-x-0 bottom-0 z-30 border-t supports-backdrop-filter:backdrop-blur",
+        // Opaque, not frosted: behind an 80% bar the idle labels' contrast
+        // fell with whatever scrolled underneath (axe, light theme).
+        "border-border bg-background fixed inset-x-0 bottom-0 z-30 border-t",
         "pt-1.5 pb-[max(env(safe-area-inset-bottom),0.5rem)]",
         "md:hidden",
         className,
@@ -111,6 +113,7 @@ export function MobileTabBar({
               <Link
                 href={item.href}
                 aria-current={isActive ? "page" : undefined}
+                data-place={isActive ? "" : undefined}
                 className={cn(
                   // min-h-11 is the 44px touch target; px-2 py-1.5 was ~32px.
                   "group relative flex min-h-11 flex-col items-center justify-center gap-0.5 rounded-md px-1 py-1.5 transition-colors outline-none",
@@ -119,7 +122,7 @@ export function MobileTabBar({
                   // which reads at 14:1 on the dark bar; the override this
                   // carried pinned brand-300 (#0d9488 in dark) at 4.8:1 —
                   // the same contrast failure the badge below had.
-                  isActive ? "text-brand-700" : "text-muted-foreground",
+                  isActive ? "text-plum-700" : "text-muted-foreground",
                 )}
               >
                 {/* The non-colour half of "you are here": a mark that is

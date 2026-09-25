@@ -111,7 +111,7 @@ const makeStyles = (c: Palette) =>
       width: "100%",
       aspectRatio: 16 / 10,
       borderRadius: radius["2xl"],
-      backgroundColor: c.accent,
+      backgroundColor: c.place,
     },
     head: { flexDirection: "row", alignItems: "center", gap: space[3] },
     names: { flex: 1, gap: 2 },

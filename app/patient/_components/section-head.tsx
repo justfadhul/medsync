@@ -19,10 +19,12 @@ export function SectionHead({
         {title}
       </h2>
       {/* No underline at rest — blue-underlined "view all" is not in the
-          system; the negative margin keeps the 44px target invisible. */}
+          system; the negative margin keeps the 44px target invisible.
+          teal-700, not `primary`: teal-600 on the page ground is 3.6:1, under
+          AA for body text, and the teal scale inverts in dark on its own. */}
       <Link
         href={linkHref}
-        className="text-primary text-body-s duration-fast ease-expo-out -my-2 inline-flex min-h-11 shrink-0 items-center rounded-md underline-offset-4 transition-colors hover:underline focus-visible:underline"
+        className="text-body-s duration-fast ease-expo-out -my-2 inline-flex min-h-11 min-w-11 shrink-0 items-center justify-end rounded-md text-teal-700 underline-offset-4 transition-colors hover:underline focus-visible:underline"
       >
         {linkLabel}
       </Link>

@@ -1,9 +1,11 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import Link from "next/link";
+import { redirect } from "next/navigation";
 
 import { ArrestAlarm } from "@/components/resus/arrest-alarm";
 import { requireClinicianScope } from "@/lib/clinician/scope";
+import { isDoctorUser } from "@/lib/doctor/scope";
 import { resusDeskV2 } from "@/lib/resus/feature";
 import { cn } from "@/lib/utils";
 
@@ -27,6 +29,11 @@ export const metadata: Metadata = {
  */
 export default async function ClinicianLayout({ children }: { children: ReactNode }) {
   const scope = await requireClinicianScope();
+  // A doctor-cadre user belongs in /doctor — a stale bookmark or a link
+  // into /clinician/availability must not strand them in the fallback
+  // workspace. isDoctorUser runs requireDoctorScope's own query, so the
+  // two gates cannot bounce a user back and forth.
+  if (await isDoctorUser(scope.userId)) redirect("/doctor/schedule");
 
   return (
     <div className="bg-background text-foreground flex min-h-svh w-full flex-col">

@@ -43,7 +43,7 @@ export function TriageWorklist({
       <div className="border-border bg-card relative isolate flex flex-col items-center gap-2.5 overflow-hidden rounded-xl border p-12 text-center">
         <div
           aria-hidden
-          className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(ellipse_at_top,rgba(13,148,136,0.04),transparent_65%)]"
+          className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(ellipse_at_top,rgba(159,47,126,0.04),transparent_65%)]"
         />
         <span className="bg-muted/50 ring-border flex size-10 items-center justify-center rounded-full ring-1">
           <DoorOpenIcon className="text-muted-foreground size-5" strokeWidth={1.5} aria-hidden />

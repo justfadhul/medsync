@@ -44,7 +44,11 @@ describe("revealPatientIdentities", () => {
     expect(src.startsWith('import "server-only";')).toBe(true);
     expect(fn).toMatch(/db\s*\.insert\(clinicalPhiAccessLog\)/);
     expect(fn).toContain('accessBasis: "department_recent"');
-    expect(fn).toMatch(/surface: `\$\{args\.surface\}\$\{OPERATIONAL_BASIS_SUFFIX\}`/);
+    // Operational by default; the doctor workspace's clinical list (`clinical: true`)
+    // logs its own surface without the suffix — the audit-first order is the same.
+    expect(fn).toMatch(
+      /surface: args\.clinical \? args\.surface : `\$\{args\.surface\}\$\{OPERATIONAL_BASIS_SUFFIX\}`/,
+    );
     // The insert precedes the assignment of the name and the photo.
     expect(fn.indexOf(".insert(")).toBeLessThan(fn.indexOf("row.displayName ="));
     expect(fn.indexOf(".insert(")).toBeLessThan(fn.indexOf("row.photoUrl ="));

@@ -142,7 +142,7 @@ function EmptyPanel({
       </svg>
       <span
         aria-hidden
-        className="scale-in bg-brand-50 text-brand-700 ring-brand-200/70 dark:bg-brand-950/40 dark:text-brand-300 dark:ring-brand-800/40 inline-flex size-10 items-center justify-center rounded-full ring-1"
+        className="scale-in bg-plum-50 text-plum-700 ring-plum-200/70 inline-flex size-10 items-center justify-center rounded-full ring-1"
       >
         <UsersIcon className="size-5" />
       </span>

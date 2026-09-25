@@ -36,10 +36,44 @@ export const brand = {
 } as const;
 
 /**
- * The accent and the signature call-to-action fill. The design system has one
- * hue, so this is the brand ramp under the name the screens were written to.
+ * The accent and the signature call-to-action fill — the brand ramp under the
+ * name the screens were written to.
  */
 export const mint = brand;
+
+/**
+ * Plum. The second hue (ADR 0097) — `DESIGN-medsync.md` § Secondary Plum.
+ * Colour as *place*, never state: where you are, who this is. Never a button,
+ * a selected control or a status. `plumDark` is the web's `.dark` ramp, where
+ * 50 is the deep end and 600 the bright anchor.
+ */
+export const plum = {
+  50: "#fdf3f9",
+  100: "#fee4f3",
+  200: "#fecbe9",
+  300: "#fea2dc",
+  400: "#ea7bc4",
+  500: "#c953a3",
+  600: "#9f2f7e",
+  700: "#87236a",
+  800: "#6a1952",
+  900: "#4e113c",
+  950: "#321227",
+} as const;
+
+export const plumDark = {
+  50: "#321227",
+  100: "#4a173a",
+  200: "#671e51",
+  300: "#862e6b",
+  400: "#a94088",
+  500: "#cb58a6",
+  600: "#ed85c8",
+  700: "#fda8dd",
+  800: "#ffcdeb",
+  900: "#fde7f4",
+  950: "#fdf3f9",
+} as const;
 
 export const gray = {
   50: "#fafafa",
@@ -118,6 +152,14 @@ export interface Palette {
   primaryForeground: string;
   /** A brand-tinted surface for a selected or emphasised thing — `--accent`. */
   accent: string;
+  /**
+   * The plum-tinted surface for a *place* — an avatar, an icon disc, the
+   * current tab, the current step (ADR 0097). Not for anything selected or
+   * anything that means a state; those stay `accent`.
+   */
+  place: string;
+  /** Ink on `place`. */
+  placeForeground: string;
   /** Text on `accent`. */
   accentForeground: string;
 
@@ -171,6 +213,8 @@ export const light: Palette = {
   primaryForeground: "#ffffff",
   accent: brand[50],
   accentForeground: brand[600],
+  place: plum[50],
+  placeForeground: plum[800],
   cta: mint[300],
   ctaForeground: brand[950],
   ctaMuted: brand[900],
@@ -196,6 +240,8 @@ export const dark: Palette = {
   primaryForeground: brand[950],
   accent: brand[950],
   accentForeground: brand[300],
+  place: plumDark[50],
+  placeForeground: plumDark[800],
   // teal-400 rather than the web's darkened gradient: a filled control on a
   // near-black ground wants the accent bright enough to be the brightest thing
   // on the screen, and its text dark enough to read on it (7.8:1).

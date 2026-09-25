@@ -5,16 +5,22 @@
  * handling-flow's "presence drops off" rule depends on:
  *   1. encounters.state → 'completed', ended_at = now(),
  *      completion_reason (optional)
- *   2. queue_entries.state → 'done', completed_at = now() for the
- *      patient's open queue row at the same hospital today
+ *   2. queue_entries.state → 'done', completed_at = now() for THIS
+ *      encounter's queue row, plus the patient's row still waiting in
+ *      the encounter's department today — never another department's
  *   3. patient_intakes.status → 'completed' + encounter_id back-link
- *      for any open intake for the same patient at this hospital
- *      today
+ *      for THIS visit's open intake: the one already linked to the
+ *      encounter, to its triage record, or to its booking — else the
+ *      one received into the encounter's department
  *   4. nursing_assignments.ends_at = now() for active assignments of
  *      this patient at this hospital (the "auto-end" semantic)
  *   5. appointments.status → 'completed' for the linked appointment
  *      (encounters.appointment_id) if it is still arrived/in_progress —
  *      before Gate A′ no code path ever wrote that status.
+ *
+ * Scoped to the encounter (ADR 0101): a patient seen in two clinics the
+ * same day keeps their place in the second when the first doctor ends
+ * the visit.
  *
  * One write → five boards updated. Per docs/patient-handling-flow-
  * gate-a-proposal.md §6 and docs/booking-app-gate-a-proposal.md §5.13 (c).
@@ -74,7 +80,9 @@ Deno.serve(async (request: Request) => {
 
   const { data: enc, error: encErr } = await sb
     .from("encounters")
-    .select("id, hospital_id, patient_user_id, clinician_user_id, state, appointment_id")
+    .select(
+      "id, hospital_id, patient_user_id, clinician_user_id, state, appointment_id, department_id, triage_record_id",
+    )
     .eq("id", input.encounter_id)
     .maybeSingle();
   if (encErr) return serverError(encErr.message, init);
@@ -134,25 +142,56 @@ Deno.serve(async (request: Request) => {
     return serverError("encounter update failed", init);
   }
 
-  // 2. Close the queue row for this patient at this hospital today.
-  const { error: e2, count: queueCount } = await sb
+  // 2. Close this encounter's queue row, and a row of the patient's still
+  //    waiting in the same department today (a triage-opened encounter never
+  //    wrote its encounter_id onto the row). Another department's line is a
+  //    different visit and is left alone.
+  const { error: e2, count: ownQueueCount } = await sb
     .from("queue_entries")
     .update({ state: "done", completed_at: now })
-    .eq("patient_user_id", enc.patient_user_id)
-    .eq("hospital_id", enc.hospital_id)
-    .gte("arrived_at", startOfDay.toISOString())
+    .eq("encounter_id", enc.id)
     .in("state", ["waiting", "being_seen"])
     .select("id", { count: "exact", head: true });
   if (e2) log.warn("queue update failed (non-fatal)", { requestId, reason: e2.message });
+  let queueCount = ownQueueCount ?? 0;
+  if (enc.department_id) {
+    const { error: e2b, count } = await sb
+      .from("queue_entries")
+      .update({ state: "done", completed_at: now })
+      .eq("patient_user_id", enc.patient_user_id)
+      .eq("hospital_id", enc.hospital_id)
+      .eq("department_id", enc.department_id)
+      .eq("state", "waiting")
+      .gte("arrived_at", startOfDay.toISOString())
+      .select("id", { count: "exact", head: true });
+    if (e2b) log.warn("queue update failed (non-fatal)", { requestId, reason: e2b.message });
+    queueCount += count ?? 0;
+  }
 
-  // 3. Close the intake row for this patient at this hospital today.
+  // 3. Close this visit's intake, found by what links it to the encounter
+  //    rather than by date: a ticket declared before midnight and seen after
+  //    it is still this visit's. The department is the fallback only for an
+  //    unbooked visit, so a second clinic's ticket survives a booked one.
+  let triageIntakeId: string | null = null;
+  if (enc.triage_record_id) {
+    const { data: tr } = await sb
+      .from("triage_records")
+      .select("intake_id")
+      .eq("id", enc.triage_record_id)
+      .maybeSingle();
+    triageIntakeId = (tr?.intake_id as string | null | undefined) ?? null;
+  }
+  const intakeLinks = [`encounter_id.eq.${enc.id}`];
+  if (triageIntakeId) intakeLinks.push(`id.eq.${triageIntakeId}`);
+  if (enc.appointment_id) intakeLinks.push(`appointment_id.eq.${enc.appointment_id}`);
+  else if (enc.department_id) intakeLinks.push(`receiving_department_id.eq.${enc.department_id}`);
   const { error: e3, count: intakeCount } = await sb
     .from("patient_intakes")
     .update({ status: "completed", encounter_id: enc.id })
     .eq("patient_user_id", enc.patient_user_id)
     .eq("hospital_id", enc.hospital_id)
-    .gte("arrived_at", startOfDay.toISOString())
     .in("status", ["arrived", "awaiting_triage", "triaged"])
+    .or(intakeLinks.join(","))
     .select("id", { count: "exact", head: true });
   if (e3) log.warn("intake update failed (non-fatal)", { requestId, reason: e3.message });
 
@@ -182,7 +221,7 @@ Deno.serve(async (request: Request) => {
   }
 
   const cascade = {
-    queue_closed: queueCount ?? 0,
+    queue_closed: queueCount,
     intake_closed: intakeCount ?? 0,
     nursing_closed: naCount ?? 0,
     appointment_completed: appointmentCount ?? 0,

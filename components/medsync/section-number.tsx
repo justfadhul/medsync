@@ -12,7 +12,7 @@ export function SectionNumber({ n, className, ...props }: SectionNumberProps) {
       data-slot="section-number"
       className={cn(
         "inline-flex items-center justify-center px-2 py-0.5",
-        "bg-accent text-primary border-brand-100 border",
+        "bg-plum-50 text-plum-700 border-plum-100 border",
         "text-body-s font-mono leading-none font-semibold tabular-nums",
         "rounded-xs",
         className,

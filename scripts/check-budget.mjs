@@ -23,6 +23,12 @@ import { existsSync, readFileSync } from "node:fs";
 import { gzipSync } from "node:zlib";
 
 const CEILING_KB = 370;
+/**
+ * Tighter per-route ceilings. /patient: the home redesign (2026-09-23) may not
+ * grow past the page it replaced — 267.0 kB gz measured on the pre-change tree;
+ * the redesign itself measured 253.2 kB (ADR 0100).
+ */
+const ROUTE_CEILING_KB = { "/patient": 267 };
 const PREFIX = "/patient";
 const STATS = ".next/diagnostics/route-bundle-stats.json";
 
@@ -49,7 +55,7 @@ const gzipKb = (path) => {
 let over = 0;
 for (const r of rows.sort((a, b) => a.route.localeCompare(b.route))) {
   const kb = r.firstLoadChunkPaths.reduce((sum, p) => sum + gzipKb(p), 0);
-  const bad = kb > CEILING_KB;
+  const bad = kb > (ROUTE_CEILING_KB[r.route] ?? CEILING_KB);
   if (bad) over++;
   console.log(`${bad ? "OVER" : "  ok"}  ${kb.toFixed(1).padStart(6)} kB  ${r.route}`);
 }

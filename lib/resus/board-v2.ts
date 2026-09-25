@@ -33,6 +33,8 @@ import { createServiceClient } from "@/lib/supabase/service";
 
 export interface BoardV2Row {
   episodeId: string;
+  /** The patient, so the doctor workspace can put every episode on one row per patient. */
+  patientUserId: string | null;
   displayName: string | null;
   ageYears: number | null;
   trigger: string;
@@ -62,6 +64,7 @@ export interface BoardV2Row {
 
 export interface BoardV2Ended {
   episodeId: string;
+  patientUserId: string | null;
   displayName: string | null;
   ageYears: number | null;
   state: "concluded" | "cancelled";
@@ -86,6 +89,8 @@ export interface ResusBoardV2Data {
 const LIVE_EVENT_CAP = 30;
 const IDLE_NOTICES_PER_RENDER = 5;
 const DAY_MS = 24 * 3600_000;
+/** The "Red / L1 — open a resus" lookback. The doctor workspace reuses it (FW-5): no second number. */
+export const OPENABLE_LOOKBACK_MS = DAY_MS;
 
 const MODE_WORD: Record<EpisodePhase, string> = {
   survey: "Survey",
@@ -251,6 +256,7 @@ export async function fetchResusBoardV2(args: {
       : null;
     return {
       episodeId: r.id,
+      patientUserId: r.patientUserId,
       displayName: safeName(r.patientUserId, r.first, r.surname),
       ageYears,
       trigger: r.triggerReason ?? TRIGGER_LABEL[r.triggerKind] ?? r.triggerKind,
@@ -301,6 +307,7 @@ export async function fetchResusBoardV2(args: {
     .sort((a, b) => (b.endedAt?.getTime() ?? 0) - (a.endedAt?.getTime() ?? 0))
     .map((r) => ({
       episodeId: r.id,
+      patientUserId: r.patientUserId,
       displayName: safeName(r.patientUserId, r.first, r.surname),
       ageYears: r.dob ? computeAgeYears(r.dob.toString(), now) : null,
       state: r.state as BoardV2Ended["state"],

@@ -65,16 +65,14 @@ export function HospitalSidebarItem({ href, label, iconKey, badgeCount }: Props)
         "group tap text-body-s flex items-center gap-2.5 rounded-md px-2.5 py-1.5 transition-colors outline-none",
         "focus-visible:ring-brand-500/40 focus-visible:ring-2",
         isActive
-          ? "bg-brand-50 text-brand-700 ring-brand-500/15 dark:bg-brand-950/40 dark:text-brand-300 ring-1 ring-inset"
+          ? "bg-plum-50 text-plum-800 ring-plum-600/10 ring-1 ring-inset"
           : "text-muted-foreground hover:bg-muted hover:text-foreground",
       )}
     >
       <Icon
         className={cn(
           "size-4 shrink-0",
-          isActive
-            ? "text-brand-600 dark:text-brand-400"
-            : "text-muted-foreground/80 group-hover:text-foreground",
+          isActive ? "text-plum-600" : "text-muted-foreground/80 group-hover:text-foreground",
         )}
         aria-hidden
       />

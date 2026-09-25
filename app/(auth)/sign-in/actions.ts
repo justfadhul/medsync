@@ -3,13 +3,16 @@
 import { redirect } from "next/navigation";
 import { z } from "zod";
 
+import { SIGN_IN } from "@/content/auth";
+import { DOCTOR_CADRE_CODES } from "@/lib/doctor/scope";
 import { logger } from "@/lib/logger";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
+import { safeRedirect, signInErrorMessage } from "./errors";
 
 const SignInSchema = z.object({
-  email: z.string().email("Enter a valid email."),
-  password: z.string().min(1, "Required."),
+  email: z.string().email(SIGN_IN.errors.email),
+  password: z.string().min(1, SIGN_IN.errors.required),
   redirect: z.string().optional(),
 });
 
@@ -42,8 +45,9 @@ export async function signInAction(_prev: SignInState, formData: FormData): Prom
 
   if (error) {
     logger.warn("sign-in failed", { reason: error.message });
-    // Never leak whether email exists. Single generic message.
-    return { errors: { _form: "Invalid email or password." } };
+    // Never leak whether email exists: one message for an unknown email and a
+    // wrong password. Only a rate limit (429) says something different.
+    return { errors: { _form: signInErrorMessage(error) } };
   }
 
   // Role-aware default landing. Resolution order:
@@ -97,13 +101,9 @@ export async function signInAction(_prev: SignInState, formData: FormData): Prom
         .select("id, cadres!inner(code)")
         .eq("user_id", signInData.user.id)
         .in("state", ["active", "approved"])
-        .in("cadres.code", [
-          "INTERN_DOCTOR",
-          "MEDICAL_OFFICER",
-          "MEDICAL_OFFICER_SG",
-          "CONSULTANT",
-          "SENIOR_CONSULTANT",
-        ])
+        // The doctor workspace's own cadre set — never a copy of it, or a
+        // cadre it serves (the Clinical Officer) is routed to /clinician.
+        .in("cadres.code", [...DOCTOR_CADRE_CODES])
         .limit(1);
       if (doctorAffError) {
         logger.warn("sign-in.routing.doctor_cadre_query_failed", {
@@ -165,14 +165,7 @@ export async function signInAction(_prev: SignInState, formData: FormData): Prom
         if (aff) {
           const cadreCode = (aff as unknown as { cadres?: { code?: string } }).cadres?.code;
           const isDoctorCadre =
-            cadreCode != null &&
-            [
-              "INTERN_DOCTOR",
-              "MEDICAL_OFFICER",
-              "MEDICAL_OFFICER_SG",
-              "CONSULTANT",
-              "SENIOR_CONSULTANT",
-            ].includes(cadreCode);
+            cadreCode != null && (DOCTOR_CADRE_CODES as ReadonlyArray<string>).includes(cadreCode);
           const isNurseCadre =
             cadreCode != null && ["NURSE", "MIDWIFE", "SPECIALIST_NURSE"].includes(cadreCode);
           const isReceptionCadre = cadreCode === "RECEPTION";
@@ -221,10 +214,7 @@ export async function signInAction(_prev: SignInState, formData: FormData): Prom
     }
   }
 
-  const target =
-    parsed.data.redirect && parsed.data.redirect.startsWith("/")
-      ? parsed.data.redirect
-      : defaultTarget;
+  const target = safeRedirect(parsed.data.redirect) ?? defaultTarget;
 
   logger.info("sign-in succeeded", { target, routeReason });
   redirect(target);

@@ -46,23 +46,23 @@ export default async function SymptomsPage({
   if (mode === "off") redirect("/patient");
 
   return (
-    // Law 3: the catalog is permanently light, whatever the workspace's theme.
-    <div className="medsync-forced-light bg-background text-foreground -mx-4 -my-6 px-4 py-6 md:-mx-6 md:-my-8 md:px-6 md:py-8">
-      <Catalog
-        mode={mode}
-        hospital={
-          scope.primaryHospitalId
-            ? {
-                id: scope.primaryHospitalId,
-                name: scope.primaryHospitalName ?? "Your hospital",
-                emergencyPhone: scope.emergencyEntrancePhone,
-              }
-            : null
-        }
-        showPregnancyForMe={profile[0]?.sex !== "male"}
-        initialItem={typeof params.item === "string" ? params.item : null}
-        initialList={params.list === "danger" ? "danger" : null}
-      />
-    </div>
+    // No wrapper: the catalog follows the site theme (owner decision
+    // 2026-09-23, superseding PRD Law 3's forced light — /emergency went the
+    // same way in aa1fe46), so it sits on the shell's own ground.
+    <Catalog
+      mode={mode}
+      hospital={
+        scope.primaryHospitalId
+          ? {
+              id: scope.primaryHospitalId,
+              name: scope.primaryHospitalName ?? "Your hospital",
+              emergencyPhone: scope.emergencyEntrancePhone,
+            }
+          : null
+      }
+      showPregnancyForMe={profile[0]?.sex !== "male"}
+      initialItem={typeof params.item === "string" ? params.item : null}
+      initialList={params.list === "danger" ? "danger" : null}
+    />
   );
 }

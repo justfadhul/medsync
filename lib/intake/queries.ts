@@ -1,6 +1,6 @@
 import "server-only";
 
-import { and, asc, eq, gte, inArray, sql } from "drizzle-orm";
+import { and, asc, eq, gte, inArray, isNull, ne, or, sql } from "drizzle-orm";
 
 import { db } from "@/db";
 import { hospitalDepartments } from "@/db/schema/hospital-departments";
@@ -109,6 +109,10 @@ export async function fetchHospitalIncomingIntakes(args: {
   const conditions = [
     eq(patientIntakes.hospitalId, args.hospitalId),
     inArray(patientIntakes.status, statuses as string[]),
+    // ADR 0101: the panel this feeds is titled "Awaiting triage" on every
+    // home, and a patient the desk sent straight to the clinic is not. NULL
+    // (every row before migration 0067) still means triage.
+    or(isNull(patientIntakes.routedTo), ne(patientIntakes.routedTo, "clinic")),
   ];
   if (args.departmentId) {
     conditions.push(eq(patientIntakes.receivingDepartmentId, args.departmentId));

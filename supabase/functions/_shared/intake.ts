@@ -9,7 +9,10 @@
  * the appointment exist — and hands in an already-authorised input; this
  * file does the rest as the front door always has: the entry type drives
  * the never-block rule and the priority hint, the audit row lands FIRST
- * (fail closed), then the INSERT as `awaiting_triage`.
+ * (fail closed), then the INSERT as `awaiting_triage`, then — when the
+ * patient is known and a department was named — their place in that
+ * department's clinic line (ADR 0101), so a desk walk-in reaches the
+ * doctor's queue rail the way a checked-in booking does.
  *
  * KEY RULE — EMERGENCY NEVER BLOCKS. When the entry type is an emergency
  * (`entry_types.is_emergency`) the bare minimum is accepted (a patient OR
@@ -20,6 +23,7 @@ import type { SaAuditAction } from "./sa-audit.ts";
 import type { SupabaseClient } from "npm:@supabase/supabase-js@2.106.1";
 
 import { badRequest, serverError } from "./errors.ts";
+import { insertQueueRow } from "./queue.ts";
 import { recordSaAudit } from "./sa-audit.ts";
 
 export interface EntryTypeRow {
@@ -225,9 +229,20 @@ export async function registerIntake(
     return fail(serverError("intake insert failed", init));
   }
 
+  // No department or no known patient → no line to join; insertQueueRow says so.
+  const queueEntryId = await insertQueueRow(sb, {
+    hospital_id: input.hospitalId,
+    department_id: input.receivingDepartmentId ?? null,
+    patient_user_id: input.patientUserId ?? null,
+    appointment_id: input.appointmentId ?? null,
+    kind: entryType.is_emergency ? "urgent_walk_in" : "walk_in",
+    requestId,
+  });
+
   log.info("intake registered", {
     requestId,
     intake_id: intake.id,
+    queue_entry_id: queueEntryId,
     entry_type_code: input.entryTypeCode,
     is_emergency: entryType.is_emergency,
     priority_hint: intake.priority_hint,

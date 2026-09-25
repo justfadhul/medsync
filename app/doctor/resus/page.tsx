@@ -1,13 +1,16 @@
 import type { Metadata } from "next";
+import { redirect } from "next/navigation";
 
 import { ResusBoardV2 } from "@/app/nurse/resus/_components/board-v2";
 import { ResusBoard } from "@/app/nurse/resus/_components/resus-board";
+import { requireDoctorScope } from "@/lib/doctor/scope";
 import { canAdminCloseResus } from "@/lib/resus/authority";
 import { fetchResusBoard } from "@/lib/resus/board";
 import { fetchResusBoardV2 } from "@/lib/resus/board-v2";
 import { resusDeskV2 } from "@/lib/resus/feature";
 import { requireResusScope } from "@/lib/resus/scope";
 import { cn } from "@/lib/utils";
+import { doctorWorkspace } from "@/lib/workspace/feature";
 
 export const metadata: Metadata = {
   title: "Resus · MedSync",
@@ -22,6 +25,9 @@ export const dynamic = "force-dynamic";
  * desk links + open-resus redirects stay inside /doctor.
  */
 export default async function DoctorResusBoardPage() {
+  // Doctor workspace on: the board lives in the Resus lane (307). The desk stays.
+  const doctor = await requireDoctorScope();
+  if (doctorWorkspace(doctor.hospitalId)) redirect("/doctor?lane=resus");
   const scope = await requireResusScope("/doctor/resus");
   if (resusDeskV2()) {
     const [boardV2, canAdminClose] = await Promise.all([

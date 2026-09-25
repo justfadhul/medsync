@@ -17,8 +17,13 @@ const buttonVariants = cva(
   {
     variants: {
       variant: {
-        primary:
-          "bg-primary text-primary-foreground hover:bg-primary-hover active:bg-primary-active",
+        // White on teal-600 is 3.7:1 (fails AA for button text); teal-700 is
+        // 5.5:1 (landing v4, ADR 0099). Dark keeps the token pair (bright
+        // teal-500 fill, deep-teal text) because the teal scale inverts there.
+        primary: [
+          "bg-teal-700 text-white hover:bg-teal-800 active:bg-teal-900",
+          "dark:bg-primary dark:text-primary-foreground dark:hover:bg-primary-hover dark:active:bg-primary-active",
+        ].join(" "),
         secondary:
           "bg-secondary text-secondary-foreground border border-gray-200 dark:border-gray-300 hover:bg-muted hover:border-gray-300 active:bg-gray-150",
         ghost:
@@ -29,11 +34,15 @@ const buttonVariants = cva(
         // deep-teal text, rather than a filled brand button. Both scales flip
         // in dark mode, so the pairing holds without a dark: override.
         mint: "bg-mint-300 text-brand-900 hover:bg-mint-200 active:bg-mint-400 dark:bg-mint-700 dark:text-brand-100 dark:hover:bg-mint-800",
+        // Solid red with white text in BOTH themes: the one red thing stays
+        // unmistakable. The old dark pair (burgundy, pink text) vanished on a
+        // critical-tinted surface, and the catalog's interrupt sheet is exactly
+        // that burgundy. Tailwind's red ramp does not invert with the theme:
+        // white on its 600 step is 4.8:1, on the 700 step 6.5:1.
         emergency: [
           "bg-destructive text-white",
           "hover:bg-red-700 active:bg-red-800",
-          "dark:bg-status-critical-bg dark:text-status-critical-fg",
-          "dark:border dark:border-[#7f1d1d] dark:hover:bg-status-critical-bg/70",
+          "dark:bg-red-600 dark:hover:bg-red-700 dark:active:bg-red-800",
         ].join(" "),
         alert:
           "bg-alert-bg border border-alert-border text-alert-fg hover:bg-red-50 dark:hover:bg-status-critical-bg/40",

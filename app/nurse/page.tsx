@@ -38,7 +38,7 @@ export default async function NurseOverviewPage() {
       {/* Quiet atmosphere — a 5% teal wash behind the header, nothing louder. */}
       <div
         aria-hidden
-        className="pointer-events-none absolute inset-x-0 top-0 h-56 bg-[radial-gradient(80%_100%_at_50%_0%,rgba(13,148,136,0.05),transparent_70%)]"
+        className="pointer-events-none absolute inset-x-0 top-0 h-56 bg-[radial-gradient(80%_100%_at_50%_0%,rgba(159,47,126,0.05),transparent_70%)]"
       />
 
       <header className="reveal-up flex flex-col gap-2">

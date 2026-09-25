@@ -90,7 +90,19 @@ export function QueuePanel({
                             )}
                           </span>
                           <span className="text-muted-foreground text-caption font-normal">
-                            {[r.departmentName ?? "No department", r.entryTypeName].join(" · ")}
+                            {[
+                              r.departmentName ?? "No department",
+                              r.declaredByPatient ? "From the app" : r.entryTypeName,
+                              // Which door the desk sent them through (ADR 0101); a
+                              // row from before the choice existed was triaged.
+                              bucket === "declared"
+                                ? null
+                                : r.routedTo === "clinic"
+                                  ? "To clinic"
+                                  : "To triage",
+                            ]
+                              .filter(Boolean)
+                              .join(" · ")}
                           </span>
                           <span className="text-muted-foreground text-caption font-mono tabular-nums">
                             {bucket === "declared" ? "declared" : "since"}{" "}

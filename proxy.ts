@@ -26,13 +26,6 @@ const PUBLIC_PREFIXES = [
   "/sign-in", // includes /sign-in/mfa
   "/styleguide",
   "/api/health",
-  // Landing-page audience funnels — anonymous interest capture (RLS allows
-  // anon INSERT into interest_signups). /onboarding/mfa-setup stays protected
-  // because it is matched by ALWAYS_AUTH_REQUIRED_PREFIXES below and is not
-  // listed here.
-  "/onboarding/patient",
-  "/onboarding/clinical",
-  "/onboarding/hospital",
   // Phase 1 onboarding — intent selector + the three role-specific
   // signup flows. All public (signup pages run unauth by definition).
   "/signup", // covers /signup/{patient,clinical,hospital}
@@ -73,6 +66,18 @@ function isProtected(pathname: string): boolean {
   return ALWAYS_AUTH_REQUIRED_PREFIXES.some((p) => pathname === p || pathname.startsWith(`${p}/`));
 }
 
+/**
+ * A redirect that keeps the cookies `updateSession` just wrote. `getUser()` may
+ * have rotated the refresh token; a bare `NextResponse.redirect` drops the new
+ * one, leaves the browser holding a spent token, and ends the session early
+ * (Supabase SSR guidance: copy the cookies onto any new response).
+ */
+function redirectTo(url: URL, response: NextResponse): NextResponse {
+  const redirect = NextResponse.redirect(url);
+  for (const cookie of response.cookies.getAll()) redirect.cookies.set(cookie);
+  return redirect;
+}
+
 export async function proxy(request: NextRequest): Promise<NextResponse> {
   const { pathname } = request.nextUrl;
 
@@ -88,7 +93,7 @@ export async function proxy(request: NextRequest): Promise<NextResponse> {
     const url = request.nextUrl.clone();
     url.pathname = "/sign-in";
     url.searchParams.set("redirect", pathname);
-    return NextResponse.redirect(url);
+    return redirectTo(url, response);
   }
 
   // For role-gated MFA enforcement we need the auth helper. It calls into
@@ -100,7 +105,7 @@ export async function proxy(request: NextRequest): Promise<NextResponse> {
     const url = request.nextUrl.clone();
     url.pathname = "/sign-in/mfa";
     url.searchParams.set("redirect", pathname);
-    return NextResponse.redirect(url);
+    return redirectTo(url, response);
   }
 
   // Case 2: user holds a clinical/admin role but hasn't enrolled MFA yet.
@@ -108,7 +113,7 @@ export async function proxy(request: NextRequest): Promise<NextResponse> {
     if (!pathname.startsWith("/onboarding/mfa-setup")) {
       const url = request.nextUrl.clone();
       url.pathname = "/onboarding/mfa-setup";
-      return NextResponse.redirect(url);
+      return redirectTo(url, response);
     }
   }
 

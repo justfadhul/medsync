@@ -7,9 +7,16 @@ import { and, asc, desc, eq, gte, inArray, lt } from "drizzle-orm";
 import { db } from "@/db";
 import { hospitalDepartments } from "@/db/schema/hospital-departments";
 import { hospitals } from "@/db/schema/hospitals";
+import { patientIntakes } from "@/db/schema/patient-intakes";
 import { appointments } from "@/db/schema/scheduling";
 import { users } from "@/db/schema/users";
-import { DEFAULT_TIME_ZONE, localWeekdayAndMinutes } from "@/supabase/functions/_shared/slots";
+import {
+  DEFAULT_TIME_ZONE,
+  endOfLocalDay,
+  localDateKey,
+  localWeekdayAndMinutes,
+  startOfLocalDay,
+} from "@/supabase/functions/_shared/slots";
 import { normaliseSymptoms } from "@/supabase/functions/_shared/symptoms";
 
 /**
@@ -118,8 +125,9 @@ export interface AppointmentRow {
  *   The visits list needs this: a cancelled or declined future visit
  *   is still something the patient must be able to see.
  * - `upcoming-active` — only the statuses that are still going to
- *   happen. Home's "Upcoming" glance, which must not offer a
- *   cancelled visit as the next thing you are doing.
+ *   happen. Home's "Coming up", which must not offer a cancelled
+ *   visit as the next thing you are doing; home passes the start of
+ *   the clinic's day as `now`, so a session already under way stays.
  * - `past` — everything before `now`, newest first.
  */
 export type AppointmentListKind = "upcoming" | "upcoming-active" | "past";
@@ -205,6 +213,73 @@ export function confirmationPending(r: AppointmentRow, now: Date): boolean {
     startsMs > now.getTime() &&
     startsMs - now.getTime() <= CONFIRM_WINDOW_MS
   );
+}
+
+/**
+ * PRD §3.5: only a confirmed, in-person visit on the clinic's own today can
+ * be arrived at. Judged on the server's clock, in the hospital's zone. Home
+ * and the visits list both offer "I have arrived", so the rule lives here.
+ */
+export function canArrive(r: AppointmentRow, todayKey: string): boolean {
+  return (
+    r.status === "confirmed" &&
+    r.type !== "virtual" &&
+    localDateKey(new Date(r.startsAtIso), DEFAULT_TIME_ZONE) === todayKey
+  );
+}
+
+/**
+ * What the patient is told they already have today. No jargon, no mechanism,
+ * and never a count — the queue is department-scoped, and the ticket page is
+ * the one place a position is shown (ADR 0084 §6). The queue page and the
+ * home's "Coming up" read the same words from here.
+ */
+export const INTAKE_TITLE: Record<string, string> = {
+  declared: "We have already saved you a place today.",
+  arrived: "You are already at the hospital today.",
+  awaiting_triage: "You are already at the hospital today.",
+  triaged: "A nurse has already seen you today.",
+};
+
+export interface LiveIntakeToday {
+  id: string;
+  status: string;
+  departmentName: string | null;
+}
+
+/**
+ * Today's live same-day ticket at this hospital, or null — the query the
+ * queue page gates its form on, plus the department's name. "Today" is the
+ * hospital's day, not the host's: a ticket declared at 01:00 EAT is today's.
+ */
+export async function fetchLiveIntakeToday(
+  patientUserId: string,
+  hospitalId: string,
+  now: Date = new Date(),
+): Promise<LiveIntakeToday | null> {
+  const rows = await db
+    .select({
+      id: patientIntakes.id,
+      status: patientIntakes.status,
+      departmentName: hospitalDepartments.name,
+    })
+    .from(patientIntakes)
+    .leftJoin(hospitalDepartments, eq(hospitalDepartments.id, patientIntakes.receivingDepartmentId))
+    .where(
+      and(
+        eq(patientIntakes.patientUserId, patientUserId),
+        eq(patientIntakes.hospitalId, hospitalId),
+        inArray(patientIntakes.status, ["declared", "arrived", "awaiting_triage", "triaged"]),
+        gte(patientIntakes.arrivedAt, startOfLocalDay(now, DEFAULT_TIME_ZONE)),
+        lt(patientIntakes.arrivedAt, endOfLocalDay(now, DEFAULT_TIME_ZONE)),
+      ),
+    )
+    // Newest first, as pt-declare-intake and the phone read it, so a second
+    // live row (a desk registration beside a declaration) cannot make the
+    // two surfaces name different tickets.
+    .orderBy(desc(patientIntakes.arrivedAt))
+    .limit(1);
+  return rows[0] ?? null;
 }
 
 /**

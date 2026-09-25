@@ -1,7 +1,7 @@
 # MedSync Design System
 
-**Status:** Active (Phase 0.2)
-**Last updated:** 2026-05-21
+**Status:** Active (Phase 0.2 + ADR 0097)
+**Last updated:** 2026-09-21
 **Owner:** Usama Fadhul
 
 This document is the authoritative source for every visual and interactive decision in MedSync. The design system wins on all visual disagreements. Components, layouts, and styles must follow these tokens and rules exactly.
@@ -13,7 +13,7 @@ This document is the authoritative source for every visual and interactive decis
 ## Core Philosophy
 
 - **Clinical Precision.** Pixel-perfect alignment, tight letter-spacing on headlines, engineered for trust in medical contexts.
-- **Calm Authority.** Monochrome base with teal accents. Confidence without alarm. Never cold, never decorative.
+- **Calm Authority.** Monochrome base with teal as the action colour and plum as the place colour. Confidence without alarm. Never cold, never decorative.
 - **Data Density.** Compact vitals, labs, patient rows. Every pixel serves the clinician. Information-rich without clutter.
 - **Compassionate UX.** Warm neutral tones, clear hierarchy, human-centered. Progressive disclosure — summaries expand to full charts.
 - **Motion with Purpose.** `cubic-bezier(0.16, 1, 0.3, 1)` for all transitions. Never decorative animation.
@@ -81,6 +81,32 @@ This document is the authoritative source for every visual and interactive decis
 | `teal-700` | `#0F766E` | Hover state on primary CTA                  |
 | `teal-800` | `#115E59` | Dark teal text on teal backgrounds          |
 | `teal-900` | `#134E4A` | Dark CTA backgrounds                        |
+
+### Secondary Plum (place accent — ADR 0097)
+
+Teal is the only **action** colour and red the only **alarm**. Plum is the product's second hue and it means **place, never state**: it says _where you are_ — the hero glow, the active nav item, avatar monograms, the landing emphasis, chart series 2. It is a mulberry (OKLCH hue 342) generated with even lightness steps and chroma that peaks at the anchor, so `plum-50` reads as a tint rather than pink and `plum-900` never goes muddy. Every anchor clears WCAG AA in both modes.
+
+| Token      | Hex       | Usage                                  |
+| ---------- | --------- | -------------------------------------- |
+| `plum-50`  | `#FDF3F9` | Active nav fill, soft washes           |
+| `plum-100` | `#FEE4F3` | Avatar monogram fill                   |
+| `plum-200` | `#FECBE9` | Rings, borders on plum fills           |
+| `plum-300` | `#FEA2DC` | Light accents (rare)                   |
+| `plum-400` | `#EA7BC4` | Charts (secondary series, light tints) |
+| `plum-500` | `#C953A3` | Active-item dot                        |
+| `plum-600` | `#9F2F7E` | **Anchor** — active icons, `--chart-2` |
+| `plum-700` | `#87236A` | Emphasis text, the hero corner glow    |
+| `plum-800` | `#6A1952` | Dark plum text on plum fills           |
+| `plum-900` | `#4E113C` | Deep fills (rare)                      |
+| `plum-950` | `#321227` | Deepest — the dark-mode soft fill      |
+
+**Where it lives (the whole product, ADR 0097 §5):** page and band atmospheres (`oklch(… 342)` radials, the corner glow in `--gradient-hero` / `--gradient-band`); the active nav item in every shell and rail (`--sidebar-accent` is plum); the phone tab bar's current tab; `SectionNumber` and section markers; the **current** step of a multi-step form (a **done** step stays teal with its check); every monogram and avatar disc; decorative icon tiles, empty-state discs, the tinted `StatCard`; the italic emphasis in headlines; `--chart-2`.
+
+**Where it never goes:** buttons and links (teal), focus rings, checked or selected controls, filter and segmented tabs, count badges, status chips and badges, resus / triage state colour, anything that means a state. A plum element sits beside a Critical badge without competing because they differ in hue, value and shape — keep it that way; do not tint a chip plum. The test for a new use is one question: _is this a state?_ If yes, it is a status token or teal; if it says where you are or who this is, it is plum.
+
+**The mechanism:** utilities are `bg-plum-*` / `text-plum-*` and the ramp flips with the theme exactly like teal, so one set of classes covers both modes (no `dark:` variant needed — in dark, `plum-50` _is_ the deep fill). A layout that needs its own hue re-pins `--plum-*` inside a scoped class, the way `medsync-forced-dark` re-pins teal; that is how a per-workspace accent would ship without touching a component.
+
+`--gradient-hero` carries the signature: a plum glow in the bottom-right corner of the deep-teal ground (a radial layered over the teal sweep — a glow, not a diagonal, so the two hues never mix into grey). `--gradient-signature` is the straight teal → plum diagonal for a surface that wants the pairing outright.
 
 ### Clinical Status Colors
 
@@ -326,7 +352,7 @@ Dark CTA sections use: bg `#134E4A` (teal-900), white headline (22–28px, weigh
 
 ## Anti-patterns (NEVER do these)
 
-- ❌ Purple/rainbow gradients or decorative color backgrounds
+- ❌ Rainbow gradients or decorative color backgrounds — plum is the one sanctioned second hue, and only where it means place (§ Secondary Plum)
 - ❌ Bold (700) for headlines — use Medium (500)
 - ❌ Red for non-critical UI — red = clinical emergency ONLY
 - ❌ Decorative animation without functional purpose
@@ -468,6 +494,24 @@ This is the most important section. Dark mode is built by remapping surfaces, no
 | `teal-900` | `#F0FDFA` | Near-white teal tint (avoid)                     |
 
 **Key shift:** Primary accent moves from teal-600 (light) to teal-500 (dark) to maintain contrast. teal-50 (#042F2E) becomes the soft fill background.
+
+## Secondary Plum (dark — inverted like teal)
+
+| Token      | Hex       | Usage                                  |
+| ---------- | --------- | -------------------------------------- |
+| `plum-50`  | `#321227` | Active nav fill, soft washes           |
+| `plum-100` | `#4A173A` | Avatar monogram fill                   |
+| `plum-200` | `#671E51` | Rings, borders                         |
+| `plum-300` | `#862E6B` | Subtle accents                         |
+| `plum-400` | `#A94088` | Secondary plum                         |
+| `plum-500` | `#CB58A6` | Active-item dot                        |
+| `plum-600` | `#ED85C8` | **Anchor** — active icons, `--chart-2` |
+| `plum-700` | `#FDA8DD` | Emphasis text                          |
+| `plum-800` | `#FFCDEB` | Text on plum fills                     |
+| `plum-900` | `#FDE7F4` | Very bright (rare)                     |
+| `plum-950` | `#FDF3F9` | Near-white tint (avoid)                |
+
+The hero glow drops to `plum-800` (#6A1952) at 80 % over the dark teal ground.
 
 ## Clinical Status (dark)
 

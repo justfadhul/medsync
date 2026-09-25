@@ -3,9 +3,11 @@ import Link from "next/link";
 import { ArrowLeftIcon, SearchIcon } from "lucide-react";
 
 import { Input } from "@/components/ui/input";
+import { listHospitalDepartments } from "@/lib/intake/queries";
 import { searchPatientsByCode, searchTodaysBoard } from "@/lib/reception/queries";
 import { requireReceptionScope } from "@/lib/reception/scope";
-import { CheckInDeclaredButton } from "../_components/check-in-declared-button";
+import { DEFAULT_TIME_ZONE } from "@/supabase/functions/_shared/slots";
+import { RouteControl } from "../_components/route-control";
 
 export const metadata: Metadata = { title: "Find · Reception · MedSync" };
 export const dynamic = "force-dynamic";
@@ -43,7 +45,7 @@ export default async function ReceptionFindPage({ searchParams }: PageProps) {
   //   Records — patient_code only, the plaintext operational identifier
   //   ADR 0032 §2 already grants reception. No name search over the whole
   //   hospital: that is deliberately not a thing reception can do.
-  const [board, hits] =
+  const [board, hits, departments] =
     query.length >= 3
       ? await Promise.all([
           searchTodaysBoard({
@@ -53,8 +55,10 @@ export default async function ReceptionFindPage({ searchParams }: PageProps) {
             limit: 20,
           }),
           searchPatientsByCode({ hospitalId: scope.hospitalId, query, limit: 20 }),
+          // The routing control's choices, for a declared match (ADR 0101).
+          listHospitalDepartments(scope.hospitalId),
         ])
-      : [[], []];
+      : [[], [], []];
 
   return (
     <div className="mx-auto flex w-full max-w-4xl flex-col gap-6 px-6 py-8 lg:py-10">
@@ -133,7 +137,7 @@ export default async function ReceptionFindPage({ searchParams }: PageProps) {
               {board.map((b) => (
                 <li
                   key={b.intakeId}
-                  className="border-border bg-card flex items-center justify-between gap-3 rounded-xl border p-4"
+                  className="border-border bg-card flex flex-col gap-3 rounded-xl border p-4 sm:flex-row sm:items-center sm:justify-between"
                 >
                   <div className="flex min-w-0 flex-col gap-0.5">
                     <span className="text-foreground text-body-s truncate font-medium">
@@ -154,10 +158,15 @@ export default async function ReceptionFindPage({ searchParams }: PageProps) {
                     </span>
                   </div>
                   {/* The whole point of the name search: the person is at the
-                      desk with no code. Check them in here, not on another
+                      desk with no code. Send them on here, not from another
                       page where the clerk has to find them a second time. */}
                   {b.status === "declared" ? (
-                    <CheckInDeclaredButton intakeId={b.intakeId} patientLabel={b.displayName} />
+                    <RouteControl
+                      intakeId={b.intakeId}
+                      departments={departments}
+                      defaultDepartmentId={b.departmentId}
+                      patientLabel={b.displayName}
+                    />
                   ) : (
                     <span className="text-muted-foreground text-caption whitespace-nowrap">
                       Already registered today
@@ -253,8 +262,14 @@ export default async function ReceptionFindPage({ searchParams }: PageProps) {
   );
 }
 
+/** The hospital's clock, 24-hour — not the host's (UTC on Vercel). */
 function formatTime(iso: string): string {
-  return new Date(iso).toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });
+  return new Date(iso).toLocaleTimeString("en-GB", {
+    hour: "2-digit",
+    minute: "2-digit",
+    hourCycle: "h23",
+    timeZone: DEFAULT_TIME_ZONE,
+  });
 }
 
 function computeAge(iso: string): number {

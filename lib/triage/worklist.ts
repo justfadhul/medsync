@@ -1,6 +1,7 @@
 import "server-only";
 
-import { and, desc, eq, gte, inArray, lt, sql } from "drizzle-orm";
+import type { SQL } from "drizzle-orm";
+import { and, desc, eq, gte, inArray, isNull, lt, ne, or, sql } from "drizzle-orm";
 
 import { db } from "@/db";
 import { clinicalPhiAccessLog } from "@/db/schema/doctor-workspace";
@@ -60,14 +61,27 @@ export async function fetchTriageWorklist(args: {
   clinicianUserId: string;
   limit?: number;
 }): Promise<TriageWorklistRow[]> {
-  const conditions = [
+  const conditions: (SQL | undefined)[] = [
     eq(patientIntakes.hospitalId, args.hospitalId),
     // Includes 'triaged' so an already-triaged patient stays visible for
     // re-triage (deterioration / correction).
     inArray(patientIntakes.status, ["arrived", "awaiting_triage", "triaged"]),
+    // ADR 0101 R1: the desk sent this arrival straight to the clinic, so it
+    // waits on the doctor's queue, not here. NULL is every row from before the
+    // route existed — those were all sent to triage and must stay on it; a
+    // bare `<> 'clinic'` would drop them, because NULL <> 'clinic' is NULL.
+    or(isNull(patientIntakes.routedTo), ne(patientIntakes.routedTo, "clinic")),
   ];
   if (args.departmentId) {
-    conditions.push(eq(patientIntakes.receivingDepartmentId, args.departmentId));
+    // An intake with no receiving department (a desk registration that named
+    // none) belongs to no department's worklist, so it reached nobody's. Every
+    // department's triage staff at the hospital see it until someone takes it.
+    conditions.push(
+      or(
+        eq(patientIntakes.receivingDepartmentId, args.departmentId),
+        isNull(patientIntakes.receivingDepartmentId),
+      ),
+    );
   }
 
   const rows = await db

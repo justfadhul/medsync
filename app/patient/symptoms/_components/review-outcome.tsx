@@ -125,7 +125,7 @@ export function ReviewOutcome({
           <button
             type="button"
             onClick={onChange}
-            className="text-primary text-body-s min-h-11 underline-offset-4 hover:underline"
+            className="text-body-s min-h-11 text-teal-700 underline-offset-4 hover:underline"
           >
             Change
           </button>
@@ -227,7 +227,7 @@ export function ReviewOutcome({
           ) : null}
           <p className="text-muted-foreground text-body-s">
             If it gets worse while you wait,{" "}
-            <Link href="/emergency" className="text-primary underline-offset-4 hover:underline">
+            <Link href="/emergency" className="text-teal-700 underline-offset-4 hover:underline">
               tap Emergency
             </Link>
             .

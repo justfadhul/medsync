@@ -207,6 +207,84 @@ describe("red is reserved — web patient and booking surfaces", () => {
   });
 });
 
+// ─── The doctor workspace (Law 6 of its prompt) ──────────────────────────────
+
+describe("red is reserved — the doctor workspace", () => {
+  const WORKSPACE = tree("app/doctor/_components/workspace", "lib/workspace").concat(
+    tree("app/doctor/(workspace)"),
+    [
+      [
+        "app/doctor/_components/page-header.tsx",
+        stripComments(
+          readFileSync(resolve(ROOT, "app/doctor/_components/page-header.tsx"), "utf8"),
+        ),
+      ],
+    ] as const,
+  );
+
+  /**
+   * Where red may appear, and nowhere else: the arrest banner and its lane
+   * marker (the dot on the Resus chip, heading and arrest rows), the L1 acuity
+   * chip (the triage scale's own clinical signal), and the header's Emergency.
+   * Stale, overdue, idle and "needs closing" are amber; Died and record states
+   * are neutral words.
+   */
+  const RED_ALLOWED: readonly string[] = [
+    "app/doctor/_components/workspace/acuity-chip.tsx",
+    "app/doctor/_components/workspace/arrest-banner.tsx",
+    "app/doctor/_components/workspace/workspace-row.tsx",
+    "app/doctor/_components/workspace/workspace-board.tsx",
+    "app/doctor/_components/emergency-inline-link.tsx",
+  ];
+
+  it("the allowlist is real — each file exists and paints red", () => {
+    for (const p of RED_ALLOWED) {
+      const src = stripComments(readFileSync(resolve(ROOT, p), "utf8"));
+      expect(src, p).toMatch(WEB_RED_FILL);
+    }
+  });
+
+  it("no other workspace file paints red — and the engine names none", () => {
+    expect(WORKSPACE.length).toBeGreaterThan(10);
+    for (const [path, src] of WORKSPACE) {
+      if (RED_ALLOWED.includes(path)) continue;
+      const m = WEB_RED_FILL.exec(src);
+      expect(m, `${path}: ${m?.[0]}`).toBeNull();
+    }
+  });
+
+  it("the L1 chip is red only for L1, and every chip carries its level and colour word", () => {
+    const chip = readFileSync(
+      resolve(ROOT, "app/doctor/_components/workspace/acuity-chip.tsx"),
+      "utf8",
+    );
+    const tones = chip.slice(
+      chip.indexOf("const TONE"),
+      chip.indexOf("};", chip.indexOf("const TONE")),
+    );
+    const redLines = tones.split("\n").filter((l) => WEB_RED_FILL.test(l));
+    expect(redLines).toHaveLength(1);
+    expect(redLines[0]).toMatch(/^\s*1:/);
+    expect(chip).toMatch(/L\{level\}/);
+    expect(chip).toMatch(/COLOUR_WORD\[level\]/);
+  });
+
+  it("the red dots always travel with words for a screen reader", () => {
+    for (const p of [
+      "app/doctor/_components/workspace/workspace-row.tsx",
+      "app/doctor/_components/workspace/workspace-board.tsx",
+    ]) {
+      const src = readFileSync(resolve(ROOT, p), "utf8");
+      expect(src, p).toMatch(/Cardiac arrest in progress/);
+    }
+  });
+
+  it("the projection's tones are neutral or amber — never a red one", () => {
+    const flow = readFileSync(resolve(ROOT, "lib/workspace/flow.ts"), "utf8");
+    expect(flow).toMatch(/export type Tone = "neutral" \| "amber";/);
+  });
+});
+
 describe("never colour alone — web status indicators carry a word", () => {
   it("every Pill / Badge / ClinicalBadge has visible children and is not aria-hidden", () => {
     for (const [path, src] of WEB) {

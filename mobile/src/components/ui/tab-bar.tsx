@@ -109,7 +109,7 @@ export function TabButton({
   const ink = critical
     ? colors.status.criticalFg
     : isFocused
-      ? colors.accentForeground
+      ? colors.placeForeground
       : colors.mutedForeground;
 
   return (
@@ -177,7 +177,7 @@ const makeStyles = (c: Palette) =>
     },
 
     chip: { borderRadius: radius.full },
-    chipCurrent: { backgroundColor: c.accent },
+    chipCurrent: { backgroundColor: c.place },
     chipCritical: { backgroundColor: c.status.criticalBg },
 
     tab: {
@@ -195,6 +195,6 @@ const makeStyles = (c: Palette) =>
       fontFamily: font.bodyMedium,
       fontSize: 14.5,
       letterSpacing: 0.1,
-      color: c.accentForeground,
+      color: c.placeForeground,
     },
   });

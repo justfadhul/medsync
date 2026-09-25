@@ -1,187 +1,123 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import {
-  ArrowUpRightIcon,
-  BuildingIcon,
-  ClipboardListIcon,
-  StethoscopeIcon,
-  UserIcon,
-} from "lucide-react";
+import { ChevronRightIcon } from "lucide-react";
 
+import { CONTAINER, LANDING_FOCUS, TextLink } from "@/components/landing/primitives";
+import { SiteFooter } from "@/components/landing/site-footer";
+import { SiteNav } from "@/components/landing/site-nav";
+import { GET_STARTED } from "@/content/auth";
+import { signupsClosedHere } from "@/lib/legal";
 import { cn } from "@/lib/utils";
 
 export const metadata: Metadata = {
   title: "Get started",
-  description: "Sign up to MedSync as a patient, as medical staff, or on behalf of a hospital.",
+  description:
+    "Choose how you'll use MedSync: as a patient, a clinician, non-clinical hospital staff, or on behalf of a hospital.",
+  alternates: { canonical: "/get-started" },
 };
 
+/** Inner radius of the rounded-lg, 1px-bordered list, so a row's hover fill meets the border. */
+const ROW_RADIUS =
+  "first:rounded-t-[calc(var(--radius-lg)-1px)] last:rounded-b-[calc(var(--radius-lg)-1px)]";
+
 /**
- * /get-started — intent selector (kickoff §B).
+ * /get-started — the sign-up chooser (PROMPT: Sign-in and Get-started §3).
+ * Four doors under three audiences; every string lives in content/auth.ts.
+ * Server component with no client JS of its own, statically prerendered
+ * (signupsClosedHere() reads VERCEL_ENV at build time). Light only: forced in
+ * app/providers.tsx, and the footer's theme switch is off.
  *
- * Three audience tiles + a separate sign-in link for returning users.
- * No public "Admin" tile; no superadmin signup. The four-path flow
- * branches from here:
- *
- *   - patient  → no approval gate, active immediately after verify
- *   - clinical → council-anchored, per-affiliation approval, MFA mandatory
- *   - hospital → superadmin gate, applicant becomes scoped hospital_admin
- *   - superadmin → seeded, never public (signs in via standard /sign-in)
- *
- * GATE A scaffold: tiles route to the per-path signup stubs which
- * become real multi-step forms in gates C / D / E.
+ * The lists are not overflow-hidden, so the 2px LANDING_FOCUS outline (offset
+ * 2) is never clipped; the first and last rows carry the corner radius instead.
  */
-
-interface IntentTile {
-  audience: "patient" | "clinical" | "non_clinical" | "hospital";
-  label: string;
-  sub: string;
-  details: string;
-  approvalNote: string;
-  href: string;
-  Icon: typeof UserIcon;
-}
-
-const TILES: ReadonlyArray<IntentTile> = [
-  {
-    audience: "patient",
-    label: "I'm a patient",
-    sub: "Sign up to manage your own health record.",
-    details:
-      "Phone-verified signup. Optional MFA. Account is active right after you verify — pick a primary facility and join a queue from your dashboard.",
-    approvalNote: "Active immediately after phone verification.",
-    href: "/signup/patient",
-    Icon: UserIcon,
-  },
-  {
-    audience: "clinical",
-    label: "I'm a clinician",
-    sub: "Doctor, nurse, midwife, pharmacist, allied health.",
-    details:
-      "Council registration + licence upload (UMDPC, UNMC, AHPC, Pharmacy Board) is the verification anchor. One affiliation per hospital × department × role, each approved separately by the hospital's admin. MFA mandatory before any clinical access.",
-    approvalNote: "Approval-gated, per affiliation. MFA required.",
-    href: "/signup/clinical",
-    Icon: StethoscopeIcon,
-  },
-  {
-    audience: "non_clinical",
-    label: "Reception, records or non-clinical staff",
-    sub: "Front desk, records, admin — no clinical access.",
-    details:
-      "No professional council. Your hospital admin verifies you against your appointment and NIN. You get the reception workspace — bookings, intake, queue and demographics — but not clinical content.",
-    approvalNote: "Hospital-admin approval. No clinical access.",
-    href: "/signup/non-clinical",
-    Icon: ClipboardListIcon,
-  },
-  {
-    audience: "hospital",
-    label: "I represent a hospital",
-    sub: "Apply to onboard your institution.",
-    details:
-      "Institutional details + applicant authorisation. Once approved by MedSync, your account is elevated to hospital admin scoped to that hospital only. Pilot terms are cost-only for the founding cohort.",
-    approvalNote: "Reviewed by MedSync. MFA required.",
-    href: "/signup/hospital",
-    Icon: BuildingIcon,
-  },
-];
-
 export default function GetStartedPage() {
   return (
-    <div className="bg-background relative isolate flex min-h-svh w-full flex-col">
-      {/* Atmospheric teal radial — same shape as the landing hero */}
-      <div
-        aria-hidden
-        className="fade-in-slow pointer-events-none absolute top-0 left-1/2 -z-10 h-[60%] w-[140%] max-w-none -translate-x-1/2 [background:radial-gradient(closest-side,oklch(0.95_0.06_286/0.45),transparent_72%)] dark:[background:radial-gradient(closest-side,oklch(0.45_0.08_286/0.25),transparent_72%)]"
-      />
+    <div className={cn("bg-background flex min-h-svh flex-col", LANDING_FOCUS)}>
+      <SiteNav showApply={false} />
+      <main className="flex-1">
+        <div className={cn(CONTAINER, "pt-16 pb-24 sm:pt-20")}>
+          <div className="max-w-180">
+            <h1 className="font-display text-foreground text-display-m lg:text-display-l text-balance">
+              {GET_STARTED.title}
+            </h1>
+            <p className="text-heading-s text-muted-foreground mt-4 max-w-[52ch] leading-7 font-normal text-pretty">
+              {GET_STARTED.sub}
+            </p>
+            {signupsClosedHere() ? (
+              <p className="border-border text-body-m text-muted-foreground mt-6 max-w-[52ch] rounded-md border px-4 py-3 text-pretty">
+                {GET_STARTED.closed}
+              </p>
+            ) : null}
 
-      <main className="mx-auto flex w-full max-w-300 flex-1 flex-col px-5 py-14 sm:px-8 sm:py-20">
-        <header className="stagger-children mb-10 flex flex-col gap-4">
-          <Link
-            href="/"
-            className="text-muted-foreground hover:text-foreground inline-flex items-center gap-1.5 text-[12.5px] transition-colors"
-          >
-            &larr; Back to MedSync
-          </Link>
-          <span className="text-muted-foreground inline-flex items-center gap-2 font-mono text-[10px] tracking-[0.18em] uppercase">
-            <span className="pulse-dot bg-brand-500 size-1 rounded-full" />
-            Get started
-          </span>
-          <h1
-            className="font-display text-foreground text-display-s max-w-[24ch] leading-[1.05] tracking-[-0.025em] text-balance sm:text-[52px]"
-            style={{ fontWeight: 400 }}
-          >
-            One record.{" "}
-            <span className="text-brand-700 dark:text-brand-300 italic">Four doors in.</span>
-          </h1>
-          <p className="text-muted-foreground text-body-m max-w-[60ch] leading-[1.55] sm:text-[16.5px]">
-            Pick the door that matches you. Patients get an account immediately; clinicians and
-            hospitals go through approval so we can verify identity and protect patient data.
-          </p>
-        </header>
-
-        <ul role="list" className="stagger-children grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-          {TILES.map((tile) => (
-            <li key={tile.audience} className="flex">
-              <Link
-                href={tile.href}
-                className={cn(
-                  "group border-border bg-card card-lift relative flex h-full w-full flex-col gap-4 overflow-hidden rounded-xl border p-5",
-                  "hover:border-brand-300",
-                  "dark:hover:bg-brand-50/[0.04]",
-                )}
-              >
-                {/* Quiet teal wash rises from the foot of the tile on hover */}
-                <div
-                  aria-hidden
-                  className="ease-expo-out from-brand-50/70 dark:from-brand-50/6 pointer-events-none absolute inset-x-0 bottom-0 h-24 bg-linear-to-t to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100"
-                />
-                <div className="relative flex items-start justify-between">
-                  <span className="ease-expo-out bg-brand-50 text-brand-700 group-hover:bg-brand-100 dark:bg-brand-50/15 dark:text-brand-200 dark:group-hover:bg-brand-50/25 inline-flex size-10 items-center justify-center rounded-md transition-colors duration-200">
-                    <tile.Icon className="size-5" strokeWidth={1.75} />
-                  </span>
-                  <ArrowUpRightIcon
-                    className="text-muted-foreground ease-expo-out group-hover:text-brand-700 dark:group-hover:text-brand-300 size-4 transition-[transform,color] duration-200 group-hover:translate-x-0.5 group-hover:-translate-y-0.5"
-                    strokeWidth={1.5}
-                  />
+            <div className="mt-12 flex flex-col gap-10">
+              {GET_STARTED.groups.map((group, g) => (
+                <div key={group.label} className="flex flex-col gap-3">
+                  <h2
+                    id={`door-group-${g}`}
+                    className="text-overline text-muted-foreground font-mono uppercase"
+                  >
+                    {group.label}
+                  </h2>
+                  <ul
+                    role="list"
+                    aria-labelledby={`door-group-${g}`}
+                    className="border-border divide-border divide-y rounded-lg border"
+                  >
+                    {group.doors.map((door) => {
+                      const id = `door-${door.href.split("/").pop()}`;
+                      return (
+                        <li key={door.href} className={ROW_RADIUS}>
+                          <Link
+                            href={door.href}
+                            data-door
+                            aria-labelledby={`${id}-title`}
+                            aria-describedby={`${id}-desc ${id}-meta`}
+                            className="group ease-expo-out relative grid grid-cols-[1fr_auto] items-center gap-4 rounded-[inherit] p-6 transition-[background-color,box-shadow] duration-150 hover:bg-gray-50 hover:ring-1 hover:ring-teal-600 hover:ring-inset focus-visible:z-10"
+                          >
+                            <span className="flex min-w-0 flex-col gap-1">
+                              <span
+                                id={`${id}-title`}
+                                className="text-foreground text-[20px] leading-7 font-medium text-pretty"
+                              >
+                                {door.title}
+                              </span>
+                              <span
+                                id={`${id}-desc`}
+                                className="text-muted-foreground text-base leading-6 text-pretty"
+                              >
+                                {door.description}
+                              </span>
+                              <span
+                                id={`${id}-meta`}
+                                className="text-muted-foreground mt-2 text-sm leading-5 text-pretty"
+                              >
+                                <span className="text-foreground font-medium">
+                                  {GET_STARTED.needLabel}
+                                </span>{" "}
+                                {door.need} · {door.next}
+                              </span>
+                            </span>
+                            <ChevronRightIcon
+                              aria-hidden
+                              className="text-muted-foreground ease-expo-out size-5 shrink-0 transition-transform duration-150 group-hover:translate-x-0.5"
+                            />
+                          </Link>
+                        </li>
+                      );
+                    })}
+                  </ul>
                 </div>
-                <div className="relative flex flex-col gap-1.5">
-                  <span className="font-display text-foreground text-[20px] leading-tight font-medium">
-                    {tile.label}
-                  </span>
-                  <span className="text-muted-foreground text-body-s">{tile.sub}</span>
-                </div>
-                <p className="text-body-s relative leading-[1.55]">
-                  <span className="text-foreground/80">{tile.details}</span>
-                </p>
-                <p className="text-muted-foreground border-border relative mt-auto border-t pt-3 font-mono text-[10.5px] tracking-[0.12em] uppercase">
-                  {tile.approvalNote}
-                </p>
-              </Link>
-            </li>
-          ))}
-        </ul>
+              ))}
+            </div>
 
-        <div
-          className="border-border reveal-up mt-10 flex flex-wrap items-center justify-between gap-3 border-t pt-6"
-          style={{ animationDelay: "300ms" }}
-        >
-          <p className="text-muted-foreground text-body-s">Already have an account?</p>
-          <Link
-            href="/sign-in"
-            className="text-foreground border-border hover:bg-muted tap group text-body-s inline-flex items-center gap-1.5 rounded-md border px-4 py-2 font-medium transition-colors hover:border-gray-300"
-          >
-            Sign in
-            <ArrowUpRightIcon
-              className="ease-expo-out size-3.5 transition-transform duration-200 group-hover:translate-x-0.5 group-hover:-translate-y-0.5"
-              strokeWidth={1.75}
-            />
-          </Link>
+            <p className="text-body-m text-muted-foreground mt-10">
+              {GET_STARTED.signIn.lead}{" "}
+              <TextLink href={GET_STARTED.signIn.href} label={GET_STARTED.signIn.label} />
+            </p>
+          </div>
         </div>
-
-        <p className="text-muted-foreground/70 fade-in-slow mt-10 max-w-[60ch] text-[11.5px] italic">
-          MedSync is in private build. The forms below are scaffolded for review — the real
-          multi-step signup, identity verification, and approval flows ship in gates C–F.
-        </p>
       </main>
+      <SiteFooter themeToggle={false} />
     </div>
   );
 }

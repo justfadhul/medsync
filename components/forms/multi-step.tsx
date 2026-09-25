@@ -60,6 +60,11 @@ export interface MultiStepFormProps {
   flowLabel?: string;
   /** Hook to render extra controls beside Back/Continue (e.g. Save & exit). */
   trailing?: ReactNode;
+  /**
+   * Runs on Continue with the current step's section; returning false keeps
+   * the user on the step (the caller shows the errors).
+   */
+  validateStep?: (section: HTMLElement) => boolean;
 }
 
 export function MultiStepForm({
@@ -68,6 +73,7 @@ export function MultiStepForm({
   onStepChange,
   flowLabel,
   trailing,
+  validateStep,
 }: MultiStepFormProps) {
   const initialIndex = Math.max(
     0,
@@ -84,11 +90,13 @@ export function MultiStepForm({
 
   const handleNext = useCallback(() => {
     if (!canContinue) return;
+    const section = stepHeadingRef.current?.closest("section");
+    if (validateStep && section && !validateStep(section)) return;
     if (index < steps.length - 1) {
       setIndex(index + 1);
       setCanContinue(true);
     }
-  }, [canContinue, index, steps.length]);
+  }, [canContinue, index, steps.length, validateStep]);
 
   const handleBack = useCallback(() => {
     if (index > 0) {
@@ -195,7 +203,7 @@ function ProgressRail({
     <div className="flex flex-col gap-2">
       {flowLabel ? (
         <span className="text-muted-foreground inline-flex items-center gap-2 font-mono text-[10px] tracking-[0.18em] uppercase">
-          <span className="bg-brand-500 size-1 rounded-full" />
+          <span className="bg-plum-500 size-1 rounded-full" />
           {flowLabel}
           <span aria-hidden="true">&middot;</span>
           <span>
@@ -216,11 +224,9 @@ function ProgressRail({
               <span
                 className={cn(
                   "block h-1 rounded-full transition-colors",
-                  isDone
-                    ? "bg-brand-500 dark:bg-brand-400"
-                    : isActive
-                      ? "bg-brand-500 dark:bg-brand-400"
-                      : "bg-muted",
+                  // Done is state (teal, with the check); the current step is
+                  // place (plum) — ADR 0097.
+                  isDone ? "bg-brand-500 dark:bg-brand-400" : isActive ? "bg-plum-500" : "bg-muted",
                 )}
               />
               <span

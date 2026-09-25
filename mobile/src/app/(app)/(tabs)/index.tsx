@@ -497,7 +497,7 @@ export default function HomeScreen() {
                 accessibilityElementsHidden
                 importantForAccessibility="no-hide-descendants"
               >
-                <Ionicons name="calendar-outline" size={20} color={colors.accentForeground} />
+                <Ionicons name="calendar-outline" size={20} color={colors.placeForeground} />
               </View>
               <Text style={styles.secondaryTitle}>Ask for a day — the clinic confirms</Text>
               <Text style={styles.secondaryBody}>Choose from the days the clinic has open.</Text>
@@ -745,7 +745,7 @@ function HospitalPicker({ onChosen }: { onChosen: () => void }) {
             return (
               <View key={h.id} style={styles.hospital}>
                 <View style={styles.hospitalIcon} accessibilityElementsHidden>
-                  <Ionicons name="business-outline" size={20} color={colors.accentForeground} />
+                  <Ionicons name="business-outline" size={20} color={colors.placeForeground} />
                 </View>
                 <View style={styles.hospitalText}>
                   <Text style={styles.pickName}>{h.name}</Text>
@@ -808,7 +808,7 @@ const makeStyles = (c: Palette) =>
       borderRadius: radius.lg,
       alignItems: "center",
       justifyContent: "center",
-      backgroundColor: c.accent,
+      backgroundColor: c.place,
     },
     hospitalText: { flex: 1, gap: 2 },
     pickName: {
@@ -928,7 +928,7 @@ const makeStyles = (c: Palette) =>
       borderWidth: 1,
       borderColor: c.border,
     },
-    secondaryDisc: { backgroundColor: c.accent },
+    secondaryDisc: { backgroundColor: c.place },
     // The same card as the secondary door: a clinic is a booking door too.
     clinic: {
       flexDirection: "row",

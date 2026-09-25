@@ -11,6 +11,16 @@ const nextConfig: NextConfig = {
       bodySizeLimit: "10mb",
     },
   },
+  images: { formats: ["image/avif", "image/webp"] },
+  // Landing v4 route audit: one route family. The old /onboarding/* doors
+  // became /signup/*; keep the old links (and search results) working.
+  async redirects() {
+    return ["patient", "clinical", "hospital"].map((door) => ({
+      source: `/onboarding/${door}`,
+      destination: `/signup/${door}`,
+      permanent: true,
+    }));
+  },
 };
 
 /**

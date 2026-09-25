@@ -365,7 +365,7 @@ function LicenceCard({
     >
       <input type="hidden" name="bucket" value={bucket} />
       <input type="hidden" name="path" value={path} />
-      <div className="bg-brand-50 text-brand-700 ring-brand-200/70 dark:bg-brand-950/40 dark:text-brand-300 dark:ring-brand-800/40 flex size-9 shrink-0 items-center justify-center rounded ring-1">
+      <div className="bg-plum-50 text-plum-700 ring-plum-200/70 flex size-9 shrink-0 items-center justify-center rounded ring-1">
         <FileTextIcon className="size-4" aria-hidden />
       </div>
       <div className="flex min-w-0 flex-1 flex-col">

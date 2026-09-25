@@ -11,6 +11,7 @@ import { encounters } from "@/db/schema/scheduling";
 import { triageRecords } from "@/db/schema/triage";
 import { users } from "@/db/schema/users";
 import { DOCTOR_CADRE_CODES } from "@/lib/doctor/scope";
+import { findOpenEncounterToday, linkEncounterToVisit } from "@/lib/encounter/handoff";
 import { logger } from "@/lib/logger";
 
 /**
@@ -88,6 +89,12 @@ export type AssignResult =
  * Assign (or reassign) the patient of a triaged intake to a doctor by creating /
  * updating the `planned` encounter. Reassignment is only allowed while the
  * encounter is still `planned` — once it's started (in_progress), care has begun.
+ *
+ * If the patient's visit is already running today (called from the queue rail
+ * before or without triage), no second encounter is made (ADR 0101 R3): the
+ * triage is linked to the running one when it is the same doctor's, and the
+ * assignment is refused when it is someone else's — a planned encounter beside
+ * an open one is two records of one visit.
  */
 export async function assignDoctorFromIntake(args: {
   intakeId: string;
@@ -99,6 +106,7 @@ export async function assignDoctorFromIntake(args: {
       patientUserId: patientIntakes.patientUserId,
       hospitalId: patientIntakes.hospitalId,
       receivingDepartmentId: patientIntakes.receivingDepartmentId,
+      appointmentId: patientIntakes.appointmentId,
     })
     .from(patientIntakes)
     .where(eq(patientIntakes.id, args.intakeId))
@@ -153,6 +161,60 @@ export async function assignDoctorFromIntake(args: {
       return { ok: true, encounterId: existing.id, action: "reassigned" };
     }
 
+    // One assignment per visit (doctor workspace D5). A re-triage writes a new
+    // triage record, so the lookup above misses the visit's assignment, and the
+    // insert below used to put a second planned encounter beside it — the same
+    // patient three times on Assigned. The visit's open encounter, through ANY
+    // of its triage records, is the one to re-point or respect.
+    const [visitOpen] = await db
+      .select({
+        id: encounters.id,
+        state: encounters.state,
+        clinicianUserId: encounters.clinicianUserId,
+      })
+      .from(encounters)
+      .innerJoin(triageRecords, eq(triageRecords.id, encounters.triageRecordId))
+      .where(
+        and(
+          eq(triageRecords.intakeId, args.intakeId),
+          inArray(encounters.state, ["planned", "in_progress"]),
+        ),
+      )
+      .orderBy(desc(encounters.createdAt))
+      .limit(1);
+    if (visitOpen?.state === "planned") {
+      await db
+        .update(encounters)
+        .set({ clinicianUserId: args.doctorUserId, triageRecordId: tr.id })
+        .where(eq(encounters.id, visitOpen.id));
+      return {
+        ok: true,
+        encounterId: visitOpen.id,
+        action: visitOpen.clinicianUserId === args.doctorUserId ? "assigned" : "reassigned",
+      };
+    }
+    if (visitOpen) {
+      if (visitOpen.clinicianUserId !== args.doctorUserId) {
+        return {
+          ok: false,
+          error: "This patient is already being seen by another doctor — the visit is open.",
+        };
+      }
+      return { ok: true, encounterId: visitOpen.id, action: "assigned" };
+    }
+
+    const open = await findOpenEncounterToday(intake.patientUserId, intake.hospitalId);
+    if (open) {
+      if (open.clinicianUserId !== args.doctorUserId) {
+        return {
+          ok: false,
+          error: "This patient is already being seen by another doctor — the visit is open.",
+        };
+      }
+      await linkEncounterToVisit(open.id, tr.id, intake.appointmentId);
+      return { ok: true, encounterId: open.id, action: "assigned" };
+    }
+
     const [enc] = await db
       .insert(encounters)
       .values({
@@ -162,6 +224,9 @@ export async function assignDoctorFromIntake(args: {
         departmentId: deptId,
         encounterType: "emergency",
         triageRecordId: tr.id,
+        // The booking this visit answers (ADR 0101 R4) — so ending the
+        // encounter completes the appointment.
+        appointmentId: intake.appointmentId,
         state: "planned",
       })
       .returning({ id: encounters.id });

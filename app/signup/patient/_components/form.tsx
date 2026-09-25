@@ -17,6 +17,7 @@ import {
   DatePicker,
   Field,
   MultiStepForm,
+  PasswordInput,
   PhoneInput,
   SegmentedControl,
 } from "@/components/forms";
@@ -266,8 +267,7 @@ export function PatientSignupForm({
             required
             serverError={errors.password}
           >
-            <Input
-              type="password"
+            <PasswordInput
               name="password"
               autoComplete="new-password"
               minLength={12}

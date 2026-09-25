@@ -459,7 +459,7 @@ function CatalogInner({
         <Link
           href="/patient/book"
           onClick={() => clearPendingCatalogDraft()}
-          className="text-primary text-body-s inline-flex min-h-11 w-fit items-center underline-offset-4 hover:underline"
+          className="text-body-s inline-flex min-h-11 w-fit items-center text-teal-700 underline-offset-4 hover:underline"
         >
           I&rsquo;m coming for a review or check-up — skip this
         </Link>

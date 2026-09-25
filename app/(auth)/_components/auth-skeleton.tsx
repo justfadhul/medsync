@@ -1,30 +1,39 @@
+import type { ReactNode } from "react";
+
+import { AuthCard } from "@/components/medsync/auth-card";
 import { Skeleton } from "@/components/ui/skeleton";
 
 /**
- * Card-shaped placeholder matching AuthCard's frame, shown while a
- * search-param-dependent form is suspended. Shimmer only — no fake copy.
+ * The Suspense fallback for a search-param form (sign-in, MFA): the same
+ * AuthCard with the page's real static copy (title, subtitle, helper, footer),
+ * and shimmer where each labelled 48px field and the 48px button will be. Same
+ * geometry as the form, so the swap causes no layout shift.
  */
-export function AuthCardSkeleton() {
+export function AuthCardSkeleton({
+  title,
+  subtitle,
+  fields,
+  footer,
+  children,
+}: {
+  title: string;
+  subtitle?: string;
+  fields: number;
+  footer?: ReactNode;
+  children?: ReactNode;
+}) {
   return (
-    <div
-      aria-busy="true"
-      className="bg-card border-border shadow-card flex flex-col gap-6 rounded-lg border p-8"
-    >
-      <div className="flex flex-col gap-2.5">
-        <Skeleton className="h-7 w-36" />
-        <Skeleton className="h-4 w-60 max-w-full" />
-      </div>
+    <AuthCard title={title} subtitle={subtitle} footer={footer} aria-busy="true">
       <div className="flex flex-col gap-4">
-        <div className="flex flex-col gap-1.5">
-          <Skeleton className="h-3.5 w-14" />
-          <Skeleton className="h-9 w-full" />
-        </div>
-        <div className="flex flex-col gap-1.5">
-          <Skeleton className="h-3.5 w-20" />
-          <Skeleton className="h-9 w-full" />
-        </div>
-        <Skeleton className="h-9 w-full" />
+        {Array.from({ length: fields }, (_, i) => (
+          <div key={i} className="flex flex-col gap-1.5">
+            <Skeleton className="h-5 w-24" />
+            <Skeleton className="h-12 w-full" />
+          </div>
+        ))}
+        <Skeleton className="h-12 w-full" />
+        {children}
       </div>
-    </div>
+    </AuthCard>
   );
 }

@@ -4,6 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
+    "prebuild": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/check-founder-portraits.mjs",
     "build": "next build",
     "analyze": "ANALYZE=true next build --webpack",
     "budget": "node scripts/check-budget.mjs",

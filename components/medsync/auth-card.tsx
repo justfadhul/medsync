@@ -9,6 +9,11 @@ interface AuthCardProps extends HTMLAttributes<HTMLDivElement> {
   footer?: ReactNode;
 }
 
+/**
+ * The auth surface (ADR 0099): from 640px a bordered card (border-subtle, card
+ * radius, 32px padding); on phones full width with no border. The title is sans
+ * 28/36 semibold — the auth pages are a product surface, not the marketing site.
+ */
 export function AuthCard({
   title,
   subtitle,
@@ -20,19 +25,20 @@ export function AuthCard({
   return (
     <div
       className={cn(
-        "bg-card text-card-foreground border-border shadow-card flex flex-col gap-6 rounded-lg border p-8",
+        "text-card-foreground flex flex-col gap-6",
+        "sm:bg-card sm:border-gray-150 sm:rounded-lg sm:border sm:p-8",
         className,
       )}
       {...props}
     >
       <div className="flex flex-col gap-2">
-        <h1 className="font-display text-heading-l text-foreground">{title}</h1>
-        {subtitle ? <p className="text-body-s text-muted-foreground">{subtitle}</p> : null}
+        <h1 className="text-foreground text-[28px] leading-9 font-semibold tracking-[-0.02em]">
+          {title}
+        </h1>
+        {subtitle ? <div className="text-body-m text-muted-foreground">{subtitle}</div> : null}
       </div>
       {children}
-      {footer ? (
-        <div className="border-gray-150 -mx-8 mt-2 -mb-8 border-t px-8 py-4">{footer}</div>
-      ) : null}
+      {footer ? <div className="border-gray-150 border-t pt-5">{footer}</div> : null}
     </div>
   );
 }

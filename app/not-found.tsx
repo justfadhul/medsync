@@ -23,7 +23,7 @@ export default function NotFound() {
       {/* Atmosphere — softer than the hero, just a tint */}
       <div
         aria-hidden
-        className="pointer-events-none absolute top-0 left-1/2 -z-10 h-[80%] w-[120%] max-w-none -translate-x-1/2 [background:radial-gradient(closest-side,oklch(0.95_0.06_286/0.4),transparent_72%)] dark:[background:radial-gradient(closest-side,oklch(0.45_0.08_286/0.22),transparent_72%)]"
+        className="pointer-events-none absolute top-0 left-1/2 -z-10 h-[80%] w-[120%] max-w-none -translate-x-1/2 [background:radial-gradient(closest-side,oklch(0.95_0.06_342/0.4),transparent_72%)] dark:[background:radial-gradient(closest-side,oklch(0.45_0.08_342/0.22),transparent_72%)]"
       />
 
       <main className="mx-auto flex w-full max-w-200 flex-1 flex-col items-center justify-center gap-8 px-6 py-20 text-center">
@@ -36,8 +36,7 @@ export default function NotFound() {
           className="font-display text-foreground max-w-[22ch] text-[40px] leading-[1.05] tracking-[-0.025em] text-balance sm:text-[64px]"
           style={{ fontWeight: 400 }}
         >
-          The record for{" "}
-          <span className="text-brand-700 dark:text-brand-300 italic">this page</span> is missing.
+          The record for <span className="text-plum-700 italic">this page</span> is missing.
         </h1>
 
         <p className="text-muted-foreground text-body-m sm:text-body-l max-w-[58ch] leading-[1.6] text-balance">

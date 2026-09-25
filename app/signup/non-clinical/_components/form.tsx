@@ -12,7 +12,7 @@ import type { ComboboxItem } from "@/components/forms";
 import { useActionState, useEffect, useState, useTransition } from "react";
 import { TriangleAlertIcon } from "lucide-react";
 
-import { ConsentCheckbox, Field, FileUpload, PhoneInput } from "@/components/forms";
+import { ConsentCheckbox, Field, FileUpload, PasswordInput, PhoneInput } from "@/components/forms";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
@@ -121,13 +121,7 @@ export function NonClinicalSignupForm({
         </Field>
 
         <Field name="password" label="Password" serverError={errors.password} required>
-          <Input
-            name="password"
-            type="password"
-            minLength={8}
-            autoComplete="new-password"
-            required
-          />
+          <PasswordInput name="password" minLength={8} autoComplete="new-password" required />
         </Field>
       </section>
 

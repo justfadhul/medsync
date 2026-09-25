@@ -139,6 +139,39 @@ export const DOCTOR_FEATURE_AREAS: ReadonlyArray<DoctorFeatureArea> = [
   },
 ];
 
+/**
+ * The navigation while the doctor workspace is on (D6): three items. The SOON
+ * items stay hidden until they are built, and Alerts, Tasks, Supervisees and
+ * the Review queue arrive as lanes (lib/workspace/lanes.ts), not as nav items.
+ * Schedule has been live since ADR 0087 / 0101 — its `placeholder` above was stale.
+ */
+export const WORKSPACE_NAV: ReadonlyArray<DoctorFeatureArea> = [
+  {
+    slug: "",
+    label: "Workspace",
+    hint: "Everyone waiting on you — one row each, with the next step",
+    iconKey: "overview",
+    placeholder: false,
+    visibleTo: "all",
+  },
+  {
+    slug: "patients",
+    label: "Patients",
+    hint: "Your patient panel — care-team, encounters, department",
+    iconKey: "patients",
+    placeholder: false,
+    visibleTo: "all",
+  },
+  {
+    slug: "schedule",
+    label: "Schedule",
+    hint: "Your clinic day, the clinic queue, availability",
+    iconKey: "schedule",
+    placeholder: false,
+    visibleTo: "all",
+  },
+];
+
 export function doctorFeaturePath(slug: DoctorFeatureSlug): string {
   return slug === "" ? "/doctor" : `/doctor/${slug}`;
 }

@@ -32,9 +32,13 @@ export function ProviderCard({ provider }: { provider: Provider }) {
         "hover:shadow-card focus-visible:ring-ring focus-visible:ring-2 focus-visible:outline-none",
       )}
     >
-      {/* The face, on the brand's lightest tint — a flat surface, not the
-          reference's gradient: DESIGN-medsync.md forbids decorative grounds. */}
-      <span className="bg-brand-50 relative grid aspect-[4/3] w-full place-items-center overflow-hidden rounded-lg">
+      {/* The face, on plum's lightest tint — who this is, a place colour
+          (ADR 0097) — and a flat surface, not the reference's gradient:
+          DESIGN-medsync.md forbids decorative grounds. */}
+      <span
+        data-place
+        className="bg-plum-50 relative grid aspect-[4/3] w-full place-items-center overflow-hidden rounded-lg"
+      >
         {provider.photoUrl ? (
           // eslint-disable-next-line @next/next/no-img-element -- a signed, expiring Supabase URL: next/image would need the host allow-listed and would re-fetch it server-side
           <img
@@ -45,9 +49,9 @@ export function ProviderCard({ provider }: { provider: Provider }) {
             decoding="async"
           />
         ) : initials ? (
-          <span className="text-brand-700 text-heading-m font-mono font-medium">{initials}</span>
+          <span className="text-plum-700 text-heading-m font-mono font-medium">{initials}</span>
         ) : (
-          <StethoscopeIcon strokeWidth={1.5} className="text-brand-700 size-7" aria-hidden />
+          <StethoscopeIcon strokeWidth={1.5} className="text-plum-700 size-7" aria-hidden />
         )}
       </span>
 
@@ -63,11 +67,9 @@ export function ProviderCard({ provider }: { provider: Provider }) {
       <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
         {provider.rating ? (
           <span className="text-foreground text-body-s inline-flex items-center gap-1">
-            <StarIcon
-              className="fill-brand-500 text-brand-500 size-3.5"
-              aria-hidden
-              strokeWidth={1.5}
-            />
+            {/* Outlined, like every icon (DESIGN § Icons), and ink: a
+                rating is information, and teal on this card means "open". */}
+            <StarIcon className="text-foreground size-3.5" aria-hidden strokeWidth={1.5} />
             <span className="font-mono tabular-nums">{provider.rating.average.toFixed(1)}</span>
             <span className="text-muted-foreground">
               · {provider.rating.count} {provider.rating.count === 1 ? "review" : "reviews"}
@@ -101,7 +103,7 @@ export function ProviderCard({ provider }: { provider: Provider }) {
 
       {/* Continuity, stated in words — never colour alone (DESIGN anti-patterns). */}
       {provider.seenBefore ? (
-        <span className="bg-brand-50 text-brand-700 text-caption absolute top-6 right-6 rounded-full px-2 py-0.5 font-medium">
+        <span className="bg-card text-foreground text-caption absolute top-6 right-6 rounded-full px-2 py-0.5 font-medium">
           Seen you before
         </span>
       ) : null}

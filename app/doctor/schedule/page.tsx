@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import { SectionRule } from "@/components/medsync/panel";
 import { Pill } from "@/components/ui/data-table";
 import { requireDoctorScope } from "@/lib/doctor/scope";
+import { encounterEngineLive } from "@/lib/encounter/feature";
 import { fetchClinicianCalendarEvents } from "@/lib/scheduling/calendar";
 import {
   fetchClinicianAvailabilityBlocks,
@@ -124,7 +125,7 @@ export default async function DoctorSchedulePage() {
         />
         <div className="flex min-w-0 flex-col gap-4">
           {!settings.autoConfirm ? <PendingApprovalsRail rows={pending} /> : null}
-          <QueueRail entries={queue} />
+          <QueueRail entries={queue} encounterEngineLive={encounterEngineLive()} />
         </div>
       </div>
     </div>

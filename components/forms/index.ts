@@ -22,6 +22,7 @@ export { RadioCards, type RadioCardOption, type RadioCardsProps } from "./radio-
 export { Checkbox, type CheckboxProps } from "./checkbox";
 export { ConsentCheckbox, type ConsentCheckboxProps } from "./consent-checkbox";
 export { PhoneInput, type PhoneInputProps } from "./phone-input";
+export { PasswordInput } from "./password-input";
 export { DatePicker, type DatePickerProps } from "./date-picker";
 export { DateRangePicker, type DateRangePickerProps } from "./date-range-picker";
 export { OtpInput, type OtpInputProps } from "./otp-input";

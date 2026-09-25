@@ -21,16 +21,30 @@ import { cn } from "@/lib/utils";
  * is never covered; elsewhere on phones it sits on the safe-area edge.
  * `z-30` like the tab bar — below dialogs, so a modal can cover it.
  *
- * Hidden on /emergency/** itself: the sheet IS the affordance there. It also
- * stands down on any page that renders its own Emergency link marked
- * `data-emergency-inline` (the resus desk header, PROMPT §5.7 / P11), so it
- * never floats over bedside controls — and never leaves a page without one.
+ * Hidden on /emergency/** itself: the sheet IS the affordance there. Also
+ * hidden on the landing (`/`, `/about`), `/get-started` and the (auth) shell
+ * (ADR 0099): their top bar carries the shared EmergencyButton, so a second
+ * control would double up. It also stands down on any page that renders its
+ * own Emergency link marked `data-emergency-inline` (the resus desk header,
+ * PROMPT §5.7 / P11), so it never floats over bedside controls — and never
+ * leaves a page without one.
  * Pulses once on mount (PRD §7.5), `motion-safe:` only — no continuous
  * pulse, no pulse at all for reduced-motion users.
  */
+/** Routes whose top bar carries the shared EmergencyButton (ADR 0099: get-started and the (auth) shell). */
+const HEADER_EMERGENCY = [
+  "/get-started",
+  "/sign-in",
+  "/sign-up",
+  "/forgot-password",
+  "/onboarding/mfa-setup",
+];
+
 export function EmergencyPill() {
   const pathname = usePathname();
   if (pathname === "/emergency" || pathname.startsWith("/emergency/")) return null;
+  if (pathname === "/" || pathname === "/about") return null; // ADR 0099: the landing header carries Emergency
+  if (HEADER_EMERGENCY.some((p) => pathname === p || pathname.startsWith(`${p}/`))) return null;
   const abovePatientBars = pathname === "/patient" || pathname.startsWith("/patient/");
 
   // Its own landmark: axe's region rule wants every piece of page content

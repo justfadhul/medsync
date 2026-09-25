@@ -28,6 +28,7 @@ import { assert, describe, expect, it } from "vitest";
 const APP = resolve(process.cwd(), ".next/server/app");
 const PAGES = [
   "index",
+  "about",
   "styleguide",
   "sign-in",
   "sign-up",

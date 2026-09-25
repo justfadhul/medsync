@@ -38,7 +38,11 @@ A role-based digital-hospital platform for Ugandan hospitals (IM-first, Mulago b
 
 ### `components/`
 
-- `ui/` — shadcn primitives. `landing/` — homepage sections (barrel `index.ts`; `v2-*` = wayfinding chrome; `_`-prefixed = internal helpers/mocks). `forms/` — shared multi-step form primitives. `medsync/`, `intake/`, etc.
+- `ui/` — shadcn primitives. `landing/` — the public landing `/` and `/about` (v4 "Slim", ADR 0099): `primitives.tsx` (section shell, header, kicker, CTAs), one file or folder per section (`hero/`, `trust/`, `founders/` are folders), `mocks/` (illustrative product mocks, roles and readings only), `site-nav`/`site-footer`; `_`-prefixed files survive only for `/styleguide` and the 404. `forms/` — shared multi-step form primitives. `medsync/`, `intake/`, etc.
+
+### `content/` — landing copy as data
+
+`landing.ts`, `hero.ts`, `founders.ts`, `trust-claims.ts`: every visible string on `/` and `/about`. Components hold none. Strings marked CSO / `HERO_LOCKED` need the Clinical Safety Officer's sign-off to change; `tests/landing/*` enforce the brief's invariants (no dosing, no names in mocks, 8 sections, ≤ 1,300 words, …).
 
 ### `db/schema/` — Drizzle tables (⚠️ do not hand-edit migrations; see below)
 

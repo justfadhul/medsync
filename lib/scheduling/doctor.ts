@@ -180,6 +180,10 @@ export interface DepartmentQueueRow {
   /** The audited reveal (ADR 0095). A walk-in has no booking, so no complaint line. */
   identity: PatientIdentity;
   appointmentId: string | null;
+  /** Set by ha-start-encounter when the row is called. The rail's "End visit"
+   *  closes THIS encounter (ADR 0101 R3), so a being_seen row without one has
+   *  nothing to end and offers nothing. */
+  encounterId: string | null;
   notes: string | null;
 }
 
@@ -209,6 +213,7 @@ export async function fetchDepartmentQueueToday(args: {
       dateOfBirth: patientProfiles.dateOfBirth,
       avatarPath: users.avatarPath,
       appointmentId: queueEntries.appointmentId,
+      encounterId: queueEntries.encounterId,
       symptoms: appointments.symptoms,
       reasonNote: appointments.reasonNote,
       notes: queueEntries.notes,
@@ -253,6 +258,7 @@ export async function fetchDepartmentQueueToday(args: {
     patientCode: r.patientCode,
     identity: toPatientIdentity(r, revealed),
     appointmentId: r.appointmentId,
+    encounterId: r.encounterId,
     notes: r.notes,
   }));
 }

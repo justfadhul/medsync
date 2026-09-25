@@ -110,7 +110,7 @@ export default async function PatientMenuPage() {
              is the accessible name. */
           <span
             aria-hidden
-            className="bg-brand-100 text-brand-800 text-heading-s grid size-14 shrink-0 place-items-center rounded-full font-medium"
+            className="bg-plum-100 text-plum-800 text-heading-s grid size-14 shrink-0 place-items-center rounded-full font-medium"
           >
             {monogram(name, scope.userEmail)}
           </span>

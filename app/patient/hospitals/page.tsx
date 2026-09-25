@@ -118,7 +118,7 @@ export default async function PatientHospitalsPage({ searchParams }: PageProps) 
                   <div className="flex items-start gap-3">
                     <span
                       aria-hidden
-                      className="bg-brand-100 text-brand-800 grid size-11 shrink-0 place-items-center rounded-xl"
+                      className="bg-plum-100 text-plum-800 grid size-11 shrink-0 place-items-center rounded-xl"
                     >
                       <HospitalIcon strokeWidth={1.5} className="size-5" />
                     </span>

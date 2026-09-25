@@ -80,7 +80,7 @@ export function CategoryGrid({
               <Icon aria-hidden className="text-primary size-5 shrink-0" strokeWidth={1.75} />
               <span className="text-caption line-clamp-3 leading-tight font-medium text-balance">
                 {t(CATALOG, c.labelKey)}
-                {n > 0 ? <span className="text-primary"> · {n} chosen</span> : null}
+                {n > 0 ? <span className="text-teal-700"> · {n} chosen</span> : null}
               </span>
             </button>
           </li>

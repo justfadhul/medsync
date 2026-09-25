@@ -56,7 +56,8 @@ async function signOut(): Promise<void> {
   // refuses the delete, and the next person on this phone would get this
   // account's messages.
   await unregisterPushToken();
-  await supabase.auth.signOut();
+  // This phone only: the default ("global") also signs the patient out of the web.
+  await supabase.auth.signOut({ scope: "local" });
 }
 
 export function SessionProvider({ children }: PropsWithChildren) {

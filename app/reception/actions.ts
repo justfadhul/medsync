@@ -13,17 +13,50 @@ import { callEdge } from "@/lib/supabase/edge";
  * revalidation.
  */
 
-export type ReceptionActionState = { ok?: boolean; error?: string };
+export type ReceptionActionState = {
+  ok?: boolean;
+  error?: string;
+  /** Where a check-in sent the patient — the function's word when it gives one. */
+  route?: ArrivalRoute;
+};
+
+type ArrivalRoute = "triage" | "clinic";
+
+/**
+ * Where the desk sends an arrival (ADR 0101): triage unless the clerk pressed
+ * "Send to clinic", and optionally another department at this hospital. The
+ * Edge Function owns the rules (an emergency entry is always triaged, the
+ * department must be here); this only refuses a clinic with no department,
+ * which would queue the patient nowhere.
+ */
+const RouteFields = {
+  route: z.enum(["triage", "clinic"]).default("triage"),
+  department_id: z.string().uuid().optional(),
+};
+const clinicHasDepartment = (v: { route: ArrivalRoute; department_id?: string }) =>
+  v.route !== "clinic" || !!v.department_id;
+const CLINIC_NEEDS_DEPARTMENT = { message: "Choose the clinic's department first." };
+
+/** The route fields as a form sends them: an empty select is "no department". */
+function routeFrom(formData: FormData) {
+  return {
+    route: formData.get("route") ?? undefined,
+    department_id: formData.get("department_id") || undefined,
+  };
+}
 
 /* ─── Check-in a booked patient ─────────────────────────────────── */
 
-const CheckInSchema = z.object({
-  appointment_id: z.string().uuid(),
-  reason: z
-    .string()
-    .min(8, "Reason ≥ 8 chars (audited).")
-    .default("Booked patient checked in at front desk."),
-});
+const CheckInSchema = z
+  .object({
+    appointment_id: z.string().uuid(),
+    reason: z
+      .string()
+      .min(8, "Reason ≥ 8 chars (audited).")
+      .default("Booked patient checked in at front desk."),
+    ...RouteFields,
+  })
+  .refine(clinicHasDepartment, CLINIC_NEEDS_DEPARTMENT);
 
 export async function checkInPatientAction(
   _prev: ReceptionActionState,
@@ -32,29 +65,34 @@ export async function checkInPatientAction(
   const parsed = CheckInSchema.safeParse({
     appointment_id: formData.get("appointment_id"),
     reason: formData.get("reason") ?? undefined,
+    ...routeFrom(formData),
   });
-  if (!parsed.success) {
-    const first = Object.values(parsed.error.flatten().fieldErrors).flat().find(Boolean);
-    return { error: first ?? "Please check the values." };
-  }
+  if (!parsed.success) return { error: firstIssue(parsed.error) };
   await requireReceptionScope();
-  const result = await callEdge("ha-check-in-patient", parsed.data, "reception");
+  const result = await callEdge<{ data?: { route?: ArrivalRoute } }>(
+    "ha-check-in-patient",
+    parsed.data,
+    "reception",
+  );
   if (!result.ok) return { error: result.error };
   revalidatePath("/reception");
   revalidatePath("/reception/expected");
   revalidatePath("/reception/flow");
-  return { ok: true };
+  return { ok: true, route: result.data?.data?.route ?? parsed.data.route };
 }
 
 /* ─── Check-in a declared (patient-initiated) intake ───────────── */
 
-const CheckInDeclaredSchema = z.object({
-  intake_id: z.string().uuid(),
-  reason: z
-    .string()
-    .min(8, "Reason ≥ 8 chars (audited).")
-    .default("Patient-declared queue ticket checked in at front desk."),
-});
+const CheckInDeclaredSchema = z
+  .object({
+    intake_id: z.string().uuid(),
+    reason: z
+      .string()
+      .min(8, "Reason ≥ 8 chars (audited).")
+      .default("Patient-declared queue ticket checked in at front desk."),
+    ...RouteFields,
+  })
+  .refine(clinicHasDepartment, CLINIC_NEEDS_DEPARTMENT);
 
 /**
  * Reception flips a patient-declared 'declared' intake to 'arrived'
@@ -69,19 +107,26 @@ export async function checkInDeclaredIntakeAction(
   const parsed = CheckInDeclaredSchema.safeParse({
     intake_id: formData.get("intake_id"),
     reason: formData.get("reason") ?? undefined,
+    ...routeFrom(formData),
   });
-  if (!parsed.success) {
-    const first = Object.values(parsed.error.flatten().fieldErrors).flat().find(Boolean);
-    return { error: first ?? "Please check the values." };
-  }
+  if (!parsed.success) return { error: firstIssue(parsed.error) };
   await requireReceptionScope();
-  const result = await callEdge("ha-check-in-patient", parsed.data, "reception");
+  const result = await callEdge<{ data?: { route?: ArrivalRoute } }>(
+    "ha-check-in-patient",
+    parsed.data,
+    "reception",
+  );
   if (!result.ok) return { error: result.error };
   revalidatePath("/reception");
   revalidatePath("/reception/expected");
   revalidatePath("/reception/find");
   revalidatePath("/reception/flow");
-  return { ok: true };
+  return { ok: true, route: result.data?.data?.route ?? parsed.data.route };
+}
+
+/** A refine's message has no field, so `fieldErrors` would drop it; the first issue never does. */
+function firstIssue(error: z.ZodError): string {
+  return error.issues[0]?.message ?? "Please check the values.";
 }
 
 /* ─── Cancel an intake ──────────────────────────────────────────── */

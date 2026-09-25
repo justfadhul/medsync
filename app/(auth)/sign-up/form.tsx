@@ -4,6 +4,7 @@ import type { SignUpState } from "./actions";
 import Link from "next/link";
 import { useActionState } from "react";
 
+import { PasswordInput } from "@/components/forms";
 import { AuthCard, FieldError } from "@/components/medsync/auth-card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -63,10 +64,9 @@ export function SignUpForm() {
 
         <div className="flex flex-col gap-1.5">
           <Label htmlFor="password">Password</Label>
-          <Input
+          <PasswordInput
             id="password"
             name="password"
-            type="password"
             autoComplete="new-password"
             minLength={12}
             required

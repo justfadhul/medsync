@@ -114,6 +114,11 @@ export const patientIntakes = pgTable(
     // chip on staff boards.
     declaredByPatient: boolean("declared_by_patient").notNull().default(false),
 
+    // Where the desk sent this arrival at check-in (migration 0067, ADR 0101):
+    // 'triage' or 'clinic'. NULL is every row before 0067 and means triage.
+    // Clinic-routed arrivals stay off the triage worklist.
+    routedTo: text("routed_to"),
+
     // Denormalized triage outcome (migration 0036) — the cheap acuity
     // sort key the worklist/board need. The full record lives in
     // triage_records; these mirror its assigned level + time.
@@ -142,6 +147,10 @@ export const patientIntakes = pgTable(
     check(
       "intakes_patient_or_unknown",
       sql`${t.patientUserId} IS NOT NULL OR ${t.provisionalPatientId} IS NOT NULL OR ${t.patientUnknownLabel} IS NOT NULL`,
+    ),
+    check(
+      "intakes_routed_to_check",
+      sql`${t.routedTo} IS NULL OR ${t.routedTo} IN ('triage','clinic')`,
     ),
     check(
       "intakes_triage_level_check",

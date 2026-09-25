@@ -17,6 +17,7 @@ import {
   departmentSchedulingPolicy,
 } from "@/db/schema/scheduling";
 import {
+  canArrive,
   CANCELLABLE,
   confirmationPending,
   fetchAppointments,
@@ -208,18 +209,6 @@ export default async function PatientAppointments() {
   );
 }
 
-/**
- * PRD §3.5: only a confirmed, in-person visit on the clinic's own today can
- * be arrived at. Judged on the server's clock, in the hospital's zone.
- */
-function canArrive(r: AppointmentRow, todayKey: string): boolean {
-  return (
-    r.status === "confirmed" &&
-    r.type !== "virtual" &&
-    localDateKey(new Date(r.startsAtIso), DEFAULT_TIME_ZONE) === todayKey
-  );
-}
-
 function SectionHead({ id, title, count }: { id: string; title: string; count: number }) {
   return (
     <div className="flex items-baseline justify-between gap-3">
@@ -277,7 +266,7 @@ function UpcomingVisit({
       <div className="flex items-start gap-3">
         <span
           aria-hidden
-          className="bg-brand-50 text-brand-700 grid size-11 shrink-0 place-items-center rounded-xl"
+          className="bg-plum-50 text-plum-700 grid size-11 shrink-0 place-items-center rounded-xl"
         >
           {initials ? (
             <span className="text-body-s font-mono font-medium">{initials}</span>

@@ -20,7 +20,7 @@ export function StatCard({ tinted = false, ...stat }: StatProps & { tinted?: boo
     <div
       className={cn(
         "flex items-center gap-3 rounded-xl border px-4 py-3 shadow-xs",
-        tinted ? "bg-accent border-brand-200 dark:border-brand-800" : "bg-card border-border",
+        tinted ? "bg-plum-50 border-plum-200" : "bg-card border-border",
       )}
     >
       <StatBody {...stat} tinted={tinted} />
@@ -65,7 +65,7 @@ function StatBody({ label, value, hint, icon, tinted }: StatProps & { tinted: bo
       <span
         className={cn(
           "grid size-9 shrink-0 place-items-center rounded-lg",
-          tinted ? "bg-card text-brand-700" : "bg-muted text-brand-700",
+          tinted ? "bg-card text-plum-700" : "bg-muted text-plum-700",
         )}
       >
         {icon}

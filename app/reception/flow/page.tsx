@@ -6,6 +6,7 @@ import { ArrowLeftIcon } from "lucide-react";
 import { Pill } from "@/components/ui/pill";
 import { fetchTodayFlow } from "@/lib/reception/queries";
 import { requireReceptionScope } from "@/lib/reception/scope";
+import { DEFAULT_TIME_ZONE } from "@/supabase/functions/_shared/slots";
 import { AutoRefresh } from "../_components/auto-refresh";
 
 export const metadata: Metadata = { title: "Flow · Reception · MedSync" };
@@ -143,7 +144,12 @@ export default async function ReceptionFlowPage() {
   );
 }
 
+/** The hospital's clock, 24-hour — not the host's (UTC on Vercel). */
 function formatTime(iso: string): string {
-  const d = new Date(iso);
-  return d.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });
+  return new Date(iso).toLocaleTimeString("en-GB", {
+    hour: "2-digit",
+    minute: "2-digit",
+    hourCycle: "h23",
+    timeZone: DEFAULT_TIME_ZONE,
+  });
 }

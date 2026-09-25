@@ -125,7 +125,7 @@ export function AvailabilitySheetButton({
                     a hand-written dark step fights the flip and loses contrast. */}
                 <span
                   aria-hidden
-                  className="bg-brand-50 text-brand-700 ring-brand-200/70 inline-flex size-9 items-center justify-center rounded-full ring-1"
+                  className="bg-plum-50 text-plum-700 ring-plum-200/70 inline-flex size-9 items-center justify-center rounded-full ring-1"
                 >
                   <CalendarClockIcon className="size-4" />
                 </span>

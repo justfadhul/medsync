@@ -1,6 +1,6 @@
 "use client";
 
-import type { BoardV2Ended, BoardV2Row } from "@/lib/resus/board-v2";
+import type { BoardV2Row } from "@/lib/resus/board-v2";
 import type { StepVisual } from "@/lib/resus/model";
 import type { ReactNode } from "react";
 import Link from "next/link";
@@ -11,8 +11,8 @@ import { ChevronRightIcon, ClockIcon } from "lucide-react";
 import {
   AMBER_CHIP,
   AMBER_NOTE,
+  endedWord,
   hhmm,
-  OUTCOME_WORD,
 } from "@/app/nurse/resus/[episodeId]/_components/v2/close-out-words";
 import { cn } from "@/lib/utils";
 import { adminCloseResusV2 } from "../_v2/actions-closeout";
@@ -32,11 +32,7 @@ const VISUAL: Record<StepVisual, { word: string; chip: string }> = {
   active_threat: { word: "Active threat", chip: "bg-rose-600 text-white" },
 };
 
-export function endedWord(e: BoardV2Ended): string {
-  if (e.state === "cancelled") return "Opened in error";
-  if (e.closureKind === "administrative") return "Closed administratively";
-  return e.outcomeCode ? OUTCOME_WORD[e.outcomeCode] : "Ended";
-}
+export { endedWord };
 
 export function Section({
   id,

@@ -63,9 +63,9 @@ export function EmergencyInterrupt({
         showCloseButton={false}
         desktop="center"
         widthClassName="md:max-w-[480px] md:w-full"
-        // Portalled out of the page: the forced-light wrapper is re-applied here (Law 3).
+        // Follows the site theme like the page (owner, 2026-09-23). In dark the
+        // sheet is the critical burgundy and the Call button solid red on it.
         className={cn(
-          "medsync-forced-light",
           calm
             ? "bg-card text-foreground border-border"
             : "bg-status-critical-bg text-foreground border-status-critical-fg/30",

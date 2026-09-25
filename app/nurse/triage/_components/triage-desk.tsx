@@ -192,6 +192,8 @@ export function TriageDesk({
   basePath = "/nurse/triage",
   resusBase = "/nurse/resus",
   openResusOnArrest = false,
+  onSubmitted,
+  backLabel = "Back to worklist",
 }: {
   row: TriageWorklistRow;
   mayDownTriage: boolean;
@@ -201,6 +203,13 @@ export function TriageDesk({
   resusBase?: string;
   /** Resus Desk v2 S0: the server page passes `resusDeskV2()` — never read here (client). */
   openResusOnArrest?: boolean;
+  /**
+   * The doctor workspace's sheet shows the result and the next step in place;
+   * without it the desk returns to the worklist, as before.
+   */
+  onSubmitted?: (state: TriageSubmitState) => void;
+  /** The back link's words: the doctor workspace's sheet goes "Back to board". */
+  backLabel?: string;
 }) {
   const router = useRouter();
   const onClose = useCallback(() => router.push(basePath), [router, basePath]);
@@ -229,8 +238,10 @@ export function TriageDesk({
     {},
   );
   useEffect(() => {
-    if (state.ok) onClose();
-  }, [state.ok, onClose]);
+    if (!state.ok) return;
+    if (onSubmitted) onSubmitted(state);
+    else onClose();
+  }, [state, onClose, onSubmitted]);
 
   const liveVitals = useMemo(
     () => ({
@@ -844,7 +855,7 @@ export function TriageDesk({
           className="size-3.5 transition-transform group-hover:-translate-x-0.5"
           aria-hidden
         />
-        Back to worklist
+        {backLabel}
       </Link>
 
       {/* a11y: announce the live level/disposition as vitals change so a

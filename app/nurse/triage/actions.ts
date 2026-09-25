@@ -78,6 +78,10 @@ export type TriageSubmitState = {
   triageRecordId?: string;
   computedLevel?: number;
   assignedLevel?: number;
+  /** The engine's first stated reason — the doctor workspace's result sheet says why. */
+  why?: string | null;
+  /** A Step-0 life threat: the sheet offers Open resus first. */
+  lifeThreat?: boolean;
 };
 
 export async function submitTriageAction(
@@ -274,6 +278,8 @@ export async function submitTriageAction(
     triageRecordId: record.id,
     computedLevel,
     assignedLevel,
+    why: result.reasoning[0] ?? null,
+    lifeThreat: result.lifeThreat,
   };
 }
 

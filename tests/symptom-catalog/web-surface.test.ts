@@ -222,9 +222,10 @@ describe("Gate CS", () => {
     expect(src.catalog).toMatch(/mode === "draft_watermarked" \? <Watermark \/> : null/);
   });
 
-  it("the page redirects when the mode is off and forces the light scheme", () => {
+  it("the page redirects when the mode is off and follows the site theme (owner, 2026-09-23)", () => {
     expect(src.page).toMatch(/if \(mode === "off"\) redirect\("\/patient"\)/);
-    expect(src.page).toMatch(/medsync-forced-light/);
+    expect(src.page).not.toMatch(/medsync-forced-light/);
+    expect(src.interrupt).not.toMatch(/medsync-forced-light/);
   });
 
   it("the home imports catalogRenderMode and keeps the shortlist when off", () => {

@@ -9,6 +9,7 @@ import { z } from "zod";
 import { db } from "@/db";
 import { consentVersions } from "@/db/schema/consent-versions";
 import { encrypt } from "@/lib/encryption";
+import { assertSignupsOpen } from "@/lib/legal";
 import { logger } from "@/lib/logger";
 import { listCadres, listDepartments, listRoles } from "@/lib/reference-data";
 import { createClient } from "@/lib/supabase/server";
@@ -102,6 +103,7 @@ export async function submitNonClinicalSignupAction(
   _prev: NonClinicalSignupState,
   formData: FormData,
 ): Promise<NonClinicalSignupState> {
+  assertSignupsOpen(); // S8 D1: production collects no personal data until the legal basics exist
   // Pull the optional appointment-letter file before string conversion.
   const appointmentLetterFile = formData.get("appointment_letter");
   const rawEntries: Array<[string, string]> = [];

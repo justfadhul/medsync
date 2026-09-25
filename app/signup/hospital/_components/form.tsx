@@ -1,14 +1,14 @@
 "use client";
 
+import type { HospitalApplicationErrors } from "../_lib/schema";
 import type {
-  HospitalApplicationErrors,
   HospitalApplicationState,
   loadSubcountiesForDistrictActionHospital,
   submitHospitalApplicationAction,
 } from "../actions";
 import type { ImSpecialty } from "./im-subspecialty-picker";
 import type { ComboboxItem, MultiStepStep } from "@/components/forms";
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 import { TriangleAlertIcon } from "lucide-react";
 
 import {
@@ -19,6 +19,7 @@ import {
   Field,
   FileUpload,
   MultiStepForm,
+  PasswordInput,
   PhoneInput,
   RadioCards,
   SegmentedControl,
@@ -44,6 +45,7 @@ import {
   STAFF_BANDS,
   SUPPORT_SERVICE_CHOICES,
 } from "../_lib/catalog";
+import { hospitalApplicationPayload, HospitalApplicationSchema } from "../_lib/schema";
 import { ImSubspecialtyPicker } from "./im-subspecialty-picker";
 
 /**
@@ -147,7 +149,51 @@ export function HospitalApplicationForm({
     submit,
     {},
   );
-  const errors: HospitalApplicationErrors = state.errors ?? {};
+  // Continue checks the step against the server's own schema (the fields this step renders);
+  // those errors sit over the last submit's.
+  const [stepErrors, setStepErrors] = useState<Record<string, string>>({});
+  const errors: HospitalApplicationErrors & Record<string, string | undefined> = {
+    ...state.errors,
+    ...stepErrors,
+  };
+
+  function validateStep(section: HTMLElement): boolean {
+    const form = section.closest("form");
+    if (!form) return true;
+    const data = new FormData(form);
+    const { cleaned } = hospitalApplicationPayload(data);
+    const here = new Set(
+      Array.from(section.querySelectorAll("[name]"), (el) => el.getAttribute("name")),
+    );
+    const found: Record<string, string> = {};
+    for (const issue of HospitalApplicationSchema.safeParse(cleaned).error?.issues ?? []) {
+      const key = String(issue.path[0]);
+      if (here.has(key) && !found[key]) found[key] = key in cleaned ? issue.message : "Required.";
+    }
+    // The server's cross-field and upload checks, a step early.
+    const departments = cleaned.departments;
+    if (
+      here.has("primary_department") &&
+      !found.primary_department &&
+      Array.isArray(departments) &&
+      !departments.includes(String(cleaned.primary_department))
+    ) {
+      found.primary_department = "Primary must be one of your selected departments.";
+    }
+    for (const name of ["facility_licence_document", "authority_letter_document"]) {
+      const file = data.get(name);
+      if (here.has(name) && !(file instanceof File && file.size > 0)) found[name] = "Required.";
+    }
+    setStepErrors(found);
+    const first = Object.keys(found)[0];
+    if (first) {
+      section
+        .querySelector(`[name="${first}"]`)
+        ?.closest("div")
+        ?.scrollIntoView({ block: "center", behavior: "smooth" });
+    }
+    return !first;
+  }
 
   const steps: MultiStepStep[] = [
     /* ─── Step 1 — Institution (§B) ────────────────────────────── */
@@ -487,6 +533,7 @@ export function HospitalApplicationForm({
             label="Facility licence document"
             description="PDF / JPG / PNG, ≤ 5 MB. Stored privately."
             required
+            serverError={errors.facility_licence_document}
           >
             <FileUpload
               name="facility_licence_document"
@@ -586,6 +633,7 @@ export function HospitalApplicationForm({
             label="Signed authorisation letter"
             description="On letterhead, naming you as the authorised applicant. PDF / JPG / PNG, ≤ 5 MB."
             required
+            serverError={errors.authority_letter_document}
           >
             <FileUpload
               name="authority_letter_document"
@@ -714,12 +762,7 @@ export function HospitalApplicationForm({
             required
             serverError={errors.applicant_password}
           >
-            <Input
-              name="applicant_password"
-              type="password"
-              autoComplete="new-password"
-              minLength={12}
-            />
+            <PasswordInput name="applicant_password" autoComplete="new-password" minLength={12} />
           </Field>
 
           <ConsentCheckbox
@@ -771,7 +814,7 @@ export function HospitalApplicationForm({
       )}
       noValidate
     >
-      <MultiStepForm flowLabel="Hospital application" steps={steps} />
+      <MultiStepForm flowLabel="Hospital application" steps={steps} validateStep={validateStep} />
     </form>
   );
 }

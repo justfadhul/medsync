@@ -369,7 +369,8 @@ const makeStyles = (c: Palette) =>
       justifyContent: "center",
     },
     dotDone: { backgroundColor: c.primary, borderColor: c.primary },
-    dotCurrent: { backgroundColor: c.accent, borderColor: c.primary },
+    // Done is state (teal); the current step is place (plum) — ADR 0097.
+    dotCurrent: { backgroundColor: c.place, borderColor: c.placeForeground },
     connector: { width: 1, height: space[5], backgroundColor: c.border },
     stepWord: {
       fontFamily: font.body,

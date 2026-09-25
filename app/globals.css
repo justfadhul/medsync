@@ -72,6 +72,24 @@
   --color-mint-900: var(--mint-900);
   --color-mint-950: var(--mint-950);
 
+  /* ─── Plum: the secondary accent (ADR 0097) ───────────────────────────
+     Colour as *place*, never state — hero glow, active nav, avatars,
+     chart series 2. The CTA stays teal; red stays the only alarm. Flips
+     with the theme exactly like teal (dark 50 is the deep end). A layout
+     may re-pin `--plum-*` the way `medsync-forced-dark` re-pins teal to
+     give one workspace its own hue. */
+  --color-plum-50: var(--plum-50);
+  --color-plum-100: var(--plum-100);
+  --color-plum-200: var(--plum-200);
+  --color-plum-300: var(--plum-300);
+  --color-plum-400: var(--plum-400);
+  --color-plum-500: var(--plum-500);
+  --color-plum-600: var(--plum-600);
+  --color-plum-700: var(--plum-700);
+  --color-plum-800: var(--plum-800);
+  --color-plum-900: var(--plum-900);
+  --color-plum-950: var(--plum-950);
+
   /* ─── Gradients ───────────────────────────────────────────────────────
      Large-area, low-contrast washes in the manner of the reference designs:
      the shift is a lightness step within one hue, never a rainbow. Each is a
@@ -319,14 +337,14 @@
   --sidebar-foreground: #171717;
   --sidebar-primary: #0d9488;
   --sidebar-primary-foreground: #ffffff;
-  --sidebar-accent: #f0fdfa;
-  --sidebar-accent-foreground: #0d9488;
+  --sidebar-accent: var(--plum-50);
+  --sidebar-accent-foreground: var(--plum-800);
   --sidebar-border: #e5e5e5;
   --sidebar-ring: #14b8a6;
 
   /* Charts */
   --chart-1: #0d9488;
-  --chart-2: #2dd4bf;
+  --chart-2: var(--plum-600);
   --chart-3: #5eead4;
   --chart-4: #525252;
   --chart-5: #171717;
@@ -357,12 +375,31 @@
   --mint-900: var(--teal-900);
   --mint-950: var(--teal-950);
 
-  /* Gradients (light) */
-  --gradient-hero: linear-gradient(158deg, #115e59 0%, #0f766e 58%, #0d9488 100%);
-  --gradient-band: linear-gradient(180deg, #115e59 0%, #0f766e 100%);
+  /* Plum — mulberry, OKLCH h 342, even lightness steps, chroma peaking at 600 */
+  --plum-50: #fdf3f9;
+  --plum-100: #fee4f3;
+  --plum-200: #fecbe9;
+  --plum-300: #fea2dc;
+  --plum-400: #ea7bc4;
+  --plum-500: #c953a3;
+  --plum-600: #9f2f7e;
+  --plum-700: #87236a;
+  --plum-800: #6a1952;
+  --plum-900: #4e113c;
+  --plum-950: #321227;
+
+  /* Gradients (light). The hero carries the signature: a plum glow in one
+     corner of the deep-teal ground — a glow, not a sweep, so the two hues
+     never mix into grey along a long diagonal. */
+  --gradient-hero:
+    radial-gradient(120% 120% at 100% 100%, rgba(135, 35, 106, 0.85) 0%, transparent 55%),
+    linear-gradient(158deg, #115e59 0%, #0f766e 58%, #0d9488 100%);
+  --gradient-band:
+    radial-gradient(120% 120% at 100% 100%, rgba(135, 35, 106, 0.85) 0%, transparent 55%),
+    linear-gradient(180deg, #115e59 0%, #0f766e 100%);
   --gradient-wash: linear-gradient(180deg, #f0fdfa 0%, #ffffff 100%);
   --gradient-accent: linear-gradient(150deg, #5eead4 0%, #99f6e4 100%);
-  --gradient-signature: linear-gradient(135deg, #0f766e 0%, #2dd4bf 100%);
+  --gradient-signature: linear-gradient(135deg, #0f766e 0%, #9f2f7e 100%);
   --gradient-card: linear-gradient(165deg, #ffffff 0%, #f0fdfa 100%);
 
   /* Shadows (light) */
@@ -450,14 +487,14 @@
   --sidebar-foreground: #e5e5e5;
   --sidebar-primary: #2dd4bf;
   --sidebar-primary-foreground: #042f2e;
-  --sidebar-accent: #042f2e;
-  --sidebar-accent-foreground: #5eead4;
+  --sidebar-accent: var(--plum-50);
+  --sidebar-accent-foreground: var(--plum-800);
   --sidebar-border: #262626;
   --sidebar-ring: #2dd4bf;
 
   /* Charts (brighter to read on dark) */
   --chart-1: #2dd4bf;
-  --chart-2: #5eead4;
+  --chart-2: var(--plum-600);
   --chart-3: #99f6e4;
   --chart-4: #a3a3a3;
   --chart-5: #e5e5e5;
@@ -489,12 +526,29 @@
   --mint-900: var(--teal-900);
   --mint-950: var(--teal-950);
 
+  /* Plum (dark) — inverted like teal: 50 is the deep end, 600 the bright anchor */
+  --plum-50: #321227;
+  --plum-100: #4a173a;
+  --plum-200: #671e51;
+  --plum-300: #862e6b;
+  --plum-400: #a94088;
+  --plum-500: #cb58a6;
+  --plum-600: #ed85c8;
+  --plum-700: #fda8dd;
+  --plum-800: #ffcdeb;
+  --plum-900: #fde7f4;
+  --plum-950: #fdf3f9;
+
   /* Gradients (dark — same hue, dropped in lightness so they read as depth) */
-  --gradient-hero: linear-gradient(158deg, #021a19 0%, #042f2e 58%, #134e4a 100%);
-  --gradient-band: linear-gradient(180deg, #042f2e 0%, #115e59 100%);
+  --gradient-hero:
+    radial-gradient(120% 120% at 100% 100%, rgba(106, 25, 82, 0.8) 0%, transparent 55%),
+    linear-gradient(158deg, #021a19 0%, #042f2e 58%, #134e4a 100%);
+  --gradient-band:
+    radial-gradient(120% 120% at 100% 100%, rgba(106, 25, 82, 0.8) 0%, transparent 55%),
+    linear-gradient(180deg, #042f2e 0%, #115e59 100%);
   --gradient-wash: linear-gradient(180deg, #0b1a19 0%, #0a0a0a 100%);
   --gradient-accent: linear-gradient(150deg, #0f766e 0%, #115e59 100%);
-  --gradient-signature: linear-gradient(135deg, #134e4a 0%, #0f766e 100%);
+  --gradient-signature: linear-gradient(135deg, #134e4a 0%, #6a1952 100%);
   --gradient-card: linear-gradient(165deg, #171717 0%, #0f1f1e 100%);
 
   /* Shadows (dark — 3-5x stronger + faint white inner edge per spec) */
@@ -752,63 +806,6 @@
   }
 }
 
-/* ─── Forced-dark sections ───────────────────────────────────────────────
-   The mid-band (§08) and final-CTA (§16) are intentionally always-dark
-   surfaces regardless of theme — light teal text on a deep teal ground in
-   both light and dark modes. But the brand/mint (= teal) scales flip
-   between modes (brand-50 = #f0fdfa light, #042f2e dark), so any brand
-   utility on these sections would inverse in dark mode and the text would
-   disappear into the background.
-
-   This utility pins every teal variable to its light-mode value within the
-   scoped element and its descendants, and re-points brand/mint at them
-   there (a var() alias resolves on the element that declares it, so the
-   :root aliases would not follow). `text-brand-50` then always resolves
-   to the light shade these dark surfaces were designed against, and the
-   950 step stays deep so the band's own `bg-brand-950` does not turn
-   near-white in dark. */
-@utility medsync-forced-dark {
-  --teal-50: #f0fdfa;
-  --teal-100: #ccfbf1;
-  --teal-200: #99f6e4;
-  --teal-300: #5eead4;
-  --teal-400: #2dd4bf;
-  --teal-500: #14b8a6;
-  --teal-600: #0d9488;
-  --teal-700: #0f766e;
-  --teal-800: #115e59;
-  --teal-900: #134e4a;
-  --teal-950: #042f2e;
-
-  --brand-50: var(--teal-50);
-  --brand-100: var(--teal-100);
-  --brand-200: var(--teal-200);
-  --brand-300: var(--teal-300);
-  --brand-400: var(--teal-400);
-  --brand-500: var(--teal-500);
-  --brand-600: var(--teal-600);
-  --brand-700: var(--teal-700);
-  --brand-800: var(--teal-800);
-  --brand-900: var(--teal-900);
-  --brand-950: var(--teal-950);
-
-  --mint-50: var(--teal-50);
-  --mint-100: var(--teal-100);
-  --mint-200: var(--teal-200);
-  --mint-300: var(--teal-300);
-  --mint-400: var(--teal-400);
-  --mint-500: var(--teal-500);
-  --mint-600: var(--teal-600);
-  --mint-700: var(--teal-700);
-  --mint-800: var(--teal-800);
-  --mint-900: var(--teal-900);
-  --mint-950: var(--teal-950);
-
-  /* Gradients on a forced-dark band use the deep end of the ramp in both modes. */
-  --gradient-hero: linear-gradient(158deg, #042f2e 0%, #134e4a 58%, #0f766e 100%);
-  --gradient-band: linear-gradient(180deg, #042f2e 0%, #115e59 100%);
-}
-
 /* ADR 0098 Law 3: the Emergency Pathway and the symptom catalog are
    permanently light. This re-pins every :root token on the scoped element
    so its subtree ignores `.dark` — the forced-dark utility above, mirrored.
@@ -906,9 +903,20 @@
   --mint-800: var(--teal-800);
   --mint-900: var(--teal-900);
   --mint-950: var(--teal-950);
+  --plum-50: #fdf3f9;
+  --plum-100: #fee4f3;
+  --plum-200: #fecbe9;
+  --plum-300: #fea2dc;
+  --plum-400: #ea7bc4;
+  --plum-500: #c953a3;
+  --plum-600: #9f2f7e;
+  --plum-700: #87236a;
+  --plum-800: #6a1952;
+  --plum-900: #4e113c;
+  --plum-950: #321227;
   --gradient-wash: linear-gradient(180deg, #f0fdfa 0%, #ffffff 100%);
   --gradient-accent: linear-gradient(150deg, #5eead4 0%, #99f6e4 100%);
-  --gradient-signature: linear-gradient(135deg, #0f766e 0%, #2dd4bf 100%);
+  --gradient-signature: linear-gradient(135deg, #0f766e 0%, #9f2f7e 100%);
   --gradient-card: linear-gradient(165deg, #ffffff 0%, #f0fdfa 100%);
   --shadow-xs-value: 0 1px 2px rgba(0, 0, 0, 0.04);
   --shadow-sm-value: 0 1px 3px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.04);
@@ -917,6 +925,80 @@
   --shadow-card-value: 0 0 0 1px rgba(0, 0, 0, 0.06), 0 1px 3px rgba(0, 0, 0, 0.04);
   --shadow-popover-value: 0 0 0 1px rgba(0, 0, 0, 0.06), 0 12px 24px -4px rgba(0, 0, 0, 0.12);
   --shadow-focus-value: 0 0 0 2px rgba(20, 184, 166, 0.4);
+}
+
+/* ─── Forced-dark sections ───────────────────────────────────────────────
+   The mid-band (§08) and final-CTA (§16) are intentionally always-dark
+   surfaces regardless of theme — light teal text on a deep teal ground in
+   both light and dark modes. But the brand/mint (= teal) scales flip
+   between modes (brand-50 = #f0fdfa light, #042f2e dark), so any brand
+   utility on these sections would inverse in dark mode and the text would
+   disappear into the background.
+
+   This utility pins every teal variable to its light-mode value within the
+   scoped element and its descendants, and re-points brand/mint at them
+   there (a var() alias resolves on the element that declares it, so the
+   :root aliases would not follow). `text-brand-50` then always resolves
+   to the light shade these dark surfaces were designed against, and the
+   950 step stays deep so the band's own `bg-brand-950` does not turn
+   near-white in dark. */
+@utility medsync-forced-dark {
+  --teal-50: #f0fdfa;
+  --teal-100: #ccfbf1;
+  --teal-200: #99f6e4;
+  --teal-300: #5eead4;
+  --teal-400: #2dd4bf;
+  --teal-500: #14b8a6;
+  --teal-600: #0d9488;
+  --teal-700: #0f766e;
+  --teal-800: #115e59;
+  --teal-900: #134e4a;
+  --teal-950: #042f2e;
+
+  --brand-50: var(--teal-50);
+  --brand-100: var(--teal-100);
+  --brand-200: var(--teal-200);
+  --brand-300: var(--teal-300);
+  --brand-400: var(--teal-400);
+  --brand-500: var(--teal-500);
+  --brand-600: var(--teal-600);
+  --brand-700: var(--teal-700);
+  --brand-800: var(--teal-800);
+  --brand-900: var(--teal-900);
+  --brand-950: var(--teal-950);
+
+  --mint-50: var(--teal-50);
+  --mint-100: var(--teal-100);
+  --mint-200: var(--teal-200);
+  --mint-300: var(--teal-300);
+  --mint-400: var(--teal-400);
+  --mint-500: var(--teal-500);
+  --mint-600: var(--teal-600);
+  --mint-700: var(--teal-700);
+  --mint-800: var(--teal-800);
+  --mint-900: var(--teal-900);
+  --mint-950: var(--teal-950);
+
+  /* Plum pinned to its light values for the same reason as teal above. */
+  --plum-50: #fdf3f9;
+  --plum-100: #fee4f3;
+  --plum-200: #fecbe9;
+  --plum-300: #fea2dc;
+  --plum-400: #ea7bc4;
+  --plum-500: #c953a3;
+  --plum-600: #9f2f7e;
+  --plum-700: #87236a;
+  --plum-800: #6a1952;
+  --plum-900: #4e113c;
+  --plum-950: #321227;
+
+  /* Gradients on a forced-dark band use the deep end of the ramp in both modes. */
+  --gradient-hero:
+    radial-gradient(120% 120% at 100% 100%, rgba(135, 35, 106, 0.85) 0%, transparent 55%),
+    linear-gradient(158deg, #042f2e 0%, #134e4a 58%, #0f766e 100%);
+  --gradient-band:
+    radial-gradient(120% 120% at 100% 100%, rgba(135, 35, 106, 0.85) 0%, transparent 55%),
+    linear-gradient(180deg, #042f2e 0%, #115e59 100%);
 }
 
 /* Base layer — minimal global rules. Components own their styles. */

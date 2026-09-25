@@ -1,276 +1,118 @@
 import Link from "next/link";
-import { PlusIcon } from "lucide-react";
+import { MinusIcon, PlusIcon } from "lucide-react";
 
+import { FAQ, FINAL_CTA } from "@/content/landing";
+import { CLAIMS } from "@/content/trust-claims";
+import { signupsOpen } from "@/lib/legal";
 import { cn } from "@/lib/utils";
-import { RevealOnScroll, StaggerOnScroll } from "./_reveal-on-scroll";
+import { CONTAINER, CtaGroup, Emph, Kicker, TEXT_LINK } from "./primitives";
 
 /**
- * §15 — FAQ.
+ * S8 — the FAQ and the closing band (PROMPT-LANDING-S8). Server component,
+ * zero client JavaScript: the questions are a native exclusive accordion
+ * (`<details name="faq">`). Two answers are derived so they can't drift from
+ * the truth: "Is MedSync live?" follows `signupsOpen` (lib/legal.ts), and "Is
+ * patient data safe?" names only the trust claims whose status is "built".
  *
- * Native HTML `<details>` / `<summary>` accordion — accessible by default
- * (keyboard, screen reader, no JS required). Server component. The
- * rotating chevron and panel reveal are pure CSS via the `[&[open]]`
- * sibling selector.
- *
- * 8 honest questions. No marketing answers. Each one names what we have
- * and what we don't.
+ * Layout: header + contact line left (cols 1–4), accordion right (cols 6–12);
+ * then the full-bleed teal-900 band — the page's one dark moment — flush on
+ * the footer.
  */
-
-interface FaqEntry {
-  q: string;
-  a: React.ReactNode;
-}
-
-const FAQS: FaqEntry[] = [
-  {
-    q: "Is MedSync live yet?",
-    a: (
-      <>
-        <p>
-          Not generally available. We&rsquo;re in private build, lining up the first hospital pilot.
-          The wait-list and pilot-request forms on this page go to a real founder inbox &mdash; not
-          an autoresponder.
-        </p>
-      </>
-    ),
-  },
-  {
-    q: "Who is MedSync for?",
-    a: (
-      <>
-        <p>Three audiences, in this order:</p>
-        <ol className="mt-2 list-decimal pl-5">
-          <li>
-            <strong>Hospitals</strong> &mdash; built to run any Ugandan hospital up to
-            national-referral scale: regional referrals, large mission hospitals, and national
-            referrals all sit on the same product.
-          </li>
-          <li>
-            <strong>Clinicians</strong> &mdash; doctors, nurses, pharmacists, CHWs who work inside
-            those hospitals.
-          </li>
-          <li>
-            <strong>Patients</strong> &mdash; once a hospital onboards, their patients get the
-            home-monitoring + SMS adherence side.
-          </li>
-        </ol>
-      </>
-    ),
-  },
-  {
-    q: "Is my data safe?",
-    a: (
-      <>
-        <p>
-          Short answer: the protections you&rsquo;d expect, and they&rsquo;re in the codebase now
-          &mdash; PostgreSQL row-level security (deny-by-default), append-only audit log,
-          AES-256-GCM column encryption for PII, mandatory TOTP MFA for any clinical role,
-          PII-redacted server + Sentry logs.
-        </p>
-        <p className="mt-2">
-          Long answer:{" "}
-          <Link
-            className="text-brand-700 dark:text-brand-300 underline-offset-2 hover:underline"
-            href="/#trust"
-          >
-            the trust section
-          </Link>{" "}
-          lists each mechanism and the file in this repo where it lives.
-        </p>
-      </>
-    ),
-  },
-  {
-    q: "Are you HIPAA / ISO 27001 / SOC 2 certified?",
-    a: (
-      <>
-        <p>
-          No. Holding none of those today and we won&rsquo;t put a badge on this page until we do.
-          The engineering controls described above are <em>equivalent</em> in spirit to the HIPAA
-          Security Rule&rsquo;s technical safeguards, but equivalence isn&rsquo;t certification.
-        </p>
-        <p className="mt-2">
-          Uganda Data Protection and Privacy Act 2019 compliance is the jurisdictional bar
-          we&rsquo;re actually held to and it&rsquo;s the one we engineer against day-to-day.
-        </p>
-      </>
-    ),
-  },
-  {
-    q: "What does a hospital pilot cost?",
-    a: (
-      <>
-        <p>
-          The first pilot cohort runs on cost-only terms &mdash; we don&rsquo;t charge a licence,
-          you cover only the marginal infrastructure (SMS, server, etc.). We trade for design
-          partnership: weekly clinician feedback, real workflow access, permission to write about
-          the work (no PHI).
-        </p>
-        <p className="mt-2">
-          After pilot, pricing is per-bed per-month with a sliding scale for public-sector
-          hospitals. We&rsquo;ll quote in a call, not on this page.
-        </p>
-      </>
-    ),
-  },
-  {
-    q: "What happens when the internet goes down?",
-    a: (
-      <>
-        <p>
-          The ward keeps working. MedSync writes locally first and syncs on reconnect &mdash;
-          clinicians can chart, prescribe, and read the record offline. The catch: ward-to-ward sync
-          within a single hospital still needs at least a local network. We&rsquo;re not pretending
-          the offline story is solved end-to-end.
-        </p>
-      </>
-    ),
-  },
-  {
-    q: "Why Uganda specifically?",
-    a: (
-      <>
-        <p>
-          Because the team is Ugandan and the problem is in front of us. The closed-loop record idea
-          travels &mdash; Mulago, Mengo, Mbarara all share the same paper-to-WhatsApp handover gap.
-          The version of MedSync that&rsquo;s built for Uganda will run in most of the region
-          without rebuild; the version that&rsquo;s built for Boston wouldn&rsquo;t survive a power
-          cut at IM-A.
-        </p>
-      </>
-    ),
-  },
-  {
-    q: "How do I get on the wait-list or apply as a clinician / hospital?",
-    a: (
-      <>
-        <p>The three doors below the hero are the actual route:</p>
-        <ul className="mt-2 flex flex-col gap-1.5">
-          {[
-            { label: "For patients · join the wait-list", href: "/onboarding/patient" },
-            { label: "For clinicians · request access", href: "/onboarding/clinical" },
-            { label: "For hospitals · request a pilot", href: "/onboarding/hospital" },
-          ].map((d) => (
-            <li key={d.href}>
-              <Link
-                href={d.href}
-                className="text-brand-700 dark:text-brand-300 underline-offset-2 hover:underline"
-              >
-                {d.label}
-              </Link>
-            </li>
-          ))}
-        </ul>
-      </>
-    ),
-  },
-];
-
 export function Faq() {
+  const built = CLAIMS.filter((c) => c.status === "built");
+  const { ending } = FAQ.safe;
+  const items: Array<{ q: string; a: React.ReactNode }> = [
+    { q: FAQ.live.q, a: signupsOpen ? FAQ.live.open : FAQ.live.closed },
+    ...FAQ.items,
+    {
+      q: FAQ.safe.q,
+      a: (
+        <>
+          {built.map((c) => `${c.title} ${c.description}`).join(" ")} {ending.before}{" "}
+          <Link href={ending.href} className={TEXT_LINK}>
+            {ending.link}
+          </Link>
+          {ending.after}
+        </>
+      ),
+    },
+    FAQ.next,
+  ];
+
   return (
     <section
       id="faq"
-      aria-labelledby="faq-headline"
-      className="border-border bg-background relative w-full border-y"
+      data-section-anchor
+      aria-labelledby="faq-title"
+      className="border-border bg-background w-full border-t"
     >
-      <div className="mx-auto w-full max-w-300 px-5 py-20 sm:px-8 sm:py-28">
-        <div className="grid gap-10 md:grid-cols-12 md:gap-16">
-          {/* Left — header */}
-          <header className="md:col-span-4">
-            <RevealOnScroll>
-              <span className="text-muted-foreground inline-flex items-center gap-2 font-mono text-[10px] tracking-[0.18em] uppercase">
-                <span className="pulse-dot bg-brand-500 size-1 rounded-full" />
-                FAQ
-              </span>
-              <h2
-                id="faq-headline"
-                className="font-display text-foreground mt-3 text-[30px] leading-[1.1] tracking-[-0.025em] text-balance sm:text-[40px]"
-                style={{ fontWeight: 400 }}
-              >
-                The questions{" "}
-                <span className="text-brand-700 dark:text-brand-300 italic">
-                  we keep getting asked
-                </span>
-                .
-              </h2>
-              <p className="text-muted-foreground mt-4 max-w-[44ch] text-[14.5px] leading-[1.55]">
-                Honest answers. If your question isn&rsquo;t here, the form on{" "}
-                <a
-                  href="mailto:hello@medsync.health?subject=MedSync%20question"
-                  className="text-brand-700 dark:text-brand-300 underline-offset-2 hover:underline"
-                >
-                  hello@medsync.health
-                </a>{" "}
-                goes to a real inbox.
-              </p>
-            </RevealOnScroll>
-          </header>
-
-          {/* Right — accordion */}
-          <StaggerOnScroll
-            as="ol"
-            className="border-border divide-border divide-y border-y md:col-span-8"
+      <div className={cn(CONTAINER, "grid gap-10 py-20 lg:grid-cols-12 lg:gap-8 lg:py-28")}>
+        <div className="flex flex-col gap-5 lg:col-span-4">
+          <Kicker n={8}>{FAQ.kicker}</Kicker>
+          <h2
+            id="faq-title"
+            className="font-display text-foreground text-display-s sm:text-display-m text-balance"
           >
-            {FAQS.map((faq) => (
-              <li key={faq.q}>
-                <FaqRow faq={faq} />
-              </li>
-            ))}
-          </StaggerOnScroll>
+            <Emph {...FAQ.title} />
+          </h2>
+          <p className="text-body-m text-muted-foreground flex flex-col items-start">
+            {FAQ.contact.lead}
+            <a
+              href={FAQ.contact.href}
+              className={cn(TEXT_LINK, "inline-flex min-h-11 items-center")}
+            >
+              {FAQ.contact.label}
+            </a>
+          </p>
+        </div>
+
+        <div className="lg:col-span-7 lg:col-start-6">
+          {items.map((item) => (
+            <details
+              key={item.q}
+              name="faq"
+              className="group border-border border-b first:border-t"
+            >
+              <summary className="text-heading-s text-foreground flex min-h-11 cursor-pointer list-none items-center justify-between gap-6 rounded-sm py-4 transition-colors duration-150 hover:text-teal-700 [&::-webkit-details-marker]:hidden">
+                <span className="min-w-0 text-pretty">{item.q}</span>
+                <PlusIcon
+                  aria-hidden
+                  className="size-4 shrink-0 group-open:hidden"
+                  strokeWidth={1.5}
+                />
+                <MinusIcon
+                  aria-hidden
+                  className="hidden size-4 shrink-0 group-open:block"
+                  strokeWidth={1.5}
+                />
+              </summary>
+              <p className="text-body-l text-muted-foreground max-w-[60ch] pb-6">{item.a}</p>
+            </details>
+          ))}
+        </div>
+      </div>
+
+      {/* medsync-forced-dark pins the teal ramp to its light values: the band is
+          the same deep teal (and teal-100/200 accents) in both themes. */}
+      <div className="medsync-forced-dark bg-teal-900 text-white">
+        <div
+          className={cn(
+            CONTAINER,
+            "grid gap-10 py-16 lg:grid-cols-12 lg:items-end lg:gap-8 lg:py-24",
+          )}
+        >
+          <div className="flex flex-col gap-4 lg:col-span-7">
+            <h2 className="font-display text-display-s sm:text-display-m lg:text-display-l text-balance text-white">
+              <Emph {...FINAL_CTA.title} onDark />
+            </h2>
+            <p className="text-body-l max-w-[48ch] text-white/80">{FINAL_CTA.sub}</p>
+          </div>
+          <CtaGroup
+            tone="dark"
+            className="sm:max-w-80 lg:col-span-4 lg:col-start-9 lg:max-w-none"
+          />
         </div>
       </div>
     </section>
-  );
-}
-
-function FaqRow({ faq }: { faq: FaqEntry }) {
-  return (
-    <details
-      className={cn(
-        "group [&_summary::-webkit-details-marker]:hidden",
-        // Smooth open/close height — progressive enhancement for browsers
-        // that support ::details-content + interpolate-size (no JS). Others
-        // fall back to the instant toggle.
-        "[interpolate-size:allow-keywords]",
-        "[&::details-content]:[overflow-y:clip] [&::details-content]:[block-size:0]",
-        "[&[open]::details-content]:[block-size:auto]",
-        "motion-safe:[&::details-content]:[transition:block-size_300ms_var(--ease-expo-out),content-visibility_300ms_allow-discrete]",
-      )}
-    >
-      <summary
-        className={cn(
-          "group/sum flex cursor-pointer list-none items-start justify-between gap-6 py-5",
-          "text-foreground transition-colors duration-150",
-          "hover:bg-muted/30 focus-visible:bg-muted/40 focus-visible:outline-none",
-          "-mx-2 rounded-md px-2",
-        )}
-      >
-        <span className="font-display text-body-l leading-[1.35] font-medium text-balance sm:text-[19px]">
-          {faq.q}
-        </span>
-        <span
-          aria-hidden
-          className={cn(
-            "border-border bg-card text-muted-foreground mt-0.5 inline-flex size-7 shrink-0 items-center justify-center rounded-md border",
-            "ease-expo-out transition-transform duration-200",
-            "group-hover/sum:border-brand-300 group-hover/sum:text-brand-700 dark:group-hover/sum:text-brand-300",
-            "group-open:border-brand-300 group-open:bg-brand-50 group-open:text-brand-700 group-open:rotate-45",
-            "dark:group-open:bg-brand-50/15 dark:group-open:text-brand-200",
-          )}
-        >
-          <PlusIcon className="size-3.5" strokeWidth={2} />
-        </span>
-      </summary>
-
-      <div
-        className={cn(
-          "text-muted-foreground pr-13 pb-5 text-[14px] leading-[1.65]",
-          // Answer eases up as the panel opens; re-runs per open.
-          "motion-safe:group-open:reveal-up",
-        )}
-      >
-        {faq.a}
-      </div>
-    </details>
   );
 }

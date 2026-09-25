@@ -67,6 +67,8 @@ export async function revealPatientIdentities(args: {
   viewer: { userId: string; hospitalId: string; departmentId?: string | null };
   surface: string;
   patients: ReadonlyArray<RevealablePatient>;
+  /** A clinical list (the doctor workspace): the basis is the care itself, so no `#operational`. */
+  clinical?: boolean;
 }): Promise<Map<string, RevealedPatient>> {
   const byId = new Map<string, RevealablePatient>();
   for (const p of args.patients) {
@@ -96,7 +98,7 @@ export async function revealPatientIdentities(args: {
         clinicianUserId: args.viewer.userId,
         patientUserId,
         accessBasis: "department_recent" as const,
-        surface: `${args.surface}${OPERATIONAL_BASIS_SUFFIX}`,
+        surface: args.clinical ? args.surface : `${args.surface}${OPERATIONAL_BASIS_SUFFIX}`,
       })),
     );
   } catch (e) {

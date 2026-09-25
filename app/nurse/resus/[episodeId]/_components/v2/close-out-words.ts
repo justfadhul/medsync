@@ -15,6 +15,17 @@ export const OUTCOME_WORD: Record<OutcomeCode, string> = {
   transferred_out: "Transferred out",
 };
 
+/** An ended episode in words — the board's "Recently ended" and the doctor workspace. */
+export function endedWord(e: {
+  state: "concluded" | "cancelled";
+  closureKind: "bedside" | "administrative" | null;
+  outcomeCode: OutcomeCode | null;
+}): string {
+  if (e.state === "cancelled") return "Opened in error";
+  if (e.closureKind === "administrative") return "Closed administratively";
+  return e.outcomeCode ? OUTCOME_WORD[e.outcomeCode] : "Ended";
+}
+
 export const DESTINATION_WORD: Record<string, string> = {
   icu: "ICU",
   hdu: "HDU",

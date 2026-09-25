@@ -1,5 +1,8 @@
 import Link from "next/link";
 
+import { buttonVariants } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
+
 /**
  * ⚠ RATIFIED PATIENT-FACING COPY — ADR 0084 §1 and §2. ⚠
  *
@@ -34,8 +37,8 @@ import Link from "next/link";
  * Two structural rules, both load-bearing:
  *
  *   1. **Asymmetry is layout, not assertion.** The same-day door is first in
- *      source order on every surface and the only one with a ring; the booking
- *      door is a quieter block beside it. A door declared primary while the
+ *      source order on every surface, the only filled one and the wider
+ *      (3fr to 2fr); the booking door is an outlined block beside it. A door declared primary while the
  *      layout puts it last on a phone is not primary (§1). The doors are two
  *      compact cards (2026-09-20, owner): each carries its title and ONE of
  *      its sentences; the rest of the ratified copy is the header of the
@@ -54,32 +57,39 @@ import Link from "next/link";
  */
 export function PatientDoors() {
   return (
-    <nav aria-label="How to be seen" className="grid gap-2 sm:grid-cols-2">
-      <Link
-        href="/patient/queue"
-        className="bg-card tap ring-brand-300 flex min-h-11 flex-col gap-0.5 rounded-xl px-4 py-3 ring-1 md:hover:brightness-[0.98] dark:md:hover:brightness-110"
-      >
-        <span className="text-foreground text-body-m font-medium">
-          Coming to the hospital today
-        </span>
-        <span className="text-muted-foreground text-body-s">We cannot tell you the hour.</span>
-      </Link>
+    // Split by the doors' own slot, not the viewport: they also render inside
+    // a ~300px hospital card, where 3fr/2fr squeezed the ratified words into
+    // a 56px column. A wrapper, because an element cannot query itself.
+    <div className="@container">
+      <nav aria-label="How to be seen" className="grid gap-3 @xl:grid-cols-[3fr_2fr]">
+        {/* The primary door is the one filled surface in its region — the
+          button's own colours, so the pair can never drift from the
+          system's action teal — and the wider of the two. */}
+        <Link
+          href="/patient/queue"
+          className={cn(
+            buttonVariants({ size: "lg" }),
+            "min-h-18 flex-col items-start justify-center gap-0.5 rounded-xl px-5 py-4 text-left whitespace-normal",
+          )}
+        >
+          <span className="text-body-m font-medium">Coming to the hospital today</span>
+          <span className="text-body-s font-normal">We cannot tell you the hour.</span>
+        </Link>
 
-      {/* No ring, no fill: the secondary door is demoted by having less of
-          everything, which is the one demotion that survives being rendered
-          on a white page and inside a tinted hospital card. The label takes
-          the link colour so a plain block still reads as tappable (§11). */}
-      <Link
-        href="/patient/book"
-        className="group tap flex min-h-11 flex-col gap-0.5 rounded-xl px-4 py-3"
-      >
-        <span className="text-primary text-body-m font-medium underline-offset-4 md:group-hover:underline">
-          Ask for a day — the clinic confirms
-        </span>
-        <span className="text-muted-foreground text-body-s">
-          Choose from the days the clinic has open.
-        </span>
-      </Link>
-    </nav>
+        {/* Outlined, narrower, same height: demoted by having less of
+          everything, never by looking like a heading link (§11). */}
+        <Link
+          href="/patient/book"
+          className="tap border-primary bg-card md:hover:bg-muted flex min-h-18 flex-col justify-center gap-0.5 rounded-xl border px-5 py-4"
+        >
+          <span className="text-body-m font-medium text-teal-700">
+            Ask for a day — the clinic confirms
+          </span>
+          <span className="text-muted-foreground text-body-s">
+            Choose from the days the clinic has open.
+          </span>
+        </Link>
+      </nav>
+    </div>
   );
 }

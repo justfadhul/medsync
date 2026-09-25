@@ -60,7 +60,7 @@ export function NurseSidebarItem({ href, label, iconKey, placeholder, exact }: P
       className={cn(
         "group tap flex items-center gap-2.5 rounded-md px-2.5 py-1.5 text-[12.5px] transition-colors",
         isActive
-          ? "bg-brand-50 text-brand-800 ring-brand-600/10 dark:bg-brand-950/40 dark:text-brand-200 dark:ring-brand-400/15 font-medium ring-1 ring-inset"
+          ? "bg-plum-50 text-plum-800 ring-plum-600/10 font-medium ring-1 ring-inset"
           : "text-muted-foreground hover:bg-muted hover:text-foreground",
         placeholder && !isActive && "opacity-70",
       )}
@@ -69,9 +69,7 @@ export function NurseSidebarItem({ href, label, iconKey, placeholder, exact }: P
         aria-hidden
         className={cn(
           "size-3.5 shrink-0 transition-colors duration-150",
-          isActive
-            ? "text-brand-600 dark:text-brand-400"
-            : "text-muted-foreground/80 group-hover:text-foreground",
+          isActive ? "text-plum-600" : "text-muted-foreground/80 group-hover:text-foreground",
         )}
       />
       <span className="truncate">{label}</span>
@@ -80,7 +78,7 @@ export function NurseSidebarItem({ href, label, iconKey, placeholder, exact }: P
           soon
         </span>
       ) : isActive ? (
-        <span aria-hidden className="scale-in bg-brand-500/80 ml-auto size-1 rounded-full" />
+        <span aria-hidden className="scale-in bg-plum-500/80 ml-auto size-1 rounded-full" />
       ) : null}
     </Link>
   );

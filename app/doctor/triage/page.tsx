@@ -1,9 +1,12 @@
 import type { Metadata } from "next";
+import { redirect } from "next/navigation";
 
 import { TriageWorklist } from "@/app/nurse/triage/_components/triage-worklist";
+import { requireDoctorScope } from "@/lib/doctor/scope";
 import { resusDeskV2 } from "@/lib/resus/feature";
 import { requireTriageScope } from "@/lib/triage/scope";
 import { fetchTriageWorklist } from "@/lib/triage/worklist";
+import { doctorWorkspace } from "@/lib/workspace/feature";
 
 export const metadata: Metadata = {
   title: "Triage · MedSync",
@@ -19,6 +22,9 @@ export const dynamic = "force-dynamic";
  * desk links + open-resus stay inside the doctor workspace.
  */
 export default async function DoctorTriagePage() {
+  // Doctor workspace on: this list is the board's To triage lane (307, lane kept).
+  const doctor = await requireDoctorScope();
+  if (doctorWorkspace(doctor.hospitalId)) redirect("/doctor?lane=triage");
   const scope = await requireTriageScope();
   const rows = await fetchTriageWorklist({
     hospitalId: scope.hospitalId,
@@ -32,7 +38,7 @@ export default async function DoctorTriagePage() {
       {/* Quiet atmosphere — a 4% teal glow behind the header, nothing more. */}
       <div
         aria-hidden
-        className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-48 bg-[radial-gradient(ellipse_at_top_left,rgba(13,148,136,0.04),transparent_60%)]"
+        className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-48 bg-[radial-gradient(ellipse_at_top_left,rgba(159,47,126,0.04),transparent_60%)]"
       />
       <header className="flex flex-col gap-1.5">
         <span className="text-muted-foreground inline-flex items-center gap-1.5 font-mono text-[10px] tracking-[0.16em] uppercase">

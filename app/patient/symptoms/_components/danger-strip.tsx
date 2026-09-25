@@ -46,7 +46,15 @@ export function DangerStrip({
           );
           const inner = (
             <>
-              <TriangleAlertIcon aria-hidden className="text-status-caution-fg size-4 shrink-0" />
+              {/* On a selected tile (an ink fill: near-white in dark) the
+                  amber would vanish, so the icon takes the tile's ink. */}
+              <TriangleAlertIcon
+                aria-hidden
+                className={cn(
+                  "text-status-caution-fg size-4 shrink-0",
+                  selected?.has(it.key) && "dark:text-background",
+                )}
+              />
               <span className="line-clamp-2">{label}</span>
               <span className="sr-only">, {t(CATALOG, "tier.E")}</span>
             </>
@@ -75,14 +83,14 @@ export function DangerStrip({
         <button
           type="button"
           onClick={onAll}
-          className="text-primary text-body-s -my-3 inline-flex min-h-11 w-fit items-center underline-offset-4 hover:underline"
+          className="text-body-s -my-3 inline-flex min-h-11 w-fit items-center text-teal-700 underline-offset-4 hover:underline"
         >
           {t(CATALOG, "strip.all")} ({allCount})
         </button>
       ) : (
         <Link
           href="/patient/symptoms?list=danger"
-          className="text-primary text-body-s -my-3 inline-flex min-h-11 w-fit items-center underline-offset-4 hover:underline"
+          className="text-body-s -my-3 inline-flex min-h-11 w-fit items-center text-teal-700 underline-offset-4 hover:underline"
         >
           {t(CATALOG, "strip.all")} ({allCount})
         </Link>

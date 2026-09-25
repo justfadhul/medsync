@@ -1,0 +1,85 @@
+{
+  "$comment": "One crop box per founder, in source pixels (assets/founders-src/). Spec: 4:5, chest-up, head height 30% ±2% of the frame, eye-line 38% ±2% from the top, face centred. Landmarks are the measured source y of the top of the head, the chin and the eye-line (they draw the contact-sheet guides). A box that cannot meet the spec inside the image is clamped and says so in `note`. No exposure correction: no face is underexposed.",
+  "portraits": [
+    {
+      "slug": "usama-fadhul",
+      "src": "usama-fadhul.jpg",
+      "box": {
+        "left": 237,
+        "top": 0,
+        "width": 948,
+        "height": 1185
+      },
+      "landmarks": {
+        "headTop": 141,
+        "chin": 497,
+        "eye": 315
+      },
+      "note": "Clamped at the top: the eye-line needs 135px of wall above the frame. Head 30.0%, eye-line 26.6%, frame runs to the waist."
+    },
+    {
+      "slug": "nelson-nuwagira",
+      "src": "nelson-nuwagira.jpeg",
+      "box": {
+        "left": 297,
+        "top": 0,
+        "width": 816,
+        "height": 1020
+      },
+      "landmarks": {
+        "headTop": 52,
+        "chin": 395,
+        "eye": 217
+      },
+      "note": "Clamped at the top and in height: a 30% head needs a 1143px frame, the photo is 1024px tall. Head 33.6%, eye-line 21.3%, desk and hands in frame."
+    },
+    {
+      "slug": "caroline-murizihiwe",
+      "src": "caroline-murizihiwe.jpg",
+      "box": {
+        "left": 204,
+        "top": 54,
+        "width": 408,
+        "height": 510
+      },
+      "landmarks": {
+        "headTop": 184,
+        "chin": 346,
+        "eye": 253
+      },
+      "note": "Meets the spec (head 31.8%, eye-line 39.0%). Kept 510px tall so the book in her hand stays out of frame."
+    },
+    {
+      "slug": "nayiga-joselyn-mirembe",
+      "src": "nayiga-joselyn-mirembe.jpeg",
+      "box": {
+        "left": 126,
+        "top": 0,
+        "width": 568,
+        "height": 710
+      },
+      "landmarks": {
+        "headTop": 102,
+        "chin": 315,
+        "eye": 217
+      },
+      "note": "Clamped at the top: the eye-line needs 53px of wall above the frame. Head 30.0%, eye-line 30.6%."
+    },
+    {
+      "slug": "ssebuliba-victor",
+      "src": "ssebuliba-victor.jpeg",
+      "box": {
+        "left": 207,
+        "top": 82,
+        "width": 536,
+        "height": 670
+      },
+      "landmarks": {
+        "headTop": 233,
+        "chin": 435,
+        "eye": 337
+      },
+      "note": "Owner-supplied 2026-09-24, replacing the 2026-09-23 stand-in. Still AI-edited (garbled book spines at the left, outside the frame). Meets the spec: head 30.1%, eye-line 38.1%. Replace with an unedited photo (ADR 0099)."
+    }
+  ]
+}

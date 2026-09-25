@@ -10,6 +10,7 @@ import { db } from "@/db";
 import { consentVersions } from "@/db/schema/consent-versions";
 import { storeAvatar } from "@/lib/avatars";
 import { encrypt } from "@/lib/encryption";
+import { assertSignupsOpen } from "@/lib/legal";
 import { logger } from "@/lib/logger";
 import { listCadreGrades, listCadres, listDepartments, listRoles } from "@/lib/reference-data";
 import { createClient } from "@/lib/supabase/server";
@@ -123,6 +124,7 @@ export async function submitClinicalSignupAction(
   _prev: ClinicalSignupState,
   formData: FormData,
 ): Promise<ClinicalSignupState> {
+  assertSignupsOpen(); // S8 D1: production collects no personal data until the legal basics exist
   // FormData entries include the licence File at `licence_document` —
   // pull it before turning the rest into a string map.
   const licenceFile = formData.get("licence_document");

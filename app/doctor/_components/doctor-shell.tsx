@@ -4,8 +4,9 @@ import Link from "next/link";
 import { ShieldCheckIcon } from "lucide-react";
 
 import { cn } from "@/lib/utils";
-import { DOCTOR_FEATURE_AREAS, doctorFeaturePath } from "../_lib/features";
+import { DOCTOR_FEATURE_AREAS, doctorFeaturePath, WORKSPACE_NAV } from "../_lib/features";
 import { DoctorSidebarItem } from "./doctor-sidebar-item";
+import { EmergencyInlineLink } from "./emergency-inline-link";
 import { FullBleedGate } from "./full-bleed-gate";
 
 /**
@@ -30,6 +31,7 @@ import { FullBleedGate } from "./full-bleed-gate";
 
 const CADRE_LABEL: Record<string, string> = {
   INTERN_DOCTOR: "Intern Doctor",
+  CLINICAL_OFFICER: "Clinical Officer",
   MEDICAL_OFFICER: "Medical Officer",
   MEDICAL_OFFICER_SG: "MO Special Grade",
   CONSULTANT: "Consultant",
@@ -48,18 +50,23 @@ const LEVEL_LABEL: Record<string, string> = {
 export function DoctorShell({
   scope,
   avatarUrl,
+  workspace = false,
   children,
 }: {
   scope: DoctorScope;
   /** Signed URL of the doctor's photo, or null → the initial disc. */
   avatarUrl: string | null;
+  /** The doctor workspace is on for this hospital: three nav items, Emergency in the header. */
+  workspace?: boolean;
   children: ReactNode;
 }) {
-  const navItems = DOCTOR_FEATURE_AREAS.filter((f) => {
-    if (f.visibleTo === "senior") return scope.isSenior;
-    if (f.visibleTo === "consultant") return scope.isConsultantLevel;
-    return true;
-  });
+  const navItems = workspace
+    ? WORKSPACE_NAV
+    : DOCTOR_FEATURE_AREAS.filter((f) => {
+        if (f.visibleTo === "senior") return scope.isSenior;
+        if (f.visibleTo === "consultant") return scope.isConsultantLevel;
+        return true;
+      });
 
   const initial = (scope.fullName ?? scope.userEmail).slice(0, 1).toUpperCase();
 
@@ -71,10 +78,10 @@ export function DoctorShell({
           aria-label="Doctor workspace navigation"
           className="bg-muted/40 border-border relative hidden w-[240px] shrink-0 flex-col border-r lg:flex"
         >
-          {/* Quiet teal atmosphere at the top of the rail */}
+          {/* Quiet plum atmosphere at the top of the rail — place, not state */}
           <div
             aria-hidden
-            className="pointer-events-none absolute inset-x-0 top-0 h-44 bg-[radial-gradient(120%_100%_at_50%_0%,rgba(13,148,136,0.06),transparent_70%)]"
+            className="pointer-events-none absolute inset-x-0 top-0 h-44 bg-[radial-gradient(120%_100%_at_50%_0%,rgba(159,47,126,0.07),transparent_70%)]"
           />
 
           {/* Brand + hospital identity */}
@@ -131,7 +138,7 @@ export function DoctorShell({
               ) : (
                 <div
                   aria-hidden
-                  className="bg-brand-100 text-caption text-brand-800 ring-brand-200/70 dark:bg-brand-900/60 dark:text-brand-200 dark:ring-brand-800/50 flex size-7 shrink-0 items-center justify-center rounded-full font-mono font-semibold ring-1"
+                  className="bg-plum-100 text-caption text-plum-800 ring-plum-200/70 flex size-7 shrink-0 items-center justify-center rounded-full font-mono font-semibold ring-1"
                 >
                   {initial}
                 </div>
@@ -206,6 +213,7 @@ export function DoctorShell({
             </div>
 
             <div className="flex items-center justify-end gap-3">
+              {workspace ? <EmergencyInlineLink /> : null}
               <Link
                 href="/sign-out"
                 className="text-muted-foreground hover:text-foreground decoration-border text-[12px] underline-offset-4 transition-colors hover:underline"

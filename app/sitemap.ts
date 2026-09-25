@@ -2,32 +2,23 @@ import type { MetadataRoute } from "next";
 
 import { SITE_URL } from "@/lib/site-config";
 
-const BASE = SITE_URL;
+// Public pages only. /get-started (older status copy), /sign-up (invited staff)
+// and /styleguide (a design reference with clinical sample data) stay out.
+const PAGES: Array<[path: string, priority: number]> = [
+  ["/", 1],
+  ["/signup/hospital", 0.9],
+  ["/about", 0.8],
+  ["/signup/clinical", 0.8],
+  ["/signup/patient", 0.8],
+  ["/sign-in", 0.4],
+];
 
 export default function sitemap(): MetadataRoute.Sitemap {
   const now = new Date();
-  return [
-    { url: `${BASE}/`, lastModified: now, changeFrequency: "weekly", priority: 1 },
-    { url: `${BASE}/styleguide`, lastModified: now, changeFrequency: "monthly", priority: 0.3 },
-    { url: `${BASE}/sign-up`, lastModified: now, changeFrequency: "monthly", priority: 0.6 },
-    { url: `${BASE}/sign-in`, lastModified: now, changeFrequency: "monthly", priority: 0.4 },
-    {
-      url: `${BASE}/onboarding/patient`,
-      lastModified: now,
-      changeFrequency: "monthly",
-      priority: 0.8,
-    },
-    {
-      url: `${BASE}/onboarding/clinical`,
-      lastModified: now,
-      changeFrequency: "monthly",
-      priority: 0.8,
-    },
-    {
-      url: `${BASE}/onboarding/hospital`,
-      lastModified: now,
-      changeFrequency: "monthly",
-      priority: 0.9,
-    },
-  ];
+  return PAGES.map(([path, priority]) => ({
+    url: `${SITE_URL}${path}`,
+    lastModified: now,
+    changeFrequency: path === "/" ? "weekly" : "monthly",
+    priority,
+  }));
 }

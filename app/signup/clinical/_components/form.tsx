@@ -21,6 +21,7 @@ import {
   Field,
   FileUpload,
   MultiStepForm,
+  PasswordInput,
   PhoneInput,
   SegmentedControl,
 } from "@/components/forms";
@@ -291,8 +292,7 @@ export function ClinicalSignupForm({
             required
             serverError={errors.password}
           >
-            <Input
-              type="password"
+            <PasswordInput
               name="password"
               autoComplete="new-password"
               minLength={12}

@@ -17,7 +17,8 @@
  * `_shared/intake.ts` (ADR 0098 ruling 10), which a pre-alerted arrival
  * calls too so no door creates a second intake. This file keeps the
  * checks that are the desk's own: the patient and appointment exist, the
- * caller may register here.
+ * caller may register here, and the patient holds no live ticket here
+ * today (ADR 0101) — a second intake would put them in two lines.
  */
 import type { EntryTypeRow } from "../_shared/intake.ts";
 import { z } from "npm:zod@4.4.3";
@@ -26,6 +27,7 @@ import { getCaller, hasRole, serviceClient } from "../_shared/auth.ts";
 import { preflight } from "../_shared/cors.ts";
 import {
   badRequest,
+  conflict,
   forbidden,
   methodNotAllowed,
   notFound,
@@ -37,6 +39,7 @@ import { requireHospitalAdminScope } from "../_shared/hospital-admin-scope.ts";
 import { entryTypeRequirementsError, lookupEntryType, registerIntake } from "../_shared/intake.ts";
 import { makeLogger } from "../_shared/logger.ts";
 import { networkContext } from "../_shared/sa-audit.ts";
+import { DEFAULT_TIME_ZONE, startOfLocalDay } from "../_shared/slots.ts";
 
 const log = makeLogger("ha-register-intake");
 
@@ -161,6 +164,32 @@ Deno.serve(async (request: Request) => {
         .limit(1)
         .maybeSingle();
       if (!aff) return forbidden(init, "no active affiliation at this hospital");
+    }
+  }
+
+  // One live ticket per patient per hospital day. A declared "coming today",
+  // a checked-in booking or an earlier registration is checked in (or found)
+  // where it is, not registered over. An emergency never blocks: it is
+  // captured, and the desk reconciles the older ticket after.
+  if (input.patient_user_id && !entryType.is_emergency) {
+    const { data: live, error: liveError } = await sb
+      .from("patient_intakes")
+      .select("id, status")
+      .eq("hospital_id", input.hospital_id)
+      .eq("patient_user_id", input.patient_user_id)
+      .in("status", ["declared", "arrived", "awaiting_triage", "triaged"])
+      .gte("arrived_at", startOfLocalDay(new Date(), DEFAULT_TIME_ZONE).toISOString())
+      .limit(1)
+      .maybeSingle();
+    if (liveError) return serverError(liveError.message, init);
+    if (live) {
+      return conflict(
+        live.status === "declared"
+          ? "This patient said they are coming today — check in their existing ticket instead."
+          : "This patient already has an open ticket here today — find it on the queue instead.",
+        init,
+        { intake_id: live.id, status: live.status },
+      );
     }
   }
 

@@ -58,7 +58,9 @@ export function PatientNavRail({
     // landmark and it already has a name. Wrapping it in an unnamed
     // complementary landmark gives assistive tech two entries for one rail.
     <div className="border-sidebar-border bg-sidebar sticky top-13 hidden h-[calc(100svh-52px)] w-14 shrink-0 flex-col border-r p-2 md:flex lg:w-60 lg:p-3">
-      <nav aria-label="Patient navigation" className="min-w-0">
+      {/* The hospital link at the foot is navigation too, so it sits inside
+          the landmark — outside it, it was content in no region at all. */}
+      <nav aria-label="Patient navigation" className="flex min-w-0 flex-1 flex-col">
         <ul className="flex flex-col gap-0.5">
           {items.map((item) => {
             const isActive = item.href === activeHref;
@@ -68,6 +70,9 @@ export function PatientNavRail({
                 <Link
                   href={item.href}
                   aria-current={isActive ? "page" : undefined}
+                  // Plum says "you are here" (ADR 0097); the attribute is what
+                  // the colour-role checks look for.
+                  data-place={isActive ? "" : undefined}
                   // The label is invisible between md and lg, so it has to
                   // exist for screen readers and for the pointer tooltip.
                   aria-label={item.label}
@@ -91,26 +96,26 @@ export function PatientNavRail({
             );
           })}
         </ul>
-      </nav>
 
-      {hospitalName ? (
-        // Not a second copy of the header chip: that one is static text,
-        // this one is the way into the hospital picker.
-        <div className="border-sidebar-border mt-auto border-t pt-2">
-          <Link
-            href="/patient/hospitals"
-            aria-label={`Your hospital: ${hospitalName}. Change hospital`}
-            title={hospitalName}
-            className="tap text-muted-foreground hover:bg-muted hover:text-foreground flex min-h-11 items-center justify-center gap-2 rounded-md px-2.5 outline-none lg:justify-start"
-          >
-            <HospitalIcon aria-hidden className="size-5 shrink-0 stroke-[1.5]" />
-            <span className="text-body-s hidden min-w-0 flex-1 truncate lg:block">
-              {hospitalName}
-            </span>
-            <ChevronRightIcon aria-hidden className="hidden size-3.5 shrink-0 lg:block" />
-          </Link>
-        </div>
-      ) : null}
+        {hospitalName ? (
+          // Not a second copy of the header chip: that one is static text,
+          // this one is the way into the hospital picker.
+          <div className="border-sidebar-border mt-auto border-t pt-2">
+            <Link
+              href="/patient/hospitals"
+              aria-label={`Your hospital: ${hospitalName}. Change hospital`}
+              title={hospitalName}
+              className="tap text-muted-foreground hover:bg-muted hover:text-foreground flex min-h-11 items-center justify-center gap-2 rounded-md px-2.5 outline-none lg:justify-start"
+            >
+              <HospitalIcon aria-hidden className="size-5 shrink-0 stroke-[1.5]" />
+              <span className="text-body-s hidden min-w-0 flex-1 truncate lg:block">
+                {hospitalName}
+              </span>
+              <ChevronRightIcon aria-hidden className="hidden size-3.5 shrink-0 lg:block" />
+            </Link>
+          </div>
+        ) : null}
+      </nav>
     </div>
   );
 }

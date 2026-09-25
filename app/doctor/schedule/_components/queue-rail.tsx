@@ -1,6 +1,7 @@
 "use client";
 
 import type { PatientIdentity } from "@/components/medsync/patient-identity";
+import Link from "next/link";
 import { useState, useTransition } from "react";
 import { AlertTriangleIcon, ClockIcon, PlayIcon, PlusIcon, UserPlusIcon } from "lucide-react";
 
@@ -19,6 +20,7 @@ import {
 } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
 import { recordWalkinAction, startEncounterAction } from "../actions";
+import { EndVisitButton } from "./end-visit";
 
 export interface QueueRow {
   id: string;
@@ -30,6 +32,7 @@ export interface QueueRow {
   patientCode: string | null;
   identity: PatientIdentity;
   appointmentId: string | null;
+  encounterId: string | null;
   notes: string | null;
 }
 
@@ -42,10 +45,23 @@ const KIND_LABEL: Record<string, string> = {
 /**
  * Day-view queue rail. Renders the department's same-day queue
  * entries (waiting + being_seen). The doctor can:
- *   - Call a waiting patient → starts an encounter (ha-start-encounter)
+ *   - Call a waiting patient → starts an encounter (ha-start-encounter). A
+ *     walk-in has no booking; the function starts it from the queue row.
+ *   - End the visit of a patient being seen (ha-complete-encounter)
  *   - Record a new walk-in (ha-record-walkin)
+ *
+ * The rail is NOT behind ENCOUNTER_ENGINE_LIVE — calling and ending a visit
+ * are scheduling acts on the minimal encounter row ha-start-encounter writes.
+ * Only the "Open" link to the documentation surface waits for the flag,
+ * because that page renders nothing useful until the engine is live.
  */
-export function QueueRail({ entries }: { entries: ReadonlyArray<QueueRow> }) {
+export function QueueRail({
+  entries,
+  encounterEngineLive = false,
+}: {
+  entries: ReadonlyArray<QueueRow>;
+  encounterEngineLive?: boolean;
+}) {
   const waiting = entries.filter((e) => e.state === "waiting");
   const beingSeen = entries.filter((e) => e.state === "being_seen");
 
@@ -65,7 +81,11 @@ export function QueueRail({ entries }: { entries: ReadonlyArray<QueueRow> }) {
             <ul className="stagger-children flex flex-col gap-1">
               {beingSeen.map((e) => (
                 <li key={e.id}>
-                  <QueueChip row={e} variant="being_seen" />
+                  <QueueChip
+                    row={e}
+                    variant="being_seen"
+                    encounterEngineLive={encounterEngineLive}
+                  />
                 </li>
               ))}
             </ul>
@@ -83,7 +103,7 @@ export function QueueRail({ entries }: { entries: ReadonlyArray<QueueRow> }) {
             <ul className="stagger-children flex flex-col gap-1">
               {waiting.map((e) => (
                 <li key={e.id}>
-                  <QueueChip row={e} variant="waiting" />
+                  <QueueChip row={e} variant="waiting" encounterEngineLive={encounterEngineLive} />
                 </li>
               ))}
             </ul>
@@ -94,10 +114,19 @@ export function QueueRail({ entries }: { entries: ReadonlyArray<QueueRow> }) {
   );
 }
 
-function QueueChip({ row, variant }: { row: QueueRow; variant: "waiting" | "being_seen" }) {
+function QueueChip({
+  row,
+  variant,
+  encounterEngineLive,
+}: {
+  row: QueueRow;
+  variant: "waiting" | "being_seen";
+  encounterEngineLive: boolean;
+}) {
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const isUrgent = row.kind === "urgent_walk_in";
+  const patientLabel = row.identity.displayName ?? row.patientCode ?? "patient";
 
   function call() {
     setError(null);
@@ -153,6 +182,22 @@ function QueueChip({ row, variant }: { row: QueueRow; variant: "waiting" | "bein
             {error}
           </span>
         ) : null}
+        {/* Only a called row carries the encounter to end — a being_seen row
+            from before ADR 0101 may not, and then there is nothing to close. */}
+        {variant === "being_seen" && row.encounterId ? (
+          <div className="mt-1 flex flex-wrap items-start gap-1.5">
+            <EndVisitButton encounterId={row.encounterId} patientLabel={patientLabel} />
+            {encounterEngineLive ? (
+              <Link
+                href={`/doctor/encounters/${row.encounterId}`}
+                className="text-foreground hover:bg-muted text-caption inline-flex min-h-11 items-center rounded-sm px-3 font-medium transition-colors"
+                aria-label={`Open the encounter for ${patientLabel}`}
+              >
+                Open
+              </Link>
+            ) : null}
+          </div>
+        ) : null}
       </div>
       {variant === "waiting" ? (
         // iconSm is 28px — min-h-11/min-w-11 grows only the hit area to the
@@ -164,7 +209,7 @@ function QueueChip({ row, variant }: { row: QueueRow; variant: "waiting" | "bein
           className="min-h-11 min-w-11"
           disabled={pending}
           onClick={call}
-          aria-label={`Call ${row.identity.displayName ?? row.patientCode ?? "patient"} and start the encounter`}
+          aria-label={`Call ${patientLabel} and start the encounter`}
         >
           <PlayIcon className="size-3.5" />
         </Button>

@@ -8,6 +8,7 @@ import { hospitalDepartments } from "@/db/schema/hospital-departments";
 import { hospitals } from "@/db/schema/hospitals";
 import { patientIntakes } from "@/db/schema/patient-intakes";
 import { appointments, departmentSchedulingPolicy } from "@/db/schema/scheduling";
+import { INTAKE_TITLE } from "@/lib/patient/appointments";
 import { requirePatientScope } from "@/lib/patient/scope";
 import {
   DEFAULT_TIME_ZONE,
@@ -230,11 +231,3 @@ export default async function PatientQueuePage({
     </div>
   );
 }
-
-/** What the patient is told they already have. No jargon, no mechanism. */
-const INTAKE_TITLE: Record<string, string> = {
-  declared: "We have already saved you a place today.",
-  arrived: "You are already at the hospital today.",
-  awaiting_triage: "You are already at the hospital today.",
-  triaged: "A nurse has already seen you today.",
-};

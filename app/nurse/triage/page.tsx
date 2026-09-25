@@ -32,7 +32,7 @@ export default async function TriagePage() {
       {/* Quiet atmosphere — a 4% teal glow behind the header, nothing more. */}
       <div
         aria-hidden
-        className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-48 bg-[radial-gradient(ellipse_at_top_left,rgba(13,148,136,0.04),transparent_60%)]"
+        className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-48 bg-[radial-gradient(ellipse_at_top_left,rgba(159,47,126,0.04),transparent_60%)]"
       />
       <header className="flex flex-col gap-1.5">
         <span className="text-muted-foreground inline-flex items-center gap-1.5 font-mono text-[10px] tracking-[0.16em] uppercase">

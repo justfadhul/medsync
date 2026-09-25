@@ -6,6 +6,7 @@ import { z } from "zod";
 import { logger } from "@/lib/logger";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
+import { safeRedirect } from "../errors";
 
 const ChallengeSchema = z.object({
   code: z.string().regex(/^\d{6}$/, "Enter the 6-digit code from your authenticator."),
@@ -14,6 +15,8 @@ const ChallengeSchema = z.object({
 
 export type MfaChallengeState = {
   errors?: Partial<Record<"code" | "_form", string>>;
+  /** No TOTP factor on the account: the form links to /onboarding/mfa-setup. */
+  noFactor?: boolean;
 };
 
 export async function challengeMfaAction(
@@ -21,7 +24,8 @@ export async function challengeMfaAction(
   formData: FormData,
 ): Promise<MfaChallengeState> {
   const parsed = ChallengeSchema.safeParse({
-    code: formData.get("code"),
+    // A pasted "123 456" is still a 6-digit code.
+    code: String(formData.get("code") ?? "").replace(/\s/g, ""),
     redirect: formData.get("redirect") ?? undefined,
   });
   if (!parsed.success) {
@@ -34,11 +38,11 @@ export async function challengeMfaAction(
   const { data: factors, error: listErr } = await supabase.auth.mfa.listFactors();
   if (listErr || !factors?.totp.length) {
     logger.warn("mfa challenge attempted with no TOTP factor enrolled");
-    return { errors: { _form: "No authenticator enrolled. Re-run setup." } };
+    return { noFactor: true };
   }
   const factor = factors.totp[0];
   if (!factor) {
-    return { errors: { _form: "No authenticator enrolled. Re-run setup." } };
+    return { noFactor: true };
   }
 
   const { data: ch, error: chErr } = await supabase.auth.mfa.challenge({ factorId: factor.id });
@@ -72,10 +76,7 @@ export async function challengeMfaAction(
     }
   }
 
-  const target =
-    parsed.data.redirect && parsed.data.redirect.startsWith("/")
-      ? parsed.data.redirect
-      : defaultTarget;
+  const target = safeRedirect(parsed.data.redirect) ?? defaultTarget;
 
   logger.info("mfa challenge passed; session elevated to AAL2");
   redirect(target);

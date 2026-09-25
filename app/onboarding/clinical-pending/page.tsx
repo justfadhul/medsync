@@ -123,7 +123,7 @@ export default async function ClinicalPendingPage() {
       {/* Quiet teal wash at the top — calm, not celebratory */}
       <div
         aria-hidden
-        className="fade-in-slow pointer-events-none absolute top-0 left-1/2 -z-10 h-80 w-[120%] max-w-none -translate-x-1/2 [background:radial-gradient(closest-side,oklch(0.95_0.06_286/0.35),transparent_72%)] dark:[background:radial-gradient(closest-side,oklch(0.45_0.08_286/0.18),transparent_72%)]"
+        className="fade-in-slow pointer-events-none absolute top-0 left-1/2 -z-10 h-80 w-[120%] max-w-none -translate-x-1/2 [background:radial-gradient(closest-side,oklch(0.95_0.06_342/0.35),transparent_72%)] dark:[background:radial-gradient(closest-side,oklch(0.45_0.08_342/0.18),transparent_72%)]"
       />
 
       <header className="border-gray-150 glass sticky top-0 z-20 border-b">

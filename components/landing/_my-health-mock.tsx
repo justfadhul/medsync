@@ -13,15 +13,13 @@ import { cn } from "@/lib/utils";
 /**
  * MedSync — My Health (patient surfaces, floating-card composition).
  *
- * Patient-end twin of the §05b ClinicianHomeMock. Same fictional patient
- * (Amina N.), same date/time, same medications and glucose values — so
- * the two surfaces visibly describe ONE shared loop.
+ * The patient view of the care loop, shown on /styleguide. Public, so it
+ * carries no names, drug names, doses or clock times — neutral labels
+ * only (landing v4 clinical-safety rule).
  *
- * Renders as a vertical stack of floating cards (matching the page's
- * Attio "feature card" rhythm). Earlier iteration framed the cards
- * inside a phone bezel — dropped because the bezel competed visually
- * with the clinician dashboard and made the patient surfaces feel
- * grafted on rather than belonging.
+ * Renders as a vertical stack of floating cards. Earlier iteration framed
+ * the cards inside a phone bezel — dropped because the bezel made the
+ * patient surfaces feel grafted on rather than belonging.
  *
  * Static composition. No interactivity, no client JS, single
  * motion-safe pulse on the "due now" med icon (Lighthouse-perf-safe).
@@ -44,7 +42,7 @@ interface MyHealthMockProps {
    * card for embedding in narrower contexts (e.g. inline in §07 scenes
    * or the new patient chapter sub-points). */
   fragment?: MyHealthFragment;
-  /** When true (default `full` only), shows the "Patient view · Amina N."
+  /** When true (default `full` only), shows the "Patient view"
    * header label above the cards. Set false to drop the header when the
    * embedding context already labels the surface. */
   withHeader?: boolean;
@@ -86,10 +84,10 @@ function PatientHeader() {
     <div className="flex items-center justify-between gap-2">
       <div className="flex flex-col">
         <span className="text-muted-foreground font-mono text-[9.5px] tracking-[0.18em] uppercase">
-          Patient view &middot; Amina N.
+          Patient view
         </span>
         <span className="font-display text-foreground text-[14px] leading-tight font-medium">
-          Good morning, Amina.
+          Good morning.
         </span>
       </div>
       <span
@@ -123,9 +121,7 @@ function LogReadingCard() {
           <span className="font-display text-foreground tabular text-[34px] leading-none font-medium">
             11.6
           </span>
-          <span className="text-muted-foreground mt-1.5 text-[10.5px]">
-            Yesterday &middot; 06:08
-          </span>
+          <span className="text-muted-foreground mt-1.5 text-[10.5px]">Yesterday</span>
         </div>
         <ReadingSparkline />
       </div>
@@ -190,10 +186,14 @@ function ReadingSparkline() {
 
 function TodayMedsCard() {
   const meds = [
-    { name: "Metformin", dose: "1 g", at: "06:00", state: "taken" as const, takenAt: "06:12" },
-    { name: "Lisinopril", dose: "10 mg", at: "06:00", state: "taken" as const, takenAt: "06:14" },
-    { name: "Glibenclamide", dose: "5 mg", at: "06:00", state: "held" as const },
-    { name: "Insulin Actrapid", dose: "pre-meal", at: "11:00", state: "due" as const },
+    { name: "Morning medicine", note: "taken", state: "taken" as const },
+    { name: "Midday medicine", note: "due now", state: "due" as const },
+    { name: "Evening medicine", note: "due this evening", state: "due" as const },
+    {
+      name: "One medicine paused by your care team",
+      note: "held by your care team",
+      state: "held" as const,
+    },
   ];
   return (
     <div className="border-border bg-card flex flex-col gap-2 rounded-xl border p-3 shadow-sm">
@@ -201,7 +201,7 @@ function TodayMedsCard() {
         <span className="text-muted-foreground font-mono text-[9.5px] tracking-[0.16em] uppercase">
           Today&rsquo;s medications
         </span>
-        <span className="text-muted-foreground tabular font-mono text-[9.5px]">2 / 4</span>
+        <span className="text-muted-foreground tabular font-mono text-[9.5px]">1 / 4</span>
       </div>
       <ul className="flex flex-col gap-1.5">
         {meds.map((med) => (
@@ -220,18 +220,14 @@ function TodayMedsCard() {
                 <span className="text-foreground text-[11.5px] leading-tight font-medium">
                   {med.name}
                 </span>
-                <span className="text-muted-foreground tabular font-mono text-[9.5px]">
-                  {med.at}
-                </span>
               </div>
               <span className="text-muted-foreground text-[10px] leading-tight">
-                {med.dose}
                 {med.state === "taken" ? (
-                  <span> &middot; taken at {med.takenAt}</span>
+                  <span>{med.note}</span>
                 ) : med.state === "held" ? (
-                  <span className="text-status-caution-fg"> &middot; held by your care team</span>
+                  <span className="text-status-caution-fg">{med.note}</span>
                 ) : (
-                  <span className="text-brand-700 dark:text-brand-300"> &middot; due now</span>
+                  <span className="text-brand-700 dark:text-brand-300">{med.note}</span>
                 )}
               </span>
             </div>
@@ -324,12 +320,12 @@ function SmsReminderChip() {
         "border-border bg-card border shadow-sm",
       )}
     >
-      <span className="bg-brand-50 text-brand-700 dark:bg-brand-50/15 dark:text-brand-200 inline-flex size-7 items-center justify-center rounded-full">
+      <span className="bg-plum-50 text-plum-700 inline-flex size-7 items-center justify-center rounded-full">
         <MessageSquareIcon className="size-3.5" strokeWidth={1.75} />
       </span>
       <div className="flex flex-1 flex-col">
         <span className="text-foreground text-[11.5px] leading-tight">
-          We&rsquo;ll text you at <span className="tabular font-mono">11:00</span> too.
+          We&rsquo;ll text you a reminder too.
         </span>
         <span className="text-muted-foreground text-[10px] leading-tight">
           Reply <span className="font-mono">1</span> to confirm &middot; works on basic phones.
@@ -351,7 +347,7 @@ function ReportConcernCard() {
         "hover:border-brand-300 transition-colors duration-150",
       )}
     >
-      <span className="bg-brand-50 text-brand-700 dark:bg-brand-50/15 dark:text-brand-200 inline-flex size-7 shrink-0 items-center justify-center rounded-md">
+      <span className="bg-plum-50 text-plum-700 inline-flex size-7 shrink-0 items-center justify-center rounded-md">
         <ShieldIcon className="size-3.5" strokeWidth={1.75} />
       </span>
       <div className="flex flex-1 flex-col gap-0.5">
@@ -366,7 +362,7 @@ function ReportConcernCard() {
   );
 }
 
-/* ─── Reassurance line (privacy + named clinician) ────────────────────── */
+/* ─── Reassurance line (privacy + who reviews) ────────────────────────── */
 
 function ReassuranceLine() {
   return (
@@ -375,7 +371,7 @@ function ReassuranceLine() {
         <LockIcon className="size-2.5" strokeWidth={1.75} />
         Your care team can see this.
       </span>
-      <span className="text-muted-foreground tabular font-mono text-[9.5px]">Dr. Usama Fadhul</span>
+      <span className="text-muted-foreground tabular font-mono text-[9.5px]">Your care team</span>
     </div>
   );
 }

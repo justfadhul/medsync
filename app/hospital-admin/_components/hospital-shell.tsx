@@ -118,7 +118,7 @@ export function HospitalShell({
             <div className="flex items-center gap-2.5 px-1 py-1.5">
               <div
                 aria-hidden
-                className="bg-brand-100 text-caption text-brand-800 dark:bg-brand-900/60 dark:text-brand-200 flex size-7 shrink-0 items-center justify-center rounded-full font-mono font-semibold"
+                className="bg-plum-100 text-caption text-plum-800 flex size-7 shrink-0 items-center justify-center rounded-full font-mono font-semibold"
               >
                 {adminEmail.slice(0, 1).toUpperCase()}
               </div>

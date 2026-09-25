@@ -57,7 +57,7 @@ export function DoctorSidebarItem({ href, label, iconKey, placeholder, badgeCoun
         "tap group flex min-h-8 items-center gap-2.5 rounded-md px-2.5 py-1.5 text-[12.5px] transition-colors duration-200 outline-none",
         "focus-visible:ring-brand-500/40 focus-visible:ring-2",
         isActive
-          ? "bg-brand-50 text-brand-800 dark:bg-brand-950/40 dark:text-brand-200 font-medium"
+          ? "bg-plum-50 text-plum-800 font-medium"
           : "text-muted-foreground hover:bg-muted hover:text-foreground",
         placeholder && !isActive && "opacity-70",
       )}
@@ -66,7 +66,7 @@ export function DoctorSidebarItem({ href, label, iconKey, placeholder, badgeCoun
         aria-hidden
         className={cn(
           "ease-spring size-3.5 shrink-0 transition-transform duration-200",
-          isActive ? "text-brand-600 dark:text-brand-400 scale-110" : "group-hover:scale-105",
+          isActive ? "text-plum-600 scale-110" : "group-hover:scale-105",
         )}
       />
       <span className="truncate">{label}</span>

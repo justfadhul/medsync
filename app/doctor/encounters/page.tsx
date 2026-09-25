@@ -1,10 +1,12 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { ChevronRightIcon } from "lucide-react";
 
 import { requireDoctorScope } from "@/lib/doctor/scope";
 import { listDoctorEncounters } from "@/lib/encounter/assignment";
 import { encounterEngineLive } from "@/lib/encounter/feature";
+import { doctorWorkspace } from "@/lib/workspace/feature";
 import { DoctorEmptyState } from "../_components/empty-state";
 
 export const metadata: Metadata = { title: "Encounters · Doctor · MedSync" };
@@ -16,6 +18,8 @@ export const dynamic = "force-dynamic";
  */
 export default async function DoctorEncountersPage() {
   const scope = await requireDoctorScope();
+  // Doctor workspace on: this list is the board's In progress lane (307).
+  if (doctorWorkspace(scope.hospitalId)) redirect("/doctor?lane=in_progress");
 
   return (
     <div className="stagger-children mx-auto flex w-full max-w-3xl flex-col gap-6 px-6 py-8 lg:py-10">

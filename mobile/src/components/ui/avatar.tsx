@@ -29,7 +29,7 @@ export function Avatar({
   const { colors } = useTheme();
   const styles = useStyles(makeStyles);
   const initials = initialsOf(name);
-  const ink = tone === "onPrimary" ? colors.primaryForeground : colors.accentForeground;
+  const ink = tone === "onPrimary" ? colors.primaryForeground : colors.placeForeground;
 
   return (
     <View
@@ -72,7 +72,7 @@ const makeStyles = (c: Palette) =>
   StyleSheet.create({
     disc: {
       borderRadius: radius.full,
-      backgroundColor: c.accent,
+      backgroundColor: c.place,
       alignItems: "center",
       justifyContent: "center",
     },

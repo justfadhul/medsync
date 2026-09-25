@@ -18,6 +18,7 @@ import { signedAvatarUrl } from "@/lib/avatars";
 import { decrypt } from "@/lib/encryption";
 import { declaredLast, presenceAt, presenceOf, ts } from "@/lib/intake/queries";
 import { logger } from "@/lib/logger";
+import { appointmentBookedVia, byBookedAt, intakeBookedVia } from "@/lib/reception/booked-via";
 import { maskPhone, matchBasis } from "@/lib/reception/reconcile-basis";
 import {
   DEFAULT_TIME_ZONE,
@@ -208,6 +209,9 @@ export async function fetchReceptionTodayCounts(args: {
         and(
           eq(patientIntakes.hospitalId, args.hospitalId),
           inArray(patientIntakes.status, ["arrived", "awaiting_triage"]),
+          // A clinic-routed arrival is 'arrived' too, but is not waiting for
+          // triage and never will be (ADR 0101); NULL is legacy, i.e. triage.
+          sql`${patientIntakes.routedTo} is distinct from 'clinic'`,
           // Windowed on presence like every sibling count in this function.
           // Unbounded, one intake that never progressed past awaiting_triage
           // inflated "Awaiting triage" under the "Today counts" heading
@@ -260,9 +264,24 @@ export interface ExpectedArrival {
   patientUserId: string | null;
   patientCode: string | null;
   clinicianName: string | null;
+  departmentId: string | null;
   departmentName: string | null;
   /** Clinic-day bookings carry a position; slot bookings carry null. */
   positionNumber: number | null;
+  /** When the clinic day told the patient to come (ADR 0087); null for a slot booking. */
+  arrivalWindowStartIso: string | null;
+  /** How it was booked — a label on the Expected list, never its order (ADR 0101). */
+  channel: string;
+  origin: string;
+  /** When it was booked: the Expected list's order. */
+  createdAtIso: string;
+  /** The patient answered the day-before confirmation (ADR 0090). */
+  confirmedByPatient: boolean;
+  priority: string;
+  /** The six characters on the patient's receipt — what they read out at the desk. */
+  bookingCode: string | null;
+  /** When the booking's queue row was written, i.e. when they got here; null until then. */
+  hereSinceIso: string | null;
   /** An encounter for this booking reached state='completed' — the "Seen" stage. */
   seen: boolean;
   /**
@@ -290,6 +309,27 @@ const seenSql = sql<boolean>`exists (
     and ${encounters.state} = 'completed'
 )`;
 
+/** The booking's first queue row — its arrival. Keyed on the patient too, for the patient index. */
+const hereSinceSql = sql`(
+  select min(${queueEntries.arrivedAt}) from ${queueEntries}
+  where ${queueEntries.patientUserId} = ${appointments.patientUserId}
+    and ${queueEntries.appointmentId} = ${appointments.id}
+)`.mapWith(queueEntries.arrivedAt);
+
+/**
+ * An in-person booking that is 'arrived' with no intake carrying it: the
+ * patient tapped "I have arrived" (ha-mark-arrived), which queues them but
+ * sends them nowhere, and the desk has not routed them yet (ADR 0101). Desk
+ * check-in always writes the intake, so a checked-in booking never lands here.
+ */
+const unroutedSql = sql`${appointments.status} = 'arrived'
+  and ${appointments.type} <> 'virtual'
+  and not exists (
+    select 1 from ${patientIntakes}
+    where ${patientIntakes.appointmentId} = ${appointments.id}
+      and ${patientIntakes.hospitalId} = ${appointments.hospitalId}
+  )`;
+
 export async function fetchExpectedArrivals(args: {
   hospitalId: string;
   /** The scoped receptionist — required to audit provisional name reveals. */
@@ -300,6 +340,8 @@ export async function fetchExpectedArrivals(args: {
   surface?: string;
   /** Narrow the day's statuses — the intake pick wants only what check-in accepts. */
   statuses?: string[];
+  /** Only arrived bookings nobody has sent on yet (see `unroutedSql`). */
+  unrouted?: boolean;
 }): Promise<ExpectedArrival[]> {
   const surface = args.surface ?? "reception_expected_list";
   // The hospital's day containing `date` (a `?date=YYYY-MM-DD` parses as
@@ -327,8 +369,17 @@ export async function fetchExpectedArrivals(args: {
       symptoms: appointments.symptoms,
       reasonNote: appointments.reasonNote,
       clinicianName: users.fullName,
+      departmentId: appointments.departmentId,
       departmentName: hospitalDepartments.name,
       positionNumber: appointments.positionNumber,
+      arrivalWindowStart: appointments.arrivalWindowStart,
+      channel: appointments.channel,
+      origin: appointments.origin,
+      createdAt: appointments.createdAt,
+      confirmedByPatientAt: appointments.confirmedByPatientAt,
+      priority: appointments.priority,
+      bookingCode: appointments.bookingCode,
+      hereSince: hereSinceSql,
       seen: seenSql,
       provisionalId: provisionalPatients.id,
       provisionalNameEncrypted: provisionalPatients.declaredNameEncrypted,
@@ -360,9 +411,17 @@ export async function fetchExpectedArrivals(args: {
             "no_show",
           ],
         ),
+        args.unrouted ? unroutedSql : undefined,
       ),
     )
-    .orderBy(asc(appointments.startsAt))
+    // A clinic day's bookings share a start, so the position the patient was
+    // given orders them; booking time settles anything left (a stable board
+    // between polls). Slot bookings have no position and follow.
+    .orderBy(
+      asc(appointments.startsAt),
+      sql`${appointments.positionNumber} asc nulls last`,
+      asc(appointments.createdAt),
+    )
     .limit(args.limit ?? 100);
 
   const out: ExpectedArrival[] = rows.map((r) => {
@@ -377,8 +436,17 @@ export async function fetchExpectedArrivals(args: {
       patientUserId: r.patientUserId,
       patientCode: r.patientCode,
       clinicianName: r.clinicianName,
+      departmentId: r.departmentId,
       departmentName: r.departmentName,
       positionNumber: r.positionNumber,
+      arrivalWindowStartIso: r.arrivalWindowStart?.toISOString() ?? null,
+      channel: r.channel,
+      origin: r.origin,
+      createdAtIso: r.createdAt.toISOString(),
+      confirmedByPatient: r.confirmedByPatientAt !== null,
+      priority: r.priority,
+      bookingCode: r.bookingCode,
+      hereSinceIso: r.hereSince?.toISOString() ?? null,
       seen: r.seen,
       identity: {
         patientCode: r.patientCode,
@@ -581,6 +649,10 @@ export interface DayQueueRow {
   patientUnknownLabel: string | null;
   departmentName: string | null;
   entryTypeName: string;
+  /** The patient's own "coming today" from the app — the panel says "From the app". */
+  declaredByPatient: boolean;
+  /** Where the desk sent them (migration 0067). Null is every row before it, and means triage. */
+  routedTo: "triage" | "clinic" | null;
   /** `coalesce(checked_in_at, arrived_at)` — see `presenceAt`. */
   presenceAtIso: string;
   triageLevel: number | null;
@@ -626,6 +698,8 @@ export async function fetchQueueForDay(args: {
       provisionalId: patientIntakes.provisionalPatientId,
       departmentName: hospitalDepartments.name,
       entryTypeName: entryTypes.name,
+      declaredByPatient: patientIntakes.declaredByPatient,
+      routedTo: patientIntakes.routedTo,
       arrivedAt: patientIntakes.arrivedAt,
       checkedInAt: patientIntakes.checkedInAt,
       triageLevel: patientIntakes.triageLevel,
@@ -663,6 +737,8 @@ export async function fetchQueueForDay(args: {
       r.patientUnknownLabel ?? (!r.patientUserId && r.provisionalId ? "Identity to confirm" : null),
     departmentName: r.departmentName,
     entryTypeName: r.entryTypeName,
+    declaredByPatient: r.declaredByPatient,
+    routedTo: r.routedTo === "clinic" || r.routedTo === "triage" ? r.routedTo : null,
     presenceAtIso: presenceOf(r).toISOString(),
     triageLevel: r.triageLevel,
     priorityHint: r.priorityHint,
@@ -736,6 +812,9 @@ export interface DeclaredIntakeRow {
    * and the reveal was withheld. Render `patientCode` as the fallback. */
   displayName: string | null;
   declaredAtIso: string;
+  /** "How booked" — see `intakeBookedVia`. */
+  declaredByPatient: boolean;
+  entryTypeCode: string;
   departmentId: string | null;
   departmentName: string | null;
   presentingComplaint: string | null;
@@ -772,6 +851,8 @@ export async function fetchDeclaredIntakesToday(args: {
       dateOfBirth: patientProfiles.dateOfBirth,
       avatarPath: users.avatarPath,
       declaredAt: patientIntakes.arrivedAt,
+      declaredByPatient: patientIntakes.declaredByPatient,
+      entryTypeCode: patientIntakes.entryTypeCode,
       departmentId: patientIntakes.receivingDepartmentId,
       departmentName: hospitalDepartments.name,
       presentingComplaint: patientIntakes.presentingComplaint,
@@ -804,6 +885,8 @@ export async function fetchDeclaredIntakesToday(args: {
       patientUserId: r.patientUserId,
       displayName,
       declaredAtIso: r.declaredAt.toISOString(),
+      declaredByPatient: r.declaredByPatient,
+      entryTypeCode: r.entryTypeCode,
       departmentId: r.departmentId,
       departmentName: r.departmentName,
       presentingComplaint: r.presentingComplaint,
@@ -844,6 +927,88 @@ export async function fetchDeclaredIntakesToday(args: {
   return named;
 }
 
+/* ─── Expected today: one list, in the order people booked (ADR 0101) ── */
+
+/** A row on the desk's Expected list: a booking, or a same-day ticket from home. */
+export type ExpectedTodayRow = (
+  | ({ kind: "booking" } & ExpectedArrival)
+  | ({ kind: "declared" } & DeclaredIntakeRow)
+) & {
+  /** Words, never a sort key — see `appointmentBookedVia` / `intakeBookedVia`. */
+  bookedVia: string;
+  /** When they booked: `created_at`, or the declaration itself for a ticket. */
+  bookedAtIso: string;
+};
+
+export interface ExpectedToday {
+  /** Not here yet: today's bookings and declared tickets, oldest booking first. */
+  expected: ExpectedTodayRow[];
+  /** Here but sent nowhere — they marked themselves arrived. Longest-here first. */
+  needsRouting: ExpectedArrival[];
+}
+
+/**
+ * The desk's queue of who is coming today, merged and ordered by WHEN they
+ * booked, then id so the order is total and stable between polls (owner
+ * ruling, ADR 0101). How they booked rides along as a label and never sorts:
+ * the app must not outrank a phone call or a walk to the desk (PRD equity
+ * rule), and nothing clinical — symptoms, tier, priority — orders it either.
+ * Once they are in the building, the line is acuity then presence (ADR 0084
+ * §7b) — `fetchQueueForDay`, untouched.
+ *
+ * The reads are the audited ones the board already uses, so every name and
+ * photo here passes through the same reveal and provisional handling.
+ */
+export async function fetchExpectedToday(args: {
+  hospitalId: string;
+  /** The scoped receptionist — required to audit the name reveals. */
+  receptionUserId: string;
+  limit?: number;
+}): Promise<ExpectedToday> {
+  const [booked, declared, arrived] = await Promise.all([
+    fetchExpectedArrivals({
+      hospitalId: args.hospitalId,
+      receptionUserId: args.receptionUserId,
+      limit: args.limit,
+      statuses: ["confirmed", "pending_approval", "requested"],
+    }),
+    fetchDeclaredIntakesToday({
+      hospitalId: args.hospitalId,
+      receptionUserId: args.receptionUserId,
+      limit: args.limit,
+    }),
+    fetchExpectedArrivals({
+      hospitalId: args.hospitalId,
+      receptionUserId: args.receptionUserId,
+      limit: args.limit,
+      statuses: ["arrived"],
+      unrouted: true,
+      surface: "reception_needs_routing",
+    }),
+  ]);
+
+  const expected: ExpectedTodayRow[] = [
+    ...booked.map((b) => ({
+      ...b,
+      kind: "booking" as const,
+      bookedVia: appointmentBookedVia(b.origin, b.channel),
+      bookedAtIso: b.createdAtIso,
+    })),
+    ...declared.map((d) => ({
+      ...d,
+      kind: "declared" as const,
+      bookedVia: intakeBookedVia(d.declaredByPatient, d.entryTypeCode),
+      bookedAtIso: d.declaredAtIso,
+    })),
+  ];
+  return {
+    expected: expected.sort(byBookedAt),
+    needsRouting: arrived.sort((a, b) =>
+      (a.hereSinceIso ?? a.startsAtIso).localeCompare(b.hereSinceIso ?? b.startsAtIso),
+    ),
+  };
+}
+
 /* ─── Find a person on today's board (ADR 0084 §11) ─────────────── */
 
 export interface BoardSearchHit {
@@ -857,6 +1022,8 @@ export interface BoardSearchHit {
   /** `coalesce(checked_in_at, arrived_at)` — when they got here, or when
    * they declared if they haven't. */
   presenceAtIso: string;
+  /** The declared department — the default the desk routes to. */
+  departmentId: string | null;
   departmentName: string | null;
 }
 
@@ -912,6 +1079,7 @@ export async function searchTodaysBoard(args: {
       declaredByPatient: patientIntakes.declaredByPatient,
       arrivedAt: patientIntakes.arrivedAt,
       checkedInAt: patientIntakes.checkedInAt,
+      departmentId: patientIntakes.receivingDepartmentId,
       departmentName: hospitalDepartments.name,
     })
     .from(patientIntakes)
@@ -948,6 +1116,7 @@ export async function searchTodaysBoard(args: {
       status: r.status,
       declaredByPatient: r.declaredByPatient,
       presenceAtIso: presenceOf(r).toISOString(),
+      departmentId: r.departmentId,
       departmentName: r.departmentName,
     });
     if (hits.length >= limit) break;
@@ -1027,6 +1196,7 @@ export async function fetchTodayFlow(args: {
       arrivedAt: patientIntakes.arrivedAt,
       checkedInAt: patientIntakes.checkedInAt,
       declaredByPatient: patientIntakes.declaredByPatient,
+      routedTo: patientIntakes.routedTo,
       departmentName: hospitalDepartments.name,
     })
     .from(patientIntakes)
@@ -1070,6 +1240,8 @@ export async function fetchTodayFlow(args: {
   for (const r of intakeRows) {
     // 'completed' is set by ha-complete-encounter: the intake's encounter
     // reached state='completed' — the same "Seen" the booking rows derive.
+    // One the desk sent straight to the clinic (ADR 0101) is in its queue, as
+    // a triaged patient is.
     const stage: FlowRow["stage"] =
       r.status === "completed"
         ? "seen"
@@ -1077,7 +1249,7 @@ export async function fetchTodayFlow(args: {
           ? "declared"
           : r.status === "awaiting_triage"
             ? "awaiting_triage"
-            : r.status === "triaged"
+            : r.status === "triaged" || (r.status === "arrived" && r.routedTo === "clinic")
               ? "in_queue"
               : "arrived";
     const source = r.declaredByPatient ? "Self-declared" : "Intake";
@@ -1088,7 +1260,9 @@ export async function fetchTodayFlow(args: {
       stage,
       departmentName: r.departmentName,
       whenIso: presenceOf(r).toISOString(),
-      detail: `${source} · ${r.status}`,
+      detail: [source, r.status, r.routedTo === "clinic" ? "sent to clinic" : null]
+        .filter(Boolean)
+        .join(" · "),
       declaredIntakeId: r.status === "declared" ? r.id : null,
     });
   }

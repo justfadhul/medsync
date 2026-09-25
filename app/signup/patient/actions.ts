@@ -11,6 +11,7 @@ import { consentVersions } from "@/db/schema/consent-versions";
 import { signupDrafts } from "@/db/schema/signup-drafts";
 import { storeAvatar } from "@/lib/avatars";
 import { blindIndex, encrypt } from "@/lib/encryption";
+import { assertSignupsOpen } from "@/lib/legal";
 import { logger } from "@/lib/logger";
 import { fetchSmsConsentVersion, setSmsConsent } from "@/lib/notifications/consent";
 import { listSubcounties } from "@/lib/reference-data";
@@ -133,6 +134,7 @@ export async function submitPatientSignupAction(
   _prev: PatientSignupState,
   formData: FormData,
 ): Promise<PatientSignupState> {
+  assertSignupsOpen(); // S8 D1: production collects no personal data until the legal basics exist
   // The optional photo rides FormData as a File under `photo` — it is
   // not part of the Zod object and must not be echoed back in `values`.
   const photo = formData.get("photo");

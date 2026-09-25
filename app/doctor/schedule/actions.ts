@@ -14,6 +14,7 @@ import { callEdge } from "@/lib/supabase/edge";
  *   - confirm / decline a pending appointment (reuse existing fns)
  *   - record a walk-in (ha-record-walkin — net-new)
  *   - start an encounter (ha-start-encounter — existing)
+ *   - end the visit (ha-complete-encounter — existing)
  *   - set scheduling settings (ha-set-clinician-settings — existing)
  */
 
@@ -124,6 +125,42 @@ export async function startEncounterAction(payload: {
   const result = await callEdge("ha-start-encounter", parsed.data, "doctor.schedule");
   if (!result.ok) return { error: result.error };
   revalidatePath("/doctor/schedule");
+  return { ok: true };
+}
+
+/* ─── End the visit (ADR 0101 R3) ────────────────────────────────── */
+
+/**
+ * The completion reason and the audited reason are FIXED here, not taken from
+ * the client: the button says "End visit" and nothing else, so the audit row
+ * must say exactly that. ha-complete-encounter re-checks that the caller is the
+ * encounter's clinician (or a scoped admin) and cascades the close to the queue
+ * row, the intake and the booking — the desk and triage boards drop the patient
+ * from the same write, hence the four revalidations.
+ */
+export async function completeEncounterAction(
+  encounterId: string,
+): Promise<DoctorScheduleActionState> {
+  if (!z.string().uuid().safeParse(encounterId).success) {
+    return { error: "Need an encounter to end." };
+  }
+  await requireDoctorScope();
+  const result = await callEdge(
+    "ha-complete-encounter",
+    {
+      encounter_id: encounterId,
+      completion_reason: "ended_by_clinician",
+      reason: "Visit ended by the clinician.",
+    },
+    "doctor.schedule",
+  );
+  if (!result.ok) return { error: result.error };
+  revalidatePath("/doctor/schedule");
+  revalidatePath("/doctor");
+  revalidatePath("/doctor/encounters");
+  revalidatePath(`/doctor/encounters/${encounterId}`);
+  revalidatePath("/reception/expected");
+  revalidatePath("/nurse/triage");
   return { ok: true };
 }
 

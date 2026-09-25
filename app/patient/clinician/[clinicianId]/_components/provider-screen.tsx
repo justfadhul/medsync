@@ -109,7 +109,7 @@ export function ProviderScreen({
             {provider.photoUrl ? null : (
               <span
                 aria-hidden
-                className="bg-brand-50 text-brand-700 text-heading-s grid size-14 shrink-0 place-items-center rounded-full font-mono font-medium"
+                className="bg-plum-50 text-plum-700 text-heading-s grid size-14 shrink-0 place-items-center rounded-full font-mono font-medium"
               >
                 {initials ?? <StethoscopeIcon strokeWidth={1.5} className="size-6" />}
               </span>

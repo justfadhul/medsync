@@ -1,6 +1,7 @@
 import "server-only";
 
 import { redirect } from "next/navigation";
+import { cache } from "react";
 import { and, desc, eq, inArray } from "drizzle-orm";
 
 import { db } from "@/db";
@@ -28,16 +29,6 @@ import { logger } from "@/lib/logger";
  * switcher for doctors holding >1 affiliation is a polish ticket.
  */
 
-export const DOCTOR_CADRE_CODES = [
-  "INTERN_DOCTOR",
-  "MEDICAL_OFFICER",
-  "MEDICAL_OFFICER_SG",
-  "CONSULTANT",
-  "SENIOR_CONSULTANT",
-] as const;
-
-export type DoctorCadreCode = (typeof DOCTOR_CADRE_CODES)[number];
-
 /** Junior cadres — these are the ones whose flagged actions can route to co-sign. */
 export const JUNIOR_CADRE_CODES = ["INTERN_DOCTOR", "CLINICAL_OFFICER"] as const;
 
@@ -48,6 +39,17 @@ export const SENIOR_CADRE_CODES = [
   "CONSULTANT",
   "SENIOR_CONSULTANT",
 ] as const;
+
+/**
+ * Every cadre the doctor workspace serves: the juniors (co-signed) and the
+ * seniors (independent), exactly ADR 0027's matrix — the Clinical Officer
+ * included. Derived, never hand-listed: sign-in routing and this scope read
+ * the same constant, so a cadre can no longer pass one and fail the other
+ * (a Clinical Officer did, and landed on /clinician/availability).
+ */
+export const DOCTOR_CADRE_CODES = [...JUNIOR_CADRE_CODES, ...SENIOR_CADRE_CODES] as const;
+
+export type DoctorCadreCode = (typeof DOCTOR_CADRE_CODES)[number];
 
 export interface DoctorScope {
   userId: string;
@@ -79,7 +81,12 @@ export interface DoctorScope {
   isConsultantLevel: boolean;
 }
 
-export async function requireDoctorScope(): Promise<DoctorScope> {
+/**
+ * Cached per request (React `cache`): the doctor layout, the page and the
+ * workspace redirects of one render share one read. A redirect thrown by the
+ * first call is thrown to every caller in that render, as it should be.
+ */
+export const requireDoctorScope = cache(async function requireDoctorScope(): Promise<DoctorScope> {
   const state = await getAuthState();
   if (!state.user) redirect("/sign-in?redirect=/doctor");
 
@@ -88,40 +95,7 @@ export async function requireDoctorScope(): Promise<DoctorScope> {
   if (state.nextAal !== "aal2") redirect("/onboarding/mfa-setup");
   if (state.aal !== "aal2") redirect("/sign-in/mfa?redirect=/doctor");
 
-  const [me] = await db
-    .select({
-      affiliationId: staffAffiliations.id,
-      hospitalId: staffAffiliations.hospitalId,
-      hospitalName: hospitals.name,
-      hospitalLevel: hospitals.level,
-      departmentId: staffAffiliations.departmentId,
-      departmentName: hospitalDepartments.name,
-      cadreId: staffAffiliations.cadreId,
-      cadreCode: cadres.code,
-      cadreName: cadres.name,
-      roleId: staffAffiliations.roleId,
-      roleCode: roles.code,
-      roleName: roles.name,
-      specialtyId: staffAffiliations.specialtyId,
-      fullName: users.fullName,
-      userEmail: users.email,
-      avatarPath: users.avatarPath,
-    })
-    .from(staffAffiliations)
-    .innerJoin(hospitals, eq(hospitals.id, staffAffiliations.hospitalId))
-    .innerJoin(hospitalDepartments, eq(hospitalDepartments.id, staffAffiliations.departmentId))
-    .innerJoin(cadres, eq(cadres.id, staffAffiliations.cadreId))
-    .innerJoin(roles, eq(roles.id, staffAffiliations.roleId))
-    .innerJoin(users, eq(users.id, staffAffiliations.userId))
-    .where(
-      and(
-        eq(staffAffiliations.userId, state.user.id),
-        inArray(staffAffiliations.state, ["active", "approved"]),
-        inArray(cadres.code, DOCTOR_CADRE_CODES as unknown as string[]),
-      ),
-    )
-    .orderBy(desc(staffAffiliations.approvedAt), desc(staffAffiliations.createdAt))
-    .limit(1);
+  const me = await findDoctorAffiliation(state.user.id);
 
   if (!me) {
     logger.warn("doctor.scope.no_active_doctor_affiliation", { user_id: state.user.id });
@@ -159,4 +133,54 @@ export async function requireDoctorScope(): Promise<DoctorScope> {
     isSenior,
     isConsultantLevel,
   };
+});
+
+/**
+ * The affiliation that makes someone a doctor here — most recent, active or
+ * approved, in a doctor cadre, with its hospital, department, cadre and role
+ * rows present. requireDoctorScope and isDoctorUser share it, so the doctor
+ * gate and the /clinician guard can never disagree and bounce a user between
+ * the two workspaces.
+ */
+async function findDoctorAffiliation(userId: string) {
+  const [me] = await db
+    .select({
+      affiliationId: staffAffiliations.id,
+      hospitalId: staffAffiliations.hospitalId,
+      hospitalName: hospitals.name,
+      hospitalLevel: hospitals.level,
+      departmentId: staffAffiliations.departmentId,
+      departmentName: hospitalDepartments.name,
+      cadreId: staffAffiliations.cadreId,
+      cadreCode: cadres.code,
+      cadreName: cadres.name,
+      roleId: staffAffiliations.roleId,
+      roleCode: roles.code,
+      roleName: roles.name,
+      specialtyId: staffAffiliations.specialtyId,
+      fullName: users.fullName,
+      userEmail: users.email,
+      avatarPath: users.avatarPath,
+    })
+    .from(staffAffiliations)
+    .innerJoin(hospitals, eq(hospitals.id, staffAffiliations.hospitalId))
+    .innerJoin(hospitalDepartments, eq(hospitalDepartments.id, staffAffiliations.departmentId))
+    .innerJoin(cadres, eq(cadres.id, staffAffiliations.cadreId))
+    .innerJoin(roles, eq(roles.id, staffAffiliations.roleId))
+    .innerJoin(users, eq(users.id, staffAffiliations.userId))
+    .where(
+      and(
+        eq(staffAffiliations.userId, userId),
+        inArray(staffAffiliations.state, ["active", "approved"]),
+        inArray(cadres.code, DOCTOR_CADRE_CODES as unknown as string[]),
+      ),
+    )
+    .orderBy(desc(staffAffiliations.approvedAt), desc(staffAffiliations.createdAt))
+    .limit(1);
+  return me;
+}
+
+/** True when the user would pass requireDoctorScope — the /clinician guard sends them to /doctor. */
+export async function isDoctorUser(userId: string): Promise<boolean> {
+  return (await findDoctorAffiliation(userId)) !== undefined;
 }

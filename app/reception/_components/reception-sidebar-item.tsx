@@ -45,7 +45,7 @@ export function ReceptionSidebarItem({ href, label, iconKey, exact }: Props) {
       className={cn(
         "group tap ease-expo-out text-body-s flex items-center gap-2.5 rounded-md px-2.5 py-1.5 transition-colors duration-150",
         isActive
-          ? "bg-brand-50 text-brand-800 ring-brand-600/10 font-medium ring-1 ring-inset"
+          ? "bg-plum-50 text-plum-800 ring-plum-600/10 font-medium ring-1 ring-inset"
           : "text-muted-foreground hover:bg-muted hover:text-foreground",
       )}
     >
@@ -53,12 +53,12 @@ export function ReceptionSidebarItem({ href, label, iconKey, exact }: Props) {
         aria-hidden
         className={cn(
           "size-3.5 shrink-0 transition-colors duration-150",
-          isActive ? "text-brand-600" : "text-muted-foreground/80 group-hover:text-foreground",
+          isActive ? "text-plum-600" : "text-muted-foreground/80 group-hover:text-foreground",
         )}
       />
       <span className="truncate">{label}</span>
       {isActive ? (
-        <span aria-hidden className="bg-brand-500/80 ml-auto size-1 rounded-full" />
+        <span aria-hidden className="bg-plum-500/80 ml-auto size-1 rounded-full" />
       ) : null}
     </Link>
   );

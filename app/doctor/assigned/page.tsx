@@ -1,8 +1,10 @@
 import type { Metadata } from "next";
+import { redirect } from "next/navigation";
 
 import { requireDoctorScope } from "@/lib/doctor/scope";
 import { listAssignedEncountersForDoctor } from "@/lib/encounter/assignment";
 import { encounterEngineLive } from "@/lib/encounter/feature";
+import { doctorWorkspace } from "@/lib/workspace/feature";
 import { DoctorEmptyState } from "../_components/empty-state";
 import { AssignedRow } from "./_components/assigned-row";
 
@@ -11,6 +13,8 @@ export const dynamic = "force-dynamic";
 
 export default async function DoctorAssignedPage() {
   const scope = await requireDoctorScope();
+  // Doctor workspace on: this list is the board's Waiting for you lane (307).
+  if (doctorWorkspace(scope.hospitalId)) redirect("/doctor?lane=waiting");
 
   return (
     <div className="stagger-children mx-auto flex w-full max-w-3xl flex-col gap-6 px-6 py-8 lg:py-10">

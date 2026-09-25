@@ -54,19 +54,22 @@ export default async function PatientLayout({ children }: { children: ReactNode 
         <div className="flex min-w-0 items-center gap-3">
           <Link
             href="/patient"
-            className="font-display text-foreground text-body-m font-medium tracking-[-0.01em]"
+            className="font-display text-foreground text-body-m inline-flex min-h-11 items-center font-medium tracking-[-0.01em]"
           >
             MedSync
           </Link>
           {scope.primaryHospitalName ? (
             <span
+              data-place
               className="text-muted-foreground text-caption hidden min-w-0 items-center gap-1.5 font-mono tracking-[0.16em] uppercase sm:inline-flex"
               title={scope.primaryHospitalName}
             >
-              {/* Static dot: nothing on this surface is live, so it doesn't pulse. */}
+              {/* Static dot: nothing on this surface is live, so it doesn't
+                  pulse. Plum, not teal: it says where you are, and teal on
+                  this page only ever means something to press (ADR 0097). */}
               <span
                 aria-hidden
-                className="bg-brand-500 ring-brand-500/20 size-1 shrink-0 rounded-full ring-2"
+                className="bg-plum-500 ring-plum-500/20 size-1 shrink-0 rounded-full ring-2"
               />
               <span className="truncate">{scope.primaryHospitalName}</span>
             </span>

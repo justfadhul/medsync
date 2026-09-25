@@ -2,6 +2,7 @@ import type { PatientSummary } from "@/lib/doctor/patient-access";
 import type { CaptureMap } from "@/lib/ncd/engine/evaluate";
 import type { Metadata } from "next";
 import Link from "next/link";
+import { Suspense } from "react";
 import { eq } from "drizzle-orm";
 import { AlertTriangleIcon, ArrowLeftIcon } from "lucide-react";
 
@@ -15,7 +16,10 @@ import { toEncounterScope } from "@/lib/encounter/workspace-scope";
 import { DIABETES_CATALOG, DISTRICT_SITE, REFERRAL_SITE } from "@/lib/ncd/catalog/diabetes";
 import { loadNcdDraft } from "@/lib/ncd/draft";
 import { initialCapture, loadLatestVitals, loadPatientDemographics } from "@/lib/ncd/vitals";
+import { doctorWorkspace } from "@/lib/workspace/feature";
+import { EncounterRail, NextPatient } from "../../_components/workspace/encounter-extras";
 import { NcdClerkship } from "./_components/ncd-clerkship";
+import { VisitStatus } from "./_components/visit-status";
 import { saveNcdDraftAction } from "./actions";
 
 export const metadata: Metadata = { title: "Encounter · Doctor · MedSync" };
@@ -58,6 +62,7 @@ export default async function DoctorEncounterPage({ params }: PageProps) {
       encounterType: encounters.encounterType,
       state: encounters.state,
       startedAt: encounters.startedAt,
+      endedAt: encounters.endedAt,
     })
     .from(encounters)
     .where(eq(encounters.id, encounterId))
@@ -126,37 +131,54 @@ export default async function DoctorEncounterPage({ params }: PageProps) {
   const draft = ncdClerkshipLive()
     ? await loadNcdDraft(encounterId, scope.userId, DIABETES_CATALOG)
     : undefined;
+  // Doctor workspace on: back goes to the board, the rail and "next patient" join the page.
+  const workspace = doctorWorkspace(scope.hospitalId);
 
   return (
     <div className="bg-background text-foreground relative isolate flex min-h-svh flex-col">
       {/* Ambient clinical atmosphere — a whisper of teal at the top, 95% monochrome below */}
       <div
         aria-hidden
-        className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-72 bg-[radial-gradient(ellipse_80%_100%_at_50%_0%,rgba(13,148,136,0.05),transparent_70%)]"
+        className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-72 bg-[radial-gradient(ellipse_80%_100%_at_50%_0%,rgba(159,47,126,0.05),transparent_70%)]"
       />
       <WorkspaceTopBar
         scope={scope}
         patientName={patient ? `${patient.firstName} ${patient.surname}` : null}
+        visit={<VisitStatus encounterId={encounterId} state={enc.state} endedAt={enc.endedAt} />}
+        back={workspace ? { href: "/doctor", label: "Workspace" } : undefined}
       />
-      <div className="stagger-children mx-auto flex w-full max-w-[1500px] flex-1 flex-col gap-5 px-4 py-5 lg:px-8 lg:py-6">
-        {patient ? <PatientHeader patient={patient} allergies={record.allergies} /> : null}
+      {workspace && enc.state === "completed" ? (
+        <Suspense fallback={null}>
+          <NextPatient scope={scope} />
+        </Suspense>
+      ) : null}
+      <div className="flex flex-1">
+        {workspace ? (
+          <Suspense fallback={null}>
+            <EncounterRail scope={scope} currentEncounterId={encounterId} />
+          </Suspense>
+        ) : null}
+        <div className="stagger-children mx-auto flex w-full max-w-[1500px] min-w-0 flex-1 flex-col gap-5 px-4 py-5 lg:px-8 lg:py-6">
+          {patient ? <PatientHeader patient={patient} allergies={record.allergies} /> : null}
 
-        <header className="flex flex-col gap-0.5">
-          <span className="text-muted-foreground/80 font-mono text-[10px] tracking-[0.18em] uppercase">
-            Clinical documentation
-          </span>
-          <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-            <h1 className="font-display text-foreground text-heading-m leading-[1.1] font-medium tracking-[-0.015em]">
-              {enc.encounterType} · {enc.state}
-            </h1>
-            <p className="text-muted-foreground text-caption font-mono tabular-nums">
-              Started {enc.startedAt.toISOString().slice(0, 16).replace("T", " ")}
-              {doc ? ` · documentation v${doc.version} (${doc.status})` : " · no documentation yet"}
-            </p>
-          </div>
-        </header>
+          <header className="flex flex-col gap-0.5">
+            <span className="text-muted-foreground/80 font-mono text-[10px] tracking-[0.18em] uppercase">
+              Clinical documentation
+            </span>
+            <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+              <h1 className="font-display text-foreground text-heading-m leading-[1.1] font-medium tracking-[-0.015em]">
+                {enc.encounterType} · {enc.state}
+              </h1>
+              <p className="text-muted-foreground text-caption font-mono tabular-nums">
+                Started {enc.startedAt.toISOString().slice(0, 16).replace("T", " ")}
+                {doc
+                  ? ` · documentation v${doc.version} (${doc.status})`
+                  : " · no documentation yet"}
+              </p>
+            </div>
+          </header>
 
-        {/* The NCD clerkship (ADR 0082). Gated by NCD_CLERKSHIP_LIVE; the
+          {/* The NCD clerkship (ADR 0082). Gated by NCD_CLERKSHIP_LIVE; the
             criteria carry their own sign-off state, and the profile shows a
             gated-dark notice while any citation is unratified — so the surface
             can be reviewed without any part of it claiming to be ratified
@@ -167,53 +189,54 @@ export default async function DoctorEncounterPage({ params }: PageProps) {
             and audited, and writing a version every time a clinician changes tab
             would turn the clinical timeline into noise. The explicit clinical
             save — the one that does write a version — is the next increment. */}
-        {ncdClerkshipLive() ? (
-          <NcdClerkship
-            catalog={DIABETES_CATALOG}
-            site={REFERRAL_SITE}
-            siteOptions={[REFERRAL_SITE, DISTRICT_SITE]}
-            initialValues={initialCapture(
-              { ...demographics.values, ...(vitals?.values ?? {}) },
-              draft,
-            )}
-            ageBand={demographics.ageBand}
-            onSave={saveDraft}
-            pulled={
-              vitals?.vitals.length
-                ? {
-                    values: vitals.values,
-                    items: vitals.vitals.map((v) => ({
-                      feature: v.feature,
-                      display: v.display,
-                      value: v.value,
-                      fromTriage: v.fromTriage,
-                    })),
-                    latestAt: vitals.latestAt?.toISOString().slice(11, 16),
-                    anyFromTriage: vitals.anyFromTriage,
-                  }
-                : undefined
-            }
-          />
-        ) : (
-          <section className="border-border bg-card flex flex-col gap-2 rounded-xl border p-5 shadow-xs">
-            <span className="text-muted-foreground/80 font-mono text-[10px] tracking-[0.18em] uppercase">
-              Clerkship
-            </span>
-            <h2 className="font-display text-foreground text-heading-s leading-[1.3] font-medium tracking-[-0.01em]">
-              Being rebuilt for NCD care
-            </h2>
-            <p className="text-muted-foreground text-body-s max-w-prose leading-relaxed">
-              The previous clerkship is no longer available for new entries. Existing documentation
-              for this encounter is unchanged and still readable — in the timeline below and in the
-              patient&apos;s clinical record.
-            </p>
-            {doc ? (
-              <p className="text-muted-foreground text-caption font-mono tabular-nums">
-                Last documented: v{doc.version} ({doc.status})
+          {ncdClerkshipLive() ? (
+            <NcdClerkship
+              catalog={DIABETES_CATALOG}
+              site={REFERRAL_SITE}
+              siteOptions={[REFERRAL_SITE, DISTRICT_SITE]}
+              initialValues={initialCapture(
+                { ...demographics.values, ...(vitals?.values ?? {}) },
+                draft,
+              )}
+              ageBand={demographics.ageBand}
+              onSave={saveDraft}
+              pulled={
+                vitals?.vitals.length
+                  ? {
+                      values: vitals.values,
+                      items: vitals.vitals.map((v) => ({
+                        feature: v.feature,
+                        display: v.display,
+                        value: v.value,
+                        fromTriage: v.fromTriage,
+                      })),
+                      latestAt: vitals.latestAt?.toISOString().slice(11, 16),
+                      anyFromTriage: vitals.anyFromTriage,
+                    }
+                  : undefined
+              }
+            />
+          ) : (
+            <section className="border-border bg-card flex flex-col gap-2 rounded-xl border p-5 shadow-xs">
+              <span className="text-muted-foreground/80 font-mono text-[10px] tracking-[0.18em] uppercase">
+                Clerkship
+              </span>
+              <h2 className="font-display text-foreground text-heading-s leading-[1.3] font-medium tracking-[-0.01em]">
+                Being rebuilt for NCD care
+              </h2>
+              <p className="text-muted-foreground text-body-s max-w-prose leading-relaxed">
+                The previous clerkship is no longer available for new entries. Existing
+                documentation for this encounter is unchanged and still readable — in the timeline
+                below and in the patient&apos;s clinical record.
               </p>
-            ) : null}
-          </section>
-        )}
+              {doc ? (
+                <p className="text-muted-foreground text-caption font-mono tabular-nums">
+                  Last documented: v{doc.version} ({doc.status})
+                </p>
+              ) : null}
+            </section>
+          )}
+        </div>
       </div>
     </div>
   );
@@ -221,6 +244,7 @@ export default async function DoctorEncounterPage({ params }: PageProps) {
 
 const CADRE_LABEL: Record<string, string> = {
   INTERN_DOCTOR: "Intern Doctor",
+  CLINICAL_OFFICER: "Clinical Officer",
   MEDICAL_OFFICER: "Medical Officer",
   MEDICAL_OFFICER_SG: "MO Special Grade",
   CONSULTANT: "Consultant",
@@ -231,22 +255,30 @@ const CADRE_LABEL: Record<string, string> = {
 function WorkspaceTopBar({
   scope,
   patientName,
+  visit,
+  back = { href: "/doctor/encounters", label: "Encounters" },
 }: {
   scope: Awaited<ReturnType<typeof requireDoctorScope>>;
   patientName: string | null;
+  /** End visit / "Completed · 14:05" (ADR 0101 R3). */
+  visit: React.ReactNode;
+  /** Where the back link goes: the Encounters list, or the doctor workspace's board. */
+  back?: { href: string; label: string };
 }) {
   return (
-    <header className="border-border glass sticky top-0 z-30 flex h-13 items-center justify-between gap-3 border-b px-4 sm:px-6">
+    // min-h, not h: the End visit confirm and its refusal line need room, and
+    // on a phone the right-hand group wraps rather than pushing off-screen.
+    <header className="border-border glass sticky top-0 z-30 flex min-h-13 flex-wrap items-center justify-between gap-x-3 gap-y-1 border-b px-4 py-1 sm:px-6">
       <div className="flex min-w-0 items-center gap-3">
         <Link
-          href="/doctor/encounters"
+          href={back.href}
           className="text-muted-foreground hover:text-foreground group inline-flex shrink-0 items-center gap-1 text-[12.5px] transition-colors"
         >
           <ArrowLeftIcon
             className="size-3.5 transition-transform duration-200 group-hover:-translate-x-0.5"
             aria-hidden
           />
-          Encounters
+          {back.label}
         </Link>
         <span className="text-border hidden sm:inline" aria-hidden>
           |
@@ -255,7 +287,8 @@ function WorkspaceTopBar({
           {patientName ?? "Clerking"}
         </span>
       </div>
-      <div className="flex items-center gap-3">
+      <div className="flex flex-wrap items-center gap-3">
+        {visit}
         <span className="text-muted-foreground hidden items-center gap-1.5 font-mono text-[10px] tracking-[0.14em] uppercase lg:inline-flex">
           <span
             aria-hidden

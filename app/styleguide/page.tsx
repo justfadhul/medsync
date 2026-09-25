@@ -91,6 +91,35 @@ const darkBrandScale: ReadonlyArray<SwatchSpec> = [
   { name: "brand-950", hex: "#F0FDFA", textOnLight: true },
 ];
 
+/** Plum — the secondary accent (ADR 0097). Place, never state. */
+const lightPlumScale: ReadonlyArray<SwatchSpec> = [
+  { name: "plum-50", hex: "#FDF3F9", textOnLight: true },
+  { name: "plum-100", hex: "#FEE4F3", textOnLight: true },
+  { name: "plum-200", hex: "#FECBE9", textOnLight: true },
+  { name: "plum-300", hex: "#FEA2DC", textOnLight: true },
+  { name: "plum-400", hex: "#EA7BC4", textOnLight: true },
+  { name: "plum-500", hex: "#C953A3", textOnLight: false },
+  { name: "plum-600", hex: "#9F2F7E", textOnLight: false },
+  { name: "plum-700", hex: "#87236A", textOnLight: false },
+  { name: "plum-800", hex: "#6A1952", textOnLight: false },
+  { name: "plum-900", hex: "#4E113C", textOnLight: false },
+  { name: "plum-950", hex: "#321227", textOnLight: false },
+];
+
+const darkPlumScale: ReadonlyArray<SwatchSpec> = [
+  { name: "plum-50", hex: "#321227", textOnLight: false },
+  { name: "plum-100", hex: "#4A173A", textOnLight: false },
+  { name: "plum-200", hex: "#671E51", textOnLight: false },
+  { name: "plum-300", hex: "#862E6B", textOnLight: false },
+  { name: "plum-400", hex: "#A94088", textOnLight: false },
+  { name: "plum-500", hex: "#CB58A6", textOnLight: true },
+  { name: "plum-600", hex: "#ED85C8", textOnLight: true },
+  { name: "plum-700", hex: "#FDA8DD", textOnLight: true },
+  { name: "plum-800", hex: "#FFCDEB", textOnLight: true },
+  { name: "plum-900", hex: "#FDE7F4", textOnLight: true },
+  { name: "plum-950", hex: "#FDF3F9", textOnLight: true },
+];
+
 /** `mint-*` aliases the same teal ramp — one hue, two names the components use. */
 const lightMintScale: ReadonlyArray<SwatchSpec> = lightBrandScale.map((s) => ({
   ...s,
@@ -105,7 +134,7 @@ const gradientSpecs: ReadonlyArray<{ name: string; className: string; usage: str
   {
     name: "gradient-signature",
     className: "bg-gradient-signature",
-    usage: "Brand → accent diagonal",
+    usage: "Teal → plum diagonal",
   },
   { name: "gradient-card", className: "bg-gradient-card", usage: "Raised card surface" },
 ];
@@ -318,9 +347,57 @@ export default function StyleguidePage() {
             </div>
           </Section>
 
-          {/* 03b — Gradients */}
+          {/* 04 — Plum (secondary accent) */}
           <Section
-            n={3}
+            n={4}
+            title="Plum — secondary accent"
+            subtitle="Colour as place, never state. Light anchor is plum-600 (#9F2F7E); dark brightens to #ED85C8. It lives on the hero glow, active nav, avatar monograms and chart series 2 — never on a button (teal is the only action colour) and never on a status chip."
+          >
+            <div className="flex flex-col gap-6">
+              <div>
+                <span className="text-caption text-muted-foreground mb-3 inline-block font-mono uppercase">
+                  Light
+                </span>
+                <div className="grid grid-cols-2 gap-3 sm:grid-cols-5 lg:grid-cols-11">
+                  {lightPlumScale.map((s) => (
+                    <Swatch key={`lp-${s.name}`} {...s} />
+                  ))}
+                </div>
+              </div>
+              <div>
+                <span className="text-caption text-muted-foreground mb-3 inline-block font-mono uppercase">
+                  Dark
+                </span>
+                <div className="grid grid-cols-2 gap-3 sm:grid-cols-5 lg:grid-cols-11">
+                  {darkPlumScale.map((s) => (
+                    <Swatch key={`dp-${s.name}`} {...s} />
+                  ))}
+                </div>
+              </div>
+              <div>
+                <span className="text-caption text-muted-foreground mb-3 inline-block font-mono uppercase">
+                  In use (flips with the theme)
+                </span>
+                <div className="flex flex-wrap items-center gap-3">
+                  <span className="bg-plum-50 text-plum-800 ring-plum-600/10 inline-flex items-center gap-2 rounded-md px-2.5 py-1.5 text-[12.5px] font-medium ring-1 ring-inset">
+                    Active nav item
+                  </span>
+                  <span
+                    aria-hidden
+                    className="bg-plum-100 text-plum-800 ring-plum-200/70 text-caption inline-flex size-7 items-center justify-center rounded-full font-mono font-semibold ring-1"
+                  >
+                    N
+                  </span>
+                  <span className="text-plum-700 font-display text-heading-s italic">Emphasis</span>
+                  <span className="bg-plum-600 h-2 w-24 rounded-full" aria-label="Chart series 2" />
+                </div>
+              </div>
+            </div>
+          </Section>
+
+          {/* 05 — Gradients */}
+          <Section
+            n={5}
             title="Gradients"
             subtitle="Large-area, low-contrast washes: the shift is a lightness step inside one hue, never a rainbow. Each flips with the theme."
           >
@@ -337,9 +414,9 @@ export default function StyleguidePage() {
             </div>
           </Section>
 
-          {/* 04 — Clinical status (auto-flips) */}
+          {/* 06 — Clinical status (auto-flips) */}
           <Section
-            n={4}
+            n={6}
             title="Clinical status (auto-flips)"
             subtitle="Six states with mode-aware bg/fg pairs. Red softens to #FCA5A5 in dark — visible without being retina-searing at 3am."
           >
@@ -359,9 +436,9 @@ export default function StyleguidePage() {
             </div>
           </Section>
 
-          {/* 05 — Typography */}
+          {/* 07 — Typography */}
           <Section
-            n={5}
+            n={7}
             title="Typography"
             subtitle="Neue Haas Grotesk for UI, fallback chain through Helvetica Neue. SF Mono / Fira Code for clinical data."
           >
@@ -383,9 +460,9 @@ export default function StyleguidePage() {
             </div>
           </Section>
 
-          {/* 06 — Buttons */}
+          {/* 08 — Buttons */}
           <Section
-            n={6}
+            n={8}
             title="Buttons"
             subtitle="Six variants, three sizes. Primary teal flips its anchor across modes; emergency softens its red palette in dark."
           >
@@ -425,9 +502,9 @@ export default function StyleguidePage() {
             </div>
           </Section>
 
-          {/* 07 — Inputs */}
+          {/* 09 — Inputs */}
           <Section
-            n={7}
+            n={9}
             title="Inputs"
             subtitle="Compact for data density. Focus ring is brand-tinted; error state pulls the alert palette."
           >
@@ -451,9 +528,9 @@ export default function StyleguidePage() {
             </div>
           </Section>
 
-          {/* 08 — Cards */}
+          {/* 10 — Cards */}
           <Section
-            n={8}
+            n={10}
             title="Cards"
             subtitle="Three tones flip surfaces and borders per mode automatically."
           >
@@ -498,9 +575,9 @@ export default function StyleguidePage() {
             </div>
           </Section>
 
-          {/* 09 — Vital stat strip */}
+          {/* 11 — Vital stat strip */}
           <Section
-            n={9}
+            n={11}
             title="Vital stat strip"
             subtitle="The clinical primitive. Monospace, tabular-nums, large. Critical vitals snap to red + bold (softened in dark)."
           >
@@ -528,9 +605,9 @@ export default function StyleguidePage() {
             </Card>
           </Section>
 
-          {/* 10 — Section numbers + clinical paths */}
+          {/* 12 — Section numbers + clinical paths */}
           <Section
-            n={10}
+            n={12}
             title="Section numbers & clinical paths"
             subtitle="Bracket numbers anchor the eye through dense layouts. Path notation locates the clinician in the IA."
           >
@@ -574,9 +651,9 @@ export default function StyleguidePage() {
             </div>
           </Section>
 
-          {/* 11 — Spacing */}
+          {/* 13 — Spacing */}
           <Section
-            n={11}
+            n={13}
             title="Spacing"
             subtitle="4px base grid. Tailwind utilities map 1-to-1 (8px = p-2, 16px = p-4, …)."
           >
@@ -594,9 +671,9 @@ export default function StyleguidePage() {
             </div>
           </Section>
 
-          {/* 12 — Radii */}
+          {/* 14 — Radii */}
           <Section
-            n={12}
+            n={14}
             title="Radii"
             subtitle="Six steps. xs for badges, sm for inputs, md for buttons, lg for cards."
           >
@@ -616,9 +693,9 @@ export default function StyleguidePage() {
             </div>
           </Section>
 
-          {/* 13 — Shadows */}
+          {/* 15 — Shadows */}
           <Section
-            n={13}
+            n={15}
             title="Shadows"
             subtitle="Restrained elevation. Dark mode adds a faint white inner edge for definition."
           >
@@ -632,18 +709,18 @@ export default function StyleguidePage() {
             </div>
           </Section>
 
-          {/* 14a — Scheduling calendar (addendum GATE A) */}
+          {/* 16 — Scheduling calendar (addendum GATE A) */}
           <Section
-            n={14}
+            n={16}
             title="Scheduling calendar — month · week · day · agenda"
             subtitle="Reusable MedSync calendar (see components/scheduling/calendar/). Week is the workhorse for clinicians; current-time indicator on today; availability blocks render as hatched / muted background; urgent appointments carry the red ring (clinical-emergency colour only). Click any appointment to open the existing AppointmentDetailSheet."
           >
             <CalendarDemo />
           </Section>
 
-          {/* 14 — Landing patient mock (addendum GATE PA review) */}
+          {/* 17 — Landing patient mock (addendum GATE PA review) */}
           <Section
-            n={15}
+            n={17}
             title="Patient-experience mock — “MedSync · My Health”"
             subtitle="Patient-end twin of the §05b Clinician Home. Static composition; same Amina N. (MS-00184), same date/time, same medications, same glucose values. Renderable as the full device or as fragments for embedding inside §07 scenes and the new patient chapter."
           >

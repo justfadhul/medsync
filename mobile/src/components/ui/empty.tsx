@@ -44,7 +44,7 @@ export function Empty({
         accessibilityElementsHidden
         importantForAccessibility="no-hide-descendants"
       >
-        <Ionicons name={icon} size={26} color={colors.accentForeground} />
+        <Ionicons name={icon} size={26} color={colors.placeForeground} />
       </View>
 
       <Text accessibilityRole="header" style={styles.title}>
@@ -69,7 +69,7 @@ const makeStyles = (c: Palette) =>
       width: 64,
       height: 64,
       borderRadius: radius.full,
-      backgroundColor: c.accent,
+      backgroundColor: c.place,
       alignItems: "center",
       justifyContent: "center",
     },

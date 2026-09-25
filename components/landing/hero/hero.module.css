@@ -1,0 +1,61 @@
+/*
+ * S1 loop motion — reveals the closed loop once, in story order, and rests.
+ *   0.0s  ① the phone rises in
+ *   0.6s  the first connector draws toward the hospital card (lands 1.0s)
+ *   1.0s  ② the card rises in
+ *   1.6s  the second connector draws toward the reply (lands 2.0s)
+ *   2.0s  ③ the reply rises in; everything is still by 2.4s
+ * Only transform, opacity and stroke-dashoffset animate, on the design
+ * system's expo-out and its 150/400ms durations. Outside this media query
+ * nothing applies: under reduced motion the loop is simply there.
+ */
+
+@media (prefers-reduced-motion: no-preference) {
+  .beat1,
+  .beat2,
+  .beat3 {
+    animation: rise 400ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+  .beat2 {
+    animation-delay: 1000ms;
+  }
+  .beat3 {
+    animation-delay: 2000ms;
+  }
+
+  .draw1,
+  .draw2 {
+    stroke-dasharray: 1;
+    animation: draw 400ms cubic-bezier(0.16, 1, 0.3, 1) 600ms both;
+  }
+  .draw2 {
+    animation-delay: 1600ms;
+  }
+
+  .head1,
+  .head2 {
+    animation: appear 150ms cubic-bezier(0.16, 1, 0.3, 1) 850ms both;
+  }
+  .head2 {
+    animation-delay: 1850ms;
+  }
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+
+@keyframes draw {
+  from {
+    stroke-dashoffset: 1;
+  }
+}
+
+@keyframes appear {
+  from {
+    opacity: 0;
+  }
+}
