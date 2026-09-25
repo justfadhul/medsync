@@ -10,7 +10,7 @@ import { logger } from "@/lib/logger";
 import { fieldErrors } from "@/lib/onboarding/schemas";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
-import { agreementSchema } from "./schema";
+import { agreementSchema } from "./_lib/schema";
 
 export type AgreementState = {
   ok?: boolean;

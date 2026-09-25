@@ -6,9 +6,8 @@ import { CONTAINER, LANDING_FOCUS, TextLink } from "@/components/landing/primiti
 import { SiteFooter } from "@/components/landing/site-footer";
 import { SiteNav } from "@/components/landing/site-nav";
 import { GET_STARTED } from "@/content/auth";
-import { GET_STARTED_CALL, GET_STARTED_V2 } from "@/content/onboarding";
+import { GET_STARTED_CALL } from "@/content/onboarding";
 import { signupsClosedHere } from "@/lib/legal";
-import { onboardingV2ForEveryone } from "@/lib/onboarding/feature";
 import { cn } from "@/lib/utils";
 
 export const metadata: Metadata = {
@@ -33,9 +32,6 @@ const ROW_RADIUS =
  * 2) is never clipped; the first and last rows carry the corner radius instead.
  */
 export default function GetStartedPage() {
-  // Onboarding v2 (§5.11): read at build time — this page is static. The per-browser preview
-  // cookie doesn't reach it; ONBOARDING_V2=1 does.
-  const v2 = onboardingV2ForEveryone();
   return (
     <div className={cn("bg-background flex min-h-svh flex-col", LANDING_FOCUS)}>
       <SiteNav showApply={false} />
@@ -68,9 +64,7 @@ export default function GetStartedPage() {
                     aria-labelledby={`door-group-${g}`}
                     className="border-border divide-border divide-y rounded-lg border"
                   >
-                    {group.doors.map((d) => {
-                      const door =
-                        v2 && GET_STARTED_V2[d.href] ? { ...d, ...GET_STARTED_V2[d.href] } : d;
+                    {group.doors.map((door) => {
                       const id = `door-${door.href.split("/").pop()}`;
                       return (
                         <li key={door.href} className={ROW_RADIUS}>
@@ -113,7 +107,7 @@ export default function GetStartedPage() {
                       );
                     })}
                   </ul>
-                  {v2 && group.doors.some((d) => d.href === "/signup/hospital") ? (
+                  {group.doors.some((d) => d.href === "/signup/hospital") ? (
                     <TextLink href={GET_STARTED_CALL.href} label={GET_STARTED_CALL.label} />
                   ) : null}
                 </div>

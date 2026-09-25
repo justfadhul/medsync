@@ -19,7 +19,7 @@ const card = "border-border bg-card shadow-card flex flex-col gap-3 rounded-lg b
  * Hospital pending v2 (§5.9, §5.10): what's still needed (upload it here), the steps, and — once
  * verified — the agreement gate. No promise of an email or SMS (Q11): "Check back here".
  */
-export async function HospitalPendingV2({ app }: { app: HospitalApplication }) {
+export async function HospitalPendingView({ app }: { app: HospitalApplication }) {
   const rejected = app.state === "rejected";
   const gate = app.state === "verified" && !app.agreementAcceptedVersion;
   const signed = app.state === "verified" && !!app.agreementAcceptedVersion;

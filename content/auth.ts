@@ -108,7 +108,7 @@ export const GET_STARTED = {
         {
           title: "I’m a clinician",
           description: "Doctor, nurse, midwife, pharmacist or allied health professional.",
-          need: "your council registration number (a photo of your practising licence helps)",
+          need: "your council registration number and your practising licence (a phone photo; it can follow)",
           next: "Approved by your hospital admin, then you set up two-step verification",
           href: "/signup/clinical",
         },
@@ -127,8 +127,8 @@ export const GET_STARTED = {
         {
           title: "I represent a hospital",
           description: "Apply to join as a founding pilot hospital.",
-          need: "the facility’s registration number and licence, and a signed letter authorising you",
-          next: "Reviewed by MedSync",
+          need: "a signed letter from a senior officer authorising you (it can follow), and for a private facility its operating licence",
+          next: "Reviewed by MedSync, then you sign the data-processing agreement",
           href: "/signup/hospital",
         },
       ],

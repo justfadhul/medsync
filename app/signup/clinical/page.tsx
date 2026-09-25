@@ -1,68 +1,35 @@
 import type { Metadata } from "next";
-import { desc, eq } from "drizzle-orm";
 
-import { db } from "@/db";
-import { consentVersions } from "@/db/schema/consent-versions";
-import { onboardingV2 } from "@/lib/onboarding/feature";
-import { listCouncils, listHospitals } from "@/lib/reference-data";
-import { SignupUnavailable } from "../_components/unavailable";
-import { ClinicalSignupForm } from "./_lazy";
-import { ClinicalSignupV2 } from "./_v2/view";
-import {
-  loadCadreGradesForCadreAction,
-  loadCadresForCouncilAction,
-  loadDepartmentsForHospitalAction,
-  loadRolesForCadreAction,
-  submitClinicalSignupAction,
-} from "./actions";
+import { SignupUnavailable } from "@/app/signup/_components/unavailable";
+import { STAFF } from "@/content/onboarding-staff";
+import { liveNotice } from "@/lib/onboarding/notice";
+import { listHospitals, listSpecialties } from "@/lib/reference-data";
+import { ClinicalSignupForm } from "./_components/form";
 
 export const metadata: Metadata = {
   title: "Clinical staff signup · MedSync",
   robots: { index: false, follow: false },
 };
 
+// The live notice (and reference lists) are read per request.
 export const dynamic = "force-dynamic";
 
+/** Clinical staff signup v2 — server half: the live notice, the hospitals and the specialties. */
 export default async function ClinicalSignupPage() {
-  if (await onboardingV2()) return <ClinicalSignupV2 />;
-  const [councils, hospitals, [activeConsent]] = await Promise.all([
-    listCouncils(),
+  const [notice, hospitals, specialties] = await Promise.all([
+    liveNotice(),
     listHospitals(),
-    db
-      .select()
-      .from(consentVersions)
-      .where(eq(consentVersions.consentType, "data_processing"))
-      .orderBy(desc(consentVersions.effectiveDate))
-      .limit(1),
+    listSpecialties(),
   ]);
-
-  if (!activeConsent) {
+  if (!notice)
     return (
-      <SignupUnavailable title="Signup unavailable">
-        The current consent text isn&apos;t ready yet. Please check back shortly.
-      </SignupUnavailable>
+      <SignupUnavailable title={STAFF.unavailableTitle}>{STAFF.unavailableBody}</SignupUnavailable>
     );
-  }
-
   return (
     <ClinicalSignupForm
-      councils={councils.map((c) => ({
-        value: c.id,
-        label: c.name,
-        searchText: c.code,
-      }))}
-      hospitals={hospitals.map((h) => ({ value: h.id, label: h.name }))}
-      consent={{
-        version: activeConsent.version,
-        bodySha256: activeConsent.bodySha256,
-        body: activeConsent.body,
-        effectiveDate: activeConsent.effectiveDate,
-      }}
-      loadCadres={loadCadresForCouncilAction}
-      loadCadreGrades={loadCadreGradesForCadreAction}
-      loadRoles={loadRolesForCadreAction}
-      loadDepartments={loadDepartmentsForHospitalAction}
-      submit={submitClinicalSignupAction}
+      notice={notice}
+      hospitals={hospitals.map((h) => ({ id: h.id, name: h.name }))}
+      specialties={specialties.map((s) => ({ value: s.id, label: s.name }))}
     />
   );
 }

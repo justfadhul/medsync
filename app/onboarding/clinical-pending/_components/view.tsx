@@ -33,7 +33,7 @@ const councilShort = (code: string | null, fallback: string | null) =>
  * cadres.is_clinical (O13): clinicians see their council's register; everyone else, employment.
  * No promise of an email (Q11). A missing licence shows as "Still needed" with the upload box.
  */
-export async function ClinicalPendingV2() {
+export async function ClinicalPendingView() {
   const supabase = await createClient();
   // getSession (cookie-only), as the v1 page: a slow getUser round-trip used to bounce to sign-in.
   const { data: sessionData } = await supabase.auth.getSession();

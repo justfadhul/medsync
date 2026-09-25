@@ -85,10 +85,10 @@ describe("colour", () => {
   const V2 = [
     ...files(join(ROOT, "components/onboarding")),
     ...["patient", "clinical", "non-clinical", "hospital"].flatMap((f) =>
-      files(join(ROOT, "app/signup", f, "_v2")),
+      files(join(ROOT, "app/signup", f, "_components")),
     ),
-    ...files(join(ROOT, "app/onboarding/clinical-pending/_v2")),
-    ...files(join(ROOT, "app/onboarding/hospital-pending/_v2")),
+    ...files(join(ROOT, "app/onboarding/clinical-pending/_components")),
+    ...files(join(ROOT, "app/onboarding/hospital-pending/_components")),
     ...files(join(ROOT, "app/admin/setup")),
     join(ROOT, "app/signup/_components/staff-work.tsx"),
     join(ROOT, "app/patient/profile/_components/complete-profile.tsx"),

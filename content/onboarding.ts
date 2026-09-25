@@ -339,25 +339,7 @@ export const PROFILE = {
   done: "Done",
 } as const;
 
-/** /get-started doors under v2 (§5.11): "You'll need" matches the new forms. Keyed by href. */
-export const GET_STARTED_V2: Record<string, { need: string; next: string }> = {
-  "/signup/patient": {
-    need: "an email address and a Ugandan mobile number",
-    next: "Ready as soon as you sign up",
-  },
-  "/signup/clinical": {
-    need: "your council registration number and your practising licence (a phone photo; it can follow)",
-    next: "Approved by your hospital admin, then you set up two-step verification",
-  },
-  "/signup/non-clinical": {
-    need: "your National ID number (NIN) and the name of your hospital",
-    next: "Approved by your hospital admin, then you set up two-step verification",
-  },
-  "/signup/hospital": {
-    need: "a signed letter from a senior officer authorising you (it can follow), and for a private facility its operating licence",
-    next: "Reviewed by MedSync, then you sign the data-processing agreement",
-  },
-};
+/** The hospital door's second link (§5.11, D15): the short lead on /signup/hospital. */
 export const GET_STARTED_CALL = {
   label: "Not ready to apply? Ask us to call you",
   href: "/signup/hospital#call",

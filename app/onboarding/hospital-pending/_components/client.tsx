@@ -1,6 +1,6 @@
 "use client";
 
-import type { AgreementState } from "./actions";
+import type { AgreementState } from "../actions";
 import type { DocumentKind } from "@/lib/onboarding/documents";
 import type { ReactNode } from "react";
 import { useRouter } from "next/navigation";
@@ -13,7 +13,7 @@ import { inputClass } from "@/components/onboarding/styles";
 import { Button } from "@/components/ui/button";
 import { PENDING } from "@/content/onboarding";
 import { HOSPITAL_PENDING } from "@/content/onboarding-hospital";
-import { signAgreementAction } from "./actions";
+import { signAgreementAction } from "../actions";
 
 /** A "Still needed" document: pick it and it uploads now; the page then re-reads what's owed. */
 export function UploadNow({ kind }: { kind: DocumentKind }) {

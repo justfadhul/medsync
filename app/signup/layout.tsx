@@ -6,7 +6,6 @@ import { ArrowLeftIcon } from "lucide-react";
 import { EmergencyButton } from "@/components/landing/emergency-button";
 import { SIGNUP_HOLD, SITE } from "@/content/landing";
 import { signupsClosedHere } from "@/lib/legal";
-import { onboardingV2 } from "@/lib/onboarding/feature";
 import { SignupUnavailable } from "./_components/unavailable";
 
 export const metadata: Metadata = {
@@ -14,8 +13,7 @@ export const metadata: Metadata = {
 };
 
 /**
- * Shared signup layout — wraps the per-path stubs at /signup/*. The
- * real multi-step flows replace the stubs in gates C / D / E.
+ * Shared signup layout for the four one-page forms at /signup/* (Onboarding v2, ADR 0119).
  *
  * robots: noindex (signup pages shouldn't appear in search results
  * during the build phase).
@@ -24,10 +22,9 @@ export const metadata: Metadata = {
  * and the PDPO registration is done (landing v4 S8, decision D1; lib/legal.ts):
  * every /signup/* route renders the holding page instead of its form.
  */
-export default async function SignupLayout({ children }: { children: ReactNode }) {
-  // Onboarding v2 (Q17, S15): the header carries the Emergency button, as on /get-started, and the
-  // floating pill steps aside so it never covers a field or the submit. Flag-off pages are unchanged.
-  const v2 = await onboardingV2();
+export default function SignupLayout({ children }: { children: ReactNode }) {
+  // Q17, S15: the header carries the Emergency button, as on /get-started, and the floating pill
+  // steps aside (data-emergency-inline) so it never covers a field or the submit.
   return (
     <div className="bg-background relative isolate flex min-h-svh w-full flex-col">
       {/* Quiet teal wash behind the flow header — atmosphere, not decoration */}
@@ -38,20 +35,10 @@ export default async function SignupLayout({ children }: { children: ReactNode }
 
       <header
         className="border-border/60 glass sticky top-0 z-30 w-full border-b"
-        data-emergency-inline={v2 ? "" : undefined}
+        data-emergency-inline=""
       >
-        <div
-          className={
-            v2
-              ? "mx-auto flex h-14 w-full max-w-300 items-center justify-between gap-3 px-4 sm:px-8"
-              : "mx-auto flex w-full max-w-300 items-center justify-between px-5 py-3 sm:px-8"
-          }
-        >
-          <div
-            className={
-              v2 ? "flex items-center gap-3 whitespace-nowrap sm:gap-5" : "flex items-center gap-5"
-            }
-          >
+        <div className="mx-auto flex h-14 w-full max-w-300 items-center justify-between gap-3 px-4 sm:px-8">
+          <div className="flex items-center gap-3 whitespace-nowrap sm:gap-5">
             <Link
               href="/"
               className="font-display text-foreground text-[16px] tracking-tight transition-opacity hover:opacity-80"
@@ -66,14 +53,8 @@ export default async function SignupLayout({ children }: { children: ReactNode }
                 className="ease-expo-out size-3 transition-transform duration-200 group-hover:-translate-x-0.5"
                 strokeWidth={2}
               />
-              {v2 ? (
-                <>
-                  <span className="sm:hidden">Other doors</span>
-                  <span className="hidden sm:inline">Choose a different door</span>
-                </>
-              ) : (
-                "Choose a different door"
-              )}
+              <span className="sm:hidden">Other doors</span>
+              <span className="hidden sm:inline">Choose a different door</span>
             </Link>
           </div>
           <div className="flex items-center gap-3 whitespace-nowrap sm:gap-4">
@@ -83,7 +64,7 @@ export default async function SignupLayout({ children }: { children: ReactNode }
             >
               Sign in
             </Link>
-            {v2 ? <EmergencyButton /> : null}
+            <EmergencyButton />
           </div>
         </div>
       </header>

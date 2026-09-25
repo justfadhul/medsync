@@ -1,366 +1,171 @@
 "use client";
 
-import type {
-  loadDepartmentsForHospitalAction,
-  loadNonClinicalCadresAction,
-  loadRolesForCadreAction,
-  NonClinicalSignupErrors,
-  NonClinicalSignupState,
-  submitNonClinicalSignupAction,
-} from "../actions";
-import type { ComboboxItem } from "@/components/forms";
-import { useActionState, useEffect, useState, useTransition } from "react";
-import { TriangleAlertIcon } from "lucide-react";
+import type { HospitalOption } from "../../_components/staff-work";
+import type { NonClinicalInput } from "@/lib/onboarding/schemas";
+import Link from "next/link";
+import { useFormContext } from "react-hook-form";
 
-import { ConsentCheckbox, Field, FileUpload, PasswordInput, PhoneInput } from "@/components/forms";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { ConsentBlock } from "@/components/onboarding/consent-block";
+import { DocumentField } from "@/components/onboarding/document-field";
+import {
+  EmailField,
+  fieldId,
+  PasswordField,
+  PhoneField,
+  TextField,
+  useFieldValue,
+} from "@/components/onboarding/fields";
+import { FormHeader, Section, SectionedForm } from "@/components/onboarding/sectioned-form";
+import { KIT, NON_CLINICAL, STAFF_COMMON } from "@/content/onboarding";
+import { STAFF } from "@/content/onboarding-staff";
+import { ninWarning } from "@/lib/onboarding/fields";
+import { RECEPTION } from "@/lib/onboarding/profession";
+import { nonClinicalSchema } from "@/lib/onboarding/schemas";
+import { WorkFields } from "../../_components/staff-work";
+import { submitNonClinicalSignup } from "../actions";
 
-/**
- * Non-clinical staff signup form. Mirrors /signup/clinical's intent
- * (per-affiliation, MFA later, pending → admin approval) without the
- * council/licence section. Single-page native form — the clinical
- * form's multi-step + cascading-combobox stack is great but heavier
- * than this surface needs; the server action validates everything
- * regardless.
- *
- * Verification basis = hospital-admin approval as employer attestation
- * (see docs/reception-registration-gate-a-proposal.md). NIN is required
- * (identity); staff number / authorising officer / appointment letter
- * are optional supporting evidence.
- */
+const SECTIONS = [
+  {
+    id: "you",
+    title: NON_CLINICAL.sections.you,
+    fields: ["fullName", "email", "phone", "password"],
+  },
+  {
+    id: "identity",
+    title: NON_CLINICAL.sections.identity,
+    fields: ["nin", "staffNumber", "officerName", "officerRole", "letter"],
+  },
+  {
+    id: "work",
+    title: NON_CLINICAL.sections.work,
+    fields: ["hospitalId", "departmentId", "employmentType"],
+  },
+] as const;
 
-interface Props {
-  hospitals: ReadonlyArray<{ id: string; name: string }>;
-  consent: { version: string; bodySha256: string };
-  loadCadres: typeof loadNonClinicalCadresAction;
-  loadRoles: typeof loadRolesForCadreAction;
-  loadDepartments: typeof loadDepartmentsForHospitalAction;
-  submit: typeof submitNonClinicalSignupAction;
-}
-
-// Mirrors the shared <Input> focus treatment — teal border + soft glow.
-const SELECT_CLASS =
-  "border-input bg-background text-foreground ease-expo-out rounded-md border px-3 py-2 text-body-s outline-none transition-all duration-150 focus-visible:border-brand-500 focus-visible:shadow-[0_0_0_2px_rgba(20,184,166,0.15)] disabled:cursor-not-allowed disabled:opacity-50 dark:focus-visible:border-brand-400 dark:focus-visible:shadow-[0_0_0_2px_rgba(45,212,191,0.2)]";
+/** Never in the draft: the NIN (§5.1) and files (a restored "file" would have no file behind it). */
+const SECRET = ["nin", "letter"] as const;
 
 export function NonClinicalSignupForm({
+  notice,
   hospitals,
-  consent,
-  loadCadres,
-  loadRoles,
-  loadDepartments,
-  submit,
-}: Props) {
-  const [state, formAction, pending] = useActionState<NonClinicalSignupState, FormData>(submit, {});
-
-  const errors: NonClinicalSignupErrors = state.errors ?? {};
-  const values = state.values ?? {};
-
-  const [cadres, setCadres] = useState<ReadonlyArray<ComboboxItem>>([]);
-  const [roles, setRoles] = useState<ReadonlyArray<ComboboxItem>>([]);
-  const [departments, setDepartments] = useState<ReadonlyArray<ComboboxItem>>([]);
-  const [, startTransition] = useTransition();
-
-  useEffect(() => {
-    void loadCadres().then(setCadres);
-  }, [loadCadres]);
-
-  function onCadreChange(cadreId: string) {
-    if (!cadreId) {
-      setRoles([]);
-      return;
-    }
-    startTransition(async () => {
-      const list = await loadRoles(cadreId);
-      setRoles(list);
-    });
-  }
-
-  function onHospitalChange(hospitalId: string) {
-    if (!hospitalId) {
-      setDepartments([]);
-      return;
-    }
-    startTransition(async () => {
-      const list = await loadDepartments(hospitalId);
-      setDepartments(list);
-    });
-  }
-
+}: {
+  notice: { version: string; sha: string; body: string; effective: string };
+  hospitals: readonly HospitalOption[];
+}) {
   return (
-    <form action={formAction} className="stagger-children flex flex-col gap-8">
-      {/* ── Section: Account ──────────────────────────────────── */}
-      <section className="flex flex-col gap-4">
-        <h2 className="text-muted-foreground inline-flex items-center gap-2 font-mono text-[10.5px] tracking-[0.14em] uppercase">
-          <span aria-hidden className="bg-brand-500 size-1 rounded-full" />
-          Account
-        </h2>
-
-        <Field name="full_name" label="Full name" serverError={errors.full_name} required>
-          <Input name="full_name" defaultValue={values.full_name} autoComplete="name" required />
-        </Field>
-
-        <Field
-          name="email"
-          label="Work email"
-          description="Use your hospital email if you have one — it helps your admin recognise you."
-          serverError={errors.email}
-          required
+    <SectionedForm<NonClinicalInput>
+      form="non_clinical"
+      schema={nonClinicalSchema}
+      defaults={{
+        consentVersion: notice.version,
+        consentSha: notice.sha,
+        employmentType: "full_time",
+      }}
+      sections={SECTIONS}
+      secret={SECRET}
+      submit={submitNonClinicalSignup}
+      submitLabel={NON_CLINICAL.submit}
+      pendingLabel={NON_CLINICAL.pending}
+      header={
+        <FormHeader
+          kicker={NON_CLINICAL.kicker}
+          title={NON_CLINICAL.title}
+          lead={NON_CLINICAL.lead}
         >
-          <Input
-            name="email"
-            type="email"
-            defaultValue={values.email}
-            autoComplete="email"
-            required
-          />
-        </Field>
-
-        <Field name="phone_e164" label="Phone" serverError={errors.phone_e164} required>
-          <PhoneInput name="phone_e164" mobileOnly invalid={!!errors.phone_e164} />
-        </Field>
-
-        <Field name="password" label="Password" serverError={errors.password} required>
-          <PasswordInput name="password" minLength={8} autoComplete="new-password" required />
-        </Field>
-      </section>
-
-      {/* ── Section: Identity (replaces council/licence) ──────── */}
-      <section className="flex flex-col gap-4">
-        <h2 className="text-muted-foreground inline-flex items-center gap-2 font-mono text-[10.5px] tracking-[0.14em] uppercase">
-          <span aria-hidden className="bg-brand-500 size-1 rounded-full" />
-          Identity
-        </h2>
-        <p className="text-muted-foreground -mt-2 text-[12px] leading-relaxed">
-          Reception staff don&rsquo;t hold a professional council registration. The hospital admin
-          who approves your account is verifying that you&rsquo;re genuinely employed. We use your{" "}
-          <strong>NIN</strong> for identity; everything else is optional but strengthens trust.
-        </p>
-
-        <Field
-          name="nin"
-          label="National ID (NIN)"
-          description="As printed on your national ID. Stored encrypted."
-          serverError={errors.nin}
-          required
-        >
-          <Input
-            name="nin"
-            defaultValue={values.nin}
-            autoComplete="off"
-            spellCheck={false}
-            required
-            className="font-mono uppercase"
-          />
-        </Field>
-
-        <Field
-          name="staff_number"
-          label="Internal staff number (optional)"
-          description="If your hospital has assigned you one."
-        >
-          <Input name="staff_number" defaultValue={values.staff_number} />
-        </Field>
-
-        <div className="grid grid-cols-1 items-end gap-3 sm:grid-cols-2">
-          <Field
-            name="authorising_officer_name"
-            label="Authorising officer (optional)"
-            description="A senior who can vouch for you."
+          <Link
+            href="/signup/clinical"
+            className="text-body-s self-start font-medium text-teal-700 underline underline-offset-4 dark:text-teal-400"
           >
-            <Input name="authorising_officer_name" defaultValue={values.authorising_officer_name} />
-          </Field>
-          <Field
-            name="authorising_officer_role"
-            label="Their role (optional)"
-            description="E.g. Records HOD, Front-Desk Lead."
-          >
-            <Input name="authorising_officer_role" defaultValue={values.authorising_officer_role} />
-          </Field>
-        </div>
-
-        <Field
-          name="appointment_letter"
-          label="Appointment letter (optional)"
-          description="PDF or image, ≤ 5MB. Helps your admin approve faster."
-        >
-          <FileUpload
-            name="appointment_letter"
-            accept="application/pdf,image/jpeg,image/png"
-            maxMb={5}
-            hint="PDF, JPG or PNG · max 5MB"
-          />
-        </Field>
-      </section>
-
-      {/* ── Section: Where you work ───────────────────────────── */}
-      <section className="flex flex-col gap-4">
-        <h2 className="text-muted-foreground inline-flex items-center gap-2 font-mono text-[10.5px] tracking-[0.14em] uppercase">
-          <span aria-hidden className="bg-brand-500 size-1 rounded-full" />
-          Where you work
-        </h2>
-
-        <Field
-          name="cadre_id"
-          label="Role category"
-          description="Reception is the only non-clinical option today."
-          serverError={errors.cadre_id}
-          required
-        >
-          <select
-            id="cadre_id"
-            name="cadre_id"
-            required
-            defaultValue={values.cadre_id ?? ""}
-            onChange={(e) => onCadreChange(e.target.value)}
-            className={SELECT_CLASS}
-          >
-            <option value="" disabled>
-              {cadres.length === 0 ? "Loading…" : "Choose…"}
-            </option>
-            {cadres.map((c) => (
-              <option key={c.value} value={c.value}>
-                {c.label}
-              </option>
-            ))}
-          </select>
-        </Field>
-
-        <Field name="role_id" label="Role" serverError={errors.role_id} required>
-          <select
-            id="role_id"
-            name="role_id"
-            required
-            disabled={roles.length === 0}
-            defaultValue={values.role_id ?? ""}
-            className={SELECT_CLASS}
-          >
-            <option value="" disabled>
-              {roles.length === 0 ? "Pick a role category first" : "Choose…"}
-            </option>
-            {roles.map((r) => (
-              <option key={r.value} value={r.value}>
-                {r.label}
-              </option>
-            ))}
-          </select>
-        </Field>
-
-        <Field name="hospital_id" label="Hospital" serverError={errors.hospital_id} required>
-          <select
-            id="hospital_id"
-            name="hospital_id"
-            required
-            defaultValue={values.hospital_id ?? ""}
-            onChange={(e) => onHospitalChange(e.target.value)}
-            className={SELECT_CLASS}
-          >
-            <option value="" disabled>
-              Choose your hospital
-            </option>
-            {hospitals.map((h) => (
-              <option key={h.id} value={h.id}>
-                {h.name}
-              </option>
-            ))}
-          </select>
-        </Field>
-
-        <Field
-          name="department_id"
-          label="Department / unit"
-          serverError={errors.department_id}
-          required
-        >
-          <select
-            id="department_id"
-            name="department_id"
-            required
-            disabled={departments.length === 0}
-            defaultValue={values.department_id ?? ""}
-            className={SELECT_CLASS}
-          >
-            <option value="" disabled>
-              {departments.length === 0 ? "Pick a hospital first" : "Choose…"}
-            </option>
-            {departments.map((d) => (
-              <option key={d.value} value={d.value}>
-                {d.label}
-              </option>
-            ))}
-          </select>
-        </Field>
-
-        <Field
-          name="employment_type"
-          label="Employment"
-          serverError={errors.employment_type}
-          required
-        >
-          <select
-            id="employment_type"
-            name="employment_type"
-            defaultValue={values.employment_type ?? "full_time"}
-            className={SELECT_CLASS}
-          >
-            <option value="full_time">Full-time</option>
-            <option value="visiting">Part-time</option>
-            <option value="locum">Locum</option>
-          </select>
-        </Field>
-      </section>
-
-      {/* ── Section: Consent ──────────────────────────────────── */}
-      <section className="flex flex-col gap-3">
-        <h2 className="text-muted-foreground inline-flex items-center gap-2 font-mono text-[10.5px] tracking-[0.14em] uppercase">
-          <span aria-hidden className="bg-brand-500 size-1 rounded-full" />
-          Consent
-        </h2>
-        <ConsentCheckbox
-          name="data_processing_consent"
-          version={consent.version}
-          bodySha256={consent.bodySha256}
-          label="I agree to MedSync's data-processing terms"
-          description="We process the data you've entered to verify your role and provide the workspace."
-          invalid={!!errors.data_processing_consent}
-          required
+            {NON_CLINICAL.clinicalLink}
+          </Link>
+        </FormHeader>
+      }
+      consent={
+        <ConsentBlock version={notice.version} effective={notice.effective} body={notice.body} />
+      }
+      after={NON_CLINICAL.after}
+    >
+      <Section id="you">
+        <TextField
+          name="fullName"
+          label={STAFF_COMMON.fullName}
+          autoComplete="name"
+          autoCapitalize="words"
         />
-        {errors.data_processing_consent ? (
-          <p className="text-destructive text-[11.5px]">{errors.data_processing_consent}</p>
-        ) : null}
-      </section>
-
-      {errors._form ? (
-        <p
-          role="alert"
-          className="scale-in flex items-start gap-2 rounded-md border border-amber-200 bg-amber-50 px-3 py-2.5 text-[12.5px] leading-snug text-amber-900 dark:border-amber-800/40 dark:bg-amber-950/30 dark:text-amber-200"
-        >
-          <TriangleAlertIcon aria-hidden className="mt-px size-3.5 shrink-0" strokeWidth={2} />
-          <span>{errors._form}</span>
-        </p>
-      ) : null}
-
-      <div className="flex items-center justify-end gap-2">
-        <Button type="submit" disabled={pending} className="tap">
-          {pending ? (
-            <>
-              <span
-                aria-hidden
-                className="size-3 shrink-0 rounded-full border-2 border-current/30 border-t-current motion-safe:animate-spin"
-              />
-              Creating account…
-            </>
-          ) : (
-            "Create my account"
-          )}
-        </Button>
-      </div>
-
-      <p className="text-muted-foreground text-[11.5px] leading-relaxed">
-        We&rsquo;ll create your account in a <span className="font-mono">pending</span> state. Your
-        hospital admin reviews and approves. Once approved you&rsquo;ll sign in to the reception
-        workspace.
-      </p>
-    </form>
+        <EmailField name="email" label={STAFF_COMMON.workEmail} hint={STAFF_COMMON.workEmailHint} />
+        <PhoneField name="phone" label={STAFF_COMMON.phone} />
+        <PasswordField
+          name="password"
+          label={STAFF_COMMON.password}
+          hint={STAFF_COMMON.passwordHint}
+        />
+      </Section>
+      <Section id="identity">
+        <div className="flex flex-col gap-1.5">
+          <TextField
+            name="nin"
+            label={NON_CLINICAL.nin}
+            hint={NON_CLINICAL.ninHint}
+            mono
+            autoCapitalize="characters"
+            maxLength={20}
+          />
+          <NinNote />
+        </div>
+        <details className="group flex flex-col">
+          <summary className="text-body-s cursor-pointer font-medium text-teal-700 underline underline-offset-4 dark:text-teal-400">
+            {NON_CLINICAL.speedUp}
+          </summary>
+          <div className="mt-4 flex flex-col gap-5">
+            <TextField
+              name="staffNumber"
+              label={NON_CLINICAL.staffNumber}
+              optional
+              maxLength={60}
+            />
+            <TextField
+              name="officerName"
+              label={NON_CLINICAL.officerName}
+              optional
+              autoCapitalize="words"
+            />
+            <TextField
+              name="officerRole"
+              label={NON_CLINICAL.officerRole}
+              hint={NON_CLINICAL.officerRoleHint}
+              optional
+            />
+            <DocumentField
+              name="letter"
+              kind="appointment_letter"
+              label={`${NON_CLINICAL.letter} ${KIT.optional}`}
+              laterText={STAFF.letterLater}
+            />
+          </div>
+        </details>
+      </Section>
+      <Section id="work">
+        <WorkFields hospitals={hospitals} departmentLabel={NON_CLINICAL.department}>
+          <p className="text-body-m text-foreground">{NON_CLINICAL.joiningAs(RECEPTION.label)}</p>
+        </WorkFields>
+      </Section>
+    </SectionedForm>
   );
+}
+
+/** The soft NIN check (§5.12): a note after they leave the field, never an error, never a block. */
+function NinNote() {
+  const nin = useFieldValue("nin") ?? "";
+  const { formState } = useFormContext();
+  // A soft check: quiet, and silent while the hard rule is already showing its error.
+  const note = formState.touchedFields.nin && !formState.errors.nin ? ninWarning(nin) : null;
+  return note ? (
+    <p
+      id={`${fieldId("nin")}-note`}
+      aria-live="polite"
+      className="text-body-s text-muted-foreground"
+    >
+      {note}
+    </p>
+  ) : null;
 }

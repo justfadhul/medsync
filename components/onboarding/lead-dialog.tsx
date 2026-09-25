@@ -6,7 +6,7 @@ import { createPortal } from "react-dom";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { FormProvider, useForm } from "react-hook-form";
 
-import { submitLeadV2 } from "@/app/signup/hospital/_v2/actions";
+import { submitHospitalLead } from "@/app/signup/hospital/actions";
 import { Button } from "@/components/ui/button";
 import { LEAD } from "@/content/onboarding";
 import { leadSchema } from "@/lib/onboarding/schemas";
@@ -16,7 +16,7 @@ import { LocationField } from "./location-field";
 /**
  * The short lead (D15): "Ask us to call you" (hospital door) and "My hospital isn't on MedSync"
  * (clinical form). A native <dialog>, portalled to <body> so it never nests inside the page's form.
- * Creates no account; saves a hospital_leads row through submitLeadV2.
+ * Creates no account; saves a hospital_leads row through submitHospitalLead.
  */
 export function LeadDialog({ source, trigger }: { source: LeadInput["source"]; trigger: string }) {
   const ref = useRef<HTMLDialogElement>(null);
@@ -45,7 +45,7 @@ export function LeadDialog({ source, trigger }: { source: LeadInput["source"]; t
     setBusy(true);
     setFormError(null);
     try {
-      const r = await submitLeadV2(v);
+      const r = await submitHospitalLead(v);
       if (r.ok) setSent(true);
       else {
         for (const [k, m] of Object.entries(r.fieldErrors ?? {}))

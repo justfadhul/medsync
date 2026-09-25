@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
 
 import { hospitalApprove } from "@/app/admin/_lib/hospital-review";
-import { agreementSchema } from "@/app/onboarding/hospital-pending/_v2/schema";
-import { proofFor } from "@/app/signup/hospital/_v2/proof";
+import { agreementSchema } from "@/app/onboarding/hospital-pending/_lib/schema";
+import { proofFor } from "@/app/signup/hospital/_lib/proof";
 import { HOSPITAL_REVIEW as R } from "@/content/onboarding-hospital";
 
 describe("hospital v2 — proof by ownership (§5.7)", () => {

@@ -5,7 +5,7 @@ import { desc, eq } from "drizzle-orm";
 import { db } from "@/db";
 import { hospitalApplications } from "@/db/schema/hospital-applications";
 import { createClient } from "@/lib/supabase/server";
-import { HospitalPendingV2 } from "./_v2/view";
+import { HospitalPendingView } from "./_components/view";
 
 export const metadata: Metadata = {
   title: "Your hospital application · MedSync",
@@ -63,5 +63,5 @@ export default async function HospitalPendingPage() {
   }
   // For every applicant, whichever form they used (ADR 0124/0125): the old page promised emails
   // nothing sends (Q11), and "Still needed" + the agreement gate live here.
-  return <HospitalPendingV2 app={app} />;
+  return <HospitalPendingView app={app} />;
 }

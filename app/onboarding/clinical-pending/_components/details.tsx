@@ -1,6 +1,6 @@
 "use client";
 
-import type { DetailsState } from "./actions";
+import type { DetailsState } from "../actions";
 import { useRouter } from "next/navigation";
 import { useActionState } from "react";
 import { TriangleAlertIcon } from "lucide-react";
@@ -12,7 +12,7 @@ import { Button } from "@/components/ui/button";
 import { KIT, PENDING } from "@/content/onboarding";
 import { STAFF_PENDING } from "@/content/onboarding-staff";
 import { cn } from "@/lib/utils";
-import { saveMyGradeAction, updateMyPhotoAction } from "./actions";
+import { saveMyGradeAction, updateMyPhotoAction } from "../actions";
 
 /** "Still needed": the licence uploads straight away, then the page re-reads what's on file. */
 export function LicenceNow() {

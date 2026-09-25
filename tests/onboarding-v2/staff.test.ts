@@ -16,11 +16,11 @@ function strings(v: unknown): string[] {
 const src = (p: string) => readFileSync(resolve(__dirname, "../..", p), "utf8");
 
 const V2_FILES = [
-  "app/signup/clinical/_v2/form.tsx",
-  "app/signup/non-clinical/_v2/form.tsx",
+  "app/signup/clinical/_components/form.tsx",
+  "app/signup/non-clinical/_components/form.tsx",
   "app/signup/_components/staff-work.tsx",
-  "app/onboarding/clinical-pending/_v2/view.tsx",
-  "app/onboarding/clinical-pending/_v2/details.tsx",
+  "app/onboarding/clinical-pending/_components/view.tsx",
+  "app/onboarding/clinical-pending/_components/details.tsx",
 ];
 
 describe("staff onboarding v2 copy", () => {
@@ -49,14 +49,14 @@ describe("staff onboarding v2 copy", () => {
 
 describe("staff onboarding v2 surfaces", () => {
   it("the clinical form asks profession only: no grade or role picker (§5.6)", () => {
-    const form = src("app/signup/clinical/_v2/form.tsx");
+    const form = src("app/signup/clinical/_components/form.tsx");
     expect(form).toContain("<ProfessionField");
     expect(form).not.toMatch(/name="(grade|cadreGrade\w*|role\w*|council\w*|cadre\w*)"/);
     expect(form).not.toContain("PROFILE_GRADES");
   });
 
   it("the non-clinical form shows the role, never asks it (O10)", () => {
-    const form = src("app/signup/non-clinical/_v2/form.tsx");
+    const form = src("app/signup/non-clinical/_components/form.tsx");
     expect(form).toContain("NON_CLINICAL.joiningAs(RECEPTION.label)");
     expect(form).not.toMatch(/name="role\w*"/);
   });
@@ -67,7 +67,7 @@ describe("staff onboarding v2 surfaces", () => {
   });
 
   it("the v2 pending page carries Emergency in its header", () => {
-    const view = src("app/onboarding/clinical-pending/_v2/view.tsx");
+    const view = src("app/onboarding/clinical-pending/_components/view.tsx");
     expect(view).toContain("<EmergencyButton");
     expect(view).toContain("data-emergency-inline");
   });

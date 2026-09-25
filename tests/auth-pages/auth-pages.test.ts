@@ -4,6 +4,14 @@ import { JSDOM } from "jsdom";
 import { describe, expect, it } from "vitest";
 
 import { GET_STARTED, PHONE_SIGN_IN, SIGN_IN } from "@/content/auth";
+import {
+  clinicalSchema,
+  fieldErrors,
+  hospitalSchema,
+  needsLicence,
+  nonClinicalSchema,
+  patientSchema,
+} from "@/lib/onboarding/schemas";
 
 /**
  * Sign-in and Get-started redesign — the brief's invariant suite (PROMPT:
@@ -116,25 +124,6 @@ function attrText(doc: Document): string {
     .querySelectorAll("meta[content]")
     .forEach((el) => values.push(el.getAttribute("content") ?? ""));
   return values.join(" ");
-}
-
-/** The body of `const <name> = z.object({ … });` in a sign-up action (or its shared `_lib/schema.ts`). */
-function schema(d: (typeof DOORS)[number], name: string): string {
-  const shared = join(ROOT, `app/signup/${d}/_lib/schema.ts`);
-  const src =
-    read(join(ROOT, `app/signup/${d}/actions.ts`)) + (existsSync(shared) ? read(shared) : "");
-  const body = src.match(new RegExp(`const ${name} = z\\.object\\(\\{([\\s\\S]*?)\\n\\}\\);`))?.[1];
-  expect(body, `${name} in app/signup/${d}/actions.ts — did the schema move?`).toBeTruthy();
-  return body!;
-}
-
-/**
- * Is `field` a required key of the schema body? Its expression runs from
- * `field:` to the next line at the same indent (prettier keeps keys aligned).
- */
-function required(body: string, field: string): boolean {
-  const expr = body.match(new RegExp(`^( +)${field}:\\s[\\s\\S]*?(?=^\\1\\S|$(?![\\s\\S]))`, "m"));
-  return !!expr && !/\.(optional|nullish|default)\(/.test(expr[0]);
 }
 
 const door = (href: string) => {
@@ -337,23 +326,26 @@ describe("source: shell, forms, copy and schemas", () => {
     expect(read(GET_STARTED_PAGE)).toContain("data-door");
   });
 
-  it("10 copy matches schema — each door's “You’ll need” names its required fields", () => {
-    const patient = schema("patient", "PatientSignupSchema");
-    expect(required(patient, "email")).toBe(true);
-    expect(required(patient, "phone_e164")).toBe(true);
+  it("10 copy matches schema — each door's “You’ll need” names what its form requires", () => {
+    // The onboarding forms share one schema per form with the server (lib/onboarding/schemas.ts):
+    // an empty submit's errors are exactly the required fields.
+    const missing = (s: { safeParse: (v: unknown) => { error?: unknown } }) =>
+      Object.keys(fieldErrors(s.safeParse({}).error as Parameters<typeof fieldErrors>[0]));
+
+    const patient = missing(patientSchema);
+    expect(patient).toEqual(expect.arrayContaining(["email", "phone"]));
     expect(door("/signup/patient").need).toMatch(/email/i);
     expect(door("/signup/patient").need).toMatch(/mobile/i);
 
-    const clinical = schema("clinical", "ClinicalSignupSchema");
-    expect(required(clinical, "registration_number")).toBe(true);
-    expect(required(clinical, "licence_document"), "licence became required").toBe(false);
+    const clinical = missing(clinicalSchema);
+    expect(clinical).toEqual(expect.arrayContaining(["registrationNumber", "licence"]));
     const clinician = door("/signup/clinical").need;
     expect(clinician).toMatch(/registration number/i);
-    if (/licen[cs]e/i.test(clinician))
-      expect(clinician, "the licence is optional").toMatch(/helps/i);
+    expect(clinician, "the licence is required for approval (it may follow)").toMatch(
+      /licen[cs]e/i,
+    );
 
-    const nonClinical = schema("non-clinical", "NonClinicalSignupSchema");
-    expect(required(nonClinical, "nin")).toBe(true);
+    expect(missing(nonClinicalSchema)).toContain("nin");
     expect(door("/signup/non-clinical").need).toMatch(/\bNIN\b/);
     // "administration" only once a non-clinical admin cadre is seeded.
     const nonClinicalCadres = walk(join(ROOT, "supabase/migrations"))
@@ -370,15 +362,13 @@ describe("source: shell, forms, copy and schemas", () => {
       expect(door("/signup/non-clinical").description).not.toMatch(/administration/i);
     }
 
-    const hospital = schema("hospital", "HospitalApplicationSchema");
-    expect(required(hospital, "registration_number")).toBe(true);
-    const action = read(join(ROOT, "app/signup/hospital/actions.ts"));
-    expect(action).toMatch(/licence document is required/i);
-    expect(action).toMatch(/authorisation letter is required/i);
+    // A hospital always owes the signed letter; a private facility also its operating licence.
+    expect(missing(hospitalSchema)).toContain("letter");
+    expect(needsLicence("private")).toBe(true);
+    expect(needsLicence("public_moh")).toBe(false);
     const facility = door("/signup/hospital").need;
-    expect(facility).toMatch(/registration number/i);
-    expect(facility).toMatch(/licen[cs]e/i);
     expect(facility).toMatch(/letter/i);
+    expect(facility).toMatch(/licen[cs]e/i);
   });
 
   it('12 budgets — no "use client" under app/get-started', () => {

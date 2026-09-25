@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 
 import { STAFF_PENDING } from "@/content/onboarding-staff";
-import { ClinicalPendingV2 } from "./_v2/view";
+import { ClinicalPendingView } from "./_components/view";
 
 export const metadata: Metadata = {
   title: STAFF_PENDING.metaTitle,
@@ -17,5 +17,5 @@ export const dynamic = "force-dynamic";
  * (Q11) and told reception staff about a council registry (O13).
  */
 export default function ClinicalPendingPage() {
-  return <ClinicalPendingV2 />;
+  return <ClinicalPendingView />;
 }

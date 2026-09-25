@@ -4,9 +4,7 @@ For Fadhul, to run with real testers (Phase 7). Each session takes 15–20 minut
 
 ## Before you start
 
-1. **Turn v2 on for the test phone:** open **`https://medsync-six.vercel.app/signup/preview`** once in that phone's browser. It sets a cookie for that browser only; everyone else keeps the old forms.
-   - Turn it off again with `…/signup/preview?off`.
-   - To turn v2 on for everyone: set `ONBOARDING_V2=1` in Vercel Production and redeploy.
+1. **v2 is live for everyone** (ADR 0129): no flag and no preview link.
 2. **Use a low-end Android on mobile data** where you can, and at least one desktop.
 3. **Accounts are real:** use a fresh email per tester (e.g. `name+test1@gmail.com`). Delete the test accounts afterwards from `/admin/people`.
 4. **Don't help.** Note where they stop, what they re-read, and what they say.
