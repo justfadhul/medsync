@@ -76,10 +76,15 @@ export const districts = pgTable(
     name: text("name").notNull(),
     /** True for the 11 cities elevated to district-equivalent status. */
     isCity: boolean("is_city").notNull().default(false),
+    /** UBOS pcode (COD-AB v01, 0070). Null only on retired placeholder rows. */
+    pcode: text("pcode"),
+    /** Placeholder rows with no single boundary match (0070: Fort Portal) — hidden from pickers. */
+    retiredAt: timestamp("retired_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [
     uniqueIndex("districts_code_unique").on(t.code),
+    uniqueIndex("districts_pcode_key").on(t.pcode),
     index("districts_region_idx").on(t.regionId),
     index("districts_name_idx").on(t.name),
   ],
@@ -94,10 +99,16 @@ export const subcounties = pgTable(
       .references(() => districts.id, { onDelete: "cascade" }),
     code: text("code").notNull(),
     name: text("name").notNull(),
+    /** UBOS pcode and the county it sits in (COD-AB v01, 0070). */
+    pcode: text("pcode"),
+    countyPcode: text("county_pcode"),
+    countyName: text("county_name"),
+    retiredAt: timestamp("retired_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [
     uniqueIndex("subcounties_district_code_unique").on(t.districtId, t.code),
+    uniqueIndex("subcounties_pcode_key").on(t.pcode),
     index("subcounties_district_idx").on(t.districtId),
   ],
 );

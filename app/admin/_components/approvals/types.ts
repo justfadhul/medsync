@@ -37,4 +37,12 @@ export interface ApprovalItem {
   /** Supporting documents (one or many). Replaces the single
    * documentBucket+documentPath pair. */
   documents?: ReadonlyArray<ApprovalDocument>;
+  /** Something in the evidence needs a second look (shows the Flag pill). */
+  flagged?: boolean;
+  /** Hospital applications: which half of the queue (DOC-2). */
+  group?: "ready" | "waiting_docs";
+  /** The approve button's word when it isn't "Approve" ("Verify", "Approve & provision"). */
+  approveLabel?: string;
+  /** Why approval can't happen yet; shown instead of an active Approve. */
+  approveBlocked?: string;
 }

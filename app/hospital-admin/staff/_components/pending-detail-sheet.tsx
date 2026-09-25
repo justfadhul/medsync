@@ -10,6 +10,7 @@ import { Pill } from "@/components/ui/data-table";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Sheet, SheetBody, SheetContent, SheetFooter, SheetHeader } from "@/components/ui/sheet";
+import { APPROVAL } from "@/content/onboarding-staff";
 import { cn } from "@/lib/utils";
 import { getEvidenceSignedUrlAction } from "../../../admin/actions";
 import {
@@ -60,6 +61,8 @@ export function PendingDetailSheet({ item, onOpenChange }: SheetProps) {
 function DetailContent({ item, onClose }: { item: PendingAffiliationRow; onClose: () => void }) {
   const [mode, setMode] = useState<Mode>("view");
   const days = item.daysSinceSubmission;
+  // DOC-1: a clinician can't be approved until the licence is here (the Edge Function refuses too).
+  const waitingLicence = item.isClinical && !item.licenceDocumentPath;
 
   return (
     <>
@@ -155,6 +158,17 @@ function DetailContent({ item, onClose }: { item: PendingAffiliationRow; onClose
               approving.
             </p>
           ) : null}
+          {item.isClinical && item.councilCode === "UMDPC" ? (
+            <a
+              href={APPROVAL.umdpcRegisterUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-body-s inline-flex w-fit items-center gap-1.5 font-medium text-teal-700 underline underline-offset-4 dark:text-teal-400"
+            >
+              {APPROVAL.checkUmdpc}
+              <ExternalLinkIcon aria-hidden className="size-3" />
+            </a>
+          ) : null}
         </Section>
 
         <Section index={item.reviewNote ? 3 : 2} title="Claimed role">
@@ -186,8 +200,8 @@ function DetailContent({ item, onClose }: { item: PendingAffiliationRow; onClose
             </Section>
           ) : (
             <Section index={item.reviewNote ? 4 : 3} title="Licence document">
-              <p className="text-muted-foreground rounded-md bg-red-50/70 px-2.5 py-2 text-[12.5px] ring-1 ring-red-500/30 ring-inset dark:bg-red-950/25">
-                No licence document on file — request one before approving.
+              <p className="rounded-md bg-amber-50/70 px-2.5 py-2 text-[12.5px] text-amber-900 ring-1 ring-amber-500/30 ring-inset dark:bg-amber-950/25 dark:text-amber-200">
+                {APPROVAL.noLicence}
               </p>
             </Section>
           )
@@ -223,7 +237,17 @@ function DetailContent({ item, onClose }: { item: PendingAffiliationRow; onClose
               <XIcon className="size-3.5" />
               Reject…
             </Button>
-            <Button variant="primary" onClick={() => setMode("approve")}>
+            {waitingLicence ? (
+              <span id="approve-blocked" className="text-muted-foreground text-body-s self-center">
+                {APPROVAL.waitingLicence}
+              </span>
+            ) : null}
+            <Button
+              variant="primary"
+              onClick={() => setMode("approve")}
+              disabled={waitingLicence}
+              aria-describedby={waitingLicence ? "approve-blocked" : undefined}
+            >
               <CheckIcon className="size-3.5" />
               Approve…
             </Button>
@@ -315,6 +339,21 @@ function ActionForm({
           </p>
         ) : null}
       </div>
+
+      {mode === "approve" && item.isClinical ? (
+        <div className="flex flex-col gap-1.5 text-left">
+          <Label htmlFor="licence_valid_until">
+            {APPROVAL.validUntil}{" "}
+            <span className="text-muted-foreground font-normal">{APPROVAL.validUntilHint}</span>
+          </Label>
+          <Input
+            id="licence_valid_until"
+            name="licence_valid_until"
+            type="date"
+            className="w-fit"
+          />
+        </div>
+      ) : null}
 
       <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
         <Button type="button" variant="ghost" onClick={onCancel} disabled={pending}>

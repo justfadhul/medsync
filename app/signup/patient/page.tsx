@@ -4,9 +4,11 @@ import { desc, eq } from "drizzle-orm";
 import { db } from "@/db";
 import { consentVersions } from "@/db/schema/consent-versions";
 import { fetchSmsConsentVersion } from "@/lib/notifications/consent";
+import { onboardingV2 } from "@/lib/onboarding/feature";
 import { listDistricts } from "@/lib/reference-data";
 import { SignupUnavailable } from "../_components/unavailable";
-import { PatientSignupForm } from "./_components/form";
+import { PatientSignupForm } from "./_lazy";
+import { PatientSignupV2 } from "./_v2/view";
 import { loadSubcountiesForDistrictAction, submitPatientSignupAction } from "./actions";
 
 export const metadata: Metadata = {
@@ -30,6 +32,7 @@ export const dynamic = "force-dynamic";
  * `<ConsentCheckbox />` for cross-validation in the Server Action.
  */
 export default async function PatientSignupPage() {
+  if (await onboardingV2()) return <PatientSignupV2 />;
   const districts = await listDistricts();
   const districtItems = districts.map((d) => ({ value: d.id, label: d.name }));
 

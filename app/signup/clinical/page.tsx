@@ -3,9 +3,11 @@ import { desc, eq } from "drizzle-orm";
 
 import { db } from "@/db";
 import { consentVersions } from "@/db/schema/consent-versions";
+import { onboardingV2 } from "@/lib/onboarding/feature";
 import { listCouncils, listHospitals } from "@/lib/reference-data";
 import { SignupUnavailable } from "../_components/unavailable";
-import { ClinicalSignupForm } from "./_components/form";
+import { ClinicalSignupForm } from "./_lazy";
+import { ClinicalSignupV2 } from "./_v2/view";
 import {
   loadCadreGradesForCadreAction,
   loadCadresForCouncilAction,
@@ -22,6 +24,7 @@ export const metadata: Metadata = {
 export const dynamic = "force-dynamic";
 
 export default async function ClinicalSignupPage() {
+  if (await onboardingV2()) return <ClinicalSignupV2 />;
   const [councils, hospitals, [activeConsent]] = await Promise.all([
     listCouncils(),
     listHospitals(),

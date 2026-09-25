@@ -3,6 +3,7 @@ import { and, eq, isNull, lt, notExists } from "drizzle-orm";
 
 import { db } from "@/db";
 import { ussdSessions } from "@/db/schema/channels";
+import { onboardingEvents } from "@/db/schema/onboarding";
 import { bookingAgents, provisionalPatients } from "@/db/schema/provisional-patients";
 import { appointments } from "@/db/schema/scheduling";
 import { env } from "@/lib/env";
@@ -84,13 +85,33 @@ export async function GET(request: Request) {
         .returning({ id: ussdSessions.id })
     ).length;
     logger.info("cron.sweep-ussd-sessions.ran", { removed: ussd });
-    return NextResponse.json({ ok: true, removed, sessions, provisionals, ussd });
+    const events = await pruneOnboardingEvents();
+    return NextResponse.json({ ok: true, removed, sessions, provisionals, ussd, events });
   } catch (e) {
     logger.error("cron.sweep-provisionals.failed", { reason: String(e) });
     return NextResponse.json(
       { error: "Provisional sweep failed", removed, sessions },
       { status: 500 },
     );
+  }
+}
+
+/**
+ * EV-3 (Onboarding v2): the funnel keeps 180 days (ONBOARDING_EVENTS_RETENTION_DAYS overrides).
+ * Its own try: a failure here (e.g. before 0070 is applied) never stops the other sweeps.
+ */
+async function pruneOnboardingEvents(): Promise<number | null> {
+  const days = Number(process.env.ONBOARDING_EVENTS_RETENTION_DAYS) || 180;
+  try {
+    const gone = await db
+      .delete(onboardingEvents)
+      .where(lt(onboardingEvents.createdAt, new Date(Date.now() - days * 86_400_000)))
+      .returning({ id: onboardingEvents.id });
+    logger.info("cron.prune-onboarding-events.ran", { removed: gone.length, days });
+    return gone.length;
+  } catch (e) {
+    logger.warn("cron.prune-onboarding-events.failed", { reason: String(e) });
+    return null;
   }
 }
 

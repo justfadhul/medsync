@@ -32,6 +32,13 @@ const ReasonArgs = z.object({
   reason: z.string().min(8, "Reason ≥ 8 chars required."),
 });
 
+const ApproveArgs = ReasonArgs.extend({
+  licence_valid_until: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/, "Enter the licence date as a full date.")
+    .optional(),
+});
+
 const NoteArgs = z.object({
   affiliation_id: z.string().uuid(),
   note: z.string().min(8, "Note ≥ 8 chars required."),
@@ -101,16 +108,20 @@ export async function approveStaffAffiliationAction(
   _prev: StaffActionState,
   formData: FormData,
 ): Promise<StaffActionState> {
-  const parsed = ReasonArgs.safeParse({
+  const parsed = ApproveArgs.safeParse({
     affiliation_id: formData.get("affiliation_id"),
     reason: formData.get("reason"),
+    // An empty date input posts "": that means "not recorded".
+    licence_valid_until: formData.get("licence_valid_until") || undefined,
   });
   if (!parsed.success) {
-    return { error: parsed.error.flatten().fieldErrors.reason?.[0] ?? "Invalid input." };
+    const fe = parsed.error.flatten().fieldErrors;
+    return { error: fe.reason?.[0] ?? fe.licence_valid_until?.[0] ?? "Invalid input." };
   }
 
   await guardScope(parsed.data.affiliation_id);
 
+  // The Edge Function holds DOC-1 (no licence, no approval) and records licence_valid_until.
   const result = await callEdgeFunction("approve-staff-affiliation", parsed.data);
   if (!result.ok) return { error: result.error };
   revalidatePath("/hospital-admin/staff");

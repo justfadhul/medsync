@@ -2,15 +2,21 @@ import type { ApprovalEvidence, ApprovalItem } from "./_components/approvals/typ
 import type { SQL } from "drizzle-orm";
 import { and, desc, eq, inArray } from "drizzle-orm";
 
+import {
+  FACILITY_LEVEL_LABELS,
+  OWNERSHIP_LABELS,
+  HOSPITAL_REVIEW as R,
+} from "@/content/onboarding-hospital";
 import { db } from "@/db";
 import { clinicianProfiles, staffAffiliations } from "@/db/schema/clinician-profiles";
 import { hospitalApplicationDepartments } from "@/db/schema/hospital-application-departments";
 import { hospitalApplicationSpecialties } from "@/db/schema/hospital-application-specialties";
-import { hospitalApplications } from "@/db/schema/hospital-applications";
+import { hospitalApplications, hospitalLeads } from "@/db/schema/hospital-applications";
 import { hospitalDepartments } from "@/db/schema/hospital-departments";
 import { hospitalDpaVersions } from "@/db/schema/hospital-dpa-versions";
 import { hospitals } from "@/db/schema/hospitals";
 import {
+  cadres,
   districts,
   regions,
   roles as rolesTable,
@@ -20,9 +26,13 @@ import {
 import { users } from "@/db/schema/users";
 import { decrypt } from "@/lib/encryption";
 import { logger } from "@/lib/logger";
+import { hospitalDocumentsOutstanding } from "@/lib/onboarding/documents";
+import { needsLicence } from "@/lib/onboarding/schemas";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
+import { HospitalLeads } from "./_components/approvals/leads";
 import { ApprovalsQueue } from "./_components/approvals/queue";
+import { hospitalApprove } from "./_lib/hospital-review";
 
 export const dynamic = "force-dynamic";
 
@@ -69,6 +79,7 @@ export default async function AdminApprovalsPage() {
         hospitalId: staffAffiliations.hospitalId,
         departmentId: staffAffiliations.departmentId,
         roleId: staffAffiliations.roleId,
+        cadreId: staffAffiliations.cadreId,
         employmentType: staffAffiliations.employmentType,
         createdAt: staffAffiliations.createdAt,
       })
@@ -82,20 +93,27 @@ export default async function AdminApprovalsPage() {
       const hospitalIds = [...new Set(rows.map((r) => r.hospitalId))];
       const deptIds = [...new Set(rows.map((r) => r.departmentId))];
       const roleIds = [...new Set(rows.map((r) => r.roleId))];
+      const cadreIds = [...new Set(rows.map((r) => r.cadreId))];
 
-      const [usersData, hospitalsData, deptsData, rolesLookup, clinicianData] = await Promise.all([
-        db.select().from(users).where(inArray(users.id, userIds)),
-        db.select().from(hospitals).where(inArray(hospitals.id, hospitalIds)),
-        db.select().from(hospitalDepartments).where(inArray(hospitalDepartments.id, deptIds)),
-        db.select().from(rolesTable).where(inArray(rolesTable.id, roleIds)),
-        db.select().from(clinicianProfiles).where(inArray(clinicianProfiles.id, userIds)),
-      ]);
+      const [usersData, hospitalsData, deptsData, rolesLookup, clinicianData, cadreData] =
+        await Promise.all([
+          db.select().from(users).where(inArray(users.id, userIds)),
+          db.select().from(hospitals).where(inArray(hospitals.id, hospitalIds)),
+          db.select().from(hospitalDepartments).where(inArray(hospitalDepartments.id, deptIds)),
+          db.select().from(rolesTable).where(inArray(rolesTable.id, roleIds)),
+          db.select().from(clinicianProfiles).where(inArray(clinicianProfiles.id, userIds)),
+          db
+            .select({ id: cadres.id, isClinical: cadres.isClinical })
+            .from(cadres)
+            .where(inArray(cadres.id, cadreIds)),
+        ]);
 
       const userById = new Map(usersData.map((u) => [u.id, u]));
       const hospitalById = new Map(hospitalsData.map((h) => [h.id, h]));
       const deptById = new Map(deptsData.map((d) => [d.id, d]));
       const roleById = new Map(rolesLookup.map((r) => [r.id, r]));
       const clinicianById = new Map(clinicianData.map((c) => [c.id, c]));
+      const clinicalCadre = new Set(cadreData.filter((c) => c.isClinical).map((c) => c.id));
 
       for (const r of rows) {
         const u = userById.get(r.userId);
@@ -103,10 +121,13 @@ export default async function AdminApprovalsPage() {
         const d = deptById.get(r.departmentId);
         const role = roleById.get(r.roleId);
         const clinician = clinicianById.get(r.userId);
+        // DOC-1: a clinician can't be approved without a licence on file (the server refuses too).
+        const waitingLicence = clinicalCadre.has(r.cadreId) && !clinician?.licenceDocumentPath;
 
         staffItems.push({
           id: r.id,
           kind: "staff",
+          approveBlocked: waitingLicence ? R.waitingLicence : undefined,
           title: u?.fullName ?? "(unknown clinician)",
           subtitle: `${role?.name ?? "—"} · ${h?.name ?? "—"}`,
           createdAtIso: r.createdAt.toISOString(),
@@ -153,7 +174,7 @@ export default async function AdminApprovalsPage() {
     const rows = await db
       .select()
       .from(hospitalApplications)
-      .where(inArray(hospitalApplications.state, ["pending_approval", "under_review"]))
+      .where(inArray(hospitalApplications.state, ["pending_approval", "under_review", "verified"]))
       .orderBy(desc(hospitalApplications.createdAt))
       .limit(50);
 
@@ -228,15 +249,27 @@ export default async function AdminApprovalsPage() {
         // reviewer at least sees something.
         const applicantPhone = tryDecrypt(r.applicantPhone);
         const callbackContact = tryDecrypt(r.callbackContactValue);
+        const officerPhone = tryDecrypt(r.authorityOfficerPhone);
+        const officerEmail = tryDecrypt(r.authorityOfficerEmail);
+        const outstanding = hospitalDocumentsOutstanding({
+          ownership: r.ownership,
+          authority_letter_path: r.authorityLetterPath,
+          facility_licence_path: r.facilityLicencePath,
+        });
 
         hospitalItems.push({
           id: r.id,
           kind: "hospital",
           title: r.hospitalName,
-          subtitle: `${r.facilityLevel} · ${r.ownership}${
-            r.emailDomainMismatch ? " · ⚠ email-domain mismatch" : ""
-          }`,
+          subtitle: `${label(FACILITY_LEVEL_LABELS, r.facilityLevel)} · ${label(OWNERSHIP_LABELS, r.ownership)}`,
           createdAtIso: r.createdAt.toISOString(),
+          flagged:
+            r.emailDomainMismatch ||
+            r.duplicateFacility ||
+            r.publicEmailDomain ||
+            !!r.registryCorrectionNote,
+          group: r.documentsComplete ? "ready" : "waiting_docs",
+          ...hospitalApprove(r),
           evidence: [
             /* --- Institution profile (§B) --- */
             { section: "Institution", label: "Official name", value: r.hospitalName },
@@ -431,10 +464,55 @@ export default async function AdminApprovalsPage() {
             /* --- Verification & authority (§E6) --- */
             {
               section: "Verification",
-              label: "Reg number",
-              value: r.registrationNumber,
-              mono: true,
+              label: R.source,
+              value:
+                r.facilitySource === "registry"
+                  ? R.sourceRegistry(r.registryCode ?? "—")
+                  : R.sourceManual,
+              mono: r.facilitySource === "registry",
+              tone: r.facilitySource === "registry" ? undefined : ("warning" as const),
             },
+            ...(r.duplicateFacility
+              ? [
+                  {
+                    section: "Verification",
+                    label: R.duplicate,
+                    value: R.duplicateValue,
+                    tone: "warning" as const,
+                  },
+                ]
+              : []),
+            ...(r.registryCorrectionNote
+              ? [
+                  {
+                    section: "Verification",
+                    label: R.correction,
+                    value: r.registryCorrectionNote,
+                    tone: "warning" as const,
+                  },
+                ]
+              : []),
+            ...(r.pnfpBureau
+              ? [{ section: "Verification", label: R.bureau, value: r.pnfpBureau }]
+              : []),
+            {
+              section: "Verification",
+              label: R.outstanding,
+              value: outstanding.length
+                ? outstanding.map((k) => R.docLabels[k as keyof typeof R.docLabels]).join(", ")
+                : R.allOnFile,
+              tone: outstanding.length ? ("warning" as const) : ("ok" as const),
+            },
+            ...(r.registrationNumber
+              ? [
+                  {
+                    section: "Verification",
+                    label: "Reg number",
+                    value: r.registrationNumber,
+                    mono: true,
+                  },
+                ]
+              : []),
             ...(r.registrationAuthority
               ? [
                   {
@@ -459,23 +537,15 @@ export default async function AdminApprovalsPage() {
               value: r.institutionalEmailDomain,
               mono: true,
             },
-            ...(r.facilityLicencePath
-              ? [
-                  {
-                    section: "Verification",
-                    label: "Facility licence",
-                    value: "Uploaded — see Documents below",
-                    tone: "ok" as const,
-                  },
-                ]
-              : [
-                  {
-                    section: "Verification",
-                    label: "Facility licence",
-                    value: "Missing",
-                    tone: "critical" as const,
-                  },
-                ]),
+            {
+              section: "Verification",
+              label: "Facility licence",
+              ...(r.facilityLicencePath
+                ? { value: "Uploaded — see Documents below", tone: "ok" as const }
+                : needsLicence(r.ownership)
+                  ? { value: R.missing, tone: "warning" as const }
+                  : { value: R.licenceNotNeeded }),
+            },
 
             /* --- Applicant --- */
             ...(r.applicantFullName
@@ -523,6 +593,16 @@ export default async function AdminApprovalsPage() {
                   },
                 ]
               : []),
+            ...(r.publicEmailDomain
+              ? [
+                  {
+                    section: "Applicant",
+                    label: R.publicDomain,
+                    value: R.publicDomainValue,
+                    tone: "warning" as const,
+                  },
+                ]
+              : []),
 
             /* --- Authority anchor --- */
             ...(r.authorityOfficerName
@@ -550,10 +630,16 @@ export default async function AdminApprovalsPage() {
                   {
                     section: "Authority",
                     label: "Authorisation letter",
-                    value: "Missing",
-                    tone: "critical" as const,
+                    value: R.missing,
+                    tone: "warning" as const,
                   },
                 ]),
+            ...(officerPhone
+              ? [{ section: "Authority", label: R.officerPhone, value: officerPhone, mono: true }]
+              : []),
+            ...(officerEmail
+              ? [{ section: "Authority", label: R.officerEmail, value: officerEmail, mono: true }]
+              : []),
             ...(callbackContact
               ? [
                   {
@@ -578,12 +664,17 @@ export default async function AdminApprovalsPage() {
                   },
                 ]
               : []),
-            {
-              section: "Agreement",
-              label: "Authorised to bind",
-              value: r.authorisedToBind ? "Yes" : "No",
-              tone: r.authorisedToBind ? ("ok" as const) : ("critical" as const),
-            },
+            // v2 applications sign after verification (D7): nothing to show until they do.
+            ...(r.agreementAcceptedVersion
+              ? [
+                  {
+                    section: "Agreement",
+                    label: "Authorised to bind",
+                    value: r.authorisedToBind ? "Yes" : "No",
+                    tone: r.authorisedToBind ? ("ok" as const) : ("critical" as const),
+                  },
+                ]
+              : []),
             ...(r.agreementAcceptedVersion
               ? [
                   {
@@ -654,10 +745,36 @@ export default async function AdminApprovalsPage() {
     (a, b) => new Date(b.createdAtIso).getTime() - new Date(a.createdAtIso).getTime(),
   );
 
-  return <ApprovalsQueue items={allItems} canSeeHospitalQueue={isSuperadmin} />;
+  // The short leads ("Ask us to call you", "My hospital isn't on MedSync") — read-only (D15).
+  const leads = isSuperadmin
+    ? await db
+        .select({
+          id: hospitalLeads.id,
+          hospitalName: hospitalLeads.hospitalName,
+          district: districts.name,
+          contactName: hospitalLeads.contactName,
+          contactPhone: hospitalLeads.contactPhone,
+          contactEmail: hospitalLeads.contactEmail,
+          source: hospitalLeads.source,
+          createdAt: hospitalLeads.createdAt,
+        })
+        .from(hospitalLeads)
+        .leftJoin(districts, eq(districts.id, hospitalLeads.districtId))
+        .orderBy(desc(hospitalLeads.createdAt))
+        .limit(20)
+    : [];
+
+  return (
+    <>
+      <ApprovalsQueue items={allItems} canSeeHospitalQueue={isSuperadmin} />
+      {isSuperadmin ? <HospitalLeads leads={leads} /> : null}
+    </>
+  );
 }
 
 /* --- Local helpers -------------------------------------------------- */
+
+const label = (labels: Record<string, string>, code: string) => labels[code] ?? code;
 
 /** Humanise a stored code ("INTERNAL_MEDICINE" → "Internal Medicine"). */
 function humanise(code: string): string {

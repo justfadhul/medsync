@@ -46,6 +46,12 @@ export const PII_FIELD_NAMES: ReadonlySet<string> = new Set([
   "session",
   "authorization",
   "cookie",
+  // LOC-7 (Onboarding v2): a patient's position is used once and never logged.
+  "lat",
+  "lng",
+  "latitude",
+  "longitude",
+  "coords",
 ]);
 
 const REDACTED = "[REDACTED]";

@@ -12,6 +12,10 @@
  * if you bypass this Edge Function and hit the table directly, you
  * still can't change state.
  *
+ * DOC-1 (Onboarding v2): a clinical cadre can't be approved until its
+ * practising licence is on file ("Waiting for the licence", details.code
+ * 'licence_missing'). The approver may record licence_valid_until.
+ *
  * Audit:
  *   - sa_audit_log entry written by recordSaAudit() with action +
  *     before/after diff. Required reason ≥ 8 chars.
@@ -40,6 +44,12 @@ const log = makeLogger("approve-staff-affiliation");
 const InputSchema = z.object({
   affiliation_id: z.string().uuid(),
   reason: z.string().min(8, "Reason ≥ 8 chars required for the approval record."),
+  /** Read off the licence by the approver (Onboarding v2): stored as clinician_profiles.registration_expiry. */
+  licence_valid_until: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/, "Use YYYY-MM-DD.")
+    .refine((d) => !Number.isNaN(Date.parse(`${d}T00:00:00Z`)), "Not a real date.")
+    .optional(),
 });
 
 Deno.serve(async (request: Request) => {
@@ -69,7 +79,7 @@ Deno.serve(async (request: Request) => {
   const sb = serviceClient();
   const { data: aff, error: fetchError } = await sb
     .from("staff_affiliations")
-    .select("id, user_id, hospital_id, state, approved_at, approved_by, rejection_reason")
+    .select("id, user_id, hospital_id, cadre_id, state, approved_at, approved_by, rejection_reason")
     .eq("id", input.affiliation_id)
     .single();
   if (fetchError || !aff) return notFound(init, "affiliation not found");
@@ -84,9 +94,35 @@ Deno.serve(async (request: Request) => {
     : false;
   if (!isSuperadmin && !isHospitalAdmin) return forbidden(init);
 
+  // DOC-1 (Onboarding v2): a clinician's practising licence is required for approval. It may
+  // follow the signup, so the check lives here, at approval. Fails closed if the cadre can't be read.
+  const { data: cadre, error: cadreError } = await sb
+    .from("cadres")
+    .select("is_clinical")
+    .eq("id", aff.cadre_id)
+    .single();
+  if (cadreError || !cadre) return serverError("cadre lookup failed", init);
+  const isClinical = cadre.is_clinical === true;
+  if (isClinical) {
+    const { data: profile } = await sb
+      .from("clinician_profiles")
+      .select("licence_document_path")
+      .eq("id", aff.user_id)
+      .maybeSingle();
+    if (!profile?.licence_document_path) {
+      return badRequest("Waiting for the licence", init, { code: "licence_missing" });
+    }
+  }
+  const expiry = isClinical ? (input.licence_valid_until ?? null) : null;
+
   const nowIso = new Date().toISOString();
   const before = { state: aff.state, approved_at: aff.approved_at, approved_by: aff.approved_by };
-  const after = { state: "approved", approved_at: nowIso, approved_by: caller.id };
+  const after = {
+    state: "approved",
+    approved_at: nowIso,
+    approved_by: caller.id,
+    ...(expiry ? { registration_expiry: expiry } : {}),
+  };
 
   // Write the audit FIRST so a downstream UPDATE failure can't leave
   // an un-attributed transition in audit_log.
@@ -107,6 +143,17 @@ Deno.serve(async (request: Request) => {
   } catch (e) {
     log.error("sa_audit failed; aborting approval", { requestId, reason: String(e) });
     return serverError("audit write failed", init);
+  }
+
+  if (expiry) {
+    const { error: expiryError } = await sb
+      .from("clinician_profiles")
+      .update({ registration_expiry: expiry })
+      .eq("id", aff.user_id);
+    if (expiryError) {
+      log.error("licence expiry update failed", { requestId, reason: expiryError.message });
+      return serverError("licence date write failed", init);
+    }
   }
 
   const { error: updateError } = await sb

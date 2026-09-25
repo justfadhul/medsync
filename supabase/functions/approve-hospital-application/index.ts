@@ -28,6 +28,18 @@
  *
  * Without those the function returns 400 — the applicant flow MUST
  * have captured the agreement metadata at submission time (GATE B).
+ *
+ * Onboarding v2 (D7, ADR 0125) — Verify → sign → Approve & provision:
+ *   - An application with no agreement yet is VERIFIED, not provisioned:
+ *     documents_complete must hold (DOC-2), state → 'verified', audited
+ *     as verify_hospital_application. The applicant then signs the DPA on
+ *     the pending page.
+ *   - A 'verified' application with a signed agreement provisions exactly
+ *     as below. v1 applications (agreement captured at submission) keep
+ *     the one-step path.
+ *   - Provisioning also copies the application's district and region
+ *     names onto hospitals.district / hospitals.region (emergency
+ *     contacts match on hospitals.district).
  */
 
 import { z } from "npm:zod@4.4.3";
@@ -139,21 +151,65 @@ Deno.serve(async (request: Request) => {
     .select(
       "id, applicant_user_id, hospital_name, facility_level, district_id, state, " +
         "approved_hospital_id, signatory_name, signatory_title, " +
-        "agreement_accepted_version, agreement_accepted_at",
+        "agreement_accepted_version, agreement_accepted_at, documents_complete",
     )
     .eq("id", input.application_id)
     .single();
   if (fetchError || !app) return notFound(init, "application not found");
 
-  const ALLOWED_STARTING_STATES = new Set(["pending_approval", "under_review"]);
+  const ALLOWED_STARTING_STATES = new Set(["pending_approval", "under_review", "verified"]);
   if (!ALLOWED_STARTING_STATES.has(app.state)) {
     return badRequest(
-      `Application is in state '${app.state}'; must be pending_approval or under_review.`,
+      `Application is in state '${app.state}'; must be pending_approval, under_review or verified.`,
       init,
     );
   }
 
-  if (!app.agreement_accepted_version || !app.signatory_name || !app.signatory_title) {
+  // ── VERIFY (v2, D7): no agreement yet → check documents, mark verified, don't provision ──
+  if (!app.agreement_accepted_version) {
+    if (app.state === "verified") {
+      return badRequest("Waiting for the applicant to sign the agreement.", init);
+    }
+    if (!app.documents_complete) return badRequest("Documents outstanding", init);
+    const { ipAddress, userAgent } = networkContext(request);
+    try {
+      await recordSaAudit({
+        actorId: caller.id,
+        action: "verify_hospital_application",
+        targetKind: "hospital_application",
+        targetId: app.id,
+        reason: input.reason,
+        requestId,
+        ipAddress,
+        userAgent,
+        beforeData: { state: app.state },
+        afterData: { state: "verified" },
+      });
+    } catch (e) {
+      log.error("sa_audit failed; aborting verification", { requestId, reason: String(e) });
+      return serverError("audit write failed", init);
+    }
+    const { error: verifyError } = await sb
+      .from("hospital_applications")
+      .update({
+        state: "verified",
+        reviewed_by: caller.id,
+        reviewed_at: new Date().toISOString(),
+      })
+      .eq("id", app.id)
+      .eq("state", app.state);
+    if (verifyError) {
+      log.error("application verify failed", { requestId, reason: verifyError.message });
+      return serverError("verification write failed", init);
+    }
+    log.info("application verified; waiting for the agreement", {
+      requestId,
+      application_id: app.id,
+    });
+    return ok({ application_id: app.id, state: "verified" }, init);
+  }
+
+  if (!app.signatory_name || !app.signatory_title) {
     return badRequest(
       "Application is missing agreement metadata (§E7). Cannot approve until the applicant " +
         "completes the agreement step.",
@@ -213,6 +269,18 @@ Deno.serve(async (request: Request) => {
     private: "private",
     other: "private",
   };
+  // The district and region by name — emergency contacts match on hospitals.district, which was
+  // NULL for every onboarded hospital. A failed lookup leaves them NULL, as before.
+  const { data: districtRow } = await sb
+    .from("districts")
+    .select("name, region_id")
+    .eq("id", app.district_id)
+    .maybeSingle();
+  const { data: regionRow } = districtRow
+    ? await sb.from("regions").select("name").eq("id", districtRow.region_id).maybeSingle()
+    : { data: null };
+  if (!districtRow) log.warn("district lookup failed (continuing)", { requestId });
+
   const { data: hospitalRow, error: hospitalError } = await sb
     .from("hospitals")
     .insert({
@@ -220,6 +288,8 @@ Deno.serve(async (request: Request) => {
       slug,
       level: levelMap[app.facility_level] ?? "private",
       state: "provisioning",
+      district: districtRow?.name ?? null,
+      region: regionRow?.name ?? null,
     })
     .select("id")
     .single();

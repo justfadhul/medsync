@@ -28,6 +28,7 @@ const ACTION_OPTIONS = [
   { value: "reject_staff_affiliation", label: "Reject staff affiliation" },
   { value: "approve_hospital_application", label: "Approve hospital application" },
   { value: "reject_hospital_application", label: "Reject hospital application" },
+  { value: "verify_hospital_application", label: "Verify hospital application" },
   { value: "break_glass_open", label: "Break-glass open" },
   { value: "break_glass_close", label: "Break-glass close" },
   { value: "four_eyes_request", label: "Four-eyes request" },

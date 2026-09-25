@@ -70,14 +70,15 @@ Deno.serve(async (request: Request) => {
     .single();
   if (fetchError || !app) return notFound(init, "application not found");
 
-  // Mirrors approve-hospital-application: both pending_approval and
-  // under_review are valid starting states. under_review means a
-  // superadmin has begun review; rejecting from there is the same
-  // operator finalising their decision.
-  const ALLOWED_STARTING_STATES = new Set(["pending_approval", "under_review"]);
+  // Mirrors approve-hospital-application: pending_approval, under_review
+  // and (Onboarding v2, D7) verified are valid starting states. under_review
+  // means a superadmin has begun review; verified means the applicant has
+  // yet to sign the agreement. Rejecting from either is the operator
+  // finalising their decision.
+  const ALLOWED_STARTING_STATES = new Set(["pending_approval", "under_review", "verified"]);
   if (!ALLOWED_STARTING_STATES.has(app.state)) {
     return badRequest(
-      `Application is in state '${app.state}'; must be pending_approval or under_review.`,
+      `Application is in state '${app.state}'; must be pending_approval, under_review or verified.`,
       init,
     );
   }

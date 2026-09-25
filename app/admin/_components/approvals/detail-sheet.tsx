@@ -64,7 +64,6 @@ export function ApprovalDetailSheet({ item, onOpenChange }: SheetProps) {
 function ApprovalDetailContent({ item, onClose }: { item: ApprovalItem; onClose: () => void }) {
   const [mode, setMode] = useState<Mode>("view");
   const isHospital = item.kind === "hospital";
-  const flaggedSubtitle = item.subtitle.includes("⚠");
 
   return (
     <>
@@ -75,7 +74,7 @@ function ApprovalDetailContent({ item, onClose }: { item: ApprovalItem; onClose:
               {isHospital ? "Hospital application" : "Staff affiliation"}
             </Pill>
             <Pill tone="pending">Pending review</Pill>
-            {flaggedSubtitle ? (
+            {item.flagged ? (
               <Pill tone="caution">
                 <AlertTriangleIcon className="mr-0.5 -ml-0.5 size-3" aria-hidden />
                 Flag
@@ -138,10 +137,20 @@ function ApprovalDetailContent({ item, onClose }: { item: ApprovalItem; onClose:
               <XIcon className="size-3.5" />
               Reject…
             </Button>
-            <Button variant="primary" onClick={() => setMode("approve")}>
-              <CheckIcon className="size-3.5" />
-              Approve…
-            </Button>
+            {item.approveBlocked && item.kind === "hospital" ? (
+              <span className="text-body-s text-muted-foreground self-center">
+                {item.approveBlocked}
+              </span>
+            ) : item.approveBlocked ? (
+              <Button variant="primary" disabled>
+                {item.approveBlocked}
+              </Button>
+            ) : (
+              <Button variant="primary" onClick={() => setMode("approve")}>
+                <CheckIcon className="size-3.5" />
+                {item.approveLabel ?? "Approve"}…
+              </Button>
+            )}
           </>
         ) : (
           <ReasonForm
@@ -221,7 +230,7 @@ function ReasonForm({
               ? "Approving…"
               : "Rejecting…"
             : mode === "approve"
-              ? "Confirm approval"
+              ? (item.approveLabel ?? "Confirm approval")
               : "Confirm rejection"}
         </Button>
       </div>

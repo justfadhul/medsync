@@ -131,6 +131,8 @@ export interface PendingAffiliationRow {
 
   // Clinical-only fields (null for non-clinical applicants).
   councilName: string | null;
+  /** e.g. "UMDPC" — drives the register link in the approval sheet. */
+  councilCode: string | null;
   registrationNumber: string | null;
   registrationExpiry: string | null;
   licenceDocumentPath: string | null;
@@ -162,6 +164,7 @@ async function fetchPendingAffiliations(hospitalId: string): Promise<PendingAffi
       departmentName: hospitalDepartments.name,
       specialtyName: specialties.name,
       councilName: councils.name,
+      councilCode: councils.code,
       registrationNumber: clinicianProfiles.registrationNumber,
       registrationExpiry: clinicianProfiles.registrationExpiry,
       licenceDocumentPath: clinicianProfiles.licenceDocumentPath,
@@ -206,6 +209,7 @@ async function fetchPendingAffiliations(hospitalId: string): Promise<PendingAffi
     createdAtIso: r.createdAt.toISOString(),
     daysSinceSubmission: Math.floor((nowMs - r.createdAt.getTime()) / 86_400_000),
     councilName: r.councilName,
+    councilCode: r.councilCode,
     registrationNumber: r.registrationNumber,
     registrationExpiry: r.registrationExpiry ? r.registrationExpiry.toString() : null,
     licenceDocumentPath: r.licenceDocumentPath,

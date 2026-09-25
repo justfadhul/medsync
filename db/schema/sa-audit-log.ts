@@ -47,6 +47,7 @@ export const saAuditLog = pgTable(
         'reject_staff_affiliation',
         'approve_hospital_application',
         'reject_hospital_application',
+        'verify_hospital_application',
         'cross_tenant_read',
         'cross_tenant_export',
         'elevate_admin',

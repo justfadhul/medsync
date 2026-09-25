@@ -136,7 +136,8 @@ export async function signInAction(_prev: SignInState, formData: FormData): Prom
         });
       }
 
-      if (app && ["pending_approval", "under_review", "rejected"].includes(app.state)) {
+      // `verified` (Onboarding v2, D7): the applicant signs the agreement on the pending page.
+      if (app && ["pending_approval", "under_review", "verified", "rejected"].includes(app.state)) {
         defaultTarget = "/onboarding/hospital-pending";
         routeReason = `hospital-application-${app.state}`;
       } else {

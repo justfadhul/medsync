@@ -1,250 +1,293 @@
 "use client";
 
-import type { StepState } from "../actions";
+import type { StepState } from "../_lib/rules";
+import type { DepartmentsData } from "./departments-task";
+import type { ProfileData } from "./profile-tasks";
+import type { ReactNode } from "react";
+import dynamic from "next/dynamic";
 import { useActionState } from "react";
 import { CheckIcon, PlusIcon, TrashIcon } from "lucide-react";
 
-import { DEPARTMENT_GROUPS } from "@/app/signup/hospital/_lib/catalog";
 import { Button } from "@/components/ui/button";
-import { Pill } from "@/components/ui/data-table";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Pill } from "@/components/ui/pill";
+import { SETUP } from "@/content/onboarding";
+import { CHECKLIST, OPD_BANDS_V2 } from "@/content/onboarding-setup";
 import { cn } from "@/lib/utils";
+import { countDone, departmentLabel, neededTasks } from "../_lib/rules";
 import {
   addWardAction,
-  confirmDepartmentsAction,
   finaliseSetupAction,
   inviteBackupAdminAction,
   inviteStaffAction,
   removeWardAction,
 } from "../actions";
+import { DepartmentsTask } from "./departments-task";
+import { formatDay, FormStatus } from "./ui";
+
+// The recommended/optional tasks sit in collapsed rows: their code loads after the page does (Law 10).
+const LocationTask = dynamic(() => import("./location-task").then((m) => m.LocationTask), {
+  ssr: false,
+});
+const ServicesTask = dynamic(() => import("./profile-tasks").then((m) => m.ServicesTask), {
+  ssr: false,
+});
+const OperatingTask = dynamic(() => import("./profile-tasks").then((m) => m.OperatingTask), {
+  ssr: false,
+});
+const ContactsTask = dynamic(() => import("./profile-tasks").then((m) => m.ContactsTask), {
+  ssr: false,
+});
 
 /**
- * Setup wizard — six steps per kickoff §F.
+ * Hospital setup checklist (§5.10) — grown from the six-step wizard (kickoff §F).
  *
- * Single-page wizard (no step routing) — each step renders inline,
- * each Confirm button writes its rows via a Server Action and the
- * server re-fetches on revalidatePath so the next render shows
- * fresh state. Resumable: the wizard reads its current position
- * from the data, not from local storage. Closing the tab and
- * returning resumes from the last saved row set.
+ * One page, no Next: every task is a native <details> row with its own short form and Save.
+ * "Done" is derived from the data the server passes in, never from local storage, so closing the
+ * tab and coming back resumes exactly where the rows are. Ticks are ink, actions are teal.
  */
 
 interface WizardProps {
-  hospital: { id: string; name: string; state: string };
-  prefilledDepartments: ReadonlyArray<{ code: string; isPrimary: boolean }>;
-  confirmedDepartmentSlugs: ReadonlyArray<string>;
+  hospital: { id: string; name: string };
+  hasApplication: boolean;
+  departments: DepartmentsData & { confirmedCount: number; startConfirmed: boolean };
   wards: ReadonlyArray<{ id: string; name: string; bedCount: number }>;
   roster: ReadonlyArray<{ id: string; designation: string; email: string; fullName: string }>;
   pendingInvitations: ReadonlyArray<{ id: string; email: string; invitedAtIso: string }>;
+  location: { accuracyM: number; atIso: string | null } | null;
+  profile: ProfileData | null;
+  agreement: { version: string; name: string; signedAtIso: string } | null;
 }
 
+const A = CHECKLIST.action;
+
 export function SetupWizard(props: WizardProps) {
-  const departmentsDone = props.confirmedDepartmentSlugs.length > 0;
-  const wardsDone = props.wards.length > 0;
+  const { departments: d, profile: p } = props;
+  const hasBackup = props.roster.some((r) => r.designation === "backup");
   const primaryDone = props.roster.some((r) => r.designation === "primary");
-  const backupDone = props.roster.some((r) => r.designation === "backup");
+  const needed = neededTasks({
+    departments: d.confirmedCount,
+    startChosen: d.startConfirmed,
+    backup: hasBackup,
+    wards: props.wards.length,
+  });
+  const neededTotal = Object.keys(needed).length;
+  const neededDone = countDone(needed);
+  const ready = neededDone === neededTotal && primaryDone;
+
+  const servicesDone = !!p && p.servicesOffered.length > 0;
+  const operatingDone =
+    !!p &&
+    [
+      p.internetConnectivity,
+      p.powerBackup,
+      p.bedCapacityBand,
+      p.clinicalStaffBand,
+      p.existingEmr,
+    ].every(Boolean) &&
+    OPD_BANDS_V2.some((b) => b.code === p.dailyOpdBand);
+  const contactsDone = !!p && !!p.mainPhone && !!p.officialEmail;
+  const noApp = <p className="text-body-s text-muted-foreground">{CHECKLIST.noApplication}</p>;
 
   return (
     <div className="mx-auto w-full max-w-[860px] px-4 py-8 sm:px-8 sm:py-12">
       <header className="mb-8 flex flex-col gap-2">
         <span className="text-muted-foreground font-mono text-[10px] tracking-[0.18em] uppercase">
-          Hospital setup
+          {CHECKLIST.eyebrow}
         </span>
         <h1 className="font-display text-foreground text-heading-l leading-tight font-medium tracking-[-0.02em]">
-          Get {props.hospital.name} ready to go live
+          {CHECKLIST.title(props.hospital.name)}
         </h1>
-        <p className="text-muted-foreground text-[14px]">
-          Confirm your departments, add your wards, designate a backup admin, and queue any staff
-          invitations. When the essentials are in place you can take the hospital live.
+        <p className="text-body-m text-foreground font-medium">
+          {CHECKLIST.neededCount(neededDone, neededTotal)}
         </p>
+        <p className="text-muted-foreground text-body-s">{CHECKLIST.lead}</p>
       </header>
 
-      <ol className="flex flex-col gap-6">
-        <Step
-          n={1}
-          title="Confirm departments"
-          done={departmentsDone}
-          summary={
-            departmentsDone
-              ? `${props.confirmedDepartmentSlugs.length} departments confirmed`
-              : "Pick the departments you actually run."
-          }
+      <Group title={SETUP.neededTitle}>
+        <Task
+          title={CHECKLIST.departments.title}
+          done={needed.departments}
+          summary={CHECKLIST.departments.summary(
+            d.confirmedCount,
+            d.start ? departmentLabel(d.start) : null,
+          )}
+          action={needed.departments ? A.change : A.start}
         >
-          <StepDepartments
+          <DepartmentsTask
             hospitalId={props.hospital.id}
-            prefilled={props.prefilledDepartments}
-            alreadyConfirmed={props.confirmedDepartmentSlugs}
+            hasApplication={props.hasApplication}
+            data={d}
           />
-        </Step>
-
-        <Step
-          n={2}
-          title="Wards & beds"
-          done={wardsDone}
-          summary={wardsDone ? `${props.wards.length} wards on file` : "Add at least one ward."}
-        >
-          <StepWards hospitalId={props.hospital.id} wards={props.wards} />
-        </Step>
-
-        <Step
-          n={3}
-          title="Admin team"
-          done={primaryDone}
-          summary={`${props.roster.length} on the roster${backupDone ? "" : " · invite a backup"}`}
+        </Task>
+        <Task
+          title={CHECKLIST.backup.title}
+          done={hasBackup}
+          summary={CHECKLIST.backup.summary(hasBackup)}
+          action={hasBackup ? A.change : A.start}
         >
           <StepAdminTeam hospitalId={props.hospital.id} roster={props.roster} />
-        </Step>
+        </Task>
+        <Task
+          title={CHECKLIST.wards.title}
+          done={needed.wards}
+          summary={CHECKLIST.wards.summary(props.wards.length)}
+          action={needed.wards ? A.change : A.start}
+        >
+          <StepWards hospitalId={props.hospital.id} wards={props.wards} />
+        </Task>
+      </Group>
 
-        <Step
-          n={4}
-          title="Staff onboarding"
-          summary={`${props.pendingInvitations.length} pending invitations`}
+      <Group title={SETUP.recommendedTitle}>
+        <Task
+          title={SETUP.location}
+          done={!!props.location}
+          summary={
+            props.location
+              ? CHECKLIST.location.summaryDone(props.location.accuracyM)
+              : CHECKLIST.location.summaryTodo
+          }
+          action={props.location ? A.change : A.set}
+        >
+          <LocationTask hospitalId={props.hospital.id} saved={props.location} />
+        </Task>
+        <Task
+          title={SETUP.services}
+          done={servicesDone}
+          summary={
+            servicesDone
+              ? CHECKLIST.services.summaryDone(p.servicesOffered.length)
+              : CHECKLIST.services.summaryTodo
+          }
+          action={servicesDone ? A.change : A.start}
+        >
+          {p ? <ServicesTask hospitalId={props.hospital.id} p={p} /> : noApp}
+        </Task>
+        <Task
+          title={SETUP.operating}
+          done={operatingDone}
+          summary={
+            operatingDone ? CHECKLIST.operating.summaryDone : CHECKLIST.operating.summaryTodo
+          }
+          action={operatingDone ? A.change : A.start}
+        >
+          {p ? <OperatingTask hospitalId={props.hospital.id} p={p} /> : noApp}
+        </Task>
+      </Group>
+
+      <Group title={SETUP.optionalTitle}>
+        <Task
+          title={SETUP.contacts}
+          done={contactsDone}
+          summary={contactsDone ? CHECKLIST.contacts.summaryDone : CHECKLIST.contacts.summaryTodo}
+          action={contactsDone ? A.change : A.add}
+        >
+          {p ? <ContactsTask hospitalId={props.hospital.id} p={p} /> : noApp}
+        </Task>
+      </Group>
+
+      {props.agreement ? (
+        <p className="text-body-s text-muted-foreground border-border mb-8 border-t pt-4">
+          {CHECKLIST.agreement(
+            props.agreement.version,
+            props.agreement.name,
+            formatDay(props.agreement.signedAtIso),
+          )}
+        </p>
+      ) : null}
+
+      <Group>
+        <Task
+          title={CHECKLIST.staff.title}
+          summary={CHECKLIST.staff.summary(props.pendingInvitations.length)}
+          action={A.add}
         >
           <StepStaff hospitalId={props.hospital.id} pendingInvitations={props.pendingInvitations} />
-        </Step>
+        </Task>
+      </Group>
 
-        <Step
-          n={5}
-          title="Connectivity & SMS preferences"
-          summary="Confirmed at application time; can be edited after go-live."
-        >
-          <p className="text-muted-foreground text-body-s leading-relaxed">
-            Your connectivity profile was captured during the application. Settings will be editable
-            in <span className="text-foreground font-medium">Settings → Connectivity</span> after
-            the hospital is live.
-          </p>
-        </Step>
-
-        <Step
-          n={6}
-          title="Go live"
-          summary={
-            departmentsDone && wardsDone && primaryDone
-              ? "Essentials complete — ready to activate."
-              : "Complete steps 1–3 to enable."
-          }
-        >
-          <StepGoLive
-            hospitalId={props.hospital.id}
-            ready={departmentsDone && wardsDone && primaryDone}
-          />
-        </Step>
-      </ol>
+      <section
+        aria-labelledby="setup-go-live"
+        className="border-border bg-card shadow-card rounded-xl border p-5 sm:p-6"
+      >
+        <h2 id="setup-go-live" className="text-foreground text-heading-s font-medium">
+          {CHECKLIST.goLive.title}
+        </h2>
+        <p className="text-body-s text-foreground mt-1">
+          {ready
+            ? CHECKLIST.goLive.ready
+            : CHECKLIST.goLive.notReady(neededTotal - neededDone || 1)}
+        </p>
+        <StepGoLive hospitalId={props.hospital.id} ready={ready} />
+      </section>
     </div>
   );
 }
 
-/* ────────────────────────────────────────────────────────────────── */
+/* ─── Checklist rows ─────────────────────────────────────────────── */
 
-function Step({
-  n,
+function Group({ title, children }: { title?: string; children: ReactNode }) {
+  return (
+    <section className="mb-8 flex flex-col gap-3">
+      {title ? (
+        <h2 className="text-muted-foreground font-mono text-[11px] tracking-[0.14em] uppercase">
+          {title}
+        </h2>
+      ) : null}
+      <ul className="flex flex-col gap-2">{children}</ul>
+    </section>
+  );
+}
+
+/** One task: a native disclosure. State is a shape plus a word (never colour alone). */
+function Task({
   title,
   summary,
   done,
+  action,
   children,
 }: {
-  n: number;
   title: string;
   summary: string;
+  /** Omitted for rows that aren't a checklist task (staff invitations). */
   done?: boolean;
-  children: React.ReactNode;
+  action: string;
+  children: ReactNode;
 }) {
+  const stateWord = done === undefined ? null : done ? CHECKLIST.state.done : CHECKLIST.state.todo;
   return (
-    <li
-      className={cn(
-        "border-border bg-card overflow-hidden rounded-lg border",
-        done && "border-brand-200 dark:border-brand-800/60",
-      )}
-    >
-      <div className="flex items-start gap-3 px-5 py-4">
-        <div
-          className={cn(
-            "flex size-7 shrink-0 items-center justify-center rounded-full font-mono text-[12px] font-semibold",
-            done ? "bg-brand-600 text-white" : "bg-muted text-muted-foreground",
+    <li className="border-border bg-card rounded-lg border">
+      <details className="group">
+        <summary className="hover:bg-muted/40 ease-expo-out flex min-h-11 cursor-pointer list-none items-center gap-3 rounded-lg px-4 py-3 transition-colors duration-100 outline-none focus-visible:shadow-[0_0_0_2px_rgba(20,184,166,0.4)] motion-reduce:transition-none sm:px-5 [&::-webkit-details-marker]:hidden">
+          {done === undefined ? null : (
+            <span
+              aria-hidden
+              className={cn(
+                "flex size-6 shrink-0 items-center justify-center rounded-full border",
+                done ? "border-foreground text-foreground" : "border-gray-300 dark:border-gray-600",
+              )}
+            >
+              {done ? <CheckIcon className="size-3.5" strokeWidth={2.25} /> : null}
+            </span>
           )}
-        >
-          {done ? <CheckIcon className="size-3.5" /> : n}
-        </div>
-        <div className="flex flex-1 flex-col gap-0.5">
-          <h2 className="text-foreground text-body-m font-medium tracking-tight">{title}</h2>
-          <p className="text-muted-foreground text-[12.5px]">{summary}</p>
-        </div>
-      </div>
-      <div className="border-border border-t px-5 py-4">{children}</div>
+          <span className="flex min-w-0 flex-1 flex-col">
+            <span className="text-foreground text-body-m font-medium">{title}</span>
+            <span className="text-muted-foreground text-body-s">
+              {stateWord ? `${stateWord} · ${summary}` : summary}
+            </span>
+          </span>
+          <span className="text-body-s font-medium text-teal-700 group-open:invisible dark:text-teal-400">
+            {action}
+          </span>
+        </summary>
+        <div className="border-border border-t px-4 py-4 sm:px-5">{children}</div>
+      </details>
     </li>
   );
 }
 
-/* ────────────────────────────────────────────────────────────────── */
-
-function StepDepartments({
-  hospitalId,
-  prefilled,
-  alreadyConfirmed,
-}: {
-  hospitalId: string;
-  prefilled: ReadonlyArray<{ code: string; isPrimary: boolean }>;
-  alreadyConfirmed: ReadonlyArray<string>;
-}) {
-  const [state, action, pending] = useActionState<StepState, FormData>(
-    confirmDepartmentsAction,
-    {},
-  );
-  const prefilledCodes = new Set(prefilled.map((d) => d.code));
-  const confirmedLower = new Set(alreadyConfirmed.map((c) => c.toLowerCase()));
-
-  return (
-    <form action={action} className="flex flex-col gap-3">
-      <input type="hidden" name="hospital_id" value={hospitalId} />
-      <p className="text-muted-foreground text-[12.5px]">
-        Pre-selected from your application. Tick to confirm; untick if you don&apos;t currently run
-        that department.
-      </p>
-      <div className="flex flex-col gap-2">
-        {DEPARTMENT_GROUPS.map((group) => (
-          <fieldset key={group.groupLabel} className="border-border rounded-md border p-3">
-            <legend className="text-foreground px-1 text-[12px] font-medium">
-              {group.groupLabel}
-            </legend>
-            <div className="grid grid-cols-1 gap-1.5 pt-1 sm:grid-cols-2">
-              {group.items.map((d) => (
-                <label
-                  key={d.code}
-                  className="text-foreground/90 text-body-s inline-flex items-center gap-2"
-                >
-                  <input
-                    type="checkbox"
-                    name="departments"
-                    value={d.code}
-                    defaultChecked={
-                      prefilledCodes.has(d.code) || confirmedLower.has(d.code.toLowerCase())
-                    }
-                    className="size-4"
-                  />
-                  <span>{d.label}</span>
-                </label>
-              ))}
-            </div>
-          </fieldset>
-        ))}
-      </div>
-      {state.error ? (
-        <p role="alert" className="text-[12px] text-red-700">
-          {state.error}
-        </p>
-      ) : null}
-      {state.ok ? <p className="text-brand-700 text-[12px]">Saved.</p> : null}
-      <div className="flex justify-end">
-        <Button type="submit" variant="primary" size="sm" disabled={pending}>
-          {pending ? "Saving…" : "Confirm departments"}
-        </Button>
-      </div>
-    </form>
-  );
-}
-
-/* ────────────────────────────────────────────────────────────────── */
+/* ─── Wards ──────────────────────────────────────────────────────── */
 
 function StepWards({
   hospitalId,
@@ -260,11 +303,11 @@ function StepWards({
           {wards.map((w) => (
             <li
               key={w.id}
-              className="border-border bg-muted/30 text-body-s flex items-center justify-between rounded-md border px-3 py-2"
+              className="border-border bg-muted/30 text-body-s flex items-center justify-between gap-3 rounded-md border py-1 pr-1 pl-3"
             >
-              <span className="text-foreground font-medium">{w.name}</span>
+              <span className="text-foreground flex-1 font-medium">{w.name}</span>
               <span className="text-muted-foreground font-mono tabular-nums">
-                {w.bedCount} bed{w.bedCount === 1 ? "" : "s"}
+                {CHECKLIST.wards.bedCount(w.bedCount)}
               </span>
               <RemoveWardForm hospitalId={hospitalId} wardId={w.id} />
             </li>
@@ -279,37 +322,42 @@ function StepWards({
 function AddWardForm({ hospitalId }: { hospitalId: string }) {
   const [state, action, pending] = useActionState<StepState, FormData>(addWardAction, {});
   return (
-    <form
-      action={action}
-      className="border-border flex flex-col gap-2 rounded-md border bg-gray-50 p-3 sm:flex-row sm:items-end dark:bg-gray-900/40"
-    >
+    <form action={action} className="flex flex-col gap-2">
       <input type="hidden" name="hospital_id" value={hospitalId} />
-      <div className="flex flex-1 flex-col gap-1">
-        <Label htmlFor="ward_name" className="text-caption">
-          Ward name
-        </Label>
-        <Input
-          id="ward_name"
-          name="name"
-          placeholder="e.g. Medical Ward 1"
-          required
-          maxLength={120}
-        />
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
+        <div className="flex flex-1 flex-col gap-1">
+          <Label htmlFor="ward_name" className="text-body-s">
+            {CHECKLIST.wards.name}
+          </Label>
+          <Input
+            id="ward_name"
+            name="name"
+            placeholder={CHECKLIST.wards.namePlaceholder}
+            required
+            maxLength={120}
+            className="h-11"
+          />
+        </div>
+        <div className="flex flex-col gap-1 sm:w-[120px]">
+          <Label htmlFor="bed_count" className="text-body-s">
+            {CHECKLIST.wards.beds}
+          </Label>
+          <Input
+            id="bed_count"
+            name="bed_count"
+            type="number"
+            inputMode="numeric"
+            min={0}
+            defaultValue={0}
+            required
+            className="h-11"
+          />
+        </div>
+        <Button type="submit" variant="secondary" size="md" className="min-h-11" disabled={pending}>
+          <PlusIcon aria-hidden className="size-3.5" /> {CHECKLIST.wards.add}
+        </Button>
       </div>
-      <div className="flex flex-col gap-1 sm:w-[120px]">
-        <Label htmlFor="bed_count" className="text-caption">
-          Beds
-        </Label>
-        <Input id="bed_count" name="bed_count" type="number" min={0} defaultValue={0} required />
-      </div>
-      <Button type="submit" variant="secondary" size="sm" disabled={pending}>
-        <PlusIcon className="size-3.5" /> Add
-      </Button>
-      {state.error ? (
-        <p role="alert" className="text-caption text-red-700 sm:w-full">
-          {state.error}
-        </p>
-      ) : null}
+      <FormStatus state={state} />
     </form>
   );
 }
@@ -324,8 +372,9 @@ function RemoveWardForm({ hospitalId, wardId }: { hospitalId: string; wardId: st
         type="submit"
         variant="ghost"
         size="iconSm"
+        className="size-11"
         disabled={pending}
-        aria-label="Remove ward"
+        aria-label={CHECKLIST.wards.remove}
       >
         <TrashIcon className="size-3.5" />
       </Button>
@@ -333,7 +382,7 @@ function RemoveWardForm({ hospitalId, wardId }: { hospitalId: string; wardId: st
   );
 }
 
-/* ────────────────────────────────────────────────────────────────── */
+/* ─── Backup admin ───────────────────────────────────────────────── */
 
 function StepAdminTeam({
   hospitalId,
@@ -343,59 +392,73 @@ function StepAdminTeam({
   roster: ReadonlyArray<{ id: string; designation: string; email: string; fullName: string }>;
 }) {
   const [state, action, pending] = useActionState<StepState, FormData>(inviteBackupAdminAction, {});
+  const B = CHECKLIST.backup;
   return (
     <div className="flex flex-col gap-3">
       <ul className="flex flex-col gap-1.5">
         {roster.map((r) => (
           <li
             key={r.id}
-            className="border-border bg-muted/30 text-body-s flex items-center justify-between rounded-md border px-3 py-2"
+            className="border-border bg-muted/30 text-body-s flex items-center justify-between gap-3 rounded-md border px-3 py-2"
           >
-            <span className="flex flex-col">
+            <span className="flex min-w-0 flex-col">
               <span className="text-foreground font-medium">{r.fullName}</span>
-              <span className="text-muted-foreground text-caption font-mono">{r.email}</span>
+              <span className="text-muted-foreground text-caption truncate font-mono">
+                {r.email}
+              </span>
             </span>
-            <Pill tone={r.designation === "primary" ? "admitted" : "neutral"}>{r.designation}</Pill>
+            <Pill>
+              {r.designation === "primary" ? B.designation.primary : B.designation.backup}
+            </Pill>
           </li>
         ))}
       </ul>
-      <p className="text-muted-foreground text-[12px]">
-        Invite a backup admin so day-to-day operations don&apos;t single-point-of-failure on you.
-      </p>
+      <p className="text-body-s text-muted-foreground">{B.lead}</p>
       <form action={action} className="flex flex-col gap-2 sm:flex-row sm:items-end">
         <input type="hidden" name="hospital_id" value={hospitalId} />
         <div className="flex flex-1 flex-col gap-1">
-          <Label htmlFor="backup_email" className="text-caption">
-            Backup admin email
+          <Label htmlFor="backup_email" className="text-body-s">
+            {B.email}
           </Label>
           <Input
             id="backup_email"
             name="email"
             type="email"
+            autoComplete="off"
             required
             placeholder="colleague@hospital.go.ug"
+            className="h-11"
           />
         </div>
-        <Button type="submit" variant="secondary" size="sm" disabled={pending}>
-          {pending ? "Inviting…" : "Invite backup admin"}
+        <Button type="submit" variant="secondary" size="md" className="min-h-11" disabled={pending}>
+          {pending ? B.inviting : B.invite}
         </Button>
       </form>
-      {state.error ? (
-        <p role="alert" className="text-[12px] text-red-700">
-          {state.error}
-        </p>
-      ) : null}
-      {state.ok ? (
-        <p className="text-brand-700 text-[12px]">
-          Invitation queued. They&apos;ll claim the role via the invitation link (delivered in a
-          follow-up release).
-        </p>
-      ) : null}
+      {state.link ? (
+        <div className="flex flex-col gap-1.5">
+          <Label htmlFor="backup_link" className="text-body-s">
+            {B.linkLabel}
+          </Label>
+          <Input
+            id="backup_link"
+            readOnly
+            value={state.link}
+            onFocus={(e) => e.currentTarget.select()}
+            aria-describedby="backup_link_hint"
+            className="h-11 font-mono"
+          />
+          <p id="backup_link_hint" className="text-body-s text-muted-foreground">
+            {B.linkHint}
+          </p>
+        </div>
+      ) : (
+        <FormStatus state={state} />
+      )}
     </div>
   );
 }
 
-/* ────────────────────────────────────────────────────────────────── */
+/* ─── Staff invitations (not a go-live task) ─────────────────────── */
 
 function StepStaff({
   hospitalId,
@@ -405,40 +468,32 @@ function StepStaff({
   pendingInvitations: ReadonlyArray<{ id: string; email: string; invitedAtIso: string }>;
 }) {
   const [state, action, pending] = useActionState<StepState, FormData>(inviteStaffAction, {});
+  const T = CHECKLIST.staff;
   return (
     <div className="flex flex-col gap-3">
-      <p className="text-muted-foreground text-[12.5px]">
-        Invite individual clinicians, nurses, pharmacists, and lab tech now — they&apos;ll claim
-        their role via the council-anchored verification. Bulk CSV import lands in the next release.
-      </p>
+      <p className="text-body-s text-muted-foreground">{T.lead}</p>
       <form action={action} className="flex flex-col gap-2 sm:flex-row sm:items-end">
         <input type="hidden" name="hospital_id" value={hospitalId} />
         <div className="flex flex-1 flex-col gap-1">
-          <Label htmlFor="staff_email" className="text-caption">
-            Staff email
+          <Label htmlFor="staff_email" className="text-body-s">
+            {T.email}
           </Label>
-          <Input id="staff_email" name="email" type="email" required />
+          <Input id="staff_email" name="email" type="email" required className="h-11" />
         </div>
-        <Button type="submit" variant="secondary" size="sm" disabled={pending}>
-          {pending ? "Inviting…" : "Queue invitation"}
+        <Button type="submit" variant="secondary" size="md" className="min-h-11" disabled={pending}>
+          {pending ? T.inviting : T.invite}
         </Button>
       </form>
-      {state.error ? (
-        <p role="alert" className="text-[12px] text-red-700">
-          {state.error}
-        </p>
-      ) : null}
+      <FormStatus state={state} />
       {pendingInvitations.length > 0 ? (
         <ul className="flex flex-col gap-1 pt-2">
           {pendingInvitations.map((inv) => (
             <li
               key={inv.id}
-              className="text-muted-foreground flex items-center justify-between text-[12px]"
+              className="text-body-s text-muted-foreground flex items-center justify-between gap-3"
             >
-              <span className="font-mono">{inv.email}</span>
-              <span className="text-caption font-mono">
-                {new Date(inv.invitedAtIso).toLocaleDateString()}
-              </span>
+              <span className="truncate font-mono">{inv.email}</span>
+              <span className="text-caption shrink-0 font-mono">{formatDay(inv.invitedAtIso)}</span>
             </li>
           ))}
         </ul>
@@ -447,29 +502,27 @@ function StepStaff({
   );
 }
 
-/* ────────────────────────────────────────────────────────────────── */
+/* ─── Go live (calls sa-activate-hospital) ───────────────────────── */
 
 function StepGoLive({ hospitalId, ready }: { hospitalId: string; ready: boolean }) {
   const [state, action, pending] = useActionState<StepState, FormData>(finaliseSetupAction, {});
+  const G = CHECKLIST.goLive;
   return (
-    <form action={action} className="flex flex-col gap-3">
+    <form action={action} className="mt-3 flex flex-col gap-3">
       <input type="hidden" name="hospital_id" value={hospitalId} />
-      <p className="text-muted-foreground text-[12.5px]">
-        Activating the hospital runs the agreement-gate check, confirms your essential setup (≥ 1
-        department, ≥ 1 ward, ≥ 1 primary admin), and flips the hospital to{" "}
-        <span className="text-foreground font-medium">active</span>.
-      </p>
-      {state.error ? (
-        <p
-          role="alert"
-          className="rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-[12.5px] text-amber-900 dark:border-amber-800/60 dark:bg-amber-950/40 dark:text-amber-200"
+      <p className="text-body-s text-muted-foreground">{G.lead}</p>
+      <FormStatus state={state} />
+      <div>
+        <Button
+          type="submit"
+          variant="primary"
+          size="lg"
+          className="min-h-11"
+          disabled={!ready || pending}
         >
-          {state.error}
-        </p>
-      ) : null}
-      <Button type="submit" variant="primary" size="md" disabled={!ready || pending}>
-        {pending ? "Activating…" : "Activate hospital"}
-      </Button>
+          {pending ? G.activating : G.activate}
+        </Button>
+      </div>
     </form>
   );
 }

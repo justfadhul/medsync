@@ -13,6 +13,7 @@ import {
   FilterChip,
   Pill,
 } from "@/components/ui/data-table";
+import { HOSPITAL_REVIEW } from "@/content/onboarding-hospital";
 import { ApprovalDetailSheet } from "./detail-sheet";
 
 /**
@@ -34,7 +35,8 @@ interface QueueProps {
   canSeeHospitalQueue: boolean;
 }
 
-type Filter = "all" | ApprovalKind;
+/** Hospital applications split in two (DOC-2): ready for review, or waiting for documents. */
+type Filter = "all" | ApprovalKind | NonNullable<ApprovalItem["group"]>;
 
 export function ApprovalsQueue({ items, canSeeHospitalQueue }: QueueProps) {
   const [filter, setFilter] = useState<Filter>("all");
@@ -43,11 +45,15 @@ export function ApprovalsQueue({ items, canSeeHospitalQueue }: QueueProps) {
   const [selected, setSelected] = useState<ApprovalItem | null>(null);
 
   const staffCount = useMemo(() => items.filter((i) => i.kind === "staff").length, [items]);
-  const hospitalCount = useMemo(() => items.filter((i) => i.kind === "hospital").length, [items]);
+  const readyCount = useMemo(() => items.filter((i) => i.group === "ready").length, [items]);
+  const waitingCount = useMemo(
+    () => items.filter((i) => i.group === "waiting_docs").length,
+    [items],
+  );
 
   const filtered = useMemo(() => {
     if (filter === "all") return items;
-    return items.filter((i) => i.kind === filter);
+    return items.filter((i) => i.kind === filter || i.group === filter);
   }, [filter, items]);
 
   const sorted = useMemo(() => {
@@ -118,8 +124,15 @@ export function ApprovalsQueue({ items, canSeeHospitalQueue }: QueueProps) {
       {
         id: "status",
         header: "Status",
-        cell: () => <Pill tone="pending">Pending</Pill>,
-        className: "w-[110px]",
+        cell: (row) =>
+          row.approveBlocked ? (
+            <Pill tone="neutral">{row.approveBlocked}</Pill>
+          ) : row.group === "waiting_docs" ? (
+            <Pill tone="neutral">{HOSPITAL_REVIEW.waitingDocs}</Pill>
+          ) : (
+            <Pill tone="pending">{row.group === "ready" ? HOSPITAL_REVIEW.ready : "Pending"}</Pill>
+          ),
+        className: "w-[180px]",
       },
     ],
     [],
@@ -178,13 +191,22 @@ export function ApprovalsQueue({ items, canSeeHospitalQueue }: QueueProps) {
                   Staff
                 </FilterChip>
                 {canSeeHospitalQueue ? (
-                  <FilterChip
-                    active={filter === "hospital"}
-                    onClick={() => setFilter("hospital")}
-                    count={hospitalCount}
-                  >
-                    Hospital
-                  </FilterChip>
+                  <>
+                    <FilterChip
+                      active={filter === "ready"}
+                      onClick={() => setFilter("ready")}
+                      count={readyCount}
+                    >
+                      {HOSPITAL_REVIEW.ready}
+                    </FilterChip>
+                    <FilterChip
+                      active={filter === "waiting_docs"}
+                      onClick={() => setFilter("waiting_docs")}
+                      count={waitingCount}
+                    >
+                      {HOSPITAL_REVIEW.waitingDocs}
+                    </FilterChip>
+                  </>
                 ) : null}
               </DataTableToolbar>
             }
@@ -193,7 +215,7 @@ export function ApprovalsQueue({ items, canSeeHospitalQueue }: QueueProps) {
                 title={
                   filter === "all"
                     ? "Inbox zero."
-                    : `No ${filter === "staff" ? "staff" : "hospital"} approvals pending.`
+                    : `No ${filter === "staff" ? "staff" : "hospital"} approvals here.`
                 }
                 description="When a new application or affiliation is submitted, it lands here."
                 action={

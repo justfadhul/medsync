@@ -1,116 +1,196 @@
 "use server";
 
+import { randomBytes } from "node:crypto";
+import type { Desired, StepState } from "./_lib/rules";
+import type { createServiceClient } from "@/lib/supabase/service";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 
+import { ALL_DEPARTMENT_CODES } from "@/app/signup/hospital/_lib/catalog";
+import { CHECKLIST } from "@/content/onboarding-setup";
 import { env } from "@/lib/env";
 import { logger } from "@/lib/logger";
 import { createClient } from "@/lib/supabase/server";
-import { createServiceClient } from "@/lib/supabase/service";
+import { authoriseHospitalAdmin, UUID_RE } from "./_lib/auth";
+import {
+  departmentLabel,
+  departmentSlug,
+  IM_CODE,
+  imParentId,
+  planDepartments,
+  slugify,
+} from "./_lib/rules";
 
 /**
- * Setup-wizard server actions (kickoff §F, GATE D).
+ * Setup-checklist server actions (kickoff §F, GATE D; §5.10).
  *
- * Every action enforces:
- *   1. caller is signed in
- *   2. caller is a hospital_admin of the target hospital
- *   3. target hospital is in `provisioning` (the wizard's permitted window)
+ * Every action runs `authoriseHospitalAdmin` first: signed in, hospital_admin of the target
+ * hospital (a superadmin session is refused, ADR 0018 Q3), hospital in `provisioning`.
  *
- * Submissions only — the wizard renders read state directly from
- * Drizzle on the page. There is no autosave: each step's confirm
- * button writes its rows and the next render reflects the change.
- *
- * Per ADR 0018 Q3: the wizard does NOT accept a superadmin session.
- * Even though superadmin can SELECT every hospital, the wizard
- * actions reject without a hospital_admin grant on the target
- * hospital. Pre-fill in the data is fine; submission is not.
+ * Submissions only — the page renders read state directly from Drizzle. There is no autosave:
+ * each task's Save writes its rows and the next render reflects the change. The profile tasks
+ * (services, operating, contacts, location) live in ./checklist-actions.ts.
  */
 
-const UUID_RE = /^[0-9a-f-]{36}$/i;
+/** The seeded Internal Medicine specialty (0009); its children are the IM sub-specialties. */
+const IM_SPECIALTY_ID = "00000000-0000-0000-0000-000000000f00";
 
-async function authoriseHospitalAdmin(
-  hospitalId: string,
-): Promise<
-  { userId: string; service: ReturnType<typeof createServiceClient> } | { error: string }
-> {
-  if (!UUID_RE.test(hospitalId)) return { error: "Invalid hospital id." };
-  const supabase = await createClient();
-  const { data: userData } = await supabase.auth.getUser();
-  if (!userData.user) return { error: "Not signed in." };
-  const service = createServiceClient();
-  const { data: roles } = await service
-    .from("user_roles")
-    .select("role,hospital_id")
-    .eq("user_id", userData.user.id);
-  const isAdmin = !!roles?.some((r) => r.role === "hospital_admin" && r.hospital_id === hospitalId);
-  if (!isAdmin) return { error: "Not a hospital admin for this hospital." };
-
-  // Confirm hospital is in provisioning.
-  const { data: hospital } = await service
-    .from("hospitals")
-    .select("state")
-    .eq("id", hospitalId)
-    .maybeSingle();
-  if (!hospital) return { error: "Hospital not found." };
-  if (hospital.state !== "provisioning") {
-    return {
-      error: `Hospital is in '${hospital.state}'; setup is only available in provisioning.`,
-    };
-  }
-  return { userId: userData.user.id, service };
-}
-
-/* ─── Step 1 — Confirm departments ───────────────────────────────── */
+/* ─── Departments and where you'll start ─────────────────────────── */
 
 const ConfirmDepartmentsSchema = z.object({
   hospital_id: z.string().regex(UUID_RE),
-  /** Department family codes the admin confirmed are actually running. */
-  departments: z.array(z.string().min(1).max(120)).min(1),
+  /** Catalogue family codes the admin runs today. */
+  departments: z
+    .array(z.string().refine((c) => ALL_DEPARTMENT_CODES.includes(c)))
+    .min(1, CHECKLIST.departments.required),
+  /** IM sub-specialty ids (children of the IM specialty; names are read server-side). */
+  subspecialties: z.array(z.string().regex(UUID_RE)).max(30),
+  /** Typed "Other" departments, stored as real hospital_departments rows. */
+  others: z.array(z.string().trim().min(1).max(120)).max(5),
+  start: z.string().optional(),
 });
-
-export type StepState = { ok?: true; error?: string };
 
 export async function confirmDepartmentsAction(
   _prev: StepState,
   formData: FormData,
 ): Promise<StepState> {
+  const strings = (k: string) =>
+    formData.getAll(k).filter((v): v is string => typeof v === "string");
   const parsed = ConfirmDepartmentsSchema.safeParse({
     hospital_id: formData.get("hospital_id"),
-    departments: formData.getAll("departments").filter((v): v is string => typeof v === "string"),
+    departments: strings("departments"),
+    subspecialties: strings("subspecialties"),
+    others: strings("others").filter((v) => v.trim() !== ""),
+    start: formData.get("start") || undefined,
   });
   if (!parsed.success) {
-    return { error: parsed.error.flatten().fieldErrors.departments?.[0] ?? "Invalid input." };
+    return { error: parsed.error.issues[0]?.message ?? CHECKLIST.saveFailed };
+  }
+  const input = parsed.data;
+  const auth = await authoriseHospitalAdmin(input.hospital_id);
+  if ("error" in auth) return { error: auth.error };
+  const { service } = auth;
+  const hospitalId = input.hospital_id;
+
+  const { data: app } = await service
+    .from("hospital_applications")
+    .select("id")
+    .eq("approved_hospital_id", hospitalId)
+    .maybeSingle();
+  // The start department lives on the application junction; no application, nothing to store.
+  if (app && (!input.start || !input.departments.includes(input.start))) {
+    return { error: CHECKLIST.departments.startRequired };
   }
 
-  const auth = await authoriseHospitalAdmin(parsed.data.hospital_id);
-  if ("error" in auth) return { error: auth.error };
+  const top = dedupe([
+    ...input.departments.map((code) => ({
+      slug: departmentSlug(code),
+      name: departmentLabel(code),
+    })),
+    ...input.others.map((name) => ({ slug: slugify(name), name })),
+  ]);
+  let subs: Desired[] = [];
+  if (input.departments.includes(IM_CODE) && input.subspecialties.length > 0) {
+    const { data } = await service
+      .from("specialties")
+      .select("name")
+      .eq("parent_id", IM_SPECIALTY_ID)
+      .in("id", input.subspecialties);
+    subs = dedupe(
+      (data ?? []).map((s: { name: string }) => ({ slug: slugify(s.name), name: s.name })),
+    );
+  }
 
-  // For each confirmed code, ensure a row exists in hospital_departments
-  // (the per-hospital catalog). Code becomes the slug; name is humanised.
-  const rows = parsed.data.departments.map((code) => ({
-    hospital_id: parsed.data.hospital_id,
-    name: humanise(code),
-    slug: code.toLowerCase(),
-  }));
-
-  const { error } = await auth.service
+  const { data: existing, error: readError } = await service
     .from("hospital_departments")
-    .upsert(rows, { onConflict: "hospital_id,parent_id,slug" });
-  if (error) {
-    logger.error("setup.confirm_departments.failed", { reason: error.message });
-    return { error: "Could not save departments. Try again." };
+    .select("id,parent_id,slug")
+    .eq("hospital_id", hospitalId);
+  if (readError) return { error: CHECKLIST.saveFailed };
+  const rows = (existing ?? []).map(
+    (r: { id: string; parent_id: string | null; slug: string }) => ({
+      id: r.id,
+      parentId: r.parent_id,
+      slug: r.slug,
+    }),
+  );
+  const plan = planDepartments(rows, top, subs);
+
+  // Deletes first and all at once: a department already in use (FK restrict) fails the whole
+  // statement, so nothing half-changes.
+  if (plan.deleteIds.length > 0) {
+    const { error } = await service
+      .from("hospital_departments")
+      .delete()
+      .eq("hospital_id", hospitalId)
+      .in("id", plan.deleteIds);
+    if (error) {
+      logger.warn("setup.departments.delete_failed", { code: error.code });
+      return { error: error.code === "23503" ? CHECKLIST.departments.inUse : CHECKLIST.saveFailed };
+    }
+  }
+  const kept = rows.filter((r) => !plan.deleteIds.includes(r.id));
+  if (plan.insertTop.length > 0) {
+    const { data, error } = await service
+      .from("hospital_departments")
+      .insert(plan.insertTop.map((d) => ({ hospital_id: hospitalId, parent_id: null, ...d })))
+      .select("id,slug");
+    if (error) {
+      logger.error("setup.departments.insert_failed", { reason: error.message });
+      return { error: CHECKLIST.saveFailed };
+    }
+    for (const r of data ?? []) kept.push({ id: r.id, parentId: null, slug: r.slug });
+  }
+  const parentId = imParentId(kept);
+  if (plan.insertSubs.length > 0 && parentId) {
+    const { error } = await service
+      .from("hospital_departments")
+      .insert(plan.insertSubs.map((d) => ({ hospital_id: hospitalId, parent_id: parentId, ...d })));
+    if (error) {
+      logger.error("setup.departments.subs_failed", { reason: error.message });
+      return { error: CHECKLIST.saveFailed };
+    }
+  }
+
+  if (app && input.start) {
+    const error = await setStartDepartment(service, app.id as string, input.start);
+    if (error) return { error: CHECKLIST.saveFailed };
   }
   revalidatePath("/admin/setup");
   return { ok: true };
 }
 
-function humanise(code: string): string {
-  return code
-    .toLowerCase()
-    .split(/[_-]/)
-    .map((p) => (p.length > 0 ? p[0]!.toUpperCase() + p.slice(1) : p))
-    .join(" ");
+function dedupe(list: Desired[]): Desired[] {
+  const seen = new Set<string>();
+  return list.filter((d) => d.slug !== "" && !seen.has(d.slug) && seen.add(d.slug));
+}
+
+/** One is_primary row per application (partial unique index): clear, then set or add. */
+async function setStartDepartment(
+  service: ReturnType<typeof createServiceClient>,
+  applicationId: string,
+  family: string,
+): Promise<string | null> {
+  const table = () => service.from("hospital_application_departments");
+  const cleared = await table()
+    .update({ is_primary: false })
+    .eq("application_id", applicationId)
+    .eq("is_primary", true)
+    .neq("department_family", family);
+  if (cleared.error) return cleared.error.message;
+  const set = await table()
+    .update({ is_primary: true })
+    .eq("application_id", applicationId)
+    .eq("department_family", family)
+    .select("department_family");
+  if (set.error) return set.error.message;
+  if ((set.data ?? []).length > 0) return null;
+  const added = await table().insert({
+    application_id: applicationId,
+    department_family: family,
+    is_primary: true,
+  });
+  return added.error?.message ?? null;
 }
 
 /* ─── Step 2 — Wards & capacity ──────────────────────────────────── */
@@ -198,14 +278,14 @@ export async function inviteBackupAdminAction(
   const auth = await authoriseHospitalAdmin(parsed.data.hospital_id);
   if ("error" in auth) return { error: auth.error };
 
-  // Write an invitation row. The actual email-out + acceptance flow is
-  // GATE E; for now this records intent so the wizard can show the
-  // pending invitation and the admin succession trail starts.
-  const tokenHash = await sha256Hex(crypto.randomUUID() + parsed.data.email);
+  // The plaintext token is shown once, here, for the admin to pass on themselves; only its hash
+  // is stored. Claiming it (accept-hospital-admin-invitation: same email + MFA) makes them the
+  // backup, because the hospital already has a primary.
+  const token = randomBytes(32).toString("base64url");
   const { error } = await auth.service.from("hospital_staff_invitations").insert({
     hospital_id: parsed.data.hospital_id,
     invited_email: parsed.data.email.toLowerCase(),
-    invitation_token_hash: tokenHash,
+    invitation_token_hash: await sha256Hex(token),
     invited_by: auth.userId,
     source: "individual",
   });
@@ -214,7 +294,8 @@ export async function inviteBackupAdminAction(
     return { error: "Could not create the invitation." };
   }
   revalidatePath("/admin/setup");
-  return { ok: true };
+  const origin = process.env.NEXT_PUBLIC_SITE_URL ?? "https://medsync-six.vercel.app";
+  return { ok: true, link: `${origin}/admin/claim-invitation?token=${encodeURIComponent(token)}` };
 }
 
 /* ─── Step 4 — Staff invitation (individual; bulk stubbed) ───────── */
@@ -268,29 +349,41 @@ export async function finaliseSetupAction(
   const auth = await authoriseHospitalAdmin(parsed.data.hospital_id);
   if ("error" in auth) return { error: auth.error };
 
-  // Essential-steps check (kickoff §F6): departments + at least one
-  // ward + a primary admin in the roster.
-  const [{ count: deptCount }, { count: wardCount }, { count: rosterCount }] = await Promise.all([
-    auth.service
-      .from("hospital_departments")
-      .select("id", { count: "exact", head: true })
-      .eq("hospital_id", parsed.data.hospital_id),
-    auth.service
-      .from("hospital_wards")
-      .select("id", { count: "exact", head: true })
-      .eq("hospital_id", parsed.data.hospital_id),
-    auth.service
-      .from("hospital_admin_roster")
-      .select("id", { count: "exact", head: true })
-      .eq("hospital_id", parsed.data.hospital_id)
-      .is("succeeded_at", null)
-      .eq("designation", "primary"),
-  ]);
+  // Needed to go live (kickoff §F6, D17): departments with a start department, at least one
+  // ward, the primary admin and a backup admin on the roster. The Edge Function checks the DPA.
+  const hospitalId = parsed.data.hospital_id;
+  const [{ count: deptCount }, { count: wardCount }, { data: roster }, { data: app }] =
+    await Promise.all([
+      auth.service
+        .from("hospital_departments")
+        .select("id", { count: "exact", head: true })
+        .eq("hospital_id", hospitalId),
+      auth.service
+        .from("hospital_wards")
+        .select("id", { count: "exact", head: true })
+        .eq("hospital_id", hospitalId),
+      auth.service
+        .from("hospital_admin_roster")
+        .select("designation")
+        .eq("hospital_id", hospitalId)
+        .is("succeeded_at", null),
+      auth.service
+        .from("hospital_applications")
+        .select("id, hospital_application_departments(is_primary)")
+        .eq("approved_hospital_id", hospitalId)
+        .maybeSingle(),
+    ]);
+  const designations = new Set((roster ?? []).map((r: { designation: string }) => r.designation));
+  const junction = (app?.hospital_application_departments ?? []) as { is_primary: boolean }[];
   if ((deptCount ?? 0) === 0) return { error: "Confirm at least one department first." };
+  if (app && !junction.some((d) => d.is_primary)) {
+    return { error: CHECKLIST.departments.startRequired };
+  }
   if ((wardCount ?? 0) === 0) return { error: "Add at least one ward first." };
-  if ((rosterCount ?? 0) === 0) {
+  if (!designations.has("primary")) {
     return { error: "A primary admin must be on the roster (set automatically at approval)." };
   }
+  if (!designations.has("backup")) return { error: CHECKLIST.goLive.needsBackup };
 
   // Activation goes through the existing Edge Function so the agreement
   // gate fires + the audit row is recorded. The setup wizard's job is

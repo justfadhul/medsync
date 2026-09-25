@@ -7,6 +7,7 @@ import { fetchPatientProfileView, ID_TYPE_LABEL, SEX_LABEL } from "@/lib/patient
 import { requirePatientScope } from "@/lib/patient/scope";
 import { cn } from "@/lib/utils";
 import { PatientPageHeader } from "../_components/page-header";
+import { CompleteProfile } from "./_components/lazy";
 import { ProfileForm } from "./_components/profile-form";
 import { updatePatientPhotoAction } from "./actions";
 
@@ -23,8 +24,13 @@ const DOB_FMT = new Intl.DateTimeFormat("en-GB", {
   timeZone: "UTC",
 });
 
-export default async function PatientProfilePage() {
+export default async function PatientProfilePage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
   const scope = await requirePatientScope();
+  const welcome = (await searchParams).welcome === "1"; // straight after v2 signup
   const [profile, photoUrl] = await Promise.all([
     fetchPatientProfileView(scope.userId),
     signedAvatarUrl(scope.avatarPath),
@@ -39,6 +45,17 @@ export default async function PatientProfilePage() {
         backHref="/patient/menu"
         backLabel="Back to More"
       />
+
+      {profile ? (
+        <CompleteProfile
+          welcome={welcome}
+          hasId={profile.idType !== "none"}
+          hasNok={!!profile.nokName}
+          hasHospital={!!profile.primaryFacilityId}
+          hasPhoto={!!scope.avatarPath}
+          titleCode={profile.titleCode}
+        />
+      ) : null}
 
       {profile ? (
         // Identity comes first in source because that is the order a phone

@@ -23,6 +23,8 @@ export interface PatientProfileView {
   dateOfBirth: string; // ISO date 'YYYY-MM-DD'
   idType: string;
   idNumberLast4: string | null;
+  titleCode: string | null;
+  primaryFacilityId: string | null;
 
   // Editable contact
   phone: string;
@@ -48,6 +50,8 @@ export async function fetchPatientProfileView(
       dateOfBirth: patientProfiles.dateOfBirth,
       idType: patientProfiles.idType,
       idNumberEncrypted: patientProfiles.idNumberEncrypted,
+      titleCode: patientProfiles.titleCode,
+      primaryFacilityId: patientProfiles.primaryFacilityId,
       phoneEncrypted: patientProfiles.phoneEncrypted,
       villageAddressEncrypted: patientProfiles.villageAddressEncrypted,
       preferredLanguage: patientProfiles.preferredLanguage,
@@ -72,6 +76,8 @@ export async function fetchPatientProfileView(
       dateOfBirth: row.dateOfBirth,
       idType: row.idType,
       idNumberLast4: idNumber ? idNumber.slice(-4) : null,
+      titleCode: row.titleCode,
+      primaryFacilityId: row.primaryFacilityId,
       phone: decrypt(row.phoneEncrypted),
       villageAddress: row.villageAddressEncrypted ? decrypt(row.villageAddressEncrypted) : null,
       preferredLanguage: row.preferredLanguage,
@@ -91,5 +97,7 @@ export { SEX_LABEL } from "./sex";
 export const ID_TYPE_LABEL: Record<string, string> = {
   nin: "National ID (NIN)",
   passport: "Passport",
+  refugee_id: "Refugee ID",
+  other: "Other ID",
   none: "No ID on file",
 };

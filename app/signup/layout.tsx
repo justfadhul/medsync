@@ -3,8 +3,10 @@ import type { ReactNode } from "react";
 import Link from "next/link";
 import { ArrowLeftIcon } from "lucide-react";
 
+import { EmergencyButton } from "@/components/landing/emergency-button";
 import { SIGNUP_HOLD, SITE } from "@/content/landing";
 import { signupsClosedHere } from "@/lib/legal";
+import { onboardingV2 } from "@/lib/onboarding/feature";
 import { SignupUnavailable } from "./_components/unavailable";
 
 export const metadata: Metadata = {
@@ -22,7 +24,10 @@ export const metadata: Metadata = {
  * and the PDPO registration is done (landing v4 S8, decision D1; lib/legal.ts):
  * every /signup/* route renders the holding page instead of its form.
  */
-export default function SignupLayout({ children }: { children: ReactNode }) {
+export default async function SignupLayout({ children }: { children: ReactNode }) {
+  // Onboarding v2 (Q17, S15): the header carries the Emergency button, as on /get-started, and the
+  // floating pill steps aside so it never covers a field or the submit. Flag-off pages are unchanged.
+  const v2 = await onboardingV2();
   return (
     <div className="bg-background relative isolate flex min-h-svh w-full flex-col">
       {/* Quiet teal wash behind the flow header — atmosphere, not decoration */}
@@ -31,9 +36,22 @@ export default function SignupLayout({ children }: { children: ReactNode }) {
         className="fade-in-slow pointer-events-none absolute top-0 left-1/2 -z-10 h-72 w-[120%] max-w-none -translate-x-1/2 [background:radial-gradient(closest-side,oklch(0.95_0.06_342/0.35),transparent_72%)] dark:[background:radial-gradient(closest-side,oklch(0.45_0.08_342/0.18),transparent_72%)]"
       />
 
-      <header className="border-border/60 glass sticky top-0 z-30 w-full border-b">
-        <div className="mx-auto flex w-full max-w-300 items-center justify-between px-5 py-3 sm:px-8">
-          <div className="flex items-center gap-5">
+      <header
+        className="border-border/60 glass sticky top-0 z-30 w-full border-b"
+        data-emergency-inline={v2 ? "" : undefined}
+      >
+        <div
+          className={
+            v2
+              ? "mx-auto flex h-14 w-full max-w-300 items-center justify-between gap-3 px-4 sm:px-8"
+              : "mx-auto flex w-full max-w-300 items-center justify-between px-5 py-3 sm:px-8"
+          }
+        >
+          <div
+            className={
+              v2 ? "flex items-center gap-3 whitespace-nowrap sm:gap-5" : "flex items-center gap-5"
+            }
+          >
             <Link
               href="/"
               className="font-display text-foreground text-[16px] tracking-tight transition-opacity hover:opacity-80"
@@ -48,15 +66,25 @@ export default function SignupLayout({ children }: { children: ReactNode }) {
                 className="ease-expo-out size-3 transition-transform duration-200 group-hover:-translate-x-0.5"
                 strokeWidth={2}
               />
-              Choose a different door
+              {v2 ? (
+                <>
+                  <span className="sm:hidden">Other doors</span>
+                  <span className="hidden sm:inline">Choose a different door</span>
+                </>
+              ) : (
+                "Choose a different door"
+              )}
             </Link>
           </div>
-          <Link
-            href="/sign-in"
-            className="text-muted-foreground hover:text-foreground text-[12.5px] transition-colors"
-          >
-            Sign in
-          </Link>
+          <div className="flex items-center gap-3 whitespace-nowrap sm:gap-4">
+            <Link
+              href="/sign-in"
+              className="text-muted-foreground hover:text-foreground text-[12.5px] transition-colors"
+            >
+              Sign in
+            </Link>
+            {v2 ? <EmergencyButton /> : null}
+          </div>
         </div>
       </header>
       <main className="flex-1">

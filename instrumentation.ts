@@ -30,6 +30,8 @@ export async function register() {
       if (event.tags) event.tags = redactPII(event.tags) as typeof event.tags;
       if (event.user) event.user = { id: event.user.id };
       if (event.request?.cookies) event.request.cookies = { _redacted: "true" };
+      // LOC-7 (Onboarding v2): a Server Action's body can carry a patient's GPS point — never send it.
+      if (event.request) delete event.request.data;
       if (event.request?.headers) {
         const safeHeaders: Record<string, string> = {};
         for (const [k, v] of Object.entries(event.request.headers)) {

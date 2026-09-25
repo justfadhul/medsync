@@ -32,6 +32,9 @@ export type SaAuditAction =
   | "reject_staff_affiliation"
   | "approve_hospital_application"
   | "reject_hospital_application"
+  // Onboarding v2 (D7): the verify step before the applicant signs. NEEDS the
+  // sa_audit_log_action_check constraint to list it (migration 0070).
+  | "verify_hospital_application"
   | "cross_tenant_read"
   | "cross_tenant_export"
   | "elevate_admin"

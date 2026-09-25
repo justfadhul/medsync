@@ -68,7 +68,10 @@ export const patientProfiles = pgTable(
       "patient_profiles_sex_check",
       sql`${t.sex} IN ('male','female','intersex','prefer_not_say')`,
     ),
-    check("patient_profiles_id_type_check", sql`${t.idType} IN ('nin','passport','none')`),
+    check(
+      "patient_profiles_id_type_check",
+      sql`${t.idType} IN ('nin','passport','refugee_id','other','none')`, // 0070 (D12)
+    ),
     check(
       "patient_profiles_id_number_match",
       sql`(${t.idType} = 'none' AND ${t.idNumberEncrypted} IS NULL)

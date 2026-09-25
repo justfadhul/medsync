@@ -5,9 +5,11 @@ import { db } from "@/db";
 import { consentVersions } from "@/db/schema/consent-versions";
 import { hospitalDpaVersions } from "@/db/schema/hospital-dpa-versions";
 import { specialties } from "@/db/schema/reference-data";
+import { onboardingV2 } from "@/lib/onboarding/feature";
 import { listDistricts, listRegions } from "@/lib/reference-data";
 import { SignupUnavailable } from "../_components/unavailable";
-import { HospitalApplicationForm } from "./_components/form";
+import { HospitalApplicationForm } from "./_lazy";
+import { HospitalSignupV2 } from "./_v2/view";
 import {
   loadSubcountiesForDistrictActionHospital,
   submitHospitalApplicationAction,
@@ -23,6 +25,7 @@ export const dynamic = "force-dynamic";
 const INTERNAL_MEDICINE_SPEC_ID = "00000000-0000-0000-0000-000000000f00";
 
 export default async function HospitalSignupPage() {
+  if (await onboardingV2()) return <HospitalSignupV2 />;
   const [districts, regions, [activeConsent], [activeDpa], imSubs] = await Promise.all([
     listDistricts(),
     listRegions(),

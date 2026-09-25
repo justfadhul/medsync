@@ -26,15 +26,16 @@ export const hospitalLeads = pgTable(
   {
     id: uuid("id").primaryKey().defaultRandom(),
     hospitalName: text("hospital_name").notNull(),
-    facilityLevel: text("facility_level").notNull(),
-    ownership: text("ownership").notNull(),
+    // 0070: the short v2 leads ask only a name + district (+ a contact).
+    facilityLevel: text("facility_level"),
+    ownership: text("ownership"),
     districtId: uuid("district_id")
       .notNull()
       .references(() => districts.id, { onDelete: "restrict" }),
-    contactName: text("contact_name").notNull(),
-    contactRole: text("contact_role").notNull(),
-    contactEmail: text("contact_email").notNull(),
-    contactPhone: text("contact_phone").notNull(),
+    contactName: text("contact_name"),
+    contactRole: text("contact_role"),
+    contactEmail: text("contact_email"),
+    contactPhone: text("contact_phone"),
     notes: text("notes"),
     source: text("source"),
     state: text("state").notNull().default("new"),
@@ -81,7 +82,7 @@ export const hospitalApplications = pgTable(
     hospitalName: text("hospital_name").notNull(),
     facilityLevel: text("facility_level").notNull(),
     ownership: text("ownership").notNull(),
-    registrationNumber: text("registration_number").notNull(),
+    registrationNumber: text("registration_number"), // 0070: government facilities have none
     registrationAuthority: text("registration_authority"),
     districtId: uuid("district_id")
       .notNull()
@@ -168,6 +169,21 @@ export const hospitalApplications = pgTable(
       { onDelete: "restrict" },
     ),
     agreementAcceptedAt: timestamp("agreement_accepted_at", { withTimezone: true }),
+
+    // Onboarding v2 (0070) ─────────────────────────────────────────
+    registryCode: text("registry_code"),
+    facilitySource: text("facility_source").notNull().default("manual"),
+    registryCorrectionNote: text("registry_correction_note"),
+    duplicateFacility: boolean("duplicate_facility").notNull().default(false),
+    publicEmailDomain: boolean("public_email_domain").notNull().default(false),
+    pnfpBureau: text("pnfp_bureau"),
+    /** App-encrypted (lib/encryption). */
+    authorityOfficerPhone: text("authority_officer_phone"),
+    authorityOfficerEmail: text("authority_officer_email"),
+    /** DOC-2: the letter, plus the licence unless government. */
+    documentsComplete: boolean("documents_complete").generatedAlwaysAs(
+      sql`authority_letter_path IS NOT NULL AND (ownership = 'public_moh' OR facility_licence_path IS NOT NULL)`,
+    ),
   },
   (t) => [
     check(
