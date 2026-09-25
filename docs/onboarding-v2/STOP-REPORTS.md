@@ -162,3 +162,115 @@ These were written against the v2 APIs, so they failed at baseline (the modules 
 - axe: 0 violations at 390 px.
 
 **Copy and colour invariants** (`copy-and-colour.test.ts`): no email/SMS promise, no cadre/affiliation/tenant, patient copy grade ≤ 8, no red tokens, no green ticks, no asterisks, no left-edge bars in any v2 file.
+
+---
+
+## STOP 4–6: patient, staff, hospital
+
+**Build and checks:**
+- The lanes were built in parallel on separate files (staff; hospital application + review; setup checklist), then integrated.
+- `npm run typecheck` (app + Edge Functions) is clean, eslint and prettier are clean on all 137 changed files, and the v2 suites pass 64/64.
+- **Full vitest:** 3,839 pass. **2 fail, and both fail on the baseline too:**
+  - `a11y/static-pages` on `/styleguide`;
+  - `auth-pages` "9 get-started … no ↗ arrows". The baseline build's `get-started.html` already carries `lucide-arrow-up-right`, from the 404 page's CTA cluster in the RSC payload. The check only runs when the build is fresh.
+
+**Patient (S1, S2, S4, S12, S13):** checked in headless Chrome (STOP 3). `/patient/profile` gains "Complete your profile": add an ID (NIN / passport / refugee ID / other; once added it is locked, and changes go through support), title, and links to next of kin, usual hospital and photo.
+
+**Clinical and non-clinical (S5, S7, S8):**
+- One profession picker. "Registered nurse" shows "Registered with UNMC" and asks for the "UNMC registration number", with no grade or role picker.
+- Consultants must choose a specialty ("not listed yet" allowed).
+- The non-clinical role is shown, not asked.
+- The NIN soft check is quiet, and silent while the hard error shows.
+- The staff pending page (for everyone): copy split clinical / non-clinical (O13), no email promises, a "Still needed" licence upload, a photo, and a CO/lab qualification.
+- `approve-staff-affiliation` refuses clinical approval without a licence ("Waiting for the licence", `licence_missing`) and records "Licence valid until".
+- The hospital-admin sheet disables Approve with that reason, links "Check the UMDPC register" (ehealthlicense.go.ug, HTTP 200), and has the date input.
+
+**Hospital (S9, S10, S11 by code):**
+- Registry search: "mulago national" gives Mulago National Referral Hospital · Registry 9805583, a confirmation card, "Something wrong?" and "Not this one".
+- The manual path, proof by ownership (none for government; council + number + licence for private; bureau + number + licence for PNFP), and the officer (phone and/or email, not the applicant's) + letter.
+- No DPA on the form.
+- The pending page (for everyone): "Still needed" uploads and the **agreement gate** at `verified` (`signAgreementAction`: applicant-only, state-guarded, hash-checked, single-sign).
+- **Edge functions:** the verify step, `verified` added to approve/reject, and `hospitals.district`/`region` filled at provisioning.
+- **Super-admin:** evidence flags (source, registry code, duplicate, public domain, correction note, bureau, officer contacts, documents outstanding), a "Ready for review" / "Waiting for documents" split, Verify / Approve & provision / "Waiting for the applicant to sign", staff "Waiting for the licence", and a Hospital leads list.
+- **Setup checklist (`/admin/setup`):** Needed to go live (departments + start department, backup admin, wards), Recommended (facility location from the device, checked against the district; emergency and services; operating profile with its own OPD bands), Optional (contacts / landmark).
+- **Fixed along the way:** the wizard's duplicate-department slug bug, the first-provisioning-hospital bug, and the unclaimable backup-admin invite.
+- Go live now requires a start department and an accepted backup admin (D17). **The 2 hospitals in `provisioning` in production must re-invite a backup admin.**
+
+**Found and fixed during integration:**
+- 0070 now adds `verify_hospital_application` to `sa_audit_log_action_check` (without it the first Verify returned 500).
+- The staff and hospital pending pages are v2 for everyone (DOC-1 would otherwise strand flag-off applicants who have no upload surface).
+
+## STOP 7: verification
+
+**Local stack.** The PGlite harness (78/78 probes), headless Chrome on `next build` + `next start` and on `next dev`, and vitest. **Not run:** anything that writes through the live stack (sign-up, uploads, approvals). That needs 0070 and the edge functions deployed.
+
+### §12 numbers
+
+| Metric | Baseline | Target | Result |
+|---|---|---|---|
+| Continue presses (P / C / N / H) | 2 / 3 / 0 / 6 | 0 / 0 / 0 / 0 | **0 / 0 / 0 / 0** |
+| Inputs shown by default | 18 / 16 / 15 / 48 | ≤ 11 / ≤ 11 / ≤ 9 / ≤ 15 | **10** (+ village after a place) / **11** (+ specialty for consultants) / **9** (+ 4 folded) / **12** (government, registry) |
+| Required inputs | 12 / 11 / 10 / ~30 | ≤ 9 / ≤ 10 / ≤ 8 / ≤ 14 | **9 / 11 / 9 / 11**. Clinical and non-clinical count "Employment", which is pre-set to Full-time: 10 and 8 need typing. |
+| Pickers to say what you are (clinical) | 4 | 1 (+ specialty) | **1** (+ specialty for consultants) |
+| Single-option pickers | 2 | 0 | **0** |
+| Region inputs | 1 | 0 | **0** (none in any form; the DB derives it) |
+| Impossible location pairs accepted | yes (live row: Kampala + Western) | 0 | **0**: Eastern + Arua and Western + Gulu are stored as Northern; a sub-county outside its district is refused; the live row is recomputed by 0070 |
+| District-level units | 21 | all in the dataset (vs 146) | **135** (COD-AB v01, 2020; 146 counts the post-2020 cities and districts) |
+| Lowest searchable level | sub-county, Kampala only | parish, or the lowest in the dataset | **sub-county, all 1,520** (no parish level in the dataset) |
+| Registry facilities imported / placed in a district | — | report / ≥ 98 % | **6,801 / 99.54 %** |
+| Scripted time to submit | — | ≥ 40 % less | **Not measured**: needs a live submit (0070) and scripted typing; deferred to after the migration |
+| Usability (completion / time / SEQ) | — | ≥ 90 % / report / ≥ 6 | **Kit delivered** (`usability-kit.md`); results pending |
+| Patient coordinates in DB, logs or outbound requests | — | 0 | **0** (LOC-7 test: logger, console, fetch and service-client spies; logger PII list + Sentry `request.data` hardened) |
+| Rule IDs without a test | — | 0 | **4**: DOC-1 (edge function, typechecked, not executed), DOC-3 (existing storage policy, not re-probed), DOC-4 (attach action), EV-3 (cron prune). All the others are covered by vitest or the probes. |
+| RLS probes passed | — | 100 % | **78/78** |
+| axe serious/critical | label ×3, select-name ×5, nested-interactive ×3 | 0 | **0** on all four v2 forms (390 px, empty and filled) and the registry-picked state |
+| Lighthouse mobile | — | ≥ 95 | **Not available**: no Lighthouse in the repo (Q15, Law 11); axe + CDP stand in |
+| First-load JS per route (gz, build stats) | 313.3 / 313.3 / 313.1 / 381.8 | ≤ baseline | **238.2 each** (forms load lazily) |
+| JS on the wire, old vs v2 form (next start) | — | v2 ≤ old | P 351.9 → **336.2**; C 351.9 → **339.1**; N 351.7 → **335.3**; H 423.2 → **340.9** kB |
+| Other routes | pending 236.6; profile 316.1; setup 313.9; admin 313.7; staff sheet 318.6 | ≤ baseline | pending **238.1** (+1.5: the lazy loader + header Emergency); profile **318.0** (+1.9); setup **321.0** (+7.1); admin **315.2** (+1.5); staff sheet **319.9** (+1.3). **Deviation:** these are small overshoots on routes that gained features. |
+| Upload size of a 4 MB phone photo | ~4 MB | ≤ 1 MB | By construction: re-encoded to ≤ 1600 px JPEG q 0.8 on the device (typically 0.2–0.5 MB). **Not measured on a device.** |
+| Red outside the Emergency affordance on signup routes | present (asterisks, old errors) | 0 | **0** on v2 (computed styles at 360 px; source test across every v2 file). The old flag-off forms keep their red until they are removed. |
+
+### Scenarios
+
+| # | Status |
+|---|---|
+| S1 | ✓ UI: GPS ± 25 m at Mulago gives Kawempe Division; no coordinates in logs/DB/outbound (LOC-7 test). Account creation not run live. |
+| S2 | ✓ |
+| S3 | ✓ (PGlite) |
+| S4 | ✓ |
+| S5 | ✓ UI + mapping (21/21 against the seed); saving the Nurse + Surgery affiliation not run live |
+| S6 | code + UI done; not run live |
+| S7 | ✓ UI + schema |
+| S8 | ✓ copy tests + UI |
+| S9 | ✓ UI (12 inputs, no licence field, no DPA); lifecycle not run live |
+| S10 | ✓ UI; letter-later → Ready for review not run live |
+| S11 | code done (`duplicate_facility` set at submit, shown to the super-admin); not run live |
+| S12 | ✓ |
+| S13 | ✓ |
+| S14 | ✓ Flag off renders the old forms (e.g. "Sign up to work the front desk"). The pending pages are v2 for everyone, by decision (ADR 0124). |
+| S15 | ✓ at 360 px |
+
+### Owner actions, in this order
+The auto-mode classifier refused `npm run db:migrate` as a production deploy (25 Sep 2026). Nothing was deployed. **The web and the edge functions both need 0070 first**: the Drizzle schema selects the new columns and `approve-hospital-application` reads `documents_complete`.
+
+```bash
+cd /Users/airm1/Desktop/medsync-onboarding-v2
+npm run db:migrate                          # applies 0070_onboarding_v2.sql only (prod is at 0069)
+npx supabase functions deploy approve-hospital-application reject-hospital-application \
+  approve-staff-affiliation --project-ref hrfpdfonjuvsakbjtfop --use-api
+npx vercel deploy --prod --yes              # from THIS worktree; rollback target medsync-pabwmi5xx
+```
+
+**Then:**
+- Open `https://medsync-six.vercel.app/signup/preview` in your browser to see v2 (that browser only).
+- `ONBOARDING_V2=1` in Vercel Production turns it on for everyone.
+- **Before the next deploy from the main tree:** merge `feat/onboarding-v2` there. Otherwise that deploy removes v2 (harmlessly for the data).
+
+**Sign-offs outstanding:**
+- **CSO:** the under-18 message, the three consent lines, D9 (AHPC scope).
+- **Lawyer:** D19.
+- **Owner:**
+  - send the 14/7/21 catalogue JSON (Q8);
+  - re-invite backup admins for the 2 provisioning hospitals;
+  - the staff-invite → hospital-admin claim gap (Q12) is flagged and not fixed.
