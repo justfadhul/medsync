@@ -274,3 +274,17 @@ npx vercel deploy --prod --yes              # from THIS worktree; rollback targe
   - send the 14/7/21 catalogue JSON (Q8);
   - re-invite backup admins for the 2 provisioning hospitals;
   - the staff-invite → hospital-admin claim gap (Q12) is flagged and not fixed.
+
+---
+
+## Live: 25 Sep 2026
+
+- **The owner asked for v2 to replace the old forms** (ADR 0129; commit `8e8f2aa`). The flag, `/signup/preview`, the old forms, their actions and six unused `components/forms` primitives are deleted. Tests: 3,783 pass; the two rendered failures predate v2.
+- **Why the owner's first deploy showed the old forms:** it ran from the main tree, which didn't have the v2 code, and so had no 0070 to apply.
+- **The v2 diff was applied to the main tree** as uncommitted changes (`git apply`, clean). The main tree's onboarding files now match the worktree byte for byte.
+- **Deployed from the main tree:**
+  1. `npm run db:migrate` applied 0070. Verified: 135 districts / 1,520 sub-counties, 0 region mismatches, 19 generic roles, both new tables.
+  2. The 3 edge functions.
+  3. Web `medsync-il0fkn1xa` (rollback target `medsync-3kzwqfje1`).
+- **Live smoke** (read-only, nothing submitted): all four `/signup/*` routes serve the one-page forms; place search, registry search and `/get-started` copy work; axe clean.
+- `ONBOARDING_V2` in Vercel is now unused (safe to delete).
