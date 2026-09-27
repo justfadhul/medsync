@@ -1,52 +1,37 @@
-import type { Palette } from "@/theme/tokens";
-import type { TextStyle, ViewStyle } from "react-native";
+import type { Palette, TagHue } from "@/theme/tokens";
 import { StyleSheet, Text, View } from "react-native";
 
-import { useStyles } from "@/theme/theme";
+import { useStyles, useTheme } from "@/theme/theme";
 import { font, radius, space } from "@/theme/tokens";
 
 /**
- * The status chip on an appointment.
+ * The status chip on an appointment — a Chroma tag (ADR 0162).
  *
- * Two rules govern it, and they are not stylistic.
+ * Three rules govern it, and they are not stylistic.
  *
  * 1. **Never colour alone.** Every chip carries a word a patient can read, and
- *    the word is the whole message — the tone only sorts it into "on track",
- *    "waiting", "settled" or "needs your attention". A patient who cannot see
- *    the difference between the green and the amber loses nothing.
- * 2. **No red.** `status.criticalBg/Fg` exists in the token set and is
- *    deliberately unused here. Red on a MedSync surface means a clinician has
- *    declared a life threat; a clinic declining a booking request is a
- *    scheduling outcome, and spending red on it is how a patient learns to
- *    ignore red where it matters. The web retoned `declined` from critical to
- *    caution for exactly this reason (`lib/patient/appointments.ts`).
- *
- * The words are lifted verbatim from that same file's `STATUS_LABEL`, so a
- * patient who books on the phone and then opens the web app reads the same
- * sentence about the same appointment.
+ *    the word is the whole message. A patient who cannot tell the hues apart
+ *    loses nothing.
+ * 2. **A booking state is not a clinical state.** Red, amber and green belong
+ *    to the patient's clinical signals, so an appointment's state is a square
+ *    tag with a dot in a cool hue: teal for "going ahead", iris for "waiting
+ *    on the clinic", sky for "happening now", slate for "over".
+ * 3. **Same words, same hues as the web.** The words are lifted verbatim from
+ *    `lib/patient/appointments.ts`'s `STATUS_LABEL` and the hues from its
+ *    `STATUS_TONES`, so a patient who books on the phone and then opens the
+ *    web app reads the same chip about the same appointment.
  */
-type Tone = "stable" | "caution" | "pending" | "neutral";
-
-/**
- * The ten `appointments.status` values (`db/schema/scheduling.ts`).
- *
- * The tones are the web's, collapsed where this app has no token for them:
- * `arrived` / `in_progress` are `admitted` (teal) on the web and `completed`
- * is `discharged` (violet), and `theme/tokens.ts` mirrors neither ramp. They
- * fold into the nearest honest neighbour — "this is going ahead" and "this is
- * over" — and the word keeps the distinction the colour drops.
- */
-const STATUS: Record<string, { tone: Tone; word: string }> = {
-  requested: { tone: "pending", word: "Requested" },
-  pending_approval: { tone: "pending", word: "Awaiting approval" },
-  confirmed: { tone: "stable", word: "Confirmed" },
-  arrived: { tone: "stable", word: "You've arrived" },
-  in_progress: { tone: "stable", word: "In progress" },
-  completed: { tone: "neutral", word: "Completed" },
-  cancelled: { tone: "neutral", word: "Cancelled" },
-  no_show: { tone: "caution", word: "Missed" },
-  rescheduled: { tone: "neutral", word: "Rescheduled" },
-  declined: { tone: "caution", word: "Declined" },
+const STATUS: Record<string, { hue: TagHue; word: string }> = {
+  requested: { hue: "iris", word: "Requested" },
+  pending_approval: { hue: "iris", word: "Awaiting approval" },
+  confirmed: { hue: "teal", word: "Confirmed" },
+  arrived: { hue: "sky", word: "You've arrived" },
+  in_progress: { hue: "sky", word: "In progress" },
+  completed: { hue: "slate", word: "Completed" },
+  cancelled: { hue: "slate", word: "Cancelled" },
+  no_show: { hue: "slate", word: "Missed" },
+  rescheduled: { hue: "slate", word: "Rescheduled" },
+  declined: { hue: "slate", word: "Declined" },
 };
 
 export function Pill({ status }: { status: string }) {
@@ -55,55 +40,33 @@ export function Pill({ status }: { status: string }) {
   // at a patient. The column has a CHECK constraint, so this is insurance
   // against a future status shipped on the server before it ships here — and
   // a missing chip is recoverable, `no_show` spelt at someone is not.
+  const { colors } = useTheme();
   const styles = useStyles(makeStyles);
   if (!entry) return null;
-
-  const fill: Record<Tone, ViewStyle> = {
-    stable: styles.stableFill,
-    caution: styles.cautionFill,
-    pending: styles.pendingFill,
-    neutral: styles.neutralFill,
-  };
-  const ink: Record<Tone, TextStyle> = {
-    stable: styles.stableInk,
-    caution: styles.cautionInk,
-    pending: styles.pendingInk,
-    neutral: styles.neutralInk,
-  };
+  const t = colors.tag[entry.hue];
 
   return (
-    <View style={[styles.pill, fill[entry.tone]]}>
-      <Text style={[styles.word, ink[entry.tone]]}>{entry.word}</Text>
+    <View style={[styles.tag, { backgroundColor: t.bg, borderColor: t.edge }]}>
+      <View style={[styles.dot, { backgroundColor: t.dot }]} />
+      <Text style={[styles.word, { color: t.text }]}>{entry.word}</Text>
     </View>
   );
 }
 
-const makeStyles = (c: Palette) =>
+const makeStyles = (_c: Palette) =>
   StyleSheet.create({
-    pill: {
+    // Square corners and a dot: a tag, never confused with a round clinical status.
+    tag: {
       alignSelf: "flex-start",
-      paddingHorizontal: space[3],
-      paddingVertical: space[1],
-      borderRadius: radius.full,
-    },
-    word: { fontFamily: font.bodyMedium, fontSize: 12.5, letterSpacing: 0.2 },
-
-    // The design system's own clinical pairs, retoned per theme exactly as the
-    // web retones them, so a status is the same colour here as there.
-    stableFill: { backgroundColor: c.status.stableBg },
-    stableInk: { color: c.status.stableFg },
-    // Caution is the one pair whose ink fails on its own fill (2.9:1 in
-    // light), so it takes the caution well's recipe instead: the amber is the
-    // frame, the word is in the page's own ink.
-    cautionFill: {
-      backgroundColor: c.status.cautionBg,
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 6,
+      minHeight: 24,
+      paddingLeft: 7,
+      paddingRight: space[2],
       borderWidth: 1,
-      borderColor: c.status.cautionFg,
+      borderRadius: radius.sm,
     },
-    cautionInk: { color: c.foreground },
-    // A live request is a brand-tinted chip; a settled visit is a quiet one.
-    pendingFill: { backgroundColor: c.accent },
-    pendingInk: { color: c.accentForeground },
-    neutralFill: { backgroundColor: c.status.pendingBg },
-    neutralInk: { color: c.status.pendingFg },
+    dot: { width: 7, height: 7, borderRadius: radius.full },
+    word: { fontFamily: font.bodyMedium, fontSize: 12.5 },
   });

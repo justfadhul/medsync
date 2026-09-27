@@ -32,7 +32,7 @@ export function PageHeader({
         >
           {place}
         </p>
-        <h1 className="font-display text-foreground text-heading-l font-medium">{title}</h1>
+        <h1 className="font-display text-display-s text-foreground">{title}</h1>
         {subline ? <p className="text-body-s text-muted-foreground">{subline}</p> : null}
       </div>
       {right ? <div className="flex flex-wrap items-center gap-2">{right}</div> : null}

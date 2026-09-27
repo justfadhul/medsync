@@ -1,9 +1,8 @@
 "use client";
 
 import type { DoctorIconKey } from "../_lib/features";
+import type { Domain } from "@/lib/design/domains";
 import type { LucideIcon } from "lucide-react";
-import Link from "next/link";
-import { usePathname } from "next/navigation";
 import {
   ActivityIcon,
   CalendarClockIcon,
@@ -18,7 +17,8 @@ import {
   UsersIcon,
 } from "lucide-react";
 
-import { cn } from "@/lib/utils";
+import { CommandBar } from "@/components/medsync/command-bar";
+import { SidebarNavItem } from "@/components/medsync/sidebar-nav";
 
 const ICONS: Record<DoctorIconKey, LucideIcon> = {
   overview: LayoutDashboardIcon,
@@ -34,6 +34,19 @@ const ICONS: Record<DoctorIconKey, LucideIcon> = {
   resus: SirenIcon,
 };
 
+/** Which part of the hospital each item belongs to (ADR 0162); none = neutral. */
+const DOMAIN: Partial<Record<DoctorIconKey, Domain>> = {
+  patients: "patients",
+  alerts: "clinical",
+  care_team: "clinical",
+  schedule: "operations",
+  encounters: "clinical",
+  supervisees: "clinical",
+  cosign_queue: "clinical",
+  triage: "clinical",
+  // resus has no domain hue: it wears the clinical state colours.
+};
+
 interface Props {
   href: string;
   label: string;
@@ -45,41 +58,43 @@ interface Props {
 }
 
 export function DoctorSidebarItem({ href, label, iconKey, placeholder, badgeCount, exact }: Props) {
-  const pathname = usePathname();
-  const isActive = exact ? pathname === href : pathname === href || pathname.startsWith(`${href}/`);
-  const Icon = ICONS[iconKey];
-
   return (
-    <Link
+    <SidebarNavItem
       href={href}
-      aria-current={isActive ? "page" : undefined}
-      className={cn(
-        "tap group flex min-h-8 items-center gap-2.5 rounded-md px-2.5 py-1.5 text-[12.5px] transition-colors duration-200 outline-none",
-        "focus-visible:ring-brand-500/40 focus-visible:ring-2",
-        isActive
-          ? "bg-plum-50 text-plum-800 font-medium"
-          : "text-muted-foreground hover:bg-muted hover:text-foreground",
-        placeholder && !isActive && "opacity-70",
-      )}
-    >
-      <Icon
-        aria-hidden
-        className={cn(
-          "ease-spring size-3.5 shrink-0 transition-transform duration-200",
-          isActive ? "text-plum-600 scale-110" : "group-hover:scale-105",
-        )}
-      />
-      <span className="truncate">{label}</span>
-      {placeholder ? (
-        <span className="text-muted-foreground/70 ml-auto font-mono text-[9px] tracking-widest uppercase">
-          soon
-        </span>
-      ) : null}
-      {badgeCount && badgeCount > 0 ? (
-        <span className="scale-in medsync-forced-dark bg-brand-600 ml-auto inline-flex h-4 min-w-4 items-center justify-center rounded-full px-1 font-mono text-[9px] font-semibold text-white tabular-nums">
-          {badgeCount > 9 ? "9+" : badgeCount}
-        </span>
-      ) : null}
-    </Link>
+      label={label}
+      icon={ICONS[iconKey]}
+      domain={DOMAIN[iconKey]}
+      exact={exact}
+      count={badgeCount}
+      dimmed={placeholder}
+      trailing={
+        placeholder ? (
+          <span className="text-muted-foreground font-mono text-[10px] tracking-[0.06em] uppercase">
+            soon
+          </span>
+        ) : null
+      }
+    />
+  );
+}
+
+/** The workspace's ⌘K bar: every section, with the sidebar's icons and domains. */
+export function DoctorCommandBar({
+  items,
+}: {
+  items: ReadonlyArray<{ href: string; label: string; hint?: string; iconKey: DoctorIconKey }>;
+}) {
+  return (
+    <CommandBar
+      entries={items.map((i) => ({
+        id: i.href,
+        label: i.label,
+        hint: i.hint,
+        href: i.href,
+        icon: ICONS[i.iconKey],
+        group: "Navigate",
+        domain: DOMAIN[i.iconKey],
+      }))}
+    />
   );
 }

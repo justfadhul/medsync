@@ -22,10 +22,10 @@ export function ActionsBoard({ step }: { step: AbcdeLetter }) {
   return (
     <section
       aria-labelledby={headingId}
-      className="border-border bg-card flex flex-col gap-3 rounded-xl border p-4"
+      className="border-border bg-card flex flex-col gap-3 rounded-lg border p-4"
     >
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <h3 id={headingId} className="text-heading-s text-foreground font-medium">
+        <h3 id={headingId} className="text-heading-s text-foreground">
           Actions for {step} ({actions.length})
         </h3>
         {outstanding > 0 ? (

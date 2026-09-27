@@ -54,7 +54,7 @@ function Block({
   action?: React.ReactNode;
 }) {
   return (
-    <section aria-labelledby={`hours-${n}`} className="border-border bg-card rounded-xl border">
+    <section aria-labelledby={`hours-${n}`} className="border-border bg-card rounded-lg border">
       <header className="border-border flex items-center gap-3 border-b px-4 py-3">
         <SectionNumber n={n} />
         <h2 id={`hours-${n}`} className="text-foreground text-body-m font-medium">

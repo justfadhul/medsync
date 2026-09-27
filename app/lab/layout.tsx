@@ -22,10 +22,7 @@ export default async function LabLayout({ children }: { children: ReactNode }) {
     <div className="bg-background text-foreground flex min-h-svh w-full flex-col">
       <header className="border-border glass sticky top-0 z-30 flex h-[52px] items-center justify-between gap-3 border-b px-4 sm:px-6">
         <div className="flex min-w-0 items-center gap-3">
-          <Link
-            href="/"
-            className="font-display text-foreground text-body-m font-medium tracking-[-0.01em]"
-          >
+          <Link href="/" className="font-display text-foreground text-body-m font-semibold">
             MedSync
           </Link>
           <span
@@ -34,7 +31,7 @@ export default async function LabLayout({ children }: { children: ReactNode }) {
           >
             <span
               aria-hidden
-              className="pulse-dot bg-brand-500 ring-brand-500/20 mr-1.5 inline-block size-1 -translate-y-px rounded-full ring-2"
+              className="bg-grape-icon ring-grape-edge mr-1.5 inline-block size-1 -translate-y-px rounded-full ring-2"
             />
             Laboratory · {scope.hospitalName}
           </span>

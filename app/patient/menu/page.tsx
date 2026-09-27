@@ -110,7 +110,7 @@ export default async function PatientMenuPage() {
              is the accessible name. */
           <span
             aria-hidden
-            className="bg-plum-100 text-plum-800 text-heading-s grid size-14 shrink-0 place-items-center rounded-full font-medium"
+            className="text-heading-s grid size-14 shrink-0 place-items-center rounded-full bg-sky-100 text-sky-800"
           >
             {monogram(name, scope.userEmail)}
           </span>
@@ -129,7 +129,7 @@ export default async function PatientMenuPage() {
               iconKey={d.iconKey}
               title={d.label}
               subtitle={d.sub}
-              trailing={d.soon ? <Pill tone="pending">Soon</Pill> : undefined}
+              trailing={d.soon ? <Pill tone="neutral">Soon</Pill> : undefined}
             />
           ))}
         </ul>

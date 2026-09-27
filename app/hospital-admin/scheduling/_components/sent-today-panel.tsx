@@ -41,7 +41,7 @@ export function SentTodayPanel({
   return (
     <section className="border-border bg-card flex flex-col rounded-lg border">
       <div className="flex flex-col gap-1 px-6 py-5">
-        <h2 className="text-foreground text-heading-s font-medium">Sent {range}</h2>
+        <h2 className="text-foreground text-heading-s">Sent {range}</h2>
         <p className="text-muted-foreground text-body-s max-w-xl leading-relaxed">
           Messages the dispatcher sent since {since}, East Africa Time. SMS spend is what the
           provider reported per message; push is free.

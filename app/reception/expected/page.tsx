@@ -121,10 +121,10 @@ export default async function ReceptionExpectedPage({ searchParams }: PageProps)
 
       <header className="flex flex-col gap-2">
         <span className="text-muted-foreground text-overline inline-flex items-center gap-1.5 font-mono uppercase">
-          <span aria-hidden className="bg-brand-500 ring-brand-500/20 size-1 rounded-full ring-2" />
+          <span aria-hidden className="bg-plum-icon ring-plum-edge size-1 rounded-full ring-2" />
           {scope.hospitalName} · Expected arrivals
         </span>
-        <h1 className="font-display text-foreground text-heading-l">Expected patients</h1>
+        <h1 className="font-display text-display-s text-foreground">Expected patients</h1>
         <p className="text-muted-foreground text-body-s max-w-[60ch] leading-relaxed">
           When a patient arrives, send them to <span className="font-medium">triage</span> or
           straight to the <span className="font-medium">clinic</span> — they join that
@@ -216,7 +216,7 @@ function ExpectedToday({
             They told the app they have arrived, and are in their clinic&rsquo;s line — but nobody
             has sent them on yet. Send each one to triage or to the clinic.
           </p>
-          <ul className="divide-border/60 border-border bg-card divide-y overflow-hidden rounded-xl border">
+          <ul className="divide-border/60 border-border bg-card divide-y overflow-hidden rounded-lg border">
             {needsRouting.map((r) => (
               <li
                 key={r.id}
@@ -249,7 +249,7 @@ function ExpectedToday({
       ) : null}
 
       {expected.length === 0 ? (
-        <div className="border-border bg-card flex items-center gap-5 rounded-xl border p-6">
+        <div className="border-border bg-card flex items-center gap-5 rounded-lg border p-6">
           <ClockIcon className="text-border size-10 shrink-0" aria-hidden />
           <p className="text-muted-foreground text-body-s">
             Nobody is still expected today. Bookings and same-day tickets from the app appear here
@@ -257,7 +257,7 @@ function ExpectedToday({
           </p>
         </div>
       ) : (
-        <div className="border-border bg-card overflow-x-auto rounded-xl border">
+        <div className="border-border bg-card overflow-x-auto rounded-lg border">
           <table className="w-full border-collapse text-left">
             <caption className="sr-only">
               Everyone expected today and not here yet, in the order they booked — earliest booking
@@ -290,7 +290,7 @@ function ExpectedToday({
               {expected.map((r) => (
                 <tr
                   key={`${r.kind}-${r.id}`}
-                  className="hover:bg-brand-50/40 ease-expo-out align-top transition-colors duration-150"
+                  className="hover:bg-ink-25 ease-expo-out align-top transition-colors duration-150"
                 >
                   <td className="min-w-64 px-4 py-2.5">
                     <div className="flex flex-col gap-1">
@@ -298,7 +298,7 @@ function ExpectedToday({
                         patient={r.identity}
                         trailing={
                           r.kind === "booking" && !r.patientCode && r.provisional ? (
-                            <Pill tone="pending">
+                            <Pill tone="notice">
                               {r.provisional.state === "rejected"
                                 ? "Not matched · register"
                                 : "Identity to confirm"}
@@ -471,7 +471,7 @@ function BookedDay({
   dayLabel: string;
 }) {
   return rows.length === 0 ? (
-    <div className="border-border bg-card flex items-center gap-5 rounded-xl border p-6">
+    <div className="border-border bg-card flex items-center gap-5 rounded-lg border p-6">
       <svg viewBox="0 0 96 56" aria-hidden className="text-border h-12 w-auto shrink-0">
         <rect x="0" y="2" width="84" height="10" rx="4" fill="currentColor" opacity="0.5" />
         <rect x="0" y="20" width="64" height="10" rx="4" fill="currentColor" opacity="0.3" />
@@ -483,7 +483,7 @@ function BookedDay({
       </p>
     </div>
   ) : (
-    <div className="border-border bg-card overflow-x-auto rounded-xl border">
+    <div className="border-border bg-card overflow-x-auto rounded-lg border">
       <table className="w-full border-collapse text-left">
         <caption className="sr-only">
           Booked appointments, earliest first, each with its status. Check-in is for today only; a
@@ -515,10 +515,7 @@ function BookedDay({
         </thead>
         <tbody className="divide-border/60 divide-y">
           {rows.map((r) => (
-            <tr
-              key={r.id}
-              className="hover:bg-brand-50/40 ease-expo-out transition-colors duration-150"
-            >
+            <tr key={r.id} className="hover:bg-ink-25 ease-expo-out transition-colors duration-150">
               <td className="text-foreground text-body-s px-4 py-2.5 font-mono tabular-nums">
                 {formatTime(r.startsAtIso)}
               </td>
@@ -529,7 +526,7 @@ function BookedDay({
                   patient={r.identity}
                   trailing={
                     !r.patientCode && r.provisional ? (
-                      <Pill tone="pending">
+                      <Pill tone="notice">
                         {r.provisional.state === "rejected"
                           ? "Not matched · register"
                           : "Identity to confirm"}

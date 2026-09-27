@@ -115,7 +115,7 @@ export function IncomingCard({
     <article
       aria-labelledby={headingId}
       className={cn(
-        "border-border bg-card flex flex-col overflow-hidden rounded-xl border",
+        "border-border bg-card flex flex-col overflow-hidden rounded-lg border",
         // Red only for a genuine emergency; an urgent/routine card escalates in words and a neutral ring.
         escalated &&
           (row.tier === "E" ? "ring-status-critical-fg ring-2" : "ring-foreground ring-2"),

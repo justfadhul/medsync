@@ -326,7 +326,7 @@ const makeStyles = (c: Palette) =>
       backgroundColor: c.status.criticalBg,
       gap: space[1],
     },
-    noNumberTitle: { fontFamily: font.bodyMedium, fontSize: 17, color: c.status.criticalFg },
+    noNumberTitle: { fontFamily: font.bodySemiBold, fontSize: 17, color: c.status.criticalFg },
     noNumberBody: { fontFamily: font.body, fontSize: 15, lineHeight: 22, color: c.foreground },
 
     list: { gap: space[2] },

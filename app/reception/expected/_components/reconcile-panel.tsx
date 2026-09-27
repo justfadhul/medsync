@@ -35,11 +35,11 @@ export function ReconcilePanel({
   return (
     <section
       aria-labelledby="reconcile-heading"
-      className="border-border bg-card ncd-reveal flex flex-col gap-4 rounded-xl border p-5"
+      className="border-border bg-card ncd-reveal flex flex-col gap-4 rounded-lg border p-5"
     >
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="flex flex-col gap-1">
-          <h2 id="reconcile-heading" className="text-foreground text-heading-s font-medium">
+          <h2 id="reconcile-heading" className="text-foreground text-heading-s">
             Who is this booking for?
           </h2>
           <p className="text-muted-foreground text-body-s max-w-[60ch] leading-relaxed">

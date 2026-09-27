@@ -384,10 +384,14 @@ describe("red is reserved — the Expo app", () => {
     }
   });
 
+  // ADR 0162 (MedSync Chroma): a booking state is not a clinical state, so the
+  // chip is a tag in cool hues only — no red, and no amber or green either.
   it("the appointment Pill has no red tone at all", () => {
     const pill = MOBILE.find(([p]) => p === "mobile/src/components/ui/pill.tsx")?.[1] ?? "";
-    expect(pill).not.toMatch(/critical/);
-    expect(pill).toMatch(/type Tone = "stable" \| "caution" \| "pending" \| "neutral"/);
+    expect(pill).not.toMatch(/critical|status\./);
+    const hues = [...pill.matchAll(/\{ hue: "(\w+)", word: "[^"]*" \}/g)].map((m) => m[1]);
+    expect(hues.length).toBeGreaterThanOrEqual(10);
+    for (const h of hues) expect(["teal", "sky", "iris", "slate"]).toContain(h);
   });
 });
 
@@ -409,7 +413,7 @@ describe("never colour alone — the Expo app", () => {
       }
     }
     const pill = MOBILE.find(([p]) => p === "mobile/src/components/ui/pill.tsx")?.[1] ?? "";
-    const entries = [...pill.matchAll(/\{ tone: "(\w+)", word: "([^"]*)" \}/g)];
+    const entries = [...pill.matchAll(/\{ hue: "(\w+)", word: "([^"]*)" \}/g)];
     expect(entries.length).toBeGreaterThanOrEqual(10); // the ten appointments.status values
     for (const [, tone, word] of entries) {
       expect((word ?? "").trim(), `tone ${tone} without a word`).not.toBe("");

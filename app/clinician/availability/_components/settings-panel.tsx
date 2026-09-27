@@ -37,7 +37,7 @@ export function SettingsPanel({
         type="button"
         onClick={() => setExpanded((v) => !v)}
         aria-expanded={expanded}
-        className="tap hover:bg-muted/30 focus-visible:ring-brand-500/40 flex w-full items-center gap-3 rounded-lg px-5 py-3.5 text-left transition-colors outline-none focus-visible:ring-2"
+        className="tap hover:bg-muted/30 focus-visible:ring-ring flex w-full items-center gap-3 rounded-lg px-5 py-3.5 text-left transition-colors outline-none focus-visible:ring-2"
       >
         <SettingsIcon
           className={cn(

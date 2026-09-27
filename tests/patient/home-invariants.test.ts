@@ -118,12 +118,16 @@ describe("/patient home — colour roles and decoration", () => {
     }
   });
 
-  it("2 · plum is place: every tag that paints plum carries data-place", () => {
+  // ADR 0162 (MedSync Chroma): colour places, it never judges. The patient
+  // domain's hue is sky; any place hue on the home must mark a place.
+  it("2 · place hues mark a place: every tag that paints one carries data-place", () => {
+    const PLACE =
+      /\b(?:bg|text|border|ring|fill|stroke)-(?:sky|iris|grape|plum|slate)-(?:\d|solid|tint|edge|text|icon)|sidebar-accent/g;
     for (const [path, src] of HOME) {
-      for (const i of each(src, /\b(?:bg|text|border|ring|fill|stroke)-plum-\d|sidebar-accent/g)) {
+      for (const i of each(src, PLACE)) {
         const { tag } = tagAt(src, i);
         const ok = /data-place/.test(tag) || insideAttr(src, i, "data-place");
-        expect(ok, `${path}: plum without data-place in ${tag.slice(0, 120)}`).toBe(true);
+        expect(ok, `${path}: place hue without data-place in ${tag.slice(0, 120)}`).toBe(true);
       }
     }
   });
@@ -162,11 +166,14 @@ describe("/patient home — colour roles and decoration", () => {
     expect(page).not.toMatch(/tint="(?:brand|mint)"/);
   });
 
-  it("11 · headings are weight 500; no coloured left-edge bars", () => {
+  // ADR 0162: headings take their weight (600) from the Chroma type tokens —
+  // a heading utility, and never a `font-medium` or `font-bold` override.
+  it("11 · headings use the heading scale at its own weight; no coloured left-edge bars", () => {
     for (const [path, src] of HOME) {
       for (const i of each(src, /<h[1-3][\s>]/g)) {
         const { tag } = tagAt(src, i + 1);
-        expect(tag, `${path}: ${tag}`).toMatch(/font-medium/);
+        expect(tag, `${path}: ${tag}`).toMatch(/text-(?:heading|display)-/);
+        expect(tag, `${path}: ${tag}`).not.toMatch(/font-(?:medium|bold)\b/);
       }
       const bar = /\bborder-l-(?:[2-9]|\[)/.exec(src);
       expect(bar, `${path}: ${bar?.[0]}`).toBeNull();

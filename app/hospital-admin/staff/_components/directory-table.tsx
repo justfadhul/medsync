@@ -32,11 +32,12 @@ import { DirectoryDetailSheet } from "./directory-detail-sheet";
  * panel exposes them in full.
  */
 
+// Workflow states are tags, never a patient's clinical colours (ADR 0162).
 const STATUS_TONES: Record<string, PillTone> = {
-  active: "stable",
-  approved: "stable",
-  suspended: "caution",
-  deactivated: "critical",
+  active: "active",
+  approved: "active",
+  suspended: "notice",
+  deactivated: "neutral",
 };
 
 const STATUS_LABEL: Record<string, string> = {
@@ -204,7 +205,7 @@ export function DirectoryTable({
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 aria-label="Search the staff directory"
-                className="text-foreground placeholder:text-muted-foreground border-border focus-visible:ring-brand-500/40 w-64 max-w-full rounded-md border bg-transparent px-2.5 py-1 text-[12.5px] outline-none focus-visible:ring-2"
+                className="text-foreground placeholder:text-muted-foreground border-border focus-visible:ring-ring w-64 max-w-full rounded-md border bg-transparent px-2.5 py-1 text-[12.5px] outline-none focus-visible:ring-2"
               />
               <div className="ml-2 flex items-center gap-1.5">
                 {STATUS_FILTERS.map((s) => (
@@ -221,7 +222,7 @@ export function DirectoryTable({
                 aria-label="Filter by department"
                 value={departmentFilter ?? ""}
                 onChange={(e) => setDepartmentFilter(e.target.value || null)}
-                className="border-border text-foreground focus-visible:ring-brand-500/40 rounded-md border bg-transparent px-2 py-1 text-[12px] outline-none focus-visible:ring-2"
+                className="border-border text-foreground focus-visible:ring-ring rounded-md border bg-transparent px-2 py-1 text-[12px] outline-none focus-visible:ring-2"
               >
                 <option value="">All departments</option>
                 {allDepartments.map((d) => (

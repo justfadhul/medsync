@@ -40,7 +40,7 @@ import { NcdDifferential } from "./ncd-differential";
  */
 
 const OVERLINE = "font-mono text-[10px] tracking-[0.16em] uppercase text-muted-foreground/80";
-const CARD = "border-border bg-card rounded-xl border shadow-xs";
+const CARD = "border-border bg-card rounded-lg border shadow-xs";
 
 /* ── shared vocabulary for the four states ───────────────────────────────── */
 
@@ -118,7 +118,7 @@ export function NcdProfileView({ profile }: { profile: NcdProfile }) {
             />
             <div className="min-w-0 flex-1">
               <div className="flex flex-wrap items-baseline gap-x-2">
-                <h3 className="font-display text-body-m font-medium tracking-[-0.01em] text-red-900 dark:text-red-100">
+                <h3 className="text-body-m font-medium tracking-[-0.01em] text-red-900 dark:text-red-100">
                   {flag.display}
                 </h3>
                 {flag.stage ? (
@@ -276,7 +276,7 @@ export function NcdProfileView({ profile }: { profile: NcdProfile }) {
         </div>
 
         <div className="mt-2.5 flex items-baseline gap-2">
-          <span className="font-display text-foreground text-[26px] leading-none font-medium tabular-nums">
+          <span className="text-foreground text-heading-l leading-none tabular-nums">
             {completeness.percent}%
           </span>
           <span className="text-muted-foreground text-[11.5px]">of what this site can assess</span>
@@ -380,7 +380,7 @@ export function NcdProfileView({ profile }: { profile: NcdProfile }) {
 
       {/* 5. Test-validity caveats */}
       {caveats.length ? (
-        <section className="bg-card overflow-hidden rounded-xl border border-amber-300/60 dark:border-amber-800/60">
+        <section className="bg-card overflow-hidden rounded-lg border border-amber-300/60 dark:border-amber-800/60">
           <header className="flex items-center gap-2 border-b border-amber-300/40 bg-amber-50/60 px-3.5 py-2 dark:border-amber-800/40 dark:bg-amber-950/25">
             <AlertTriangleIcon
               className="size-3.5 shrink-0 text-amber-600 dark:text-amber-400"

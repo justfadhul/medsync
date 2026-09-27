@@ -154,7 +154,7 @@ export default async function PatientQueueDetailPage({ params }: PageProps) {
         ) : (
           <>
             <p className="text-foreground text-body-m flex items-baseline gap-2 font-medium">
-              <span className="text-heading-l font-mono leading-none font-medium tabular-nums">
+              <span className="text-heading-l font-mono leading-none tabular-nums">
                 {positionAhead}
               </span>
               ahead of you

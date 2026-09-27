@@ -22,7 +22,7 @@ export function SegmentedLink({
       href={href}
       aria-current={active ? "page" : undefined}
       className={cn(
-        "tap border-border text-body-s focus-visible:ring-brand-500/40 inline-flex min-h-11 items-center gap-1.5 rounded-md border px-3 transition-colors outline-none focus-visible:ring-2",
+        "tap border-border text-body-s focus-visible:ring-ring inline-flex min-h-11 items-center gap-1.5 rounded-md border px-3 transition-colors outline-none focus-visible:ring-2",
         active
           ? "bg-primary text-primary-foreground border-primary font-medium"
           : "text-foreground hover:bg-muted",

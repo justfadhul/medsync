@@ -243,9 +243,7 @@ export function AirwayPanel({
           <span className="bg-foreground/90 text-background text-body-m flex size-8 items-center justify-center rounded-lg font-mono font-semibold">
             A
           </span>
-          <h2 className="font-display text-foreground text-heading-s font-medium tracking-[-0.01em]">
-            Airway
-          </h2>
+          <h2 className="text-foreground text-heading-s tracking-[-0.01em]">Airway</h2>
         </div>
         <span
           className={cn(
@@ -410,7 +408,7 @@ export function AirwayPanel({
 
         {/* ── Triggered actions — a floating card that stays beside the
             findings as you scroll through what's being assessed (lg+). ── */}
-        <section className="border-border bg-card/95 lg:ring-border/50 flex flex-col gap-2 rounded-xl border p-3 lg:sticky lg:top-30 lg:max-h-[calc(100svh-136px)] lg:overflow-y-auto lg:shadow-md lg:ring-1 lg:backdrop-blur">
+        <section className="border-border bg-card/95 lg:ring-border/50 flex flex-col gap-2 rounded-lg border p-3 lg:sticky lg:top-30 lg:max-h-[calc(100svh-136px)] lg:overflow-y-auto lg:shadow-md lg:ring-1 lg:backdrop-blur">
           <ResusActionsHeading
             heading="Indicated actions — finding → why → do"
             outstanding={outstanding}

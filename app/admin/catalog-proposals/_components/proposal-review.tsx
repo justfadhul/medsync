@@ -22,7 +22,7 @@ export function ProposalReview({ proposal }: { proposal: PendingProposalRow }) {
   const payload = proposal.payload as Record<string, unknown>;
 
   return (
-    <li className="border-border bg-card flex flex-col gap-2 rounded-xl border p-4">
+    <li className="border-border bg-card flex flex-col gap-2 rounded-lg border p-4">
       <div className="flex items-center justify-between gap-3">
         <span className="text-foreground text-body-s font-medium">
           <span className="text-muted-foreground font-mono text-[10px] tracking-[0.12em] uppercase">

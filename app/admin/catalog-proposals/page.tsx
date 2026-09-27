@@ -24,12 +24,10 @@ export default async function CatalogProposalsPage() {
     <div className="mx-auto flex w-full max-w-3xl flex-col gap-6 px-6 py-8 lg:py-10">
       <header className="flex flex-col gap-1.5">
         <span className="text-muted-foreground inline-flex items-center gap-1.5 font-mono text-[10px] tracking-[0.16em] uppercase">
-          <span aria-hidden className="bg-brand-500 ring-brand-500/20 size-1 rounded-full ring-2" />
+          <span aria-hidden className="bg-slate-icon ring-slate-edge size-1 rounded-full ring-2" />
           Catalog governance
         </span>
-        <h1 className="font-display text-foreground text-[24px] leading-[1.1] font-medium tracking-[-0.015em]">
-          Symptom-catalog proposals
-        </h1>
+        <h1 className="font-display text-display-s text-foreground">Symptom-catalog proposals</h1>
         <p className="text-muted-foreground text-[12.5px]">
           Clinician-proposed additions to the shared catalog. Approving adds the item to the
           versioned catalog for everyone; rejecting leaves it as the clinician&rsquo;s local ad-hoc
@@ -38,7 +36,7 @@ export default async function CatalogProposalsPage() {
       </header>
 
       {proposals.length === 0 ? (
-        <div className="border-border bg-card/40 text-muted-foreground rounded-xl border border-dashed p-6">
+        <div className="border-border bg-card/40 text-muted-foreground rounded-lg border border-dashed p-6">
           <span className="text-foreground/80 text-[14px] font-medium">Nothing to review</span>
           <p className="mt-1 text-[12px]">No pending proposals.</p>
         </div>

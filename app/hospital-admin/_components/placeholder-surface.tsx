@@ -39,14 +39,12 @@ export function PlaceholderSurface({
           <span aria-hidden className="size-1 rounded-full bg-amber-500 ring-2 ring-amber-500/20" />
           {eyebrow}
         </span>
-        <h1 className="font-display text-foreground sm:text-heading-l text-[24px] leading-[1.15] font-medium tracking-[-0.015em]">
-          {title}
-        </h1>
+        <h1 className="font-display text-display-s text-foreground">{title}</h1>
         <p className="text-muted-foreground max-w-2xl text-[13.5px] leading-relaxed">
           {description}
         </p>
         {/* Hairline teal accent — recurring landing-page motif. */}
-        <div className="bg-brand-500/60 dark:bg-brand-400/50 h-px w-10" aria-hidden />
+        <div className="bg-ink-300 h-px w-10" aria-hidden />
       </header>
 
       {/* Empty-state card */}

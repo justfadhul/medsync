@@ -50,7 +50,7 @@ export function HubTabs() {
                   prefetch
                   className={cn(
                     "text-body-s relative inline-flex items-center pb-2.5 whitespace-nowrap transition-colors duration-100",
-                    "focus-visible:ring-brand-500/40 rounded-xs focus-visible:ring-2 focus-visible:outline-none",
+                    "focus-visible:ring-ring rounded-xs focus-visible:ring-2 focus-visible:outline-none",
                     active
                       ? "text-foreground font-medium"
                       : "text-muted-foreground hover:text-foreground",
@@ -61,7 +61,7 @@ export function HubTabs() {
                     aria-hidden
                     className={cn(
                       "absolute inset-x-0 -bottom-px h-0.5 rounded-full",
-                      active ? "bg-plum-600" : "bg-transparent",
+                      active ? "bg-foreground" : "bg-transparent",
                     )}
                   />
                 </Link>

@@ -68,7 +68,7 @@ export default async function PatientProfilePage({
               aria-labelledby="photo-head"
               className="bg-card dark:shadow-card flex flex-col gap-3 rounded-xl p-4 shadow-xs"
             >
-              <h2 id="photo-head" className="text-foreground text-heading-s font-medium">
+              <h2 id="photo-head" className="text-foreground text-heading-s">
                 Photo
               </h2>
               <PhotoForm
@@ -83,7 +83,7 @@ export default async function PatientProfilePage({
               className="bg-card dark:shadow-card flex flex-col gap-3 rounded-xl p-4 shadow-xs"
             >
               <div className="flex items-center justify-between gap-2">
-                <h2 id="identity-head" className="text-foreground text-heading-s font-medium">
+                <h2 id="identity-head" className="text-foreground text-heading-s">
                   Identity
                 </h2>
                 <span className="text-muted-foreground text-overline inline-flex shrink-0 items-center gap-1 uppercase">

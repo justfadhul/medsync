@@ -56,7 +56,7 @@ export default async function ReceptionBookPage({ searchParams }: PageProps) {
         <Back />
         <Header hospitalName={scope.hospitalName} />
         {open.length === 0 ? (
-          <p className="border-border bg-card text-muted-foreground text-body-s rounded-xl border p-5">
+          <p className="border-border bg-card text-muted-foreground text-body-s rounded-lg border p-5">
             {scope.hospitalName} has no clinic days or bookable times on MedSync yet. Register the
             person as a walk-in on the day instead.
           </p>
@@ -159,7 +159,7 @@ export default async function ReceptionBookPage({ searchParams }: PageProps) {
         </section>
       ) : null}
 
-      <div className="border-border bg-card flex flex-col gap-3 rounded-xl border p-5">
+      <div className="border-border bg-card flex flex-col gap-3 rounded-lg border p-5">
         <p className="text-foreground text-body-m font-medium">Not registered, or no code?</p>
         <p className="text-muted-foreground text-body-s leading-relaxed">
           Book with the name, phone and age the caller gives. No record is created; the booking
@@ -196,10 +196,10 @@ function Header({ hospitalName }: { hospitalName: string }) {
   return (
     <header className="flex flex-col gap-2">
       <span className="text-muted-foreground text-overline inline-flex items-center gap-1.5 font-mono uppercase">
-        <span aria-hidden className="bg-brand-500 ring-brand-500/20 size-1 rounded-full ring-2" />
+        <span aria-hidden className="bg-plum-icon ring-plum-edge size-1 rounded-full ring-2" />
         {hospitalName} · Book on behalf
       </span>
-      <h1 className="font-display text-foreground text-heading-l">Book a visit for a caller</h1>
+      <h1 className="font-display text-display-s text-foreground">Book a visit for a caller</h1>
       <p className="text-muted-foreground text-body-s max-w-[60ch] leading-relaxed">
         Same clinics and days the patient app offers. The code is read out at the end and texted to
         the phone given.
@@ -210,7 +210,7 @@ function Header({ hospitalName }: { hospitalName: string }) {
 
 function Hit({ patientUserId, title, sub }: { patientUserId: string; title: string; sub: string }) {
   return (
-    <li className="border-border bg-card flex items-center justify-between gap-3 rounded-xl border p-4">
+    <li className="border-border bg-card flex items-center justify-between gap-3 rounded-lg border p-4">
       <div className="flex min-w-0 flex-col gap-0.5">
         <span className="text-foreground text-body-s truncate font-medium">{title}</span>
         <span className="text-muted-foreground text-caption font-mono tabular-nums">{sub}</span>

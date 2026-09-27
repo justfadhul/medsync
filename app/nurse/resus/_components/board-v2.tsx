@@ -76,7 +76,7 @@ export function ResusBoardV2({
         </Link>
       </div>
       <header className="flex flex-col gap-1.5">
-        <h1 className="text-heading-l text-foreground font-medium">Resuscitation board</h1>
+        <h1 className="text-heading-l text-foreground">Resuscitation board</h1>
         <p className="text-body-s text-muted-foreground max-w-2xl">
           Open a resus for any Red/L1 patient or Step-0 life threat. Opening starts the record and
           calls the team. The app records what the team does — the clinician leads.

@@ -49,7 +49,7 @@ export function ProposeForm({ patientUserId, patientCode, requirement, actionKin
       <input type="hidden" name="action_kind" value={actionKind} />
 
       {requirement === "cosign_required" ? (
-        <div className="border-brand-500/30 bg-brand-50/40 dark:border-brand-400/20 dark:bg-brand-950/15 rounded-md border p-3">
+        <div className="border-border bg-muted text-foreground rounded-md border p-3">
           <p className="text-brand-900 dark:text-brand-200 text-[12.5px] leading-relaxed">
             This {ACTION_LABEL[actionKind].toLowerCase()} will go to your supervisor for review
             before it takes effect. You&rsquo;ll see the decision on your tasks list.
@@ -57,7 +57,7 @@ export function ProposeForm({ patientUserId, patientCode, requirement, actionKin
         </div>
       ) : null}
 
-      <div className="border-border bg-card flex flex-col gap-3 rounded-xl border p-4">
+      <div className="border-border bg-card flex flex-col gap-3 rounded-lg border p-4">
         <h3 className="text-muted-foreground font-mono text-[10.5px] tracking-[0.14em] uppercase">
           Proposed for {patientCode}
         </h3>
@@ -115,13 +115,13 @@ export function ProposeForm({ patientUserId, patientCode, requirement, actionKin
         </p>
       ) : null}
       {state.ok && state.outcome === "queued_for_review" ? (
-        <p className="scale-in border-brand-500/30 bg-brand-50/50 text-brand-900 dark:bg-brand-950/30 dark:text-brand-200 flex items-start gap-1.5 rounded-md border px-3 py-2 text-[12.5px] leading-relaxed">
+        <p className="scale-in border-border bg-muted text-foreground flex items-start gap-1.5 rounded-md border px-3 py-2 text-[12.5px] leading-relaxed">
           <CheckCircle2Icon className="mt-0.5 size-3.5 shrink-0" aria-hidden />
           Queued for your supervisor&rsquo;s review. You&rsquo;ll see the decision on your tasks.
         </p>
       ) : null}
       {state.ok && state.outcome === "executed" ? (
-        <p className="scale-in border-brand-500/30 bg-brand-50/50 text-brand-900 dark:bg-brand-950/30 dark:text-brand-200 flex items-start gap-1.5 rounded-md border px-3 py-2 text-[12.5px] leading-relaxed">
+        <p className="scale-in border-border bg-muted text-foreground flex items-start gap-1.5 rounded-md border px-3 py-2 text-[12.5px] leading-relaxed">
           <CheckCircle2Icon className="mt-0.5 size-3.5 shrink-0" aria-hidden />
           Recorded. (Real prescribing engine ships with the clinical module.)
         </p>

@@ -94,7 +94,7 @@ export function SetupWizard(props: WizardProps) {
         <span className="text-muted-foreground font-mono text-[10px] tracking-[0.18em] uppercase">
           {CHECKLIST.eyebrow}
         </span>
-        <h1 className="font-display text-foreground text-heading-l leading-tight font-medium tracking-[-0.02em]">
+        <h1 className="font-display text-display-s text-foreground">
           {CHECKLIST.title(props.hospital.name)}
         </h1>
         <p className="text-body-m text-foreground font-medium">
@@ -244,9 +244,9 @@ export function SetupWizard(props: WizardProps) {
 
       <section
         aria-labelledby="setup-go-live"
-        className="border-border bg-card shadow-card rounded-xl border p-5 sm:p-6"
+        className="border-border bg-card shadow-card rounded-lg border p-5 sm:p-6"
       >
-        <h2 id="setup-go-live" className="text-foreground text-heading-s font-medium">
+        <h2 id="setup-go-live" className="text-foreground text-heading-s">
           {CHECKLIST.goLive.title}
         </h2>
         <p className="text-body-s text-foreground mt-1">

@@ -248,7 +248,7 @@ function Form({
           className={
             state.isEmergency
               ? "inline-flex size-9 items-center justify-center rounded-full bg-rose-100 text-rose-700 dark:bg-rose-900/60 dark:text-rose-300"
-              : "bg-brand-100 text-brand-700 dark:bg-brand-900/60 dark:text-brand-300 inline-flex size-9 items-center justify-center rounded-full"
+              : "bg-plum-tint text-plum-icon inline-flex size-9 items-center justify-center rounded-full"
           }
         >
           {state.isEmergency ? (
@@ -652,7 +652,7 @@ function Form({
         </Panel>
 
         {/* Docked: stays in view while the taller column scrolls (grid rows stretch, `mt-auto` pins it). */}
-        <div className="border-border bg-card dark:shadow-card flex flex-wrap items-center justify-between gap-3 rounded-xl border p-3 shadow-xs lg:sticky lg:bottom-4 lg:mt-auto">
+        <div className="border-border bg-card dark:shadow-card flex flex-wrap items-center justify-between gap-3 rounded-lg border p-3 shadow-xs lg:sticky lg:bottom-4 lg:mt-auto">
           {state.error ? (
             <p
               role="alert"
@@ -726,7 +726,7 @@ function PickRow({
       <button
         type="button"
         onClick={onPick}
-        className="hover:bg-brand-50/40 focus-visible:shadow-focus ease-expo-out flex w-full flex-col gap-0.5 px-3 py-2.5 text-left transition-colors duration-150 outline-none"
+        className="hover:bg-ink-25 focus-visible:shadow-focus ease-expo-out flex w-full flex-col gap-0.5 px-3 py-2.5 text-left transition-colors duration-150 outline-none"
       >
         <PatientIdentityCard patient={patient} className="w-full" />
         {caption ? (

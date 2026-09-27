@@ -25,13 +25,10 @@ export default async function DoctorEncountersPage() {
     <div className="stagger-children mx-auto flex w-full max-w-3xl flex-col gap-6 px-6 py-8 lg:py-10">
       <header className="flex flex-col gap-1.5">
         <span className="text-muted-foreground inline-flex items-center gap-1.5 font-mono text-[10px] tracking-[0.16em] uppercase">
-          <span
-            aria-hidden
-            className="pulse-dot bg-brand-500 ring-brand-500/20 size-1 rounded-full ring-2"
-          />
+          <span aria-hidden className="bg-iris-icon ring-iris-edge size-1 rounded-full ring-2" />
           Encounters
         </span>
-        <h1 className="font-display text-foreground text-[26px] leading-[1.1] font-medium tracking-[-0.015em]">
+        <h1 className="font-display text-display-s text-foreground">
           Open &amp; recent encounters
         </h1>
         <p className="text-muted-foreground text-[12.5px]">
@@ -76,12 +73,12 @@ async function EncounterList({
     );
   }
   return (
-    <ul className="border-border divide-border/60 stagger-children bg-card flex flex-col divide-y overflow-hidden rounded-xl border">
+    <ul className="border-border divide-border/60 stagger-children bg-card flex flex-col divide-y overflow-hidden rounded-lg border">
       {rows.map((r) => (
         <li key={r.encounterId}>
           <Link
             href={`/doctor/encounters/${r.encounterId}`}
-            className="group hover:bg-brand-50/50 focus-visible:bg-brand-50/50 dark:hover:bg-brand-950/15 dark:focus-visible:bg-brand-950/15 flex items-center gap-3 px-4 py-3 transition-colors duration-200 focus-visible:outline-none"
+            className="group hover:bg-ink-25 focus-visible:bg-ink-25 dark:focus-visible:bg-brand-950/15 flex items-center gap-3 px-4 py-3 transition-colors duration-200 focus-visible:outline-none"
           >
             <span className="text-foreground text-body-s min-w-0 flex-1 truncate font-medium">
               {r.patientCode ?? "Patient"}

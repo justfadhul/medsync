@@ -9,9 +9,10 @@ import { cn } from "@/lib/utils";
 /**
  * DataTable — the workhorse table for the admin workspace.
  *
- * Density done well: tight 36px rows, sticky header in gray-50,
- * monospace + tabular-nums for IDs and counts, restrained dividers,
- * calm status pills as cells. Engineered, not bootstrapped.
+ * MedSync Chroma's RecordTable (ADR 0162): a sticky 34px header on `muted`
+ * in 12/500 `ink-600`, 38px rows (`row-table`) on `ink-150` hairlines with
+ * column rules, hover `ink-25`, selected `accent`, mono + tabular-nums for
+ * IDs and counts. The table scrolls inside its own frame.
  *
  * Interaction model:
  *   - Row click OR Enter on a focused row → onRowSelect
@@ -156,7 +157,7 @@ export function DataTable<TRow>({
     <div className={cn("flex flex-col", className)}>
       {toolbar ? (
         <div className="border-border border-b">
-          <div className="px-4 py-2.5 sm:px-6">{toolbar}</div>
+          <div className="px-3 py-2.5">{toolbar}</div>
         </div>
       ) : null}
 
@@ -164,11 +165,10 @@ export function DataTable<TRow>({
         <table className="w-full border-collapse text-left">
           <caption className="sr-only">{caption}</caption>
 
-          {/* Sticky header — bg gray-50, 10px overline, semibold,
-              gray-500 (per DESIGN-medsync.md "Patient Records Table"
-              header pattern). */}
+          {/* Sticky header — 34px on `muted`, 12/500 ink-600 (DESIGN-medsync.md
+              § RecordTable). */}
           <thead>
-            <tr className="border-border sticky top-0 z-10 border-b bg-gray-50 dark:bg-gray-900/40">
+            <tr className="bg-muted sticky top-0 z-10">
               {columns.map((col) => {
                 const isSorted = sortKey === col.id && sortDir !== null;
                 return (
@@ -185,7 +185,7 @@ export function DataTable<TRow>({
                         : undefined
                     }
                     className={cn(
-                      "text-muted-foreground px-4 py-2.5 font-mono text-[10px] font-semibold tracking-[0.08em] uppercase sm:px-6",
+                      "text-ink-600 text-caption border-border [&+&]:border-l-ink-150 h-[34px] border-b px-3 font-medium whitespace-nowrap [&+&]:border-l",
                       col.hideOnNarrow && "hidden md:table-cell",
                       col.headerClassName,
                     )}
@@ -228,7 +228,7 @@ export function DataTable<TRow>({
               <tr>
                 <td
                   colSpan={columns.length}
-                  className="text-muted-foreground text-body-s px-4 py-16 text-center sm:px-6"
+                  className="text-muted-foreground text-body-s px-4 py-16 text-center"
                 >
                   {empty ?? "Nothing to show."}
                 </td>
@@ -248,10 +248,10 @@ export function DataTable<TRow>({
                     onClick={onRowSelect ? () => onRowSelect(row) : undefined}
                     onKeyDown={onRowSelect ? (e) => handleRowKeyDown(e, row) : undefined}
                     className={cn(
-                      "border-border border-b transition-colors outline-none",
-                      "hover:bg-muted/60 focus-visible:bg-muted/80",
-                      "focus-visible:ring-brand-500/40 focus-visible:ring-2 focus-visible:ring-inset",
-                      isSelected && "bg-brand-50/60 dark:bg-brand-950/30",
+                      "border-ink-150 border-b transition-colors duration-100 outline-none last:border-b-0",
+                      "hover:bg-ink-25 focus-visible:bg-ink-25",
+                      "focus-visible:ring-ring focus-visible:ring-2 focus-visible:ring-inset",
+                      isSelected && "bg-accent hover:bg-accent",
                       onRowSelect && "cursor-pointer",
                     )}
                   >
@@ -259,7 +259,7 @@ export function DataTable<TRow>({
                       <td
                         key={col.id}
                         className={cn(
-                          "text-foreground text-body-s px-4 py-2.5 align-middle sm:px-6",
+                          "text-foreground text-body-s [&+&]:border-l-ink-150 h-[38px] px-3 py-1.5 align-middle [&+&]:border-l",
                           col.mono && "font-mono tabular-nums",
                           col.hideOnNarrow && "hidden md:table-cell",
                           col.className,
@@ -302,11 +302,9 @@ export interface DataTableEmptyProps {
 export function DataTableEmpty({ title, description, action }: DataTableEmptyProps) {
   return (
     <div className="flex flex-col items-center gap-2 py-4">
-      <p className="text-foreground text-[14px] font-medium">{title}</p>
+      <p className="text-foreground text-heading-s">{title}</p>
       {description ? (
-        <p className="text-muted-foreground max-w-md text-[12.5px] leading-relaxed">
-          {description}
-        </p>
+        <p className="text-muted-foreground text-body-s max-w-md">{description}</p>
       ) : null}
       {action ? <div className="mt-2">{action}</div> : null}
     </div>
@@ -355,19 +353,19 @@ export function FilterChip({ active, onClick, children, count }: FilterChipProps
       onClick={onClick}
       aria-pressed={active}
       className={cn(
-        "inline-flex items-center gap-1.5 rounded-md px-2.5 py-1 text-[12px] transition-colors outline-none",
-        "focus-visible:ring-brand-500/40 focus-visible:ring-2",
+        "text-caption inline-flex h-[26px] items-center gap-1.5 rounded-sm border px-2 font-medium transition-colors duration-100 outline-none",
+        "focus-visible:shadow-focus",
         active
-          ? "bg-brand-50 text-brand-700 ring-brand-200 dark:bg-brand-950/40 dark:text-brand-300 dark:ring-brand-800/40 ring-1"
-          : "bg-background text-muted-foreground hover:text-foreground hover:bg-muted ring-border ring-1",
+          ? "bg-teal-tint text-teal-text border-teal-edge"
+          : "bg-card text-ink-600 border-ink-300 shadow-control hover:bg-ink-50 hover:text-foreground",
       )}
     >
       <span>{children}</span>
       {typeof count === "number" ? (
         <span
           className={cn(
-            "font-mono text-[10px] tabular-nums",
-            active ? "text-brand-700/80 dark:text-brand-300/80" : "text-muted-foreground",
+            "font-mono text-[11px] tabular-nums",
+            active ? "text-teal-text" : "text-muted-foreground",
           )}
         >
           {count}

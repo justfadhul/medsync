@@ -471,7 +471,7 @@ const makeStyles = (c: Palette) =>
       borderWidth: 1,
       borderColor: c.border,
     },
-    cardTitle: { fontFamily: font.bodyMedium, fontSize: 17, lineHeight: 23, color: c.foreground },
+    cardTitle: { fontFamily: font.bodySemiBold, fontSize: 17, lineHeight: 23, color: c.foreground },
     body: { fontFamily: font.body, fontSize: 14.5, lineHeight: 21, color: c.foreground },
     cardLink: { alignSelf: "flex-start", marginTop: space[1], marginLeft: -space[2] },
     caption: {

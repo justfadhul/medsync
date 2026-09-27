@@ -20,15 +20,10 @@ export default async function DoctorAssignedPage() {
     <div className="stagger-children mx-auto flex w-full max-w-3xl flex-col gap-6 px-6 py-8 lg:py-10">
       <header className="flex flex-col gap-1.5">
         <span className="text-muted-foreground inline-flex items-center gap-1.5 font-mono text-[10px] tracking-[0.16em] uppercase">
-          <span
-            aria-hidden
-            className="pulse-dot bg-brand-500 ring-brand-500/20 size-1 rounded-full ring-2"
-          />
+          <span aria-hidden className="bg-iris-icon ring-iris-edge size-1 rounded-full ring-2" />
           Assigned to you
         </span>
-        <h1 className="font-display text-foreground text-[26px] leading-[1.1] font-medium tracking-[-0.015em]">
-          Patients waiting to be seen
-        </h1>
+        <h1 className="font-display text-display-s text-foreground">Patients waiting to be seen</h1>
         <p className="text-muted-foreground text-[12.5px]">
           Triaged patients assigned to you. Start the encounter to open the clerking, or hand it to
           a colleague.

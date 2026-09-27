@@ -66,7 +66,7 @@ export function AssignDoctorButton({ intakeId }: { intakeId: string }) {
         value={pick}
         onChange={(e) => setPick(e.target.value)}
         disabled={doctors === null || pending}
-        className="border-input bg-card text-foreground text-caption focus-visible:border-mint-500 max-w-[150px] rounded-sm border px-1.5 py-1 outline-none"
+        className="border-input bg-card text-foreground text-caption focus-visible:border-ring max-w-[150px] rounded-sm border px-1.5 py-1 outline-none"
       >
         <option value="">{doctors === null ? "Loading…" : "Doctor…"}</option>
         {(doctors ?? []).map((d) => (

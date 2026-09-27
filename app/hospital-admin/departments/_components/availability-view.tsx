@@ -97,7 +97,7 @@ export function AvailabilityView(props: {
       </p>
 
       {total === 0 ? (
-        <p className="border-border bg-card text-body-s text-muted-foreground rounded-xl border p-5">
+        <p className="border-border bg-card text-body-s text-muted-foreground rounded-lg border p-5">
           Everything is running. Report a problem the moment something goes down.
         </p>
       ) : (
@@ -236,7 +236,7 @@ export function AvailabilityView(props: {
         </div>
       )}
 
-      <details className="border-border bg-card rounded-xl border">
+      <details className="border-border bg-card rounded-lg border">
         <summary className="text-foreground text-body-s cursor-pointer px-4 py-3 font-medium">
           History (90 days){" "}
           <span className="text-muted-foreground font-mono tabular-nums">

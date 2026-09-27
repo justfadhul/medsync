@@ -73,7 +73,7 @@ export default async function PatientHospitalsPage({ searchParams }: PageProps) 
 
       <section className="flex flex-col gap-3" aria-labelledby="hospitals-heading">
         <div className="flex items-baseline justify-between gap-3">
-          <h2 id="hospitals-heading" className="text-heading-s font-medium">
+          <h2 id="hospitals-heading" className="text-heading-s">
             {search ? "Matches" : "All hospitals"}
           </h2>
           <span className="text-muted-foreground text-body-s tabular-nums">{results.length}</span>
@@ -118,7 +118,7 @@ export default async function PatientHospitalsPage({ searchParams }: PageProps) 
                   <div className="flex items-start gap-3">
                     <span
                       aria-hidden
-                      className="bg-plum-100 text-plum-800 grid size-11 shrink-0 place-items-center rounded-xl"
+                      className="grid size-11 shrink-0 place-items-center rounded-xl bg-sky-100 text-sky-800"
                     >
                       <HospitalIcon strokeWidth={1.5} className="size-5" />
                     </span>
@@ -135,7 +135,7 @@ export default async function PatientHospitalsPage({ searchParams }: PageProps) 
                       // choice changes — never by remounting the row.
                       <Pill
                         key={scope.primaryHospitalId ?? "none"}
-                        tone="stable"
+                        tone="active"
                         className="select-flare shrink-0"
                       >
                         Your hospital

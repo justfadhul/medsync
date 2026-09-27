@@ -60,7 +60,7 @@ const LINE_COLUMNS: ReadonlyArray<DataTableColumn<LineRow>> = [
     // and the section's sentence counts it.
     cell: (r) =>
       r.positionsNotHonoured ? (
-        <Pill tone="caution">Positions not honoured</Pill>
+        <Pill tone="notice">Positions not honoured</Pill>
       ) : (
         <span className="text-muted-foreground text-caption">—</span>
       ),

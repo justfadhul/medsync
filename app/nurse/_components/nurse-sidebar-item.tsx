@@ -1,9 +1,8 @@
 "use client";
 
 import type { NurseIconKey } from "../_lib/features";
+import type { Domain } from "@/lib/design/domains";
 import type { LucideIcon } from "lucide-react";
-import Link from "next/link";
-import { usePathname } from "next/navigation";
 import {
   ActivityIcon,
   CalendarClockIcon,
@@ -21,7 +20,8 @@ import {
   UsersIcon,
 } from "lucide-react";
 
-import { cn } from "@/lib/utils";
+import { CommandBar } from "@/components/medsync/command-bar";
+import { SidebarNavItem } from "@/components/medsync/sidebar-nav";
 
 const ICONS: Record<NurseIconKey, LucideIcon> = {
   overview: LayoutDashboardIcon,
@@ -40,6 +40,22 @@ const ICONS: Record<NurseIconKey, LucideIcon> = {
   cosign_queue: ListChecksIcon,
 };
 
+/** Which part of the hospital each item belongs to (ADR 0162); none = neutral. */
+const DOMAIN: Partial<Record<NurseIconKey, Domain>> = {
+  incoming: "operations",
+  triage: "clinical",
+  patients: "patients",
+  observations: "clinical",
+  mar: "pharmacy",
+  alerts: "clinical",
+  schedule: "operations",
+  handover: "clinical",
+  assignment_board: "operations",
+  supervisees: "clinical",
+  cosign_queue: "clinical",
+  // resus has no domain hue: it wears the clinical state colours.
+};
+
 interface Props {
   href: string;
   label: string;
@@ -49,37 +65,42 @@ interface Props {
 }
 
 export function NurseSidebarItem({ href, label, iconKey, placeholder, exact }: Props) {
-  const pathname = usePathname();
-  const isActive = exact ? pathname === href : pathname === href || pathname.startsWith(`${href}/`);
-  const Icon = ICONS[iconKey];
-
   return (
-    <Link
+    <SidebarNavItem
       href={href}
-      aria-current={isActive ? "page" : undefined}
-      className={cn(
-        "group tap flex items-center gap-2.5 rounded-md px-2.5 py-1.5 text-[12.5px] transition-colors",
-        isActive
-          ? "bg-plum-50 text-plum-800 ring-plum-600/10 font-medium ring-1 ring-inset"
-          : "text-muted-foreground hover:bg-muted hover:text-foreground",
-        placeholder && !isActive && "opacity-70",
-      )}
-    >
-      <Icon
-        aria-hidden
-        className={cn(
-          "size-3.5 shrink-0 transition-colors duration-150",
-          isActive ? "text-plum-600" : "text-muted-foreground/80 group-hover:text-foreground",
-        )}
-      />
-      <span className="truncate">{label}</span>
-      {placeholder ? (
-        <span className="text-muted-foreground/70 ml-auto font-mono text-[9px] tracking-[0.1em] uppercase">
-          soon
-        </span>
-      ) : isActive ? (
-        <span aria-hidden className="scale-in bg-plum-500/80 ml-auto size-1 rounded-full" />
-      ) : null}
-    </Link>
+      label={label}
+      icon={ICONS[iconKey]}
+      domain={DOMAIN[iconKey]}
+      exact={exact}
+      dimmed={placeholder}
+      trailing={
+        placeholder ? (
+          <span className="text-muted-foreground font-mono text-[10px] tracking-[0.06em] uppercase">
+            soon
+          </span>
+        ) : null
+      }
+    />
+  );
+}
+
+/** The workspace's ⌘K bar: every section, with the sidebar's icons and domains. */
+export function NurseCommandBar({
+  items,
+}: {
+  items: ReadonlyArray<{ href: string; label: string; hint?: string; iconKey: NurseIconKey }>;
+}) {
+  return (
+    <CommandBar
+      entries={items.map((i) => ({
+        id: i.href,
+        label: i.label,
+        hint: i.hint,
+        href: i.href,
+        icon: ICONS[i.iconKey],
+        group: "Navigate",
+        domain: DOMAIN[i.iconKey],
+      }))}
+    />
   );
 }

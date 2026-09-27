@@ -488,11 +488,11 @@ export function NcdCapture({
         <header className="mb-1.5 flex flex-wrap items-baseline gap-x-2">
           <span
             aria-hidden
-            className="bg-brand-100 text-brand-700 dark:bg-brand-900/60 dark:text-brand-300 shrink-0 self-center rounded px-1.5 py-0.5 font-mono text-[10px] font-medium tabular-nums"
+            className="bg-iris-tint text-iris-icon shrink-0 self-center rounded px-1.5 py-0.5 font-mono text-[10px] font-medium tabular-nums"
           >
             {String(index + 1).padStart(2, "0")}
           </span>
-          <h3 className="font-display text-foreground text-body-l leading-tight font-medium tracking-[-0.012em]">
+          <h3 className="text-foreground text-body-l leading-tight font-medium tracking-[-0.012em]">
             {section.display}
           </h3>
           {section.description ? (
@@ -624,7 +624,7 @@ export function NcdCapture({
                             const n = Number(raw);
                             if (Number.isFinite(n)) set(src, { state: "recorded", value: n });
                           }}
-                          className="border-input bg-card ease-expo-out focus-visible:border-brand-500 focus-visible:ring-brand-500/25 w-[4.5rem] rounded-md border px-2 py-1 text-right font-mono text-[12px] tabular-nums transition-[border-color,box-shadow] duration-100 outline-none focus-visible:ring-2"
+                          className="border-input bg-card ease-expo-out focus-visible:border-ring focus-visible:ring-ring w-[4.5rem] rounded-md border px-2 py-1 text-right font-mono text-[12px] tabular-nums transition-[border-color,box-shadow] duration-100 outline-none focus-visible:ring-2"
                         />
                         <span className="text-muted-foreground font-mono text-[10px]">
                           {input.unit}
@@ -772,7 +772,7 @@ export function NcdCapture({
          * signing off an examination they never did.
          */}
         {activeGroup && !interpretation.length && !banded.length && !offProtocol.length ? (
-          <div className="border-border bg-card text-muted-foreground rounded-xl border border-dashed px-4 py-6 text-center">
+          <div className="border-border bg-card text-muted-foreground rounded-lg border border-dashed px-4 py-6 text-center">
             <p className="text-body-s text-foreground font-medium">Not built yet</p>
             <p className="text-caption mx-auto mt-1 max-w-prose">
               {segments.find((g) => g.id === activeGroup)?.display} has no fields on it yet. Nothing
@@ -1095,7 +1095,7 @@ function ExamSummary({ blocks, values }: { blocks: { finding: Feature }[]; value
   if (!positive.length && !negative.length && !unexamined.length) return null;
 
   return (
-    <div className="border-border bg-card mb-3 flex flex-col gap-2 rounded-xl border px-3.5 py-3">
+    <div className="border-border bg-card mb-3 flex flex-col gap-2 rounded-lg border px-3.5 py-3">
       {positive.length ? (
         <p className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
           <span className="text-caption text-muted-foreground shrink-0">Found</span>
@@ -1359,7 +1359,7 @@ function FeatureRow({
       className={`group/row gap-x-3 gap-y-1 ${
         nested
           ? "px-2.5 py-1"
-          : "bg-card hover:bg-brand-50/40 dark:hover:bg-brand-950/20 ease-expo-out px-3 py-2 transition-colors duration-100"
+          : "bg-card hover:bg-ink-25 dark:hover:bg-brand-950/20 ease-expo-out px-3 py-2 transition-colors duration-100"
       } ${
         wide
           ? "flex flex-col"
@@ -1667,7 +1667,7 @@ function ValueEditor({
                       ),
                     )
                   }
-                  className="border-input bg-card ease-expo-out focus-visible:border-brand-500 focus-visible:ring-brand-500/25 w-[9rem] shrink-0 rounded-md border px-2 py-1 text-[11.5px] transition-[border-color,box-shadow] duration-100 outline-none focus-visible:ring-2"
+                  className="border-input bg-card ease-expo-out focus-visible:border-ring focus-visible:ring-ring w-[9rem] shrink-0 rounded-md border px-2 py-1 text-[11.5px] transition-[border-color,box-shadow] duration-100 outline-none focus-visible:ring-2"
                 />
               ) : null}
             </span>
@@ -1731,7 +1731,7 @@ function ValueEditor({
             placeholder={note.placeholder ?? ""}
             aria-label={`${note.label ?? "Detail"} — ${chosen.display} (optional)`}
             onChange={(e) => put({ option: chosen.value, detail: e.target.value })}
-            className="border-input bg-card ease-expo-out focus-visible:border-brand-500 focus-visible:ring-brand-500/25 w-[11rem] rounded-md border px-2 py-1 text-[11.5px] transition-[border-color,box-shadow] duration-100 outline-none focus-visible:ring-2"
+            className="border-input bg-card ease-expo-out focus-visible:border-ring focus-visible:ring-ring w-[11rem] rounded-md border px-2 py-1 text-[11.5px] transition-[border-color,box-shadow] duration-100 outline-none focus-visible:ring-2"
           />
         ) : null}
       </span>
@@ -1755,7 +1755,7 @@ function ValueEditor({
           value={iso}
           aria-label={label}
           onChange={(e) => (e.target.value ? put(e.target.value) : onSet(undefined))}
-          className={`border-input bg-card ease-expo-out focus-visible:border-brand-500 focus-visible:ring-brand-500/25 rounded-md border px-2 py-1 font-mono text-[12px] tabular-nums transition-[border-color,box-shadow] duration-100 outline-none focus-visible:ring-2 ${
+          className={`border-input bg-card ease-expo-out focus-visible:border-ring focus-visible:ring-ring rounded-md border px-2 py-1 font-mono text-[12px] tabular-nums transition-[border-color,box-shadow] duration-100 outline-none focus-visible:ring-2 ${
             iso ? "text-foreground" : "text-muted-foreground"
           }`}
         />
@@ -1783,7 +1783,7 @@ function ValueEditor({
             if (!Number.isFinite(n)) return;
             put({ value: n, unit });
           }}
-          className={`border-input bg-card ease-expo-out focus-visible:border-brand-500 focus-visible:ring-brand-500/25 w-[4.5rem] rounded-md border px-2 py-1 text-right font-mono text-[12px] tabular-nums transition-[border-color,box-shadow] duration-100 outline-none focus-visible:ring-2 ${
+          className={`border-input bg-card ease-expo-out focus-visible:border-ring focus-visible:ring-ring w-[4.5rem] rounded-md border px-2 py-1 text-right font-mono text-[12px] tabular-nums transition-[border-color,box-shadow] duration-100 outline-none focus-visible:ring-2 ${
             d ? "text-foreground" : "text-muted-foreground"
           }`}
         />
@@ -1791,7 +1791,7 @@ function ValueEditor({
           aria-label={`${label} — unit`}
           value={unit}
           onChange={(e) => put({ value: d?.value ?? 0, unit: e.target.value as DurationUnit })}
-          className="border-input bg-card text-foreground/85 ease-expo-out focus-visible:border-brand-500 rounded-md border px-1.5 py-1 text-[11.5px] transition-[border-color] duration-100 outline-none"
+          className="border-input bg-card text-foreground/85 ease-expo-out focus-visible:border-ring rounded-md border px-1.5 py-1 text-[11.5px] transition-[border-color] duration-100 outline-none"
         >
           {DURATION_UNITS.map((u) => (
             <option key={u} value={u}>
@@ -1821,7 +1821,7 @@ function ValueEditor({
         }
         put(raw);
       }}
-      className={`border-input bg-card ease-expo-out focus-visible:border-brand-500 focus-visible:ring-brand-500/25 rounded-md border px-2 py-1 transition-[border-color,box-shadow] duration-100 outline-none focus-visible:ring-2 ${
+      className={`border-input bg-card ease-expo-out focus-visible:border-ring focus-visible:ring-ring rounded-md border px-2 py-1 transition-[border-color,box-shadow] duration-100 outline-none focus-visible:ring-2 ${
         feature.valueType === "number"
           ? "w-[6.5rem] text-right font-mono text-[12px] tabular-nums"
           : "text-body-s w-full min-w-[8rem] flex-1"
@@ -2028,7 +2028,7 @@ function SeriesField({
         onBlur={add}
         placeholder={series.length ? "again" : "record"}
         aria-label={`${series.length ? "New reading" : "Record"} — ${feature.display}`}
-        className="border-input bg-card ease-expo-out focus-visible:border-brand-500 focus-visible:ring-brand-500/25 w-[4.5rem] rounded-md border px-2 py-1 text-right font-mono text-[12px] tabular-nums transition-[border-color,box-shadow] duration-100 outline-none focus-visible:ring-2"
+        className="border-input bg-card ease-expo-out focus-visible:border-ring focus-visible:ring-ring w-[4.5rem] rounded-md border px-2 py-1 text-right font-mono text-[12px] tabular-nums transition-[border-color,box-shadow] duration-100 outline-none focus-visible:ring-2"
       />
       {series.length > 1 ? (
         <span className="text-caption text-muted-foreground tabular-nums">

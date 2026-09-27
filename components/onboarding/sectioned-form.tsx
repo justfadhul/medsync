@@ -484,7 +484,7 @@ function ProgressRail() {
                   aria-hidden
                   className={cn(
                     "mt-[7px] size-1.5 rounded-full transition-opacity duration-150",
-                    here ? "bg-plum-500 opacity-100" : "opacity-0",
+                    here ? "bg-teal-icon opacity-100" : "opacity-0",
                   )}
                 />
                 <span className="flex flex-col">
@@ -561,7 +561,7 @@ export function Section({ id, children }: { id: string; children: ReactNode }) {
     >
       <header className="mb-5 flex items-center gap-3">
         <SectionNumber n={index + 1} />
-        <h2 id={`s-${id}-title`} className="text-heading-s text-foreground font-medium">
+        <h2 id={`s-${id}-title`} className="text-heading-s text-foreground">
           {def.title}
         </h2>
         <span className="text-body-s text-muted-foreground ml-auto flex items-center gap-1 whitespace-nowrap">
@@ -591,9 +591,7 @@ export function FormHeader({
   return (
     <header className="flex flex-col gap-3">
       <p className="text-overline text-muted-foreground font-mono uppercase">{kicker}</p>
-      <h1 className="font-display text-foreground text-display-s sm:text-display-m text-balance">
-        {title}
-      </h1>
+      <h1 className="font-display text-display-s text-foreground text-balance">{title}</h1>
       <p className="text-body-l text-muted-foreground max-w-[52ch] text-pretty">{lead}</p>
       {children}
     </header>

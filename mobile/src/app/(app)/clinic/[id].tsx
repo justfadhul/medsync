@@ -589,7 +589,7 @@ const makeStyles = (c: Palette) =>
       color: c.mutedForeground,
     },
     feeValue: {
-      fontFamily: font.bodyMedium,
+      fontFamily: font.bodySemiBold,
       fontSize: 20,
       lineHeight: 26,
       color: c.foreground,

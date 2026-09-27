@@ -87,10 +87,7 @@ export default async function DoctorSchedulePage() {
       <header className="flex flex-col gap-1">
         <div className="flex flex-wrap items-center gap-2">
           <span className="text-muted-foreground inline-flex items-center gap-1.5 font-mono text-[10px] tracking-[0.16em] uppercase">
-            <span
-              aria-hidden
-              className="bg-brand-500 ring-brand-500/20 size-1 rounded-full ring-2"
-            />
+            <span aria-hidden className="bg-iris-icon ring-iris-edge size-1 rounded-full ring-2" />
             {scope.hospitalName} · {scope.departmentName}
           </span>
           {/* The one setting that changes what the page does, said in a word. */}

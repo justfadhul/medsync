@@ -144,7 +144,7 @@ export function TenantsTable({ items }: TableProps) {
               {row.emergencyPhone}
             </span>
           ) : (
-            <Pill tone="caution">Not set</Pill>
+            <Pill tone="neutral">Not set</Pill>
           ),
         className: "w-[160px]",
       },
@@ -173,9 +173,7 @@ export function TenantsTable({ items }: TableProps) {
       <header className="border-border border-b px-4 py-6 sm:px-8 sm:py-8">
         <div className="mx-auto flex w-full max-w-[1200px] items-start justify-between gap-4">
           <div className="flex flex-col gap-1">
-            <h1 className="font-display text-foreground sm:text-heading-l text-[24px] leading-tight font-medium tracking-[-0.018em]">
-              Tenants
-            </h1>
+            <h1 className="font-display text-display-s text-foreground">Tenants</h1>
             <p className="text-muted-foreground text-[13.5px]">
               {items.length} hospital{items.length === 1 ? "" : "s"} on the platform. Suspend /
               deactivate are four-eyes-class and currently deferred.

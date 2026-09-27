@@ -212,7 +212,7 @@ export default async function PatientAppointments() {
 function SectionHead({ id, title, count }: { id: string; title: string; count: number }) {
   return (
     <div className="flex items-baseline justify-between gap-3">
-      <h2 id={id} className="text-foreground text-heading-s font-medium">
+      <h2 id={id} className="text-foreground text-heading-s">
         {title}
       </h2>
       <span className="text-muted-foreground text-caption font-mono tabular-nums">{count}</span>
@@ -266,7 +266,7 @@ function UpcomingVisit({
       <div className="flex items-start gap-3">
         <span
           aria-hidden
-          className="bg-plum-50 text-plum-700 grid size-11 shrink-0 place-items-center rounded-xl"
+          className="bg-sky-tint text-sky-text grid size-11 shrink-0 place-items-center rounded-xl"
         >
           {initials ? (
             <span className="text-body-s font-mono font-medium">{initials}</span>

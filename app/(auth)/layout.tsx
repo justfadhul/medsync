@@ -21,7 +21,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
         <div className="mx-auto flex h-16 w-full max-w-300 items-center justify-between gap-4 px-4 sm:px-8">
           <Link
             href="/"
-            className="font-display text-heading-s text-foreground inline-flex min-h-11 items-center rounded-sm"
+            className="font-display text-heading-s text-foreground inline-flex min-h-11 items-center rounded-sm font-semibold"
           >
             {AUTH_SHELL.wordmark}
           </Link>

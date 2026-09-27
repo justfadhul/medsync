@@ -11,8 +11,8 @@ import { extendTailwindMerge } from "tailwind-merge";
  * `cn("text-caption", "text-white")` would return just `text-white`, leaving the
  * element at the inherited 16px.
  *
- * The twelve names below mirror the `--text-*` tokens in app/globals.css exactly;
- * keep the two lists in step. See DESIGN-medsync.md § Typography.
+ * The names below mirror the MedSync Chroma `--text-*` tokens in app/globals.css
+ * exactly (ADR 0162); keep the two lists in step. See DESIGN-medsync.md § Typography.
  */
 const twMerge = extendTailwindMerge({
   extend: {
@@ -30,8 +30,13 @@ const twMerge = extendTailwindMerge({
             "body-l",
             "body-m",
             "body-s",
+            "label",
             "caption",
             "overline",
+            "stat",
+            "vital",
+            "mono-s",
+            "kbd",
           ],
         },
       ],

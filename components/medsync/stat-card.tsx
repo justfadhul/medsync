@@ -1,29 +1,35 @@
+import type { Domain } from "@/lib/design/domains";
 import type { ReactNode } from "react";
 import { ChevronRightIcon } from "lucide-react";
 
+import { DOMAIN_HUE, HUE } from "@/lib/design/domains";
 import { cn } from "@/lib/utils";
+import { DomainTile } from "./domain-tile";
 
 interface StatProps {
   label: string;
   value: number | string;
+  /** The denominator or the window: a number without its basis is a claim. */
   hint: string;
   icon: ReactNode;
+  /** The domain the count belongs to: colours the tile and the bar. */
+  domain?: Domain;
+  /**
+   * A real proportion (0–1) drawn as a thin bar in the domain's solid colour.
+   * Only when the basis is known — never a decorative bar, and never red,
+   * amber or green to judge the number.
+   */
+  share?: number;
 }
 
 /**
- * One number with its basis and an icon tile — the strip a console opens
- * with. `tinted` marks the one card a desk reads first. The hint is the
- * denominator or the window: a number without its basis is a claim.
+ * One count with its basis, a domain tile and an optional proportion bar —
+ * the strip a console opens with (MedSync Chroma, ADR 0162).
  */
-export function StatCard({ tinted = false, ...stat }: StatProps & { tinted?: boolean }) {
+export function StatCard(stat: StatProps) {
   return (
-    <div
-      className={cn(
-        "flex items-center gap-3 rounded-xl border px-4 py-3 shadow-xs",
-        tinted ? "bg-plum-50 border-plum-200" : "bg-card border-border",
-      )}
-    >
-      <StatBody {...stat} tinted={tinted} />
+    <div className="bg-card border-border flex min-w-0 flex-col gap-2.5 rounded-lg border px-4 py-3.5 shadow-xs">
+      <StatBody {...stat} />
     </div>
   );
 }
@@ -44,32 +50,50 @@ export function StatButton({
       onClick={onClick}
       aria-haspopup="dialog"
       aria-expanded={expanded}
-      className="bg-card border-border tap hover:border-brand-300 flex min-h-11 items-center gap-3 rounded-xl border px-4 py-3 text-left shadow-xs"
+      className="bg-card border-border tap hover:bg-ink-25 flex min-h-11 min-w-0 flex-col gap-2.5 rounded-lg border px-4 py-3.5 text-left shadow-xs"
     >
-      <StatBody {...stat} tinted={false} />
-      <ChevronRightIcon className="text-muted-foreground -ml-1 size-4 shrink-0" aria-hidden />
+      <StatBody {...stat} chevron />
     </button>
   );
 }
 
-function StatBody({ label, value, hint, icon, tinted }: StatProps & { tinted: boolean }) {
+function StatBody({
+  label,
+  value,
+  hint,
+  icon,
+  domain,
+  share,
+  chevron,
+}: StatProps & { chevron?: boolean }) {
   return (
     <>
-      <div className="flex min-w-0 flex-1 flex-col">
-        <span className="text-muted-foreground text-caption truncate">{label}</span>
-        <span className="text-foreground font-mono text-[22px] leading-7 font-medium tabular-nums">
-          {value}
-        </span>
-        <span className="text-muted-foreground text-caption truncate">{hint}</span>
-      </div>
-      <span
-        className={cn(
-          "grid size-9 shrink-0 place-items-center rounded-lg",
-          tinted ? "bg-card text-plum-700" : "bg-muted text-plum-700",
+      <span className="text-ink-600 text-caption flex min-w-0 items-center gap-2">
+        {domain ? (
+          <DomainTile domain={domain} icon={icon} size="sm" />
+        ) : (
+          <span
+            aria-hidden
+            className="bg-ink-100 text-ink-600 grid size-5 shrink-0 place-items-center rounded-sm [&_svg]:size-3"
+          >
+            {icon}
+          </span>
         )}
-      >
-        {icon}
+        <span className="truncate">{label}</span>
+        {chevron ? (
+          <ChevronRightIcon className="text-muted-foreground ml-auto size-4 shrink-0" aria-hidden />
+        ) : null}
       </span>
+      <span className="text-foreground text-stat font-mono tabular-nums">{value}</span>
+      {share !== undefined ? (
+        <span aria-hidden className="bg-ink-100 flex h-1.5 overflow-hidden rounded-full">
+          <i
+            className={cn("block h-full", HUE[domain ? DOMAIN_HUE[domain] : "slate"].bar)}
+            style={{ width: `${Math.round(Math.min(1, Math.max(0, share)) * 100)}%` }}
+          />
+        </span>
+      ) : null}
+      <span className="text-muted-foreground text-caption truncate font-normal">{hint}</span>
     </>
   );
 }

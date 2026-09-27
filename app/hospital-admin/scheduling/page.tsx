@@ -166,7 +166,7 @@ export default async function SchedulingPage() {
           <span className="text-muted-foreground inline-flex w-fit items-center gap-1.5 font-mono text-[10px] tracking-[0.16em] uppercase">
             <span
               aria-hidden
-              className="bg-brand-500 ring-brand-500/20 size-1 rounded-full ring-2"
+              className="bg-slate-icon ring-slate-edge size-1 rounded-full ring-2"
             />
             {scope.hospitalName} · Scheduling
           </span>
@@ -202,33 +202,35 @@ export default async function SchedulingPage() {
         ) : null}
       </header>
 
-      {/* The strip: five numbers, each with its basis. The first is tinted —
-          the reference's one highlighted card — because "today" is the one a
-          desk reads first. */}
+      {/* The strip: five numbers, each with its basis, in the Operations hue
+          (scheduling is an Operations domain, ADR 0162). */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-5">
         <StatCard
+          domain="operations"
           label="Today"
           value={stats?.todayBooked ?? "—"}
           hint="confirmed bookings"
           icon={<CalendarCheckIcon className="size-4" aria-hidden />}
-          tinted
         />
         {/* The one card that opens: the rows behind the number. When the
             stats query failed, the list itself is the count. */}
         <PendingDialog rows={pending} value={stats?.pendingApproval ?? pending.length} />
         <StatCard
+          domain="operations"
           label="Urgent today"
           value={stats?.urgentToday ?? "—"}
           hint="alert-triggered"
           icon={<AlertCircleIcon className="size-4" aria-hidden />}
         />
         <StatCard
+          domain="operations"
           label="Places, next 14 days"
           value={places}
           hint={`${booked} held · ${published.length} clinic days`}
           icon={<CalendarDaysIcon className="size-4" aria-hidden />}
         />
         <StatCard
+          domain="operations"
           label="Sent today"
           value={sentCount}
           hint={
@@ -292,7 +294,7 @@ function CapacityCard({
   const free = Math.max(places - booked, 0);
   const pct = places > 0 ? Math.round((booked / places) * 100) : 0;
   return (
-    <section className="border-border bg-card flex min-h-0 flex-col gap-4 rounded-xl border p-5 shadow-xs">
+    <section className="border-border bg-card flex min-h-0 flex-col gap-4 rounded-lg border p-5 shadow-xs">
       <header className="flex items-baseline justify-between gap-3">
         <h2 className="text-foreground text-body-m font-medium">Capacity, next 14 days</h2>
         <span className="text-muted-foreground text-caption font-mono tabular-nums">

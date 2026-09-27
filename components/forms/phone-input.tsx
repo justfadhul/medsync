@@ -99,8 +99,8 @@ export function PhoneInput({
         className={cn(
           "border-input bg-card text-foreground flex w-full items-stretch overflow-hidden rounded-sm border",
           "ease-expo-out transition-all duration-150",
-          "focus-within:border-brand-500 focus-within:shadow-[0_0_0_2px_rgba(20,184,166,0.15)]",
-          "dark:focus-within:border-brand-400 dark:focus-within:shadow-[0_0_0_2px_rgba(45,212,191,0.2)]",
+          "focus-within:border-ring focus-within:shadow-[0_0_0_3px_var(--teal-tint),0_0_0_1px_var(--ring)]",
+          "",
           invalid &&
             "border-destructive bg-alert-bg shadow-[0_0_0_2px_rgba(220,38,38,0.1)] dark:shadow-[0_0_0_2px_rgba(252,165,165,0.1)]",
           disabled && "bg-muted pointer-events-none cursor-not-allowed opacity-50",

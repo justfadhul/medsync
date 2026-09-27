@@ -41,7 +41,7 @@ export default function SignupLayout({ children }: { children: ReactNode }) {
           <div className="flex items-center gap-3 whitespace-nowrap sm:gap-5">
             <Link
               href="/"
-              className="font-display text-foreground text-[16px] tracking-tight transition-opacity hover:opacity-80"
+              className="font-display text-foreground text-heading-s font-semibold transition-opacity hover:opacity-80"
             >
               MedSync
             </Link>

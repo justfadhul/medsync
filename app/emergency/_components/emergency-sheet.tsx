@@ -26,10 +26,7 @@ export function EmergencySheet({ primary, secondaries, drafts }: EmergencySheetP
   return (
     <section aria-labelledby="emergency-heading" className="flex flex-col gap-4 sm:gap-5">
       <header className="flex flex-col gap-2">
-        <h1
-          id="emergency-heading"
-          className="font-display text-foreground text-heading-l font-medium tracking-[-0.015em]"
-        >
+        <h1 id="emergency-heading" className="font-display text-display-s text-foreground">
           Get help now
         </h1>
         <p className="text-foreground text-body-m">

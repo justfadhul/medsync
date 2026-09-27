@@ -107,17 +107,15 @@ export default async function AvailabilityPage({ searchParams }: PageProps) {
     <div className="mx-auto flex w-full max-w-5xl flex-col gap-6 px-4 py-6 sm:px-6 sm:py-8">
       <header className="reveal-up flex flex-col gap-2">
         <span className="text-muted-foreground text-overline inline-flex w-fit items-center gap-1.5 font-mono uppercase">
-          <span aria-hidden className="bg-brand-500 ring-brand-500/20 size-1 rounded-full ring-2" />
+          <span aria-hidden className="bg-iris-icon ring-iris-edge size-1 rounded-full ring-2" />
           {scope.hospitalName} · {scope.departmentName}
         </span>
-        <h1 className="font-display text-foreground text-heading-m sm:text-heading-l font-medium">
-          Your availability
-        </h1>
+        <h1 className="font-display text-display-s text-foreground">Your availability</h1>
         <p className="text-muted-foreground text-body-s max-w-2xl leading-relaxed">
           Declare your bookable hours, mark out your teaching, ward rounds and admin, and choose
           whether requests confirm automatically or wait for your approval.
         </p>
-        <div className="bg-brand-500/60 h-px w-10" aria-hidden />
+        <div className="bg-ink-300 h-px w-10" aria-hidden />
       </header>
 
       <div className="reveal-up" style={{ animationDelay: "70ms" }}>

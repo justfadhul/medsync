@@ -80,8 +80,8 @@ export function PatientNavRail({
                   className={cn(
                     "tap flex min-h-11 items-center justify-center gap-3 rounded-md px-2.5 outline-none lg:justify-start",
                     isActive
-                      ? "bg-sidebar-accent text-sidebar-accent-foreground"
-                      : "text-muted-foreground hover:bg-muted hover:text-foreground",
+                      ? "bg-sky-tint text-sky-text shadow-[inset_0_0_0_1px_var(--sky-edge)]"
+                      : "text-sidebar-foreground hover:bg-ink-100 hover:text-foreground",
                     // Sub-routes read as sub-routes by indentation alone —
                     // no left accent bar.
                     item.indent && "lg:pl-7",

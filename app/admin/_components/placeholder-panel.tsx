@@ -40,10 +40,7 @@ export function PlaceholderPanel({
           <span aria-hidden="true">&middot;</span>
           <span className="text-muted-foreground">{eyebrow}</span>
         </span>
-        <h1
-          className="font-display text-foreground text-heading-l sm:text-display-s leading-[1.1] tracking-[-0.02em]"
-          style={{ fontWeight: 400 }}
-        >
+        <h1 className="font-display text-display-s text-foreground" style={{ fontWeight: 400 }}>
           {title}
           {tag ? (
             <span

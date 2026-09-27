@@ -47,7 +47,7 @@ export async function HospitalPendingView({ app }: { app: HospitalApplication })
         data-emergency-inline=""
       >
         <div className="mx-auto flex h-14 w-full max-w-300 items-center justify-between gap-3 px-4 sm:px-8">
-          <Link href="/" className="font-display text-foreground text-[16px] tracking-tight">
+          <Link href="/" className="text-foreground text-heading-s tracking-tight">
             {HOSPITAL_PENDING.brand}
           </Link>
           <div className="flex items-center gap-3 whitespace-nowrap sm:gap-4">
@@ -67,7 +67,7 @@ export async function HospitalPendingView({ app }: { app: HospitalApplication })
       <main className="mx-auto flex w-full max-w-180 flex-col gap-6 px-4 pt-10 pb-20 sm:px-8 sm:pt-16">
         <header className="flex flex-col gap-3">
           <p className="text-overline text-muted-foreground font-mono uppercase">{state}</p>
-          <h1 className="font-display text-foreground text-display-s sm:text-display-m text-balance">
+          <h1 className="font-display text-display-s text-foreground text-balance">
             {rejected ? HOSPITAL_PENDING.rejectedTitle : P.title}
           </h1>
           <p className="text-body-l text-muted-foreground max-w-[52ch] text-pretty">
@@ -100,7 +100,7 @@ export async function HospitalPendingView({ app }: { app: HospitalApplication })
 
         {outstanding.length > 0 ? (
           <section aria-labelledby="still-needed" className="flex flex-col gap-3">
-            <h2 id="still-needed" className="text-heading-s text-foreground font-medium">
+            <h2 id="still-needed" className="text-heading-s text-foreground">
               {PENDING.stillNeeded}
             </h2>
             <p className="text-body-m text-muted-foreground">{P.waiting}</p>
@@ -117,7 +117,7 @@ export async function HospitalPendingView({ app }: { app: HospitalApplication })
 
         {reviewing ? (
           <section aria-labelledby="next-steps" className={card}>
-            <h2 id="next-steps" className="text-heading-s text-foreground font-medium">
+            <h2 id="next-steps" className="text-heading-s text-foreground">
               {PENDING.staffNextSteps}
             </h2>
             <ol className="text-body-m text-muted-foreground flex list-decimal flex-col gap-1.5 pl-5">
@@ -129,7 +129,7 @@ export async function HospitalPendingView({ app }: { app: HospitalApplication })
         ) : null}
 
         <section aria-labelledby="on-file" className={card}>
-          <h2 id="on-file" className="text-heading-s text-foreground font-medium">
+          <h2 id="on-file" className="text-heading-s text-foreground">
             {HOSPITAL_PENDING.onFile}
           </h2>
           <dl className="text-body-s grid grid-cols-1 gap-x-6 gap-y-2 sm:grid-cols-[10rem_1fr]">

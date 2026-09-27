@@ -52,7 +52,7 @@ const KIND_TINT: Record<ReadingKind, RowTint> = {
  *  `shadow-focus` is the system's 2px ring; both it and `brand-500` hold in
  *  dark on their own, so no `dark:` override to fight the ramp flip. */
 const CONTROL =
-  "border-input bg-card text-foreground text-body-s ease-expo-out rounded-sm border px-2.5 py-2 transition-all duration-150 outline-none placeholder:text-gray-400 focus-visible:border-brand-500 focus-visible:shadow-focus";
+  "border-input bg-card text-foreground text-body-s ease-expo-out rounded-sm border px-2.5 py-2 transition-all duration-150 outline-none placeholder:text-gray-400 focus-visible:border-ring focus-visible:shadow-focus";
 
 const KIND_ICON: Record<ReadingKind, LucideIcon> = {
   glucose: DropletIcon,

@@ -189,14 +189,12 @@ function Stat({
   return (
     <Link
       href={href}
-      className="border-border/60 hover:bg-muted/40 group tap focus-visible:ring-brand-500/40 flex flex-col gap-1 rounded-md border p-3 outline-none focus-visible:ring-2"
+      className="border-border/60 hover:bg-muted/40 group tap focus-visible:ring-ring flex flex-col gap-1 rounded-md border p-3 outline-none focus-visible:ring-2"
     >
       <span className="text-muted-foreground font-mono text-[10.5px] tracking-[0.12em] uppercase">
         {label}
       </span>
-      <span
-        className={cn("text-heading-l font-mono leading-none font-medium tabular-nums", toneClass)}
-      >
+      <span className={cn("text-heading-l font-mono leading-none tabular-nums", toneClass)}>
         {value}
       </span>
     </Link>

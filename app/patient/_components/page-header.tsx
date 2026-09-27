@@ -53,15 +53,17 @@ export function PatientPageHeader({
 
       {eyebrow ? (
         <span className="text-muted-foreground text-caption inline-flex items-center gap-1.5 font-mono tracking-[0.16em] uppercase">
-          <span aria-hidden className="bg-brand-500 ring-brand-500/20 size-1 rounded-full ring-2" />
+          <span
+            aria-hidden
+            data-place
+            className="bg-sky-icon ring-sky-edge size-1 rounded-full ring-2"
+          />
           {eyebrow}
         </span>
       ) : null}
 
       <div className="flex items-start justify-between gap-3">
-        <h1 className="font-display text-foreground text-heading-m sm:text-heading-l font-medium text-balance">
-          {title}
-        </h1>
+        <h1 className="font-display text-display-s text-foreground text-balance">{title}</h1>
         {action ? <div className="flex shrink-0 items-center gap-2">{action}</div> : null}
       </div>
 

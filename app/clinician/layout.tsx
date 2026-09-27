@@ -39,10 +39,7 @@ export default async function ClinicianLayout({ children }: { children: ReactNod
     <div className="bg-background text-foreground flex min-h-svh w-full flex-col">
       <header className="border-border glass sticky top-0 z-30 flex h-[52px] items-center justify-between gap-3 border-b px-4 sm:px-6">
         <div className="flex min-w-0 items-center gap-3">
-          <Link
-            href="/"
-            className="font-display text-foreground text-body-m font-medium tracking-[-0.01em]"
-          >
+          <Link href="/" className="font-display text-foreground text-body-m font-semibold">
             MedSync
           </Link>
           <span

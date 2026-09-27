@@ -44,7 +44,7 @@ export default async function PatientSettingsPage() {
       />
 
       <section className="flex flex-col gap-2">
-        <h2 className="text-heading-s font-medium">Your preferences</h2>
+        <h2 className="text-heading-s">Your preferences</h2>
 
         <ul className="stagger-children flex flex-col gap-2">
           <li className={ROW}>
@@ -77,7 +77,7 @@ export default async function PatientSettingsPage() {
       </section>
 
       <section className="bg-card dark:shadow-card flex flex-col gap-3 rounded-xl p-5 shadow-xs">
-        <h2 className="text-heading-s font-medium">Coming next</h2>
+        <h2 className="text-heading-s">Coming next</h2>
         <ul className="flex flex-col gap-1.5">
           {COMING_NEXT.map((item) => (
             <li

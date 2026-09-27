@@ -841,7 +841,7 @@ const makeStyles = (c: Palette) =>
     },
     wordmarkGroup: { flex: 1, flexDirection: "row", alignItems: "center", gap: space[3] },
     wordmark: {
-      fontFamily: font.display,
+      fontFamily: font.bodySemiBold,
       fontSize: 17,
       letterSpacing: -0.2,
       color: c.foreground,
@@ -912,7 +912,7 @@ const makeStyles = (c: Palette) =>
     primaryDoor: { padding: space[4], backgroundColor: c.cta },
     primaryDisc: { backgroundColor: withAlpha(c.ctaForeground, 0.12) },
     primaryTitle: {
-      fontFamily: font.display,
+      fontFamily: font.bodySemiBold,
       fontSize: 17,
       lineHeight: 22,
       letterSpacing: -0.2,

@@ -205,8 +205,8 @@ function BlockRow({ block, onOpen }: { block: AvailabilityRow; onOpen: () => voi
         type="button"
         onClick={onOpen}
         className={cn(
-          "group tap hover:bg-brand-50/40 dark:hover:bg-brand-950/15 flex w-full items-center gap-4 px-4 py-3 text-left transition-colors outline-none sm:px-6",
-          "focus-visible:ring-brand-500/40 focus-visible:ring-2 focus-visible:ring-inset",
+          "group tap hover:bg-ink-25 flex w-full items-center gap-4 px-4 py-3 text-left transition-colors outline-none sm:px-6",
+          "focus-visible:ring-ring focus-visible:ring-2 focus-visible:ring-inset",
         )}
       >
         <div className="flex w-32 shrink-0 flex-col">

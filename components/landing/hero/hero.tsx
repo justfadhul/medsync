@@ -20,11 +20,11 @@ export function Hero() {
             </Kicker>
             <h1
               id="top-title"
-              className="font-display text-foreground font-medium text-balance"
+              className="font-display text-foreground font-semibold text-balance"
               style={{
                 fontSize: "clamp(2.75rem, 1rem + 4.5vw, 4.5rem)",
-                lineHeight: 1.02,
-                letterSpacing: "-0.02em",
+                lineHeight: 0.98,
+                letterSpacing: "-0.04em",
               }}
             >
               <Emph {...HERO.title} />

@@ -31,10 +31,10 @@ export function HandoverForm({ wards }: { wards: ReadonlyArray<WardOption> }) {
 
   if (state.ok) {
     return (
-      <div className="border-border bg-card scale-in ring-brand-500/10 flex flex-col items-start gap-3 rounded-xl border p-5 ring-1">
+      <div className="border-border bg-card scale-in ring-brand-500/10 flex flex-col items-start gap-3 rounded-lg border p-5 ring-1">
         <span
           aria-hidden
-          className="scale-in bg-brand-100 text-brand-700 dark:bg-brand-900/60 dark:text-brand-300 inline-flex size-9 items-center justify-center rounded-full"
+          className="scale-in bg-iris-tint text-iris-icon inline-flex size-9 items-center justify-center rounded-full"
           style={{ animationDelay: "90ms" }}
         >
           <ScrollTextIcon className="size-4" />
@@ -54,7 +54,7 @@ export function HandoverForm({ wards }: { wards: ReadonlyArray<WardOption> }) {
 
   if (wards.length === 0) {
     return (
-      <div className="border-border bg-card flex flex-col gap-2 rounded-xl border p-4">
+      <div className="border-border bg-card flex flex-col gap-2 rounded-lg border p-4">
         <p className="text-foreground text-body-s font-medium">No wards set up yet</p>
         <p className="text-muted-foreground text-[12px]">
           A handover is per-ward. Your hospital admin sets up wards under{" "}

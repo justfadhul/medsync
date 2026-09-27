@@ -1,10 +1,8 @@
 "use client";
 
 import type { FeatureIconKey } from "../_lib/features";
-import Link from "next/link";
-import { usePathname } from "next/navigation";
+import type { Domain } from "@/lib/design/domains";
 import {
-  AlertTriangleIcon,
   BarChart3Icon,
   Building2Icon,
   CalendarClockIcon,
@@ -16,7 +14,7 @@ import {
   UsersIcon,
 } from "lucide-react";
 
-import { cn } from "@/lib/utils";
+import { SidebarNavItem } from "@/components/medsync/sidebar-nav";
 
 /**
  * Sidebar row for the hospital-admin shell. Same architecture as the
@@ -39,6 +37,17 @@ const ICONS: Record<FeatureIconKey, typeof LayoutDashboardIcon> = {
   profile: FileTextIcon,
 };
 
+/** Which part of the hospital each item belongs to (ADR 0162); none = neutral. */
+const DOMAIN: Partial<Record<FeatureIconKey, Domain>> = {
+  staff: "admin",
+  departments: "operations",
+  scheduling: "operations",
+  intake: "operations",
+  admins: "admin",
+  audit: "admin",
+  profile: "admin",
+};
+
 interface Props {
   href: string;
   label: string;
@@ -58,61 +67,19 @@ export function HospitalSidebarItem({
   badgeCount,
   badgeTone = "brand",
   badgeLabel,
-}: Props) {
-  const pathname = usePathname();
-  // Index route ("/hospital-admin") matches exactly; nested routes
-  // match prefix-with-slash so /staff doesn't accidentally light up
-  // /staff-something later.
-  const isActive =
-    href === "/hospital-admin"
-      ? pathname === "/hospital-admin"
-      : pathname === href || pathname.startsWith(`${href}/`);
-  const Icon = ICONS[iconKey];
-
+  onNavigate,
+}: Props & { onNavigate?: () => void }) {
   return (
-    <Link
+    <SidebarNavItem
       href={href}
-      aria-current={isActive ? "page" : undefined}
-      className={cn(
-        "group tap text-body-s flex items-center gap-2.5 rounded-md px-2.5 py-1.5 transition-colors outline-none",
-        "focus-visible:ring-brand-500/40 focus-visible:ring-2",
-        isActive
-          ? "bg-plum-50 text-plum-800 ring-plum-600/10 ring-1 ring-inset"
-          : "text-muted-foreground hover:bg-muted hover:text-foreground",
-      )}
-    >
-      <Icon
-        className={cn(
-          "size-4 shrink-0",
-          isActive ? "text-plum-600" : "text-muted-foreground/80 group-hover:text-foreground",
-        )}
-        aria-hidden
-      />
-      <span className="min-w-0 flex-1 leading-snug font-medium">{label}</span>
-
-      {badgeCount && badgeCount > 0 ? (
-        badgeTone === "caution" ? (
-          <span
-            aria-label={badgeLabel ?? `${badgeCount} need attention`}
-            className="scale-in bg-status-caution-bg dark:text-status-caution-fg inline-flex items-center gap-0.5 rounded-full px-1.5 py-0.5 font-mono text-[10px] font-semibold text-amber-800 tabular-nums"
-          >
-            <AlertTriangleIcon className="size-2.5" aria-hidden />
-            {badgeCount}
-          </span>
-        ) : (
-          <span
-            aria-label={badgeLabel ?? `${badgeCount} pending`}
-            className={cn(
-              "scale-in rounded-full px-1.5 py-0.5 font-mono text-[10px] font-semibold tabular-nums",
-              isActive
-                ? "bg-brand-600 text-white"
-                : "bg-brand-100 text-brand-800 dark:bg-brand-900/60 dark:text-brand-200",
-            )}
-          >
-            {badgeCount}
-          </span>
-        )
-      ) : null}
-    </Link>
+      label={label}
+      icon={ICONS[iconKey]}
+      domain={DOMAIN[iconKey]}
+      exact={href === "/hospital-admin"}
+      count={badgeCount}
+      countLabel={badgeLabel}
+      countTone={badgeTone === "caution" ? "caution" : "neutral"}
+      onNavigate={onNavigate}
+    />
   );
 }

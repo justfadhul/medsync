@@ -33,10 +33,10 @@ export default function NotFound() {
         </span>
 
         <h1
-          className="font-display text-foreground max-w-[22ch] text-[40px] leading-[1.05] tracking-[-0.025em] text-balance sm:text-[64px]"
+          className="font-display text-display-s text-foreground max-w-[22ch] text-balance"
           style={{ fontWeight: 400 }}
         >
-          The record for <span className="text-plum-700 italic">this page</span> is missing.
+          The record for <span className="text-ink-500">this page</span> is missing.
         </h1>
 
         <p className="text-muted-foreground text-body-m sm:text-body-l max-w-[58ch] leading-[1.6] text-balance">
@@ -52,7 +52,7 @@ export default function NotFound() {
           <Link
             href="/"
             className={cn(
-              "border-border text-foreground hover:border-brand-300 hover:bg-brand-50/50 dark:hover:bg-brand-50/10",
+              "border-border text-foreground hover:border-brand-300 hover:bg-ink-25",
               "text-body-s inline-flex items-center gap-1.5 rounded-md border px-3 py-1.5",
               "transition-colors duration-150",
             )}

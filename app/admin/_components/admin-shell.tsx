@@ -2,9 +2,10 @@ import type { SidebarIconKey } from "./admin-sidebar-active";
 import type { PaletteHospitalProp, PalettePersonProp } from "./command-palette";
 import type { ReactNode } from "react";
 import Link from "next/link";
-import { ShieldCheckIcon } from "lucide-react";
+import { ShieldAlertIcon, ShieldCheckIcon } from "lucide-react";
 
-import { cn } from "@/lib/utils";
+import { Avatar } from "@/components/medsync/avatar";
+import { SIDEBAR_CLASS, SidebarSearch, SidebarWorkspace } from "@/components/medsync/sidebar-nav";
 import { AdminSidebarItem } from "./admin-sidebar-active";
 import { CommandPaletteRoot } from "./command-palette";
 import { MobileSidebar } from "./mobile-sidebar";
@@ -70,6 +71,7 @@ const NAV_ITEMS: ReadonlyArray<NavItem> = [
   { href: "/admin/emergency", label: "Emergency", iconKey: "emergency", superadminOnly: true },
   { href: "/admin/audit", label: "Audit", iconKey: "audit", superadminOnly: true },
   { href: "/admin/health", label: "Health", iconKey: "health" },
+  { href: "/admin/feedback", label: "Tester feedback", iconKey: "feedback", superadminOnly: true },
   {
     href: "/admin/break-glass",
     label: "Break-glass",
@@ -93,26 +95,18 @@ export function AdminShell({
   return (
     <div className="bg-background text-foreground flex min-h-svh w-full">
       {/* ── Sidebar ──────────────────────────────────────────────── */}
-      <aside
-        aria-label="Workspace navigation"
-        className="bg-muted/40 border-border hidden w-[240px] shrink-0 flex-col border-r lg:flex"
-      >
-        {/* Brand */}
-        <div className="border-border flex h-13 items-center gap-2.5 border-b px-5">
-          <Link
-            href="/"
-            className="font-display text-foreground text-body-m font-medium tracking-[-0.01em] transition-opacity hover:opacity-80"
-          >
-            MedSync
-          </Link>
-          <span className="text-muted-foreground font-mono text-[9.5px] tracking-[0.16em] uppercase">
-            Console
-          </span>
+      <aside aria-label="Workspace navigation" className={SIDEBAR_CLASS}>
+        <div className="flex flex-col gap-1.5 p-2">
+          <SidebarWorkspace
+            name="MedSync"
+            sub={isSuperadmin ? "Superadmin console" : "Admin console"}
+            href="/admin"
+          />
+          <SidebarSearch />
         </div>
 
-        {/* Nav items */}
-        <nav className="flex-1 overflow-y-auto p-2">
-          <ul className="stagger-children flex flex-col gap-px">
+        <nav className="flex-1 overflow-y-auto px-2 pb-2">
+          <ul className="flex flex-col gap-0.5">
             {items.map((item) => (
               <li key={item.href}>
                 <AdminSidebarItem
@@ -127,35 +121,20 @@ export function AdminShell({
           </ul>
         </nav>
 
-        {/* Operator identity + secure-session marker */}
-        <div className="border-border border-t p-3">
-          <div className="flex items-center gap-2.5 px-1 py-1.5">
-            <div
-              aria-hidden
-              className="bg-plum-100 text-caption text-plum-800 flex size-7 shrink-0 items-center justify-center rounded-full font-mono font-semibold"
-            >
-              {operatorEmail.slice(0, 1).toUpperCase()}
-            </div>
+        <div className="border-sidebar-border border-t p-2">
+          <div className="flex items-center gap-2 px-1.5 py-1.5">
+            <Avatar name={operatorEmail} hue="slate" size="md" />
             <div className="min-w-0 flex-1">
-              <p className="text-foreground truncate text-[12px] font-medium">{operatorEmail}</p>
-              <p
-                className={cn(
-                  "inline-flex items-center gap-1 font-mono text-[10px] tracking-[0.1em] uppercase",
-                  mfaActive
-                    ? "text-brand-700 dark:text-brand-300"
-                    : "text-amber-700 dark:text-amber-400",
+              <p className="text-foreground text-label truncate">{operatorEmail}</p>
+              <p className="text-muted-foreground inline-flex items-center gap-1 text-[11px]">
+                {mfaActive ? (
+                  <ShieldCheckIcon className="size-3" aria-hidden />
+                ) : (
+                  <ShieldAlertIcon className="size-3" aria-hidden />
                 )}
-              >
-                <ShieldCheckIcon
-                  className={cn(
-                    "size-3",
-                    mfaActive
-                      ? "text-brand-600 dark:text-brand-400"
-                      : "text-amber-600 dark:text-amber-400",
-                  )}
-                  aria-hidden
-                />
-                {mfaActive ? "MFA · AAL2" : "MFA inactive"}
+                <span className={mfaActive ? undefined : "text-foreground font-medium"}>
+                  {mfaActive ? "MFA · AAL2" : "MFA inactive"}
+                </span>
               </p>
             </div>
           </div>
@@ -165,7 +144,7 @@ export function AdminShell({
       {/* ── Main column ──────────────────────────────────────────── */}
       <div className="flex min-w-0 flex-1 flex-col">
         {/* Top bar */}
-        <header className="border-border glass sticky top-0 z-30 flex h-13 items-center justify-between gap-3 border-b px-4 sm:px-6">
+        <header className="border-border glass sticky top-0 z-30 flex h-12 items-center justify-between gap-3 border-b px-4 sm:px-6">
           {/* Mobile-only: hamburger → sidebar sheet + brand mark */}
           <div className="flex items-center gap-2.5 lg:hidden">
             <MobileSidebar
@@ -178,10 +157,7 @@ export function AdminShell({
               }))}
               operatorEmail={operatorEmail}
             />
-            <Link
-              href="/admin"
-              className="font-display text-foreground text-body-m font-medium tracking-[-0.01em]"
-            >
+            <Link href="/admin" className="font-display text-foreground text-body-m font-semibold">
               MedSync
             </Link>
           </div>
@@ -190,12 +166,8 @@ export function AdminShell({
           <div className="hidden items-center gap-2 lg:flex">
             <span
               aria-label="You are signed into the superadmin console"
-              className="text-muted-foreground inline-flex items-center gap-1.5 font-mono text-[10px] tracking-[0.14em] uppercase"
+              className="text-muted-foreground text-caption inline-flex items-center gap-1.5 font-normal"
             >
-              <span
-                aria-hidden
-                className="bg-brand-500 ring-brand-500/20 size-1.5 rounded-full ring-2"
-              />
               {isSuperadmin ? "Superadmin console" : "Admin console"} · Production
             </span>
           </div>

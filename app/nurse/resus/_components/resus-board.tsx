@@ -146,7 +146,7 @@ export function ResusBoard({
             {board.openable.map((o) => (
               <li
                 key={o.triageRecordId}
-                className="border-border bg-card hover:border-border hover:bg-muted/20 flex items-center gap-3 rounded-xl border px-4 py-3 transition-colors"
+                className="border-border bg-card hover:border-border hover:bg-muted/20 flex items-center gap-3 rounded-lg border px-4 py-3 transition-colors"
               >
                 <span
                   aria-hidden

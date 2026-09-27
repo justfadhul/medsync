@@ -684,7 +684,7 @@ const makeStyles = (c: Palette) =>
       paddingBottom: space[2],
     },
     sheetTitle: {
-      fontFamily: font.display,
+      fontFamily: font.bodySemiBold,
       fontSize: 22,
       lineHeight: 28,
       letterSpacing: -0.3,
@@ -787,7 +787,7 @@ const makeStyles = (c: Palette) =>
       color: c.mutedForeground,
     },
     feeValue: {
-      fontFamily: font.bodyMedium,
+      fontFamily: font.bodySemiBold,
       fontSize: 20,
       lineHeight: 26,
       color: c.foreground,

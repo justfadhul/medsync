@@ -32,7 +32,7 @@ export function AcceptConsentForm({
   return (
     <form action={formAction} className="flex flex-col gap-5">
       <section className="bg-card dark:shadow-card flex flex-col gap-3 rounded-xl p-5 shadow-xs">
-        <h2 className="text-heading-s font-medium">
+        <h2 className="text-heading-s">
           Data-processing notice · {version}, effective {effectiveDate}
         </h2>
         <p className="text-muted-foreground text-body-s leading-relaxed whitespace-pre-line">

@@ -61,7 +61,7 @@ export function CategoryPane(p: PaneProps) {
       className="border-border bg-muted/40 flex max-h-[calc(100svh-3.25rem-4rem)] flex-col rounded-xl border"
     >
       <div className="border-border flex shrink-0 items-start justify-between gap-3 border-b px-4 py-3">
-        <h2 id="pane-title" className="font-display text-heading-s font-medium">
+        <h2 id="pane-title" className="text-heading-s">
           {p.title}
         </h2>
         <Button variant="ghost" size="iconSm" aria-label="Close list" onClick={p.onClose}>

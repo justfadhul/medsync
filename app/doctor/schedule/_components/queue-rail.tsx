@@ -146,7 +146,7 @@ function QueueChip({
         "border-border flex items-start gap-2 rounded-md border px-2.5 py-2 transition-colors duration-200",
         variant === "being_seen" && "border-blue-500/40 bg-blue-50/40 dark:bg-blue-950/15",
         isUrgent && variant === "waiting" && "border-rose-500/40 bg-rose-50/40 dark:bg-rose-950/15",
-        !isUrgent && variant === "waiting" && "hover:bg-brand-50/30 hover:border-gray-300",
+        !isUrgent && variant === "waiting" && "hover:bg-ink-25 hover:border-gray-300",
       )}
     >
       <span aria-hidden className="text-muted-foreground text-caption font-mono tabular-nums">

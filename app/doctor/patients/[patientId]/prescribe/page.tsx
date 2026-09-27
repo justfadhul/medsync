@@ -49,13 +49,10 @@ export default async function DoctorPrescribePage({ params }: PageProps) {
 
       <header className="flex flex-col gap-2">
         <span className="text-muted-foreground inline-flex items-center gap-1.5 font-mono text-[10px] tracking-[0.16em] uppercase">
-          <span
-            aria-hidden
-            className="pulse-dot bg-brand-500 ring-brand-500/20 size-1 rounded-full ring-2"
-          />
+          <span aria-hidden className="bg-iris-icon ring-iris-edge size-1 rounded-full ring-2" />
           Prescribe
         </span>
-        <h1 className="font-display text-foreground text-[24px] leading-[1.15] font-medium tracking-[-0.015em]">
+        <h1 className="font-display text-display-s text-foreground">
           {summary ? `${summary.firstName} ${summary.surname}` : "Above your access"}
         </h1>
         <p className="text-muted-foreground text-[12.5px]">
@@ -71,7 +68,7 @@ export default async function DoctorPrescribePage({ params }: PageProps) {
       </header>
 
       {summary === null ? (
-        <div className="border-border bg-card rounded-xl border p-5">
+        <div className="border-border bg-card rounded-lg border p-5">
           <p className="text-muted-foreground text-[12.5px] leading-relaxed">
             Open a patient from your panel before prescribing.
           </p>

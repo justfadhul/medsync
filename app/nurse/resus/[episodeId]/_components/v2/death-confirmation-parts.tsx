@@ -178,7 +178,7 @@ export function Confirmed({ event }: { event: TimelineEvent }) {
     <section
       data-testid="death-confirmation"
       aria-labelledby="death-confirmed-heading"
-      className="border-border bg-card shadow-card space-y-3 rounded-xl border px-4 py-4 sm:px-6"
+      className="border-border bg-card shadow-card space-y-3 rounded-lg border px-4 py-4 sm:px-6"
     >
       <h2 id="death-confirmed-heading" className="text-heading-s text-foreground">
         Death confirmed · {hhmm(p.confirmedAtIso ?? event.recordedAt)}

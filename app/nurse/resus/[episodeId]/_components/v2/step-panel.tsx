@@ -188,14 +188,14 @@ export function StepPanel({ step }: { step: AbcdeLetter }) {
     <div className="flex flex-col gap-6">
       <section
         aria-labelledby="survey-step-heading"
-        className="border-border bg-card flex flex-col gap-4 rounded-xl border p-4"
+        className="border-border bg-card flex flex-col gap-4 rounded-lg border p-4"
       >
         <header className="flex flex-wrap items-start justify-between gap-3">
           <div className="min-w-0">
             <h2
               id="survey-step-heading"
               tabIndex={-1}
-              className="text-heading-m text-foreground font-medium outline-none"
+              className="text-heading-m text-foreground outline-none"
             >
               {step} · {STEP_NAME[step]}
             </h2>

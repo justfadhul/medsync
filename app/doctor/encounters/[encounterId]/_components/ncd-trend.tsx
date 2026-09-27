@@ -248,7 +248,7 @@ export function NcdTrend({
           {/* Title, and the switcher — one axis at a time, never two. */}
           <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-3">
             <span className="flex items-center gap-2">
-              <span className="bg-brand-100 text-brand-700 dark:bg-brand-900/60 dark:text-brand-300 grid size-7 shrink-0 place-items-center rounded-lg">
+              <span className="bg-iris-tint text-iris-icon grid size-7 shrink-0 place-items-center rounded-lg">
                 <ActivityIcon className="size-4" aria-hidden />
               </span>
               <span className="text-foreground text-body-l font-medium">{active.display}</span>
@@ -281,7 +281,7 @@ export function NcdTrend({
           {/* Where it is now, how far it has moved, and what that means. */}
           <div className="mt-1 flex flex-wrap items-end justify-between gap-x-6 gap-y-2">
             <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-              <span className="font-display text-foreground text-[40px] leading-none font-medium tabular-nums">
+              <span className="text-foreground text-display-m leading-none tabular-nums">
                 {last.value}
               </span>
               <span className="flex flex-col">
@@ -358,7 +358,7 @@ export function NcdTrend({
           <div className="relative">
             <svg
               viewBox={`0 0 ${W} ${H}`}
-              className="focus-visible:ring-brand-500/40 h-auto w-full cursor-crosshair rounded-lg outline-none focus-visible:ring-2"
+              className="focus-visible:ring-ring h-auto w-full cursor-crosshair rounded-lg outline-none focus-visible:ring-2"
               role="img"
               tabIndex={0}
               aria-label={`${active.display} in ${active.unit ?? "no unit"}, ${series.length} readings over ${humanSpan(t1 - t0)}: ${series.map((r) => `${r.value} at ${day(r.at)} ${clock(r.at)}, ${bandAt(r.value)?.display ?? "not classified"}`).join("; ")}`}
@@ -607,7 +607,7 @@ export function NcdTrend({
              */}
             {hovered ? (
               <div
-                className="border-border bg-card pointer-events-none absolute top-4 z-10 rounded-xl border px-3 py-2 shadow-lg"
+                className="border-border bg-card pointer-events-none absolute top-4 z-10 rounded-lg border px-3 py-2 shadow-lg"
                 style={
                   hoverPct > 0.62
                     ? { right: `${(1 - hoverPct) * 100 + 1.5}%` }

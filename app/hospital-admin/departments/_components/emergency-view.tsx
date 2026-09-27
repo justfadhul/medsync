@@ -80,7 +80,7 @@ export function EmergencyView({ caps }: { caps: Cap[] }) {
           <section
             key={n}
             aria-labelledby={`cap-${n}`}
-            className="border-border bg-card rounded-xl border"
+            className="border-border bg-card rounded-lg border"
           >
             <header className="border-border flex items-center gap-3 border-b px-4 py-3">
               <SectionNumber n={n} />

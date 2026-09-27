@@ -99,7 +99,7 @@ export function ReviewOutcome({
           <h2
             id="outcome-title"
             className={cn(
-              "font-display text-heading-m font-medium",
+              "text-heading-m",
               tier === "U" ? "text-status-caution-fg" : "text-foreground",
             )}
           >
@@ -271,10 +271,7 @@ function SameDayReceipt({
         {hospitalName ? (
           <p className="text-overline text-muted-foreground">{hospitalName}</p>
         ) : null}
-        <h2
-          id="receipt-title"
-          className="font-display text-foreground text-heading-m leading-tight font-medium"
-        >
+        <h2 id="receipt-title" className="text-foreground text-heading-m leading-tight">
           {confirmed ? "You will be seen today" : "We asked the clinic for a time today"}
         </h2>
         <p className="text-muted-foreground text-body-s">

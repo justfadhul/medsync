@@ -130,7 +130,7 @@ export function ApprovalsQueue({ items, canSeeHospitalQueue }: QueueProps) {
           ) : row.group === "waiting_docs" ? (
             <Pill tone="neutral">{HOSPITAL_REVIEW.waitingDocs}</Pill>
           ) : (
-            <Pill tone="pending">{row.group === "ready" ? HOSPITAL_REVIEW.ready : "Pending"}</Pill>
+            <Pill tone="notice">{row.group === "ready" ? HOSPITAL_REVIEW.ready : "Pending"}</Pill>
           ),
         className: "w-[180px]",
       },
@@ -146,13 +146,11 @@ export function ApprovalsQueue({ items, canSeeHospitalQueue }: QueueProps) {
           <span className="text-muted-foreground inline-flex items-center gap-1.5 font-mono text-[10px] tracking-[0.16em] uppercase">
             <span
               aria-hidden
-              className="bg-brand-500 ring-brand-500/20 size-1 rounded-full ring-2"
+              className="bg-slate-icon ring-slate-edge size-1 rounded-full ring-2"
             />
             Console · Daily queue
           </span>
-          <h1 className="font-display text-foreground sm:text-heading-l text-[24px] leading-tight font-medium tracking-[-0.018em]">
-            Approvals
-          </h1>
+          <h1 className="font-display text-display-s text-foreground">Approvals</h1>
           <p className="text-muted-foreground text-[13.5px]">
             {canSeeHospitalQueue
               ? "Triage pending staff affiliations and hospital applications. Open a row to see the evidence and act."

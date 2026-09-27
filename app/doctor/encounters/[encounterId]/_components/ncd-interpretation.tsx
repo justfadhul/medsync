@@ -268,7 +268,7 @@ function InterpretationTable({
   const columns = COLUMNS.filter((t) => rows.some((r) => r.bands.some((b) => b.tone === t)));
 
   return (
-    <section className="border-border bg-card overflow-hidden rounded-xl border shadow-xs">
+    <section className="border-border bg-card overflow-hidden rounded-lg border shadow-xs">
       <header className="border-border/60 bg-muted/40 flex flex-wrap items-baseline gap-x-2 border-b px-3.5 py-2">
         <h4 className="text-foreground text-body-s font-medium">Interpretation</h4>
         {/* Which standard, always: the intermediate bands differ between them,

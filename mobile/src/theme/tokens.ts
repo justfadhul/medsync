@@ -1,10 +1,15 @@
 /**
- * MedSync design tokens, mirrored for React Native.
+ * MedSync Chroma design tokens (ADR 0162), mirrored for React Native.
  *
- * The web app is the source of truth: these values are lifted verbatim from
- * the `:root` block of `app/globals.css`, which `DESIGN-medsync.md` governs.
- * A patient who books on the phone and then opens the web app must not see
- * two different products, so when a token changes there it changes here.
+ * The web app is the source of truth: these values are the Chroma tokens in
+ * the `:root` / `.dark` blocks of `app/globals.css`, which `DESIGN-medsync.md`
+ * governs. A patient who books on the phone and then opens the web app must
+ * not see two different products, so when a token changes there it changes
+ * here.
+ *
+ * This app is the patient's, so its place hue is Chroma's Patients domain:
+ * `sky`. Teal stays the one action colour; red, amber and green stay the
+ * patient's clinical signals.
  *
  * Mirrored rather than imported because the web tokens are CSS custom
  * properties inside a Tailwind v4 `@theme` block — there is no JS module to
@@ -13,14 +18,13 @@
  * so every runtime can consume it.
  *
  * ponytail: hand-mirrored, so it can drift. Ceiling: the first time a colour
- * disagrees between web and phone. Upgrade path: generate this file from
- * globals.css in a prebuild step — worth it only once a second designer is
- * editing the palette.
+ * disagrees between web and phone. Upgrade path: generate this file from the
+ * Chroma tokens.json in a prebuild step, as the web's globals.css already is.
  */
 
 import { Platform } from "react-native";
 
-/** Teal. The brand hue — `DESIGN-medsync.md` § Primary Teal; anchor teal-600. */
+/** Teal — the one action colour, carried unchanged (`DESIGN-medsync.md` § Teal). */
 export const brand = {
   50: "#f0fdfa",
   100: "#ccfbf1",
@@ -35,60 +39,66 @@ export const brand = {
   950: "#042f2e",
 } as const;
 
-/**
- * The accent and the signature call-to-action fill — the brand ramp under the
- * name the screens were written to.
- */
+/** The teal ramp under the name the brand-moment screens were written to. */
 export const mint = brand;
 
 /**
- * Plum. The second hue (ADR 0097) — `DESIGN-medsync.md` § Secondary Plum.
- * Colour as *place*, never state: where you are, who this is. Never a button,
- * a selected control or a status. `plumDark` is the web's `.dark` ramp, where
- * 50 is the deep end and 600 the bright anchor.
+ * Sky — the Patients domain's place hue (ADR 0162). Colour as *place*, never
+ * state: an avatar, an icon disc, the current tab. Never a button, a selected
+ * control or a status. `skyDark` is the web's `.dark` ramp.
  */
-export const plum = {
-  50: "#fdf3f9",
-  100: "#fee4f3",
-  200: "#fecbe9",
-  300: "#fea2dc",
-  400: "#ea7bc4",
-  500: "#c953a3",
-  600: "#9f2f7e",
-  700: "#87236a",
-  800: "#6a1952",
-  900: "#4e113c",
-  950: "#321227",
+export const sky = {
+  50: "#f0f9ff",
+  100: "#e0f2fe",
+  200: "#bae6fd",
+  300: "#7dd3fc",
+  400: "#38bdf8",
+  500: "#0ea5e9",
+  600: "#0284c7",
+  700: "#0369a1",
+  800: "#075985",
+  900: "#0c4a6e",
+  950: "#082f49",
 } as const;
 
-export const plumDark = {
-  50: "#321227",
-  100: "#4a173a",
-  200: "#671e51",
-  300: "#862e6b",
-  400: "#a94088",
-  500: "#cb58a6",
-  600: "#ed85c8",
-  700: "#fda8dd",
-  800: "#ffcdeb",
-  900: "#fde7f4",
-  950: "#fdf3f9",
+/** Ink — Chroma's cool neutrals (light). */
+export const ink = {
+  0: "#ffffff",
+  25: "#fbfbfc",
+  50: "#f6f7f8",
+  100: "#f0f1f3",
+  150: "#e9eaed",
+  200: "#e3e5e8",
+  300: "#d0d3d9",
+  400: "#a0a5ae",
+  500: "#6c717b",
+  600: "#545963",
+  700: "#3d4149",
+  800: "#272a30",
+  900: "#17191d",
+  950: "#0f1012",
 } as const;
 
-export const gray = {
-  50: "#fafafa",
-  100: "#f5f5f5",
-  150: "#efefef",
-  200: "#e5e5e5",
-  300: "#d4d4d4",
-  400: "#a3a3a3",
-  500: "#737373",
-  600: "#525252",
-  700: "#404040",
-  800: "#262626",
-  900: "#171717",
-  950: "#0a0a0a",
+/** Ink in the `.dark` theme — surfaces layer upward from a near-black ground. */
+export const inkDark = {
+  0: "#16181b",
+  25: "#131417",
+  50: "#1a1c20",
+  100: "#1f2226",
+  150: "#262a2f",
+  200: "#2c3036",
+  300: "#3a3f46",
+  400: "#5b616a",
+  500: "#8a9099",
+  600: "#a9aeb6",
+  700: "#c8ccd2",
+  800: "#e1e3e7",
+  900: "#eef0f2",
+  950: "#f7f8f9",
 } as const;
+
+/** @deprecated ADR 0162 — the neutral ramp is `ink`. */
+export const gray = ink;
 
 /**
  * Clinical status pairs. Deliberately NOT part of the brand ramp — red means a
@@ -103,6 +113,9 @@ export const status = {
   cautionFg: "#d97706",
   pendingBg: "#f5f5f5",
   pendingFg: "#525252",
+  /** Chip text for critical and caution at AA (ADR 0162). */
+  criticalFgAa: "#b91c1c",
+  cautionFgAa: "#92400e",
 } as const;
 
 /**
@@ -132,6 +145,9 @@ export function withAlpha(hex: string, alpha: number): string {
  * `app/globals.css`, lifted verbatim — so a patient moving between the phone
  * and the web app sees one product in whichever theme they chose.
  */
+/** The tag hues this app paints with: action, Patients, awaiting, neutral. */
+export type TagHue = "teal" | "sky" | "iris" | "slate";
+
 export interface Palette {
   scheme: "light" | "dark";
 
@@ -153,9 +169,9 @@ export interface Palette {
   /** A brand-tinted surface for a selected or emphasised thing — `--accent`. */
   accent: string;
   /**
-   * The plum-tinted surface for a *place* — an avatar, an icon disc, the
-   * current tab, the current step (ADR 0097). Not for anything selected or
-   * anything that means a state; those stay `accent`.
+   * The sky-tinted surface for a *place* — an avatar, an icon disc, the
+   * current tab (ADR 0162: this app is the Patients domain). Not for anything
+   * selected or anything that means a state; those stay `accent`.
    */
   place: string;
   /** Ink on `place`. */
@@ -164,8 +180,8 @@ export interface Palette {
   accentForeground: string;
 
   /**
-   * The signature call-to-action — the mint fill the splash, sign-in and
-   * primary door share. There is exactly one per screen.
+   * The one call-to-action per screen — Chroma's teal primary (the old mint
+   * fill is retired, ADR 0162). The splash, sign-in and primary door share it.
    */
   cta: string;
   /** Headline text on `cta`. */
@@ -189,6 +205,11 @@ export interface Palette {
    * a genuine emergency only — `critical` is drawn by the Emergency tab and
    * `EmergencyButton` (ADR 0085 §5) and by nothing else.
    */
+  /**
+   * Square tags with a dot (ADR 0162): workflow states and labels, in cool
+   * hues only — never red, amber or green, which belong to the patient.
+   */
+  tag: Record<TagHue, { bg: string; edge: string; text: string; dot: string }>;
   status: {
     stableBg: string;
     stableFg: string;
@@ -198,61 +219,72 @@ export interface Palette {
     criticalFg: string;
     pendingBg: string;
     pendingFg: string;
+    criticalFgAa: string;
+    cautionFgAa: string;
   };
 }
 
-/** `app/globals.css` `:root`. */
+/** `app/globals.css` `:root` (MedSync Chroma). */
 export const light: Palette = {
   scheme: "light",
   background: "#ffffff",
-  foreground: gray[900],
-  card: "#ffffff",
-  muted: gray[50],
-  mutedForeground: gray[500],
-  primary: brand[600],
+  foreground: ink[900],
+  card: ink[0],
+  muted: ink[25],
+  mutedForeground: ink[500],
+  primary: brand[700],
   primaryForeground: "#ffffff",
   accent: brand[50],
-  accentForeground: brand[600],
-  place: plum[50],
-  placeForeground: plum[800],
-  cta: mint[300],
-  ctaForeground: brand[950],
-  ctaMuted: brand[900],
-  border: gray[200],
-  ring: brand[500],
-  shadow: withAlpha(gray[900], 0.14),
+  accentForeground: brand[700],
+  place: sky[50],
+  placeForeground: sky[700],
+  cta: brand[700],
+  ctaForeground: "#ffffff",
+  ctaMuted: brand[100],
+  border: ink[200],
+  ring: brand[600],
+  shadow: withAlpha(ink[900], 0.14),
+  tag: {
+    teal: { bg: "#f0fdfa", edge: "#ccfbf1", text: "#0f766e", dot: "#0d9488" },
+    sky: { bg: "#f0f9ff", edge: "#bae6fd", text: "#0369a1", dot: "#0284c7" },
+    iris: { bg: "#eef2ff", edge: "#c7d2fe", text: "#4338ca", dot: "#4f46e5" },
+    slate: { bg: "#f0f1f3", edge: "#e3e5e8", text: "#3d4149", dot: "#6c717b" },
+  },
   status,
 };
 
 /**
- * `app/globals.css` `.dark`. A near-black ground, not a teal one: the
- * brand lives in the text and the accents, where it can be read, rather than
- * behind everything, where it can only be endured.
+ * `app/globals.css` `.dark` (MedSync Chroma). A near-black ground: the brand
+ * lives in the text and the accents, where it can be read.
  */
 export const dark: Palette = {
   scheme: "dark",
-  background: "#0a0a0a",
-  foreground: "#e5e5e5",
-  card: "#171717",
-  muted: "#111111",
-  mutedForeground: "#a3a3a3",
+  background: "#0f1012",
+  foreground: inkDark[900],
+  card: inkDark[0],
+  muted: inkDark[25],
+  mutedForeground: inkDark[500],
   primary: brand[400],
   primaryForeground: brand[950],
-  accent: brand[950],
+  accent: "#0b2926",
   accentForeground: brand[300],
-  place: plumDark[50],
-  placeForeground: plumDark[800],
-  // teal-400 rather than the web's darkened gradient: a filled control on a
-  // near-black ground wants the accent bright enough to be the brightest thing
-  // on the screen, and its text dark enough to read on it (7.8:1).
-  cta: mint[400],
-  ctaForeground: mint[950],
-  ctaMuted: mint[900],
-  border: "#262626",
+  place: "#0c2533",
+  placeForeground: sky[300],
+  // Chroma's dark primary: the bright teal with deep-teal text (7.8:1).
+  cta: brand[400],
+  ctaForeground: brand[950],
+  ctaMuted: brand[900],
+  border: inkDark[200],
   ring: brand[400],
   // Deeper, because a soft shadow on near-black is invisible and the bar then
   // has to rely on its hairline alone.
-  shadow: withAlpha(gray[950], 0.6),
+  shadow: withAlpha(ink[950], 0.6),
+  tag: {
+    teal: { bg: "#0b2926", edge: "#134e4a", text: "#5eead4", dot: "#2dd4bf" },
+    sky: { bg: "#0c2533", edge: "#0c4a6e", text: "#7dd3fc", dot: "#38bdf8" },
+    iris: { bg: "#1d1f3d", edge: "#312e81", text: "#a5b4fc", dot: "#818cf8" },
+    slate: { bg: "#1f2226", edge: "#3a3f46", text: "#c8ccd2", dot: "#8a9099" },
+  },
   status: {
     stableBg: "#052e16",
     stableFg: "#4ade80",
@@ -262,6 +294,8 @@ export const dark: Palette = {
     criticalFg: "#fca5a5",
     pendingBg: "#262626",
     pendingFg: "#a3a3a3",
+    criticalFgAa: "#fca5a5",
+    cautionFgAa: "#fcd34d",
   },
 };
 
@@ -288,14 +322,14 @@ export const space = {
   24: 96,
 } as const;
 
-/** Radii — `DESIGN-medsync.md` § Border radii. `full` is a pill. */
+/** Radii — `DESIGN-medsync.md` § Borders, radii. `full` is a pill. */
 export const radius = {
   xs: 4,
   sm: 6,
   md: 8,
   lg: 12,
   xl: 16,
-  "2xl": 20,
+  "2xl": 24,
   full: 9999,
 } as const;
 
@@ -319,17 +353,22 @@ export const motion = {
 } as const;
 
 export const font = {
-  display: "Fraunces_500Medium",
   /**
-   * The wordmark cut. Lighter than `display` on purpose: Fraunces at 500
-   * carries a lot of weight at display sizes, and a logotype wants to read as
-   * drawn rather than as a bold heading. DESIGN-medsync's weight-500 rule
-   * governs HEADINGS; this is a mark.
+   * Bricolage Grotesque at 600 — Chroma's display face (ADR 0162), for screen
+   * titles and the brand moments only. Everything else is Geist.
    */
-  wordmark: "Fraunces_400Regular",
-  displayItalic: "Fraunces_400Regular_Italic",
+  display: "BricolageGrotesque_600SemiBold",
+  /** The wordmark: MedSync in the display face at 600. */
+  wordmark: "BricolageGrotesque_600SemiBold",
+  /**
+   * @deprecated Bricolage has no italic; the emphasised tail is upright and
+   * carries its colour instead (ADR 0162).
+   */
+  displayItalic: "BricolageGrotesque_600SemiBold",
   body: "Geist_400Regular",
   bodyMedium: "Geist_500Medium",
+  /** Chroma headings are Geist at 600. */
+  bodySemiBold: "Geist_600SemiBold",
   /**
    * The booking code and the position number — the two things a patient
    * reads aloud and shows at a desk (PRD §6.3: big and monospaced). The

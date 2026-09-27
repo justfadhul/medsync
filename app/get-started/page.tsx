@@ -38,7 +38,7 @@ export default function GetStartedPage() {
       <main className="flex-1">
         <div className={cn(CONTAINER, "pt-16 pb-24 sm:pt-20")}>
           <div className="max-w-180">
-            <h1 className="font-display text-foreground text-display-m lg:text-display-l text-balance">
+            <h1 className="font-display text-display-s text-foreground text-balance">
               {GET_STARTED.title}
             </h1>
             <p className="text-heading-s text-muted-foreground mt-4 max-w-[52ch] leading-7 font-normal text-pretty">

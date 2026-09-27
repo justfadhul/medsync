@@ -243,7 +243,7 @@ export function DeskBooking({
       </ol>
 
       <div className="flex items-baseline justify-between gap-3">
-        <h2 className="text-foreground text-heading-s font-medium">{titles[stepId]}</h2>
+        <h2 className="text-foreground text-heading-s">{titles[stepId]}</h2>
         {patient ? (
           <span className="text-muted-foreground text-caption font-mono tabular-nums">
             For {patient.displayName ? `${patient.displayName} · ` : ""}
@@ -589,7 +589,7 @@ function DeskReceipt({
         >
           <CheckIcon className="size-5" strokeWidth={1.5} />
         </span>
-        <h2 id="desk-receipt" className="text-foreground text-heading-m font-medium">
+        <h2 id="desk-receipt" className="text-foreground text-heading-m">
           {mode === "session"
             ? "Place booked"
             : receipt.status === "confirmed"

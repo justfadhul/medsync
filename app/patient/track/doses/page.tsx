@@ -115,7 +115,7 @@ export default async function PatientDosesPage({ searchParams }: PageProps) {
       >
         <section aria-labelledby="doses-head" className="flex flex-col gap-3">
           <div className="flex items-center justify-between gap-3">
-            <h2 id="doses-head" className="text-foreground text-heading-s font-medium">
+            <h2 id="doses-head" className="text-foreground text-heading-s">
               {isToday ? "Today" : DATE_FMT.format(day)}
             </h2>
             <Link
@@ -187,7 +187,7 @@ export default async function PatientDosesPage({ searchParams }: PageProps) {
 
             {dayDoses.asNeeded.length > 0 ? (
               <section aria-labelledby="as-needed-head" className="flex flex-col gap-3">
-                <h2 id="as-needed-head" className="text-foreground text-heading-s font-medium">
+                <h2 id="as-needed-head" className="text-foreground text-heading-s">
                   As needed
                 </h2>
                 <ul className="stagger-children flex flex-col gap-2">
@@ -217,7 +217,7 @@ export default async function PatientDosesPage({ searchParams }: PageProps) {
 
             {dayDoses.extras.length > 0 ? (
               <section aria-labelledby="extras-head" className="flex flex-col gap-2">
-                <h2 id="extras-head" className="text-foreground text-heading-s font-medium">
+                <h2 id="extras-head" className="text-foreground text-heading-s">
                   Also recorded
                 </h2>
                 <p className="text-muted-foreground text-body-s leading-relaxed">
@@ -293,7 +293,7 @@ function AsNeededItem({
           // `neutral` is the tint for a medicine that is no longer running,
           // and a tint never carries meaning on its own — so it ships the
           // word with it.
-          <Pill tone="pending">{state === "paused" ? "Paused" : "Stopped"}</Pill>
+          <Pill tone="neutral">{state === "paused" ? "Paused" : "Stopped"}</Pill>
         )
       }
     />

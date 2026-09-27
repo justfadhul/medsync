@@ -236,9 +236,7 @@ export function CirculationPanel({
           <span className="bg-foreground/90 text-background text-body-m flex size-8 items-center justify-center rounded-lg font-mono font-semibold">
             C
           </span>
-          <h2 className="font-display text-foreground text-heading-s font-medium tracking-[-0.01em]">
-            Circulation
-          </h2>
+          <h2 className="text-foreground text-heading-s tracking-[-0.01em]">Circulation</h2>
         </div>
         <span
           className={cn(
@@ -400,7 +398,7 @@ export function CirculationPanel({
         </section>
 
         {/* ── Triggered actions (urgency order; drug actions → prescribe tool) ── */}
-        <section className="border-border bg-card/95 lg:ring-border/50 flex flex-col gap-2 rounded-xl border p-3 lg:sticky lg:top-30 lg:max-h-[calc(100svh-136px)] lg:overflow-y-auto lg:shadow-md lg:ring-1 lg:backdrop-blur">
+        <section className="border-border bg-card/95 lg:ring-border/50 flex flex-col gap-2 rounded-lg border p-3 lg:sticky lg:top-30 lg:max-h-[calc(100svh-136px)] lg:overflow-y-auto lg:shadow-md lg:ring-1 lg:backdrop-blur">
           <ResusActionsHeading
             heading="Indicated actions — finding → type → do"
             outstanding={outstanding}

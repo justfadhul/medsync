@@ -69,9 +69,7 @@ export function OutcomeStep({
     <>
       {facts.inArrest ? (
         <fieldset className="flex flex-col gap-3">
-          <legend className="text-heading-s text-foreground mb-3 font-medium">
-            How did the arrest end?
-          </legend>
+          <legend className="text-heading-s text-foreground mb-3">How did the arrest end?</legend>
           <div className="flex flex-wrap gap-2">
             <Choice
               selected={draft.arrestEnd === "rosc"}
@@ -130,7 +128,7 @@ export function OutcomeStep({
         </fieldset>
       ) : (
         <fieldset className="flex flex-col gap-3">
-          <legend className="text-heading-s text-foreground mb-3 font-medium">Outcome</legend>
+          <legend className="text-heading-s text-foreground mb-3">Outcome</legend>
           <div className="flex flex-wrap gap-2">
             {offered.map((o) => {
               const code = o === "died" ? facts.deathCode : o;
@@ -219,7 +217,7 @@ export function OutcomeStep({
           className="border-border flex flex-col gap-2 border-t pt-5"
           aria-labelledby="co-admin"
         >
-          <h3 id="co-admin" className="text-heading-s text-foreground font-medium">
+          <h3 id="co-admin" className="text-heading-s text-foreground">
             Close administratively
           </h3>
           <p className="text-body-s text-muted-foreground">

@@ -102,13 +102,10 @@ async function DoctorOverview() {
       <div className="stagger-children relative mx-auto flex w-full max-w-5xl flex-col gap-8 px-6 py-8 lg:py-10">
         <header className="flex flex-col gap-2">
           <span className="text-muted-foreground inline-flex items-center gap-1.5 font-mono text-[10px] tracking-[0.16em] uppercase">
-            <span
-              aria-hidden
-              className="pulse-dot bg-brand-500 ring-brand-500/20 size-1 rounded-full ring-2"
-            />
+            <span aria-hidden className="bg-iris-icon ring-iris-edge size-1 rounded-full ring-2" />
             {scope.hospitalName} · {scope.departmentName}
           </span>
-          <h1 className="font-display text-foreground text-[30px] leading-[1.15] font-medium tracking-[-0.015em] text-balance lg:text-[34px]">
+          <h1 className="font-display text-display-s text-foreground text-balance">
             {firstName ? `Welcome, ${firstName}.` : "Welcome."}
           </h1>
           <p className="text-muted-foreground max-w-[60ch] text-[13.5px] leading-relaxed">
@@ -185,7 +182,7 @@ function SupervisorCard({
   myPendingCount: number;
 }) {
   return (
-    <section className="border-border bg-card flex flex-col gap-3 rounded-xl border p-5">
+    <section className="border-border bg-card flex flex-col gap-3 rounded-lg border p-5">
       <h2 className="text-muted-foreground font-mono text-[10.5px] tracking-[0.14em] uppercase">
         Your supervisor
       </h2>
@@ -194,7 +191,7 @@ function SupervisorCard({
         <div className="flex items-center gap-3">
           <span
             aria-hidden
-            className="bg-plum-50 text-plum-700 ring-plum-200/70 inline-flex size-10 items-center justify-center rounded-full ring-1"
+            className="bg-iris-tint text-iris-icon ring-iris-edge inline-flex size-10 items-center justify-center rounded-full ring-1"
           >
             <GraduationCapIcon className="size-5" />
           </span>
@@ -228,8 +225,8 @@ function SeniorReviewCard({ pendingCount }: { pendingCount: number }) {
       href="/doctor/cosign-queue"
       className={
         pendingCount > 0
-          ? "group card-lift border-brand-500/30 bg-brand-50/40 hover:border-brand-500/60 dark:border-brand-400/20 dark:bg-brand-950/15 flex items-center gap-3 rounded-xl border p-5"
-          : "group card-lift border-border bg-card flex items-center gap-3 rounded-xl border p-5"
+          ? "group card-lift border-teal-edge bg-teal-tint flex items-center gap-3 rounded-lg border p-5 hover:border-teal-200"
+          : "group card-lift border-border bg-card flex items-center gap-3 rounded-lg border p-5"
       }
     >
       <span
@@ -282,7 +279,7 @@ function DirectionCard({
       className={
         tone === "primary"
           ? "group card-lift bg-foreground text-background hover:bg-foreground/90 flex items-start gap-3 rounded-xl p-5 transition-colors"
-          : "group card-lift border-border bg-card flex items-start gap-3 rounded-xl border p-5"
+          : "group card-lift border-border bg-card flex items-start gap-3 rounded-lg border p-5"
       }
     >
       <span
@@ -329,7 +326,7 @@ function PlaceholderCard({
   Icon: typeof UsersIcon;
 }) {
   return (
-    <div className="border-border bg-card/40 text-muted-foreground flex items-start gap-3 rounded-xl border border-dashed p-5">
+    <div className="border-border bg-card/40 text-muted-foreground flex items-start gap-3 rounded-lg border border-dashed p-5">
       <span
         aria-hidden
         className="bg-muted/60 text-muted-foreground inline-flex size-9 shrink-0 items-center justify-center rounded-full"

@@ -80,7 +80,7 @@ export function PatientDoors() {
           everything, never by looking like a heading link (§11). */}
         <Link
           href="/patient/book"
-          className="tap border-primary bg-card md:hover:bg-muted flex min-h-18 flex-col justify-center gap-0.5 rounded-xl border px-5 py-4"
+          className="tap border-primary bg-card md:hover:bg-muted flex min-h-18 flex-col justify-center gap-0.5 rounded-lg border px-5 py-4"
         >
           <span className="text-body-m font-medium text-teal-700">
             Ask for a day — the clinic confirms

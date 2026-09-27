@@ -37,12 +37,10 @@ export default async function NurseIncomingPage() {
     <div className="mx-auto flex w-full max-w-5xl flex-col gap-6 px-4 py-6 sm:px-6 sm:py-9">
       <header className="flex flex-col gap-1.5">
         <span className="text-muted-foreground inline-flex items-center gap-1.5 font-mono text-[10px] tracking-[0.16em] uppercase">
-          <span aria-hidden className="bg-mint-500 ring-mint-500/20 size-1 rounded-full ring-2" />
+          <span aria-hidden className="bg-iris-icon ring-iris-edge size-1 rounded-full ring-2" />
           {scope.hospitalName} · Incoming
         </span>
-        <h1 className="font-display text-foreground sm:text-heading-l text-[24px] leading-[1.15] font-medium tracking-[-0.015em]">
-          Patients on their way
-        </h1>
+        <h1 className="font-display text-display-s text-foreground">Patients on their way</h1>
         <p className="text-muted-foreground text-body-s max-w-2xl leading-relaxed">
           Pre-alerts sent to this facility. Acknowledge so the reporter sees the hospital is
           expecting them; Ready when the bay is prepared; Arrived puts them in the triage queue.

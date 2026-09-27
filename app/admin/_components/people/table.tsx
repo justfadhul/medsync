@@ -58,13 +58,14 @@ interface TableProps {
   initialQuery: string;
 }
 
+// Workflow states are tags, never a patient's clinical colours (ADR 0162).
 const STATE_TONE: Record<string, PillTone> = {
-  active: "stable",
-  verified: "stable",
-  pending_approval: "caution",
-  rejected: "critical",
-  suspended: "critical",
-  deactivated: "critical",
+  active: "active",
+  verified: "active",
+  pending_approval: "notice",
+  rejected: "neutral",
+  suspended: "notice",
+  deactivated: "neutral",
   unverified: "neutral",
 };
 
@@ -126,9 +127,7 @@ export function PeopleTable({ items, currentUserId, initialQuery }: TableProps) 
     <div className="flex flex-col">
       <header className="border-border border-b px-4 py-6 sm:px-8 sm:py-8">
         <div className="mx-auto flex w-full max-w-[1200px] flex-col gap-1">
-          <h1 className="font-display text-foreground sm:text-heading-l text-[24px] leading-tight font-medium tracking-[-0.018em]">
-            People &amp; access
-          </h1>
+          <h1 className="font-display text-display-s text-foreground">People &amp; access</h1>
           <p className="text-muted-foreground text-[13.5px]">
             Operational fields only — no PHI. Every action is audited. Promote-to-superadmin is
             four-eyes-aware and auto-satisfies today.
@@ -214,7 +213,7 @@ function RolesSummary({ roles }: { roles: ReadonlyArray<PeopleItem["roles"][numb
 
   return (
     <span className="inline-flex flex-wrap items-center gap-1">
-      {isSuperadmin ? <Pill tone="admitted">superadmin</Pill> : null}
+      {isSuperadmin ? <Pill tone="neutral">superadmin</Pill> : null}
       {hospitalAdminCount > 0 ? (
         <Pill tone="neutral">hospital_admin × {hospitalAdminCount}</Pill>
       ) : null}
@@ -252,7 +251,7 @@ function PersonDetailContent({
       <SheetHeader>
         <div className="flex items-center gap-2">
           <Pill tone={STATE_TONE[item.state] ?? "neutral"}>{item.state}</Pill>
-          {isSuperadmin ? <Pill tone="admitted">superadmin</Pill> : null}
+          {isSuperadmin ? <Pill tone="neutral">superadmin</Pill> : null}
         </div>
         <SheetTitle>{item.fullName}</SheetTitle>
         <SheetDescription className="font-mono text-[12px]">{item.email}</SheetDescription>

@@ -402,7 +402,7 @@ export function PreAlertForm({
                 <li key={f.id}>
                   <label
                     className={cn(
-                      "border-border bg-card flex min-h-12 cursor-pointer items-center gap-3 rounded-xl border px-3 py-2",
+                      "border-border bg-card flex min-h-12 cursor-pointer items-center gap-3 rounded-lg border px-3 py-2",
                       "has-checked:bg-foreground has-checked:text-background has-checked:border-foreground has-focus-visible:shadow-focus",
                     )}
                   >

@@ -9,7 +9,7 @@ export function SignupUnavailable({ title, children }: { title: string; children
   return (
     <div className="stagger-children mx-auto flex max-w-2xl flex-col items-center gap-5 px-5 py-24 text-center">
       <ConsentDraftIllustration />
-      <h1 className="text-foreground font-display text-3xl">{title}</h1>
+      <h1 className="text-foreground font-display text-display-s">{title}</h1>
       <p className="text-muted-foreground max-w-[44ch] text-sm leading-relaxed">{children}</p>
     </div>
   );

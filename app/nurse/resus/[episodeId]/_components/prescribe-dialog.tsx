@@ -436,7 +436,7 @@ export function PrescribeDialog({
 
           {/* Adjust parameters — safety checks re-run live on every edit */}
           {adjusting && drug.adult ? (
-            <div className="border-border bg-card flex flex-col gap-2 rounded-xl border p-3">
+            <div className="border-border bg-card flex flex-col gap-2 rounded-lg border p-3">
               <p className="text-muted-foreground/70 font-mono text-[10px] tracking-[0.14em] uppercase">
                 Adjust parameters — safety re-checks live
               </p>

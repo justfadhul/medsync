@@ -39,7 +39,7 @@ export default async function ProfilePage() {
     <div className="mx-auto flex w-full max-w-7xl flex-col gap-4 px-4 py-5 sm:px-6">
       <header className="flex flex-col gap-1">
         <span className="text-muted-foreground inline-flex w-fit items-center gap-1.5 font-mono text-[10px] tracking-[0.16em] uppercase">
-          <span aria-hidden className="bg-brand-500 ring-brand-500/20 size-1 rounded-full ring-2" />
+          <span aria-hidden className="bg-slate-icon ring-slate-edge size-1 rounded-full ring-2" />
           {scope.hospitalName} · Profile
         </span>
         <SectionRule title="Hospital profile" />

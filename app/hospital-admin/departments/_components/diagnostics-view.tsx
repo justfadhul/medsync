@@ -145,7 +145,7 @@ function Laboratory({
 
   if (!lab) {
     return (
-      <div className="border-border bg-card flex flex-col gap-3 rounded-xl border p-5">
+      <div className="border-border bg-card flex flex-col gap-3 rounded-lg border p-5">
         <p className="text-body-s text-foreground">
           The test menu hangs off the Laboratory department, and sections are its units.
         </p>

@@ -3,17 +3,20 @@ import type { ReactNode } from "react";
 import Link from "next/link";
 import { ShieldCheckIcon } from "lucide-react";
 
-import { cn } from "@/lib/utils";
+import { Avatar } from "@/components/medsync/avatar";
+import { SIDEBAR_CLASS, SidebarSearch, SidebarWorkspace } from "@/components/medsync/sidebar-nav";
+import { Tag } from "@/components/medsync/tag";
 import { DOCTOR_FEATURE_AREAS, doctorFeaturePath, WORKSPACE_NAV } from "../_lib/features";
-import { DoctorSidebarItem } from "./doctor-sidebar-item";
+import { DoctorCommandBar, DoctorSidebarItem } from "./doctor-sidebar-item";
 import { EmergencyInlineLink } from "./emergency-inline-link";
 import { FullBleedGate } from "./full-bleed-gate";
 
 /**
  * Doctor workspace shell — sidebar + top bar + main slot.
  *
- * Modelled on the hospital-admin shell (same 240px sidebar + 52px
- * top bar). Differences worth noting:
+ * MedSync Chroma shell (ADR 0162): the shared 248px sidebar with the
+ * facility mark, ⌘K search and domain-tiled items, and a 48px top bar.
+ * Differences worth noting:
  *
  *   - The top bar carries a CADRE pill alongside the hospital pill.
  *     A doctor must never be ambiguous about "who am I, where, and
@@ -68,44 +71,19 @@ export function DoctorShell({
         return true;
       });
 
-  const initial = (scope.fullName ?? scope.userEmail).slice(0, 1).toUpperCase();
-
   return (
     <div className="bg-background text-foreground flex min-h-svh w-full">
       {/* ── Sidebar (hidden full-bleed on the bedside desks) ─────────── */}
       <FullBleedGate>
-        <aside
-          aria-label="Doctor workspace navigation"
-          className="bg-muted/40 border-border relative hidden w-[240px] shrink-0 flex-col border-r lg:flex"
-        >
-          {/* Quiet plum atmosphere at the top of the rail — place, not state */}
-          <div
-            aria-hidden
-            className="pointer-events-none absolute inset-x-0 top-0 h-44 bg-[radial-gradient(120%_100%_at_50%_0%,rgba(159,47,126,0.07),transparent_70%)]"
-          />
-
-          {/* Brand + hospital identity */}
-          <div className="border-border relative flex flex-col gap-1 border-b px-5 py-3.5">
-            <Link
-              href="/"
-              className="group inline-flex w-fit items-center gap-2 transition-opacity hover:opacity-90"
-            >
-              <BrandMark />
-              <span className="font-display text-foreground text-body-m font-medium tracking-[-0.01em]">
-                MedSync
-              </span>
-            </Link>
-            <span
-              className="text-muted-foreground truncate pl-6.5 font-mono text-[10px] tracking-[0.12em] uppercase"
-              title={scope.hospitalName}
-            >
-              {scope.hospitalName}
-            </span>
+        <aside aria-label="Doctor workspace navigation" className={SIDEBAR_CLASS}>
+          <div className="flex flex-col gap-1.5 p-2">
+            <SidebarWorkspace name={scope.hospitalName} sub="Doctor workspace" href="/doctor" />
+            <SidebarSearch />
           </div>
 
           {/* Nav */}
-          <nav className="relative flex-1 overflow-y-auto p-2">
-            <ul className="stagger-children flex flex-col gap-px">
+          <nav className="flex-1 overflow-y-auto px-2 pb-2">
+            <ul className="flex flex-col gap-0.5">
               {navItems.map((item) => (
                 <li key={item.slug}>
                   <DoctorSidebarItem
@@ -121,11 +99,11 @@ export function DoctorShell({
           </nav>
 
           {/* Identity + cadre → /doctor/profile (photo lives there) */}
-          <div className="border-border relative border-t p-3">
+          <div className="border-sidebar-border border-t p-2">
             <Link
               href="/doctor/profile"
               aria-label="Your profile"
-              className="hover:bg-muted/60 focus-visible:shadow-focus flex items-center gap-2.5 rounded-lg px-1.5 py-1.5 transition-colors duration-200 outline-none"
+              className="hover:bg-ink-100 focus-visible:shadow-focus flex items-center gap-2 rounded-md px-1.5 py-1.5 transition-colors duration-100 outline-none"
             >
               {avatarUrl ? (
                 // Signed Storage URLs are not on next/image's allowlist.
@@ -133,25 +111,17 @@ export function DoctorShell({
                 <img
                   src={avatarUrl}
                   alt=""
-                  className="ring-border size-7 shrink-0 rounded-full object-cover ring-1"
+                  className="ring-border size-8 shrink-0 rounded-full object-cover ring-1"
                 />
               ) : (
-                <div
-                  aria-hidden
-                  className="bg-plum-100 text-caption text-plum-800 ring-plum-200/70 flex size-7 shrink-0 items-center justify-center rounded-full font-mono font-semibold ring-1"
-                >
-                  {initial}
-                </div>
+                <Avatar name={scope.fullName ?? scope.userEmail} hue="iris" size="md" />
               )}
               <div className="min-w-0 flex-1">
-                <p className="text-foreground truncate text-[12px] font-medium">
+                <p className="text-foreground text-label truncate">
                   {scope.fullName ?? scope.userEmail}
                 </p>
-                <p className="text-muted-foreground inline-flex items-center gap-1 font-mono text-[10px] tracking-widest uppercase">
-                  <ShieldCheckIcon
-                    className="text-brand-600 dark:text-brand-400 size-3"
-                    aria-hidden
-                  />
+                <p className="text-muted-foreground inline-flex items-center gap-1 text-[11px]">
+                  <ShieldCheckIcon className="size-3" aria-hidden />
                   MFA · AAL2
                 </p>
               </div>
@@ -164,14 +134,14 @@ export function DoctorShell({
       <div className="flex min-w-0 flex-1 flex-col">
         {/* Top bar (hidden full-bleed on the bedside desks) */}
         <FullBleedGate>
-          <header className="border-border glass sticky top-0 z-30 flex h-13 items-center justify-between gap-3 border-b px-4 sm:px-6">
+          <header className="border-border glass sticky top-0 z-30 flex h-12 items-center justify-between gap-3 border-b px-4 sm:px-6">
             {/* Mobile: brand only (mobile drawer ships later) */}
             <div className="flex items-center gap-2.5 lg:hidden">
-              <Link href="/doctor" className="inline-flex items-center gap-2">
-                <BrandMark />
-                <span className="font-display text-foreground text-body-m font-medium tracking-[-0.01em]">
-                  MedSync
-                </span>
+              <Link
+                href="/doctor"
+                className="font-display text-foreground text-body-m font-semibold"
+              >
+                MedSync
               </Link>
             </div>
 
@@ -179,40 +149,39 @@ export function DoctorShell({
             <div className="hidden min-w-0 items-center gap-2 lg:flex">
               <span
                 aria-label={`Signed into ${scope.hospitalName} as ${CADRE_LABEL[scope.cadreCode] ?? scope.cadreCode}`}
-                className="text-muted-foreground inline-flex min-w-0 items-center gap-1.5 font-mono text-[10px] tracking-[0.14em] uppercase"
+                className="text-muted-foreground text-caption inline-flex min-w-0 items-center gap-1.5 font-normal"
               >
-                <span
-                  aria-hidden
-                  className="bg-brand-500 ring-brand-500/20 size-1.5 shrink-0 rounded-full ring-2"
-                />
-                <span className="truncate" title={scope.hospitalName}>
+                <span className="text-foreground truncate font-medium" title={scope.hospitalName}>
                   {scope.hospitalName}
                 </span>
                 <span className="text-muted-foreground/70" aria-hidden>
                   ·
                 </span>
-                <span className="text-muted-foreground/70">
-                  {LEVEL_LABEL[scope.hospitalLevel] ?? scope.hospitalLevel}
-                </span>
+                <span>{LEVEL_LABEL[scope.hospitalLevel] ?? scope.hospitalLevel}</span>
                 <span className="text-muted-foreground/70" aria-hidden>
                   ·
                 </span>
                 <span className="truncate">{scope.departmentName}</span>
               </span>
-              <span
-                className={cn(
-                  "ml-2 inline-flex items-center gap-1 rounded-full px-2 py-0.5 font-mono text-[10px] tracking-[0.12em] uppercase",
-                  scope.isJunior
-                    ? "bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-200"
-                    : "bg-brand-100 text-brand-800 dark:bg-brand-900/40 dark:text-brand-200",
-                )}
+              {/* The cadre is who you are, not a clinical state: an iris tag, never amber. */}
+              <Tag
+                hue="iris"
+                className="ml-2"
                 title={`Cadre: ${CADRE_LABEL[scope.cadreCode] ?? scope.cadreCode}`}
               >
                 {CADRE_LABEL[scope.cadreCode] ?? scope.cadreCode}
-              </span>
+              </Tag>
             </div>
 
             <div className="flex items-center justify-end gap-3">
+              <DoctorCommandBar
+                items={navItems.map((item) => ({
+                  href: doctorFeaturePath(item.slug),
+                  label: item.label,
+                  hint: item.hint,
+                  iconKey: item.iconKey,
+                }))}
+              />
               {workspace ? <EmergencyInlineLink /> : null}
               <Link
                 href="/sign-out"
@@ -227,29 +196,5 @@ export function DoctorShell({
         <main className="min-w-0 flex-1">{children}</main>
       </div>
     </div>
-  );
-}
-
-/**
- * The MedSync brand mark — a teal tile carrying a single drawn pulse.
- * `medsync-forced-dark` pins the teal scale so the white trace stays
- * readable when the theme inverts.
- */
-function BrandMark() {
-  return (
-    <span
-      aria-hidden
-      className="medsync-forced-dark ease-spring bg-brand-600 grid size-4.5 shrink-0 place-items-center rounded-[5px] text-white shadow-sm transition-transform duration-200 group-hover:scale-110"
-    >
-      <svg viewBox="0 0 16 16" fill="none" className="size-3">
-        <path
-          d="M1.5 8.5h3l1.5-4 2.5 7 2-5 1 2h3"
-          stroke="currentColor"
-          strokeWidth="1.6"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        />
-      </svg>
-    </span>
   );
 }

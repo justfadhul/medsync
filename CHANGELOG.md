@@ -5,6 +5,17 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); version
 
 ## [Unreleased]
 
+### Changed — MedSync Chroma is the design system — 2026-09-26
+
+[ADR 0162](docs/adr/0162-medsync-chroma-design-system.md). No migration, no Edge Function. `DESIGN-medsync.md` is rewritten for Chroma; `/styleguide` is the new visual contract.
+
+- **Colour that places.** Cool `ink-*` ground; teal the one action colour; one hue per hospital domain (Patients sky, Clinical iris, Pharmacy & lab grape, Operations plum, Admin slate) on tiles, sidebar items, tags, avatars and record bands; red, amber and green for the patient's clinical state only. Tokens generated from the Chroma `tokens.json`; `gray`/`brand`/`mint` remain as aliases.
+- **Type.** Bricolage Grotesque replaces Fraunces for marketing headlines, page titles and the wordmark; Geist carries every product heading at 600; a denser scale.
+- **Components.** New DomainTile, Tag, StatusPill, Avatar, Kbd, CommandBar (⌘K in every workspace), ViewSwitcher, RecordHeader, AttributeList, VitalStrip, ChromaBand; Button, Input, Card, Dialog, DataTable, StatCard, Panel, VitalStat rebuilt; every workspace sidebar rebuilt on one shared Chroma sidebar.
+- **Workflow states are tags.** Invitation, staff, clinic-session and appointment states render as square tags in cool hues, never red, amber or green. Critical and caution chip text use the AA pair (approved by the owner/CSO with Chroma).
+- **Mobile (Expo patient app):** Chroma ink, teal and sky tokens; Bricolage Grotesque replaces Fraunces (`@expo-google-fonts/bricolage-grotesque`); the mint CTA becomes the teal primary; appointment chips are tags; rating stars are ink.
+- **Removed:** gradient tokens, the plum glow, decorative pulsing dots, the italic headline accent.
+
 ### Fixed — Departments set up in the hub reach staff sign-up; every pop-up is a centred card — 2026-09-26
 
 [ADR 0161](docs/adr/0161-pop-ups-are-centred-landscape-dialogs.md). No migration. Deploy the `ha-services-hub` Edge Function **before** the app (it gains the ops the new buttons call), then `npx vercel deploy --prod --yes`.

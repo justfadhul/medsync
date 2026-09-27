@@ -20,7 +20,7 @@ export function HospitalLeads({ leads }: { leads: readonly LeadRow[] }) {
       aria-labelledby="hospital-leads"
       className="mx-auto w-full max-w-300 px-4 pt-10 pb-12 sm:px-8"
     >
-      <h2 id="hospital-leads" className="text-heading-s text-foreground font-medium">
+      <h2 id="hospital-leads" className="text-heading-s text-foreground">
         {L.title}
       </h2>
       <p className="text-body-s text-muted-foreground mt-1">{L.lead}</p>

@@ -49,12 +49,10 @@ export default async function NurseHandoverPage() {
     <div className="stagger-children mx-auto flex w-full max-w-5xl flex-col gap-8 px-6 py-8 lg:py-10">
       <header className="flex flex-col gap-2">
         <span className="text-muted-foreground inline-flex items-center gap-1.5 font-mono text-[10px] tracking-[0.16em] uppercase">
-          <span aria-hidden className="bg-brand-500 ring-brand-500/20 size-1 rounded-full ring-2" />
+          <span aria-hidden className="bg-iris-icon ring-iris-edge size-1 rounded-full ring-2" />
           {scope.hospitalName} · Handover
         </span>
-        <h1 className="font-display text-foreground text-[26px] leading-tight font-medium tracking-[-0.015em]">
-          Shift handover
-        </h1>
+        <h1 className="font-display text-display-s text-foreground">Shift handover</h1>
         <p className="text-muted-foreground max-w-[60ch] text-[12.5px]">
           What does the next shift need to know? Submit a handover for your ward — every submission
           is audited and visible to nursing + medical staff at the hospital.
@@ -63,7 +61,7 @@ export default async function NurseHandoverPage() {
 
       <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
         {/* Submit */}
-        <section className="border-border bg-card flex flex-col gap-4 rounded-xl border p-5">
+        <section className="border-border bg-card flex flex-col gap-4 rounded-lg border p-5">
           <h2 className="text-muted-foreground font-mono text-[10.5px] tracking-[0.14em] uppercase">
             Submit handover
           </h2>
@@ -71,7 +69,7 @@ export default async function NurseHandoverPage() {
         </section>
 
         {/* Recent handovers */}
-        <aside className="border-border bg-card flex flex-col gap-3 rounded-xl border p-4">
+        <aside className="border-border bg-card flex flex-col gap-3 rounded-lg border p-4">
           <h2 className="text-muted-foreground font-mono text-[10.5px] tracking-[0.14em] uppercase">
             Recent · {recent.length}
           </h2>

@@ -29,12 +29,10 @@ export default async function NursePatientsPage() {
     <div className="stagger-children mx-auto flex w-full max-w-6xl flex-col gap-6 px-6 py-8 lg:py-10">
       <header className="flex flex-col gap-2">
         <span className="text-muted-foreground inline-flex items-center gap-1.5 font-mono text-[10px] tracking-[0.16em] uppercase">
-          <span aria-hidden className="bg-brand-500 ring-brand-500/20 size-1 rounded-full ring-2" />
+          <span aria-hidden className="bg-iris-icon ring-iris-edge size-1 rounded-full ring-2" />
           {scope.hospitalName} · {scope.departmentName} · Patients
         </span>
-        <h1 className="font-display text-foreground text-[26px] leading-[1.15] font-medium tracking-[-0.015em]">
-          Your patients
-        </h1>
+        <h1 className="font-display text-display-s text-foreground">Your patients</h1>
         <p className="text-muted-foreground max-w-[60ch] text-[12.5px] leading-relaxed">
           Patients you&rsquo;re currently assigned to + patients with activity in{" "}
           {scope.departmentName} today.
@@ -54,7 +52,7 @@ export default async function NursePatientsPage() {
       {rows.length === 0 ? (
         <EmptyPanel departmentName={scope.departmentName} isInCharge={scope.isInCharge} />
       ) : (
-        <div className="border-border bg-card overflow-hidden rounded-xl border">
+        <div className="border-border bg-card overflow-hidden rounded-lg border">
           <table className="w-full border-collapse text-left">
             <thead className="border-border bg-muted/30 border-b">
               <tr className="text-muted-foreground font-mono text-[10px] tracking-[0.14em] uppercase">
@@ -72,10 +70,7 @@ export default async function NursePatientsPage() {
             </thead>
             <tbody className="divide-border/60 divide-y">
               {rows.map((r) => (
-                <tr
-                  key={r.patientUserId}
-                  className="group hover:bg-brand-50/40 dark:hover:bg-brand-950/15 transition-colors"
-                >
+                <tr key={r.patientUserId} className="group hover:bg-ink-25 transition-colors">
                   <td className="px-4 py-2.5">
                     <Link
                       href={`/nurse/patients/${r.patientUserId}`}
@@ -127,7 +122,7 @@ function EmptyPanel({
   isInCharge: boolean;
 }) {
   return (
-    <div className="border-border bg-card relative flex flex-col items-start gap-3 overflow-hidden rounded-xl border p-6">
+    <div className="border-border bg-card relative flex flex-col items-start gap-3 overflow-hidden rounded-lg border p-6">
       {/* Quiet empty-list glyph — rows fading out, nothing waiting. */}
       <svg
         viewBox="0 0 132 84"
@@ -142,7 +137,7 @@ function EmptyPanel({
       </svg>
       <span
         aria-hidden
-        className="scale-in bg-plum-50 text-plum-700 ring-plum-200/70 inline-flex size-10 items-center justify-center rounded-full ring-1"
+        className="scale-in bg-sky-tint text-sky-text ring-sky-edge inline-flex size-10 items-center justify-center rounded-full ring-1"
       >
         <UsersIcon className="size-5" />
       </span>

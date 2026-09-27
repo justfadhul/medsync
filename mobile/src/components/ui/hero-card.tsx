@@ -136,7 +136,7 @@ const makeStyles = (c: Palette) =>
       opacity: 0.8,
     },
     title: {
-      fontFamily: font.bodyMedium,
+      fontFamily: font.bodySemiBold,
       fontSize: 17,
       lineHeight: 23,
       color: c.primaryForeground,

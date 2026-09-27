@@ -63,9 +63,7 @@ export default async function EmergencyGovernancePage() {
     <div className="flex flex-col">
       <header className="border-border border-b px-4 py-6 sm:px-8 sm:py-8">
         <div className="mx-auto flex w-full max-w-[1200px] flex-col gap-1">
-          <h1 className="font-display text-foreground sm:text-heading-l text-[24px] leading-tight font-medium tracking-[-0.018em]">
-            Emergency
-          </h1>
+          <h1 className="font-display text-display-s text-foreground">Emergency</h1>
           <p className="text-muted-foreground max-w-[60ch] text-[13.5px]">
             Production shows verified numbers and signed clinical content only (Gate CS). Verifying
             a number needs two superadmins; the second approval has no executor yet — see{" "}

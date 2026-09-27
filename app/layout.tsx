@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Fraunces, Geist, Geist_Mono } from "next/font/google";
+import { Bricolage_Grotesque, Geist, Geist_Mono } from "next/font/google";
 import { Analytics } from "@vercel/analytics/next";
 
 import { EmergencyPill } from "@/components/emergency/emergency-pill";
@@ -9,17 +9,16 @@ import { Providers } from "./providers";
 import "./globals.css";
 
 /**
- * Editorial-clinical type system:
- *   - Fraunces: serif display for headlines + pull quotes. Calligraphic
- *     warmth keeps a healthcare site from reading cold; opsz=144 lets the
- *     hero H1 use the optical-size axis so the giant size reads correctly.
- *   - Geist Sans: body. Modern, clinical, optimized for data-dense UIs.
- *   - Geist Mono: tabular figures for labs, dosing, vitals, IDs.
+ * MedSync Chroma type system (ADR 0162):
+ *   - Bricolage Grotesque: display face for marketing headlines and workspace
+ *     page titles only, on its opsz axis so each size draws correctly.
+ *   - Geist: all product UI, headings included.
+ *   - Geist Mono: tabular figures for vitals, labs, MRNs, beds and key hints.
  */
-const fontDisplay = Fraunces({
+const fontDisplay = Bricolage_Grotesque({
   subsets: ["latin"],
   variable: "--font-medsync-display",
-  axes: ["opsz", "SOFT", "WONK"],
+  axes: ["opsz"],
   display: "swap",
 });
 const fontSans = Geist({
@@ -70,7 +69,7 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   themeColor: [
     { media: "(prefers-color-scheme: light)", color: "#FFFFFF" },
-    { media: "(prefers-color-scheme: dark)", color: "#0A0A0A" },
+    { media: "(prefers-color-scheme: dark)", color: "#0F1012" },
   ],
   width: "device-width",
   initialScale: 1,

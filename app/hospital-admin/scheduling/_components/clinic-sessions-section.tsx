@@ -90,11 +90,12 @@ const STATUS_LABEL: Record<string, string> = {
   closed: "Closed",
 };
 
+// Workflow states are tags, never a patient's clinical colours (ADR 0162).
 const STATUS_TONE: Record<string, PillTone> = {
-  draft: "pending",
-  published: "stable",
+  draft: "notice",
+  published: "active",
   cancelled: "neutral",
-  closed: "discharged",
+  closed: "neutral",
 };
 
 export function ClinicSessionsSection({

@@ -37,7 +37,7 @@ export function ProviderCard({ provider }: { provider: Provider }) {
           DESIGN-medsync.md forbids decorative grounds. */}
       <span
         data-place
-        className="bg-plum-50 relative grid aspect-[4/3] w-full place-items-center overflow-hidden rounded-lg"
+        className="bg-sky-tint relative grid aspect-[4/3] w-full place-items-center overflow-hidden rounded-lg"
       >
         {provider.photoUrl ? (
           // eslint-disable-next-line @next/next/no-img-element -- a signed, expiring Supabase URL: next/image would need the host allow-listed and would re-fetch it server-side
@@ -49,9 +49,9 @@ export function ProviderCard({ provider }: { provider: Provider }) {
             decoding="async"
           />
         ) : initials ? (
-          <span className="text-plum-700 text-heading-m font-mono font-medium">{initials}</span>
+          <span className="text-sky-text text-heading-m font-mono">{initials}</span>
         ) : (
-          <StethoscopeIcon strokeWidth={1.5} className="text-plum-700 size-7" aria-hidden />
+          <StethoscopeIcon strokeWidth={1.5} className="text-sky-text size-7" aria-hidden />
         )}
       </span>
 

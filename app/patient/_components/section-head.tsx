@@ -15,7 +15,7 @@ export function SectionHead({
 }) {
   return (
     <div className="flex items-center justify-between gap-3">
-      <h2 id={id} className="text-heading-s font-medium">
+      <h2 id={id} className="text-heading-s">
         {title}
       </h2>
       {/* No underline at rest — blue-underlined "view all" is not in the

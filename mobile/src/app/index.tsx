@@ -308,7 +308,7 @@ const styles = StyleSheet.create({
   content: { flex: 1, paddingHorizontal: space[5], justifyContent: "space-between" },
   middle: { flex: 1, alignItems: "center", justifyContent: "center", paddingBottom: space[16] },
   tagline: {
-    fontFamily: font.displayItalic,
+    fontFamily: font.body,
     fontSize: 15.5,
     lineHeight: 23,
     // No maxWidth and no centring: it is absolutely positioned now, and must
@@ -330,7 +330,7 @@ const styles = StyleSheet.create({
     width: "100%",
     minHeight: 52,
     borderRadius: radius.full,
-    backgroundColor: mint[300],
+    backgroundColor: mint[400],
     alignItems: "center",
     justifyContent: "center",
     paddingHorizontal: space[6],
@@ -342,8 +342,8 @@ const styles = StyleSheet.create({
     fontFamily: font.bodyMedium,
     fontSize: 16,
     letterSpacing: 0.1,
-    // The mint fill carries deep teal text — the web's signature CTA pair.
-    color: brand[900],
+    // Chroma's primary on a dark ground: the bright teal with deep-teal text (7.8:1).
+    color: brand[950],
   },
 
   secondary: { minHeight: 44, justifyContent: "center" },

@@ -4,6 +4,7 @@ import type { SidebarIconKey } from "./admin-sidebar-active";
 import { useState } from "react";
 import { MenuIcon } from "lucide-react";
 
+import { Avatar } from "@/components/medsync/avatar";
 import { Sheet, SheetClose, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
 import { AdminSidebarItem } from "./admin-sidebar-active";
@@ -40,9 +41,9 @@ export function MobileSidebar({ items, operatorEmail }: Props) {
         onClick={() => setOpen(true)}
         aria-label="Open navigation"
         className={cn(
-          "border-border bg-background text-muted-foreground inline-flex items-center justify-center rounded-md border p-1.5 transition-colors outline-none lg:hidden",
-          "hover:bg-muted hover:text-foreground",
-          "focus-visible:ring-brand-500/40 focus-visible:ring-2",
+          "border-ink-300 bg-card text-ink-600 shadow-control inline-flex size-8 items-center justify-center rounded-md border transition-colors outline-none lg:hidden",
+          "hover:bg-ink-50 hover:text-foreground",
+          "focus-visible:shadow-focus",
         )}
       >
         <MenuIcon className="size-4" aria-hidden />
@@ -52,16 +53,14 @@ export function MobileSidebar({ items, operatorEmail }: Props) {
         <SheetTitle className="sr-only">Workspace navigation</SheetTitle>
 
         <div className="border-border flex h-[52px] items-center gap-2.5 border-b px-5">
-          <span className="font-display text-foreground text-body-m font-medium tracking-[-0.01em]">
-            MedSync
-          </span>
+          <span className="font-display text-foreground text-body-m font-semibold">MedSync</span>
           <span className="text-muted-foreground font-mono text-[9.5px] tracking-[0.16em] uppercase">
             Console
           </span>
         </div>
 
         <nav className="flex-1 overflow-y-auto p-2">
-          <ul className="flex flex-col gap-px">
+          <ul className="flex flex-col gap-0.5">
             {items.map((item) => (
               <li key={item.href}>
                 {/* SheetClose wraps the row so navigating closes the sheet. */}
@@ -81,13 +80,8 @@ export function MobileSidebar({ items, operatorEmail }: Props) {
 
         <div className="border-border border-t p-3">
           <div className="flex items-center gap-2.5 px-1 py-1.5">
-            <div
-              aria-hidden
-              className="bg-plum-100 text-caption text-plum-800 flex size-7 shrink-0 items-center justify-center rounded-full font-mono font-semibold"
-            >
-              {operatorEmail.slice(0, 1).toUpperCase()}
-            </div>
-            <p className="text-foreground truncate text-[12px] font-medium">{operatorEmail}</p>
+            <Avatar name={operatorEmail} hue="slate" size="md" />
+            <p className="text-foreground text-label truncate">{operatorEmail}</p>
           </div>
         </div>
       </SheetContent>

@@ -53,9 +53,7 @@ export default async function ClaimInvitationPage({
   if (!sp.token) {
     return (
       <div className="mx-auto max-w-xl px-5 py-12">
-        <h1 className="font-display text-foreground text-heading-m font-medium">
-          Missing invitation token
-        </h1>
+        <h1 className="font-display text-display-s text-foreground">Missing invitation token</h1>
         <p className="text-muted-foreground mt-2 text-[13.5px]">
           The link you followed doesn&apos;t include a token. Ask the superadmin who invited you to
           re-share the URL.
@@ -70,9 +68,7 @@ export default async function ClaimInvitationPage({
         <span className="text-muted-foreground font-mono text-[10px] tracking-[0.18em] uppercase">
           Hospital admin invitation
         </span>
-        <h1 className="font-display text-foreground text-[26px] leading-tight font-medium tracking-[-0.02em]">
-          Claim your role
-        </h1>
+        <h1 className="font-display text-display-s text-foreground">Claim your role</h1>
         <p className="text-muted-foreground text-[13.5px]">
           You&apos;ve been invited as a hospital admin. Confirming below grants your account the
           hospital_admin role for that hospital + records you in the admin roster as the primary (or

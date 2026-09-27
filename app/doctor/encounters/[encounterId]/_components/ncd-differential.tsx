@@ -47,7 +47,7 @@ import {
  */
 
 const OVERLINE = "font-mono text-[10px] tracking-[0.16em] uppercase text-muted-foreground/80";
-const CARD = "border-border bg-card rounded-xl border shadow-xs";
+const CARD = "border-border bg-card rounded-lg border shadow-xs";
 
 /* ── vocabulary ──────────────────────────────────────────────────────────── */
 

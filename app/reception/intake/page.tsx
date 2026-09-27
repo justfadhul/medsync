@@ -74,10 +74,10 @@ export default async function ReceptionIntakePage() {
 
       <header className="flex flex-col gap-1">
         <span className="text-muted-foreground text-overline inline-flex items-center gap-1.5 font-mono uppercase">
-          <span aria-hidden className="bg-brand-500 ring-brand-500/20 size-1 rounded-full ring-2" />
+          <span aria-hidden className="bg-plum-icon ring-plum-edge size-1 rounded-full ring-2" />
           {scope.hospitalName} · Register an entry
         </span>
-        <h1 className="font-display text-foreground text-heading-l">Front door</h1>
+        <h1 className="font-display text-display-s text-foreground">Front door</h1>
         <p className="text-muted-foreground text-body-s max-w-[60ch] leading-relaxed">
           Walk-in, booked check-in, referral, emergency, transfer, follow-up. Emergency entries skip
           required fields — capture fast, complete later.

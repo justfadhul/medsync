@@ -18,15 +18,10 @@ export default async function DoctorAlertsPage() {
     <div className="stagger-children mx-auto flex w-full max-w-4xl flex-col gap-6 px-6 py-8 lg:py-10">
       <header className="flex flex-col gap-2">
         <span className="text-muted-foreground inline-flex items-center gap-1.5 font-mono text-[10px] tracking-[0.16em] uppercase">
-          <span
-            aria-hidden
-            className="pulse-dot bg-brand-500 ring-brand-500/20 size-1 rounded-full ring-2"
-          />
+          <span aria-hidden className="bg-iris-icon ring-iris-edge size-1 rounded-full ring-2" />
           Monitoring alerts
         </span>
-        <h1 className="font-display text-foreground text-[26px] leading-[1.15] font-medium tracking-[-0.015em]">
-          Alerts for your patients
-        </h1>
+        <h1 className="font-display text-display-s text-foreground">Alerts for your patients</h1>
         <p className="text-muted-foreground max-w-[60ch] text-[12.5px] leading-relaxed">
           Threshold breaches (glucose, BP, SpO₂, temperature) for patients you have a clinical
           relationship with. Prioritised, never drowning — calm-but-clear severity.
@@ -44,7 +39,7 @@ export default async function DoctorAlertsPage() {
           {alerts.map((a) => (
             <li
               key={a.id}
-              className="border-border bg-card card-lift flex items-center justify-between gap-3 rounded-xl border p-4"
+              className="border-border bg-card card-lift flex items-center justify-between gap-3 rounded-lg border p-4"
             >
               <div className="flex flex-col">
                 <span className="text-foreground text-[14px] font-medium">{a.patientCode}</span>

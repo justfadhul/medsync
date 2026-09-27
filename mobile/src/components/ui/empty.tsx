@@ -74,7 +74,7 @@ const makeStyles = (c: Palette) =>
       justifyContent: "center",
     },
     title: {
-      fontFamily: font.display,
+      fontFamily: font.bodySemiBold,
       fontSize: 20,
       lineHeight: 27,
       letterSpacing: -0.3,

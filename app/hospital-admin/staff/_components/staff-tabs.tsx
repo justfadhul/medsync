@@ -55,7 +55,7 @@ export function StaffTabs({ activeTab, pendingCount }: StaffTabsProps) {
             scroll={false}
             className={cn(
               "tap text-body-s relative inline-flex items-center gap-2 rounded-t-md px-3 py-2.5 font-medium transition-colors outline-none",
-              "focus-visible:ring-brand-500/40 focus-visible:ring-2",
+              "focus-visible:ring-ring focus-visible:ring-2",
               "hover:bg-muted/50",
               isActive ? "text-foreground" : "text-muted-foreground hover:text-foreground",
             )}

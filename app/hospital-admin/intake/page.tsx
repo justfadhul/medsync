@@ -53,12 +53,10 @@ export default async function HospitalAdminIntakePage() {
     <div className="mx-auto flex w-full max-w-6xl flex-col gap-8 px-6 py-8 lg:py-10">
       <header className="flex flex-col gap-2">
         <span className="text-muted-foreground inline-flex items-center gap-1.5 font-mono text-[10px] tracking-[0.16em] uppercase">
-          <span aria-hidden className="bg-brand-500 ring-brand-500/20 size-1 rounded-full ring-2" />
+          <span aria-hidden className="bg-slate-icon ring-slate-edge size-1 rounded-full ring-2" />
           {scope.hospitalName} · Intake
         </span>
-        <h1 className="font-display text-foreground text-heading-l leading-[1.15] font-medium tracking-[-0.015em]">
-          Front door
-        </h1>
+        <h1 className="font-display text-display-s text-foreground">Front door</h1>
         <p className="text-muted-foreground max-w-[60ch] text-[12.5px] leading-relaxed">
           Register a patient arriving at the hospital — walk-in, booked appointment, referral,
           emergency, transfer, or follow-up. Emergency entries skip required fields: capture fast,
@@ -68,12 +66,12 @@ export default async function HospitalAdminIntakePage() {
 
       {/* Today's count rail */}
       <ul className="grid grid-cols-2 gap-2">
-        <li className="border-border bg-card flex flex-col gap-1 rounded-xl border p-3">
+        <li className="border-border bg-card flex flex-col gap-1 rounded-lg border p-3">
           <span className="text-muted-foreground inline-flex items-center gap-1.5 font-mono text-[10px] tracking-[0.14em] uppercase">
             <UserPlusIcon className="size-3" aria-hidden />
             Awaiting triage
           </span>
-          <span className="font-display text-foreground text-heading-l leading-none font-medium tabular-nums">
+          <span className="text-foreground text-heading-l leading-none tabular-nums">
             {today.awaitingTriage}
           </span>
         </li>
@@ -81,7 +79,7 @@ export default async function HospitalAdminIntakePage() {
           className={
             today.emergencyAwaiting > 0
               ? "flex flex-col gap-1 rounded-xl border border-rose-500/40 bg-rose-50/40 p-3 dark:bg-rose-950/15"
-              : "border-border bg-card flex flex-col gap-1 rounded-xl border p-3"
+              : "border-border bg-card flex flex-col gap-1 rounded-lg border p-3"
           }
         >
           <span
@@ -97,8 +95,8 @@ export default async function HospitalAdminIntakePage() {
           <span
             className={
               today.emergencyAwaiting > 0
-                ? "font-display text-heading-l leading-none font-medium text-rose-700 tabular-nums dark:text-rose-300"
-                : "font-display text-foreground text-heading-l leading-none font-medium tabular-nums"
+                ? "text-heading-l leading-none text-rose-700 tabular-nums dark:text-rose-300"
+                : "text-foreground text-heading-l leading-none tabular-nums"
             }
           >
             {today.emergencyAwaiting}
@@ -126,7 +124,7 @@ export default async function HospitalAdminIntakePage() {
       {/* Awaiting-triage list */}
       <aside
         id="awaiting"
-        className="border-border bg-card flex flex-col gap-2 rounded-xl border p-4"
+        className="border-border bg-card flex flex-col gap-2 rounded-lg border p-4"
       >
         <h2 className="text-muted-foreground font-mono text-[10.5px] tracking-[0.14em] uppercase">
           Awaiting triage · {awaiting.length}

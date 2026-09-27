@@ -163,17 +163,15 @@ export default async function SchedulingRollupPage({ searchParams }: PageProps) 
     <div className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-4 py-6 sm:px-6 sm:py-8">
       <header className="flex flex-col gap-2">
         <span className="text-muted-foreground text-overline inline-flex w-fit items-center gap-1.5 font-mono uppercase">
-          <span aria-hidden className="bg-brand-500 ring-brand-500/20 size-1 rounded-full ring-2" />
+          <span aria-hidden className="bg-slate-icon ring-slate-edge size-1 rounded-full ring-2" />
           Platform · Scheduling rollup
         </span>
-        <h1 className="font-display text-foreground text-heading-m sm:text-heading-l font-medium">
-          Scheduling across hospitals
-        </h1>
+        <h1 className="font-display text-display-s text-foreground">Scheduling across hospitals</h1>
         <p className="text-muted-foreground text-body-s max-w-2xl leading-relaxed">
           Aggregate counts only — no individual appointments. Patient-level operations go through
           the per-hospital workspace.
         </p>
-        <div className="bg-brand-500/60 h-px w-10" aria-hidden />
+        <div className="bg-ink-300 h-px w-10" aria-hidden />
       </header>
 
       {errored ? (
@@ -277,7 +275,7 @@ export default async function SchedulingRollupPage({ searchParams }: PageProps) 
                   </td>
                   <td className="px-4 py-2.5 text-right sm:px-6">
                     {h.pendingApproval > 0 ? (
-                      <Pill tone="pending">{h.pendingApproval}</Pill>
+                      <Pill tone="notice">{h.pendingApproval}</Pill>
                     ) : (
                       <span className="text-muted-foreground text-body-s font-mono tabular-nums">
                         0
@@ -295,7 +293,7 @@ export default async function SchedulingRollupPage({ searchParams }: PageProps) 
                   </td>
                   <td className="px-4 py-2.5 text-right sm:px-6">
                     {h.unansweredSoon > 0 ? (
-                      <Pill tone="caution">{h.unansweredSoon}</Pill>
+                      <Pill tone="notice">{h.unansweredSoon}</Pill>
                     ) : (
                       <span className="text-muted-foreground text-body-s font-mono tabular-nums">
                         —
@@ -308,7 +306,7 @@ export default async function SchedulingRollupPage({ searchParams }: PageProps) 
                   <td className="hidden px-4 py-2.5 text-right sm:table-cell sm:px-6">
                     <Link
                       href="/admin"
-                      className="text-muted-foreground hover:text-foreground text-caption focus-visible:ring-brand-500/40 inline-flex min-h-11 items-center rounded transition-colors outline-none focus-visible:ring-2"
+                      className="text-muted-foreground hover:text-foreground text-caption focus-visible:ring-ring inline-flex min-h-11 items-center rounded transition-colors outline-none focus-visible:ring-2"
                     >
                       Approvals →
                     </Link>
@@ -737,7 +735,7 @@ function AccessPanel({
               href={`/admin/scheduling-rollup?days=${d}`}
               aria-current={d === days ? "page" : undefined}
               className={cn(
-                "text-caption focus-visible:ring-brand-500/40 inline-flex min-h-11 items-center rounded px-2 font-mono transition-colors outline-none focus-visible:ring-2",
+                "text-caption focus-visible:ring-ring inline-flex min-h-11 items-center rounded px-2 font-mono transition-colors outline-none focus-visible:ring-2",
                 d === days
                   ? "text-foreground font-medium"
                   : "text-muted-foreground hover:text-foreground",
@@ -855,12 +853,7 @@ function Kpi({ label, value, tone = "neutral" }: { label: string; value: number;
   return (
     <div className="border-border bg-card flex flex-col gap-1 rounded-lg border p-4">
       <span className="text-muted-foreground text-overline font-mono uppercase">{label}</span>
-      <span
-        className={cn(
-          "font-display text-heading-l leading-none font-medium tabular-nums",
-          TONE_CLASS[tone],
-        )}
-      >
+      <span className={cn("text-heading-l leading-none tabular-nums", TONE_CLASS[tone])}>
         {value}
       </span>
     </div>
@@ -882,12 +875,7 @@ function Metric({
   return (
     <div className="bg-card flex flex-col gap-1 px-4 py-3 sm:px-6">
       <span className="text-muted-foreground text-overline font-mono uppercase">{label}</span>
-      <span
-        className={cn(
-          "text-heading-s font-mono leading-none font-medium tabular-nums",
-          TONE_CLASS[tone],
-        )}
-      >
+      <span className={cn("text-heading-s font-mono leading-none tabular-nums", TONE_CLASS[tone])}>
         {value}
       </span>
       {hint ? <span className="text-muted-foreground text-caption">{hint}</span> : null}

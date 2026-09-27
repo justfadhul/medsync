@@ -151,7 +151,7 @@ export function DebriefPanel() {
     <section
       data-testid="debrief"
       aria-labelledby="debrief-heading"
-      className="border-border bg-card shadow-card rounded-xl border"
+      className="border-border bg-card shadow-card rounded-lg border"
     >
       <header className="border-border flex flex-wrap items-baseline justify-between gap-2 border-b px-4 py-3 sm:px-6">
         <h2 id="debrief-heading" className="text-heading-s text-foreground">

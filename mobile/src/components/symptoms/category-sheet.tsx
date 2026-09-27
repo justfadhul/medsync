@@ -102,7 +102,7 @@ const makeStyles = (c: Palette) =>
     },
     title: {
       flex: 1,
-      fontFamily: font.display,
+      fontFamily: font.bodySemiBold,
       fontSize: 22,
       lineHeight: 28,
       letterSpacing: -0.3,

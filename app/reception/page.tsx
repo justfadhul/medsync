@@ -68,10 +68,10 @@ export default async function ReceptionTodayPage() {
       ) : null}
       <header className="reveal-up flex flex-col gap-2">
         <span className="text-muted-foreground text-overline inline-flex items-center gap-1.5 font-mono uppercase">
-          <span aria-hidden className="bg-brand-500 ring-brand-500/20 size-1 rounded-full ring-2" />
+          <span aria-hidden className="bg-plum-icon ring-plum-edge size-1 rounded-full ring-2" />
           {scope.hospitalName} · Front desk
         </span>
-        <h1 className="font-display text-foreground text-heading-l">
+        <h1 className="font-display text-display-s text-foreground">
           {firstName ? `Hi, ${firstName}.` : "Hi."}
         </h1>
         <p className="text-muted-foreground text-body-s max-w-[60ch] leading-relaxed">
@@ -159,7 +159,7 @@ function StatTile({
           ? "text-muted-foreground"
           : "text-foreground";
   return (
-    <div className="border-border bg-card flex flex-col gap-1 rounded-xl border p-3">
+    <div className="border-border bg-card flex flex-col gap-1 rounded-lg border p-3">
       <span className="text-muted-foreground text-overline font-mono uppercase">{label}</span>
       <span className={`font-display text-heading-l leading-none tabular-nums ${toneClass}`}>
         {value}
@@ -187,7 +187,7 @@ function QuickAction({
       className={
         tone === "primary"
           ? "group tap ease-expo-out bg-foreground text-background hover:bg-foreground/90 flex items-start gap-3 rounded-xl p-5 transition-colors duration-150"
-          : "group tap ease-expo-out border-border bg-card hover:bg-muted/30 flex items-start gap-3 rounded-xl border p-5 transition-colors duration-150"
+          : "group tap ease-expo-out border-border bg-card hover:bg-muted/30 flex items-start gap-3 rounded-lg border p-5 transition-colors duration-150"
       }
     >
       <span

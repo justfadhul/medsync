@@ -73,12 +73,10 @@ export default async function StaffRollupPage() {
     <div className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-4 py-6 sm:px-6 sm:py-8">
       <header className="flex flex-col gap-2">
         <span className="text-muted-foreground inline-flex w-fit items-center gap-1.5 font-mono text-[10px] tracking-[0.16em] uppercase">
-          <span aria-hidden className="bg-brand-500 ring-brand-500/20 size-1 rounded-full ring-2" />
+          <span aria-hidden className="bg-slate-icon ring-slate-edge size-1 rounded-full ring-2" />
           Platform · Staff rollup
         </span>
-        <h1 className="font-display text-foreground sm:text-heading-l text-[24px] leading-[1.15] font-medium tracking-[-0.015em]">
-          Staff across hospitals
-        </h1>
+        <h1 className="font-display text-display-s text-foreground">Staff across hospitals</h1>
         <p className="text-muted-foreground max-w-2xl text-[13.5px] leading-relaxed">
           Aggregate counts only — no individual names or council numbers. To act on a specific
           pending affiliation, use the{" "}
@@ -87,7 +85,7 @@ export default async function StaffRollupPage() {
           </Link>
           .
         </p>
-        <div className="bg-brand-500/60 dark:bg-brand-400/50 h-px w-10" aria-hidden />
+        <div className="bg-ink-300 h-px w-10" aria-hidden />
       </header>
 
       {errored ? (
@@ -206,7 +204,7 @@ export default async function StaffRollupPage() {
                   </td>
                   <td className="px-4 py-2.5 text-right sm:px-6">
                     {h.pending > 0 ? (
-                      <Pill tone="pending">{h.pending}</Pill>
+                      <Pill tone="notice">{h.pending}</Pill>
                     ) : (
                       <span className="text-muted-foreground font-mono text-[12.5px] tabular-nums">
                         0
@@ -398,14 +396,7 @@ function KpiCard({
       <span className="text-muted-foreground font-mono text-[10.5px] tracking-[0.12em] uppercase">
         {label}
       </span>
-      <span
-        className={cn(
-          "font-display text-heading-l leading-none font-medium tabular-nums",
-          toneClass,
-        )}
-      >
-        {value}
-      </span>
+      <span className={cn("text-heading-l leading-none tabular-nums", toneClass)}>{value}</span>
       {hint ? (
         <span className="text-muted-foreground text-caption leading-tight">{hint}</span>
       ) : null}

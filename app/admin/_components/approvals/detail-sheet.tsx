@@ -73,9 +73,9 @@ function ApprovalDetailContent({ item, onClose }: { item: ApprovalItem; onClose:
             <Pill tone={isHospital ? "admitted" : "neutral"}>
               {isHospital ? "Hospital application" : "Staff affiliation"}
             </Pill>
-            <Pill tone="pending">Pending review</Pill>
+            <Pill tone="notice">Pending review</Pill>
             {item.flagged ? (
-              <Pill tone="caution">
+              <Pill tone="notice">
                 <AlertTriangleIcon className="mr-0.5 -ml-0.5 size-3" aria-hidden />
                 Flag
               </Pill>
@@ -83,14 +83,14 @@ function ApprovalDetailContent({ item, onClose }: { item: ApprovalItem; onClose:
           </div>
 
           <div className="flex flex-col gap-1.5">
-            <h2 className="font-display text-foreground text-[24px] leading-[1.15] font-medium tracking-[-0.015em]">
+            <h2 className="text-foreground text-heading-l leading-[1.15] tracking-[-0.015em]">
               {item.title}
             </h2>
             <p className="text-muted-foreground text-body-s leading-snug">{item.subtitle}</p>
           </div>
 
           {/* Hairline teal accent — the recurring motif from the landing surface. */}
-          <div className="bg-brand-500/60 dark:bg-brand-400/50 h-px w-10" aria-hidden />
+          <div className="bg-ink-300 h-px w-10" aria-hidden />
 
           <dl className="flex flex-wrap items-baseline gap-x-6 gap-y-1.5 text-[11.5px]">
             <div className="flex items-baseline gap-1.5">
@@ -403,7 +403,7 @@ function EvidenceDocCard({
       <input type="hidden" name="bucket" value={bucket} />
       <input type="hidden" name="path" value={path} />
 
-      <div className="bg-plum-50 text-plum-700 ring-plum-200/70 flex size-9 shrink-0 items-center justify-center rounded ring-1">
+      <div className="bg-slate-tint text-slate-icon ring-slate-edge flex size-9 shrink-0 items-center justify-center rounded ring-1">
         <FileTextIcon className="size-4" aria-hidden />
       </div>
 

@@ -13,11 +13,12 @@ import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 import { inviteStaffAction, revokeStaffInvitationAction } from "../actions";
 
+// Workflow states are tags, never a patient's clinical colours (ADR 0162).
 const STATUS_TONES: Record<InvitationRow["status"], PillTone> = {
-  pending: "pending",
-  accepted: "stable",
+  pending: "notice",
+  accepted: "active",
   revoked: "neutral",
-  expired: "caution",
+  expired: "neutral",
 };
 
 const STATUS_LABEL: Record<InvitationRow["status"], string> = {
@@ -98,7 +99,7 @@ function SendForm({ onIssued }: { onIssued: (issued: ReadonlyArray<IssuedInvitat
             className={cn(
               "border-border text-foreground placeholder:text-muted-foreground",
               "min-h-[120px] resize-y rounded-md border bg-transparent px-3 py-2 font-mono text-[12.5px] leading-relaxed outline-none",
-              "focus-visible:ring-brand-500/40 focus-visible:ring-2",
+              "focus-visible:ring-ring focus-visible:ring-2",
             )}
           />
         </div>
@@ -281,7 +282,7 @@ function RevokeButton({ invitationId, email }: { invitationId: string; email: st
         minLength={8}
         autoFocus
         placeholder={`Why revoking ${email}? (≥ 8 chars)`}
-        className="border-border text-caption focus-visible:ring-brand-500/40 w-64 max-w-full rounded-md border bg-transparent px-2 py-0.5 outline-none focus-visible:ring-2"
+        className="border-border text-caption focus-visible:ring-ring w-64 max-w-full rounded-md border bg-transparent px-2 py-0.5 outline-none focus-visible:ring-2"
       />
       <Button type="submit" variant="secondary" size="sm" disabled={pending}>
         {pending ? "Revoking…" : "Confirm"}

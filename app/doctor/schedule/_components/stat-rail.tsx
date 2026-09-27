@@ -21,15 +21,16 @@ export function StatRail({ stats, windowLabel }: { stats: SchedulingStats; windo
     >
       <li>
         <StatCard
+          domain="operations"
           label="Appointments"
           value={stats.total}
           hint={windowLabel}
           icon={<ListChecksIcon className="size-4" aria-hidden />}
-          tinted
         />
       </li>
       <li>
         <StatCard
+          domain="operations"
           label="Confirmed"
           value={stats.confirmed}
           hint="on the calendar"
@@ -38,6 +39,7 @@ export function StatRail({ stats, windowLabel }: { stats: SchedulingStats; windo
       </li>
       <li>
         <StatCard
+          domain="operations"
           label="Pending"
           value={stats.pending}
           hint="awaiting you"
@@ -46,6 +48,7 @@ export function StatRail({ stats, windowLabel }: { stats: SchedulingStats; windo
       </li>
       <li>
         <StatCard
+          domain="operations"
           label="Urgent"
           value={stats.urgent}
           hint="alert-triggered"
@@ -54,6 +57,7 @@ export function StatRail({ stats, windowLabel }: { stats: SchedulingStats; windo
       </li>
       <li>
         <StatCard
+          domain="operations"
           label="Completed"
           value={stats.completed}
           hint="in the window"
@@ -62,6 +66,7 @@ export function StatRail({ stats, windowLabel }: { stats: SchedulingStats; windo
       </li>
       <li>
         <StatCard
+          domain="operations"
           label="Cancelled"
           value={stats.cancelled}
           hint="in the window"

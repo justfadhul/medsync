@@ -119,7 +119,7 @@ export function DeathConfirmation() {
     <section
       data-testid="death-confirmation"
       aria-labelledby="death-heading"
-      className="border-border bg-card shadow-card rounded-xl border"
+      className="border-border bg-card shadow-card rounded-lg border"
     >
       <header className="border-border flex flex-wrap items-center gap-x-4 gap-y-2 border-b px-4 py-3 sm:px-6">
         <h2 id="death-heading" className="text-heading-s text-foreground">

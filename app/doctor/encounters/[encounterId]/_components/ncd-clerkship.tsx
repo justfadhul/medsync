@@ -202,7 +202,7 @@ export function NcdClerkship({
       <header className="flex flex-wrap items-center gap-x-3 gap-y-2">
         <span className="inline-flex items-center gap-1.5">
           <ActivityIcon className="text-brand-600 dark:text-brand-400 size-4" aria-hidden />
-          <h2 className="font-display text-foreground text-body-l leading-tight font-medium tracking-[-0.012em]">
+          <h2 className="text-foreground text-body-l leading-tight font-medium tracking-[-0.012em]">
             {catalog.display}
           </h2>
         </span>
@@ -238,7 +238,7 @@ export function NcdClerkship({
 
       <div className="grid grid-cols-1 gap-3 lg:h-[calc(100svh-9rem)] lg:max-h-[52rem] lg:min-h-[32rem] lg:grid-cols-[13rem_minmax(0,1fr)_24rem]">
         {/* Rail — the whole protocol, so one-at-a-time never means hidden. */}
-        <div className="border-border bg-card overflow-x-auto rounded-xl border p-1.5 shadow-xs lg:overflow-x-hidden lg:overflow-y-auto">
+        <div className="border-border bg-card overflow-x-auto rounded-lg border p-1.5 shadow-xs lg:overflow-x-hidden lg:overflow-y-auto">
           <NcdSectionRail progress={progress} activeId={activeId} onPick={leave} />
           {onSave ? <SaveStatus state={save} onRetry={() => void persist(values)} /> : null}
         </div>

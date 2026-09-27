@@ -19,7 +19,7 @@ export function DoctorEmptyState({
   return (
     <div
       className={cn(
-        "border-border bg-card/40 flex flex-col items-center gap-4 rounded-xl border border-dashed px-6 py-10 text-center",
+        "border-border bg-card/40 flex flex-col items-center gap-4 rounded-lg border border-dashed px-6 py-10 text-center",
         className,
       )}
     >

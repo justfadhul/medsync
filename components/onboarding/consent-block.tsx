@@ -30,7 +30,7 @@ export function ConsentBlock({
       aria-labelledby="consent-title"
       className="flex flex-col gap-4 rounded-lg bg-gray-50 p-5 sm:p-6 dark:bg-gray-900"
     >
-      <h2 id="consent-title" className="text-heading-s text-foreground font-medium">
+      <h2 id="consent-title" className="text-heading-s text-foreground">
         {CONSENT.title}
       </h2>
       <ul className="text-body-m text-foreground flex list-disc flex-col gap-1.5 pl-5">

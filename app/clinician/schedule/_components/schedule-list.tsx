@@ -147,8 +147,8 @@ export function ScheduleList({
                     type="button"
                     onClick={() => openRow(r.id)}
                     className={cn(
-                      "group tap hover:bg-brand-50/40 dark:hover:bg-brand-950/15 flex w-full items-center gap-3 px-4 py-3 text-left transition-colors outline-none",
-                      "focus-visible:bg-muted/60 focus-visible:ring-brand-500/40 focus-visible:ring-2 focus-visible:ring-inset",
+                      "group tap hover:bg-ink-25 flex w-full items-center gap-3 px-4 py-3 text-left transition-colors outline-none",
+                      "focus-visible:bg-muted/60 focus-visible:ring-ring focus-visible:ring-2 focus-visible:ring-inset",
                       r.status === "pending_approval" &&
                         "bg-amber-50/40 hover:bg-amber-50/70 dark:bg-amber-950/15 dark:hover:bg-amber-950/25",
                     )}

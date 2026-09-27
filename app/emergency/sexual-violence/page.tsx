@@ -42,9 +42,7 @@ export default async function SexualViolencePage() {
           </Link>
         </nav>
         <header className="flex flex-col gap-2">
-          <h1 className="font-display text-foreground text-heading-l font-medium tracking-[-0.015em]">
-            After sexual violence
-          </h1>
+          <h1 className="font-display text-display-s text-foreground">After sexual violence</h1>
           <p className="text-foreground text-body-m leading-relaxed">
             What happened is not your fault. Care is time-sensitive — being seen within 72 hours
             matters, and a hospital can help with medicines, injuries and a report if you want one.

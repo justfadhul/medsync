@@ -137,7 +137,7 @@ export async function ClinicalPendingView() {
         data-emergency-inline=""
       >
         <div className="mx-auto flex h-14 w-full max-w-300 items-center justify-between gap-3 px-4 sm:px-8">
-          <Link href="/" className="font-display text-foreground text-[16px] tracking-tight">
+          <Link href="/" className="font-display text-foreground text-heading-s font-semibold">
             {SITE.wordmark}
           </Link>
           <div className="flex items-center gap-3 whitespace-nowrap sm:gap-4">
@@ -166,9 +166,7 @@ export async function ClinicalPendingView() {
             />
             {describeState(aff.state as LifecycleState)}
           </p>
-          <h1 className="font-display text-foreground text-display-s sm:text-display-m text-balance">
-            {title}
-          </h1>
+          <h1 className="font-display text-display-s text-foreground text-balance">{title}</h1>
           <p className="text-body-l text-muted-foreground max-w-[56ch] text-pretty">{body}</p>
           {isUnderReview ? (
             <p className="text-body-m text-muted-foreground">{PENDING.checkBack}</p>
@@ -294,7 +292,7 @@ function Card({
       className="border-border bg-card shadow-card flex flex-col gap-4 rounded-lg border p-5 sm:p-6"
     >
       <div className="flex items-baseline justify-between gap-3">
-        <h2 id={`${id}-title`} className="text-heading-s text-foreground font-medium">
+        <h2 id={`${id}-title`} className="text-heading-s text-foreground">
           {title}
         </h2>
         {aside}

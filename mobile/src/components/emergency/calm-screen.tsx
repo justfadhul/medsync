@@ -110,7 +110,7 @@ const makeStyles = (c: Palette) =>
   StyleSheet.create({
     column: { gap: space[5] },
     lead: {
-      fontFamily: font.display,
+      fontFamily: font.bodySemiBold,
       fontSize: 22,
       lineHeight: 30,
       letterSpacing: -0.3,

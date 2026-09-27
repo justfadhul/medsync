@@ -36,7 +36,7 @@ export function IncomingIntakesPanel({
   return (
     <section
       aria-label="Incoming intakes"
-      className="border-border bg-card flex flex-col gap-3 rounded-xl border p-4"
+      className="border-border bg-card flex flex-col gap-3 rounded-lg border p-4"
     >
       <header className="flex items-baseline justify-between gap-2">
         <h2 className="text-muted-foreground inline-flex items-center gap-1.5 font-mono text-[10.5px] tracking-[0.14em] uppercase">

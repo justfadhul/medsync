@@ -19,11 +19,12 @@ import { Sheet, SheetBody, SheetContent, SheetFooter, SheetHeader } from "@/comp
 import { cn } from "@/lib/utils";
 import { assignStaffRoleAction, resetStaffMfaAction, setStaffStatusAction } from "../actions";
 
+// Workflow states are tags, never a patient's clinical colours (ADR 0162).
 const STATUS_TONES: Record<string, PillTone> = {
-  active: "stable",
-  approved: "stable",
-  suspended: "caution",
-  deactivated: "critical",
+  active: "active",
+  approved: "active",
+  suspended: "notice",
+  deactivated: "neutral",
 };
 
 const STATUS_LABEL: Record<string, string> = {
@@ -107,7 +108,7 @@ function DetailContent({
           </div>
 
           <div className="flex flex-col gap-1.5">
-            <h2 className="font-display text-foreground text-[24px] leading-[1.15] font-medium tracking-[-0.015em]">
+            <h2 className="text-foreground text-heading-l leading-[1.15] tracking-[-0.015em]">
               {item.fullName}
             </h2>
             <p className="text-muted-foreground text-body-s leading-snug">
@@ -115,7 +116,7 @@ function DetailContent({
             </p>
           </div>
 
-          <div className="bg-brand-500/60 dark:bg-brand-400/50 h-px w-10" aria-hidden />
+          <div className="bg-ink-300 h-px w-10" aria-hidden />
 
           <dl className="flex flex-wrap items-baseline gap-x-6 gap-y-1.5 text-[11.5px]">
             <Meta label="Email" value={item.email} mono />
@@ -436,7 +437,7 @@ function AssignRoleForm({
             id="department-select"
             value={departmentId}
             onChange={(e: ChangeEvent<HTMLSelectElement>) => setDepartmentId(e.target.value)}
-            className="border-border text-foreground text-body-s focus-visible:ring-brand-500/40 rounded-md border bg-transparent px-2 py-1.5 outline-none focus-visible:ring-2"
+            className="border-border text-foreground text-body-s focus-visible:ring-ring rounded-md border bg-transparent px-2 py-1.5 outline-none focus-visible:ring-2"
           >
             {departmentCatalog.map((d) => (
               <option key={d.id} value={d.id}>
@@ -451,7 +452,7 @@ function AssignRoleForm({
             id="role-select"
             value={roleId}
             onChange={(e: ChangeEvent<HTMLSelectElement>) => setRoleId(e.target.value)}
-            className="border-border text-foreground text-body-s focus-visible:ring-brand-500/40 rounded-md border bg-transparent px-2 py-1.5 outline-none focus-visible:ring-2"
+            className="border-border text-foreground text-body-s focus-visible:ring-ring rounded-md border bg-transparent px-2 py-1.5 outline-none focus-visible:ring-2"
           >
             {roleCatalog.map((r) => (
               <option key={r.id} value={r.id}>

@@ -67,7 +67,7 @@ export function DayStrip({ selectedIso, basePath, minIso, maxIso, className }: D
         <DayStep basePath={basePath} to={prev} direction="previous" />
         {/* Live, because client-side navigation swaps this heading in place
             and the month is the only thing the chips below don't say. */}
-        <h2 aria-live="polite" className="text-foreground text-heading-s font-medium">
+        <h2 aria-live="polite" className="text-foreground text-heading-s">
           {MONTH_FMT.format(selected)}
         </h2>
         <DayStep basePath={basePath} to={next} direction="next" />

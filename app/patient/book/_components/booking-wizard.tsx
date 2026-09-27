@@ -859,10 +859,7 @@ function Receipt({
           {forLabel ? `For ${forLabel} · ` : ""}
           {hospitalName}
         </p>
-        <h1
-          id="receipt-title"
-          className="font-display text-foreground text-heading-m leading-tight font-medium tracking-[-0.015em]"
-        >
+        <h1 id="receipt-title" className="font-display text-display-s text-foreground">
           {mode === "session"
             ? forLabel
               ? `${forLabel}'s place is booked`

@@ -131,7 +131,7 @@ export default async function PatientTrackHub() {
           {/* ── Today's medicines ─────────────────────────────── */}
           <section className="flex flex-col gap-3" aria-labelledby="medicines-head">
             <div className="flex items-center justify-between gap-3">
-              <h2 id="medicines-head" className="text-heading-s font-medium">
+              <h2 id="medicines-head" className="text-heading-s">
                 Today&rsquo;s medicines
               </h2>
               <Link
@@ -183,7 +183,7 @@ export default async function PatientTrackHub() {
                       href="/patient/track/medications"
                       trailing={
                         !active ? (
-                          <Pill tone="pending">
+                          <Pill tone="neutral">
                             {med.state === "paused" ? "Paused" : "Stopped"}
                           </Pill>
                         ) : pendingSlot ? (
@@ -218,7 +218,7 @@ export default async function PatientTrackHub() {
         {/* ── Recent readings ─────────────────────────────────── */}
         <section className="flex flex-col gap-3" aria-labelledby="readings-head">
           <div className="flex items-center justify-between gap-3">
-            <h2 id="readings-head" className="text-heading-s font-medium">
+            <h2 id="readings-head" className="text-heading-s">
               Recent readings
             </h2>
             {readings.length > 0 ? (
@@ -259,9 +259,7 @@ function Stat({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex flex-col gap-1 px-4 py-3">
       <dt className="text-muted-foreground text-overline font-mono uppercase">{label}</dt>
-      <dd className="text-foreground text-heading-m tabular font-mono leading-none font-medium">
-        {value}
-      </dd>
+      <dd className="text-foreground text-heading-m tabular font-mono leading-none">{value}</dd>
     </div>
   );
 }
@@ -288,9 +286,7 @@ function ReadingCard({ reading, now }: { reading: ReadingRow; now: Date }) {
           </span>
         </div>
         {valueText ? (
-          <span className="text-foreground text-heading-s tabular font-mono font-medium">
-            {valueText}
-          </span>
+          <span className="text-foreground text-heading-s tabular font-mono">{valueText}</span>
         ) : reading.severity === null ? (
           <span className="text-muted-foreground text-body-s">No value recorded</span>
         ) : null}

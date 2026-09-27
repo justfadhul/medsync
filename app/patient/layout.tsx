@@ -54,7 +54,7 @@ export default async function PatientLayout({ children }: { children: ReactNode 
         <div className="flex min-w-0 items-center gap-3">
           <Link
             href="/patient"
-            className="font-display text-foreground text-body-m inline-flex min-h-11 items-center font-medium tracking-[-0.01em]"
+            className="font-display text-foreground text-body-m inline-flex min-h-11 items-center font-semibold"
           >
             MedSync
           </Link>
@@ -69,7 +69,7 @@ export default async function PatientLayout({ children }: { children: ReactNode 
                   this page only ever means something to press (ADR 0097). */}
               <span
                 aria-hidden
-                className="bg-plum-500 ring-plum-500/20 size-1 shrink-0 rounded-full ring-2"
+                className="bg-sky-icon ring-sky-edge size-1 shrink-0 rounded-full ring-2"
               />
               <span className="truncate">{scope.primaryHospitalName}</span>
             </span>

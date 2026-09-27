@@ -78,7 +78,7 @@ export function DayStrip({
   return (
     <nav
       aria-label="Expected arrivals by day"
-      className="border-border bg-card dark:shadow-card flex flex-col rounded-xl border shadow-xs"
+      className="border-border bg-card dark:shadow-card flex flex-col rounded-lg border shadow-xs"
     >
       <div className="border-border flex min-h-11 items-center justify-between gap-2 border-b px-2">
         <Link
@@ -124,7 +124,7 @@ export function DayStrip({
                   words.length ? words.join(", ") : "nothing expected"
                 }`}
                 className={cn(
-                  "hover:bg-brand-50/40 ease-expo-out flex min-h-11 flex-col items-center gap-1 px-1 py-2.5 transition-colors duration-150",
+                  "hover:bg-ink-25 ease-expo-out flex min-h-11 flex-col items-center gap-1 px-1 py-2.5 transition-colors duration-150",
                   isSelected && "bg-muted/30",
                 )}
               >

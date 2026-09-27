@@ -106,7 +106,7 @@ export default async function PatientMedicationsPage({ searchParams }: PageProps
                       title={med.name}
                       subtitle={subtitleOf(med, times)}
                       trailing={
-                        <Pill tone="pending">{med.state === "paused" ? "Paused" : "Stopped"}</Pill>
+                        <Pill tone="neutral">{med.state === "paused" ? "Paused" : "Stopped"}</Pill>
                       }
                     />
                   ))}
@@ -116,7 +116,7 @@ export default async function PatientMedicationsPage({ searchParams }: PageProps
           </div>
 
           <aside aria-labelledby="meds-times" className="flex flex-col gap-3">
-            <h2 id="meds-times" className="text-foreground text-heading-s font-medium">
+            <h2 id="meds-times" className="text-foreground text-heading-s">
               Dose times
             </h2>
             <div className="bg-card dark:shadow-card flex flex-col gap-3 rounded-xl p-4 shadow-xs">
@@ -146,7 +146,7 @@ export default async function PatientMedicationsPage({ searchParams }: PageProps
 function SectionHead({ id, title, count }: { id: string; title: string; count: number }) {
   return (
     <div className="flex items-baseline justify-between gap-3">
-      <h2 id={id} className="text-foreground text-heading-s font-medium">
+      <h2 id={id} className="text-foreground text-heading-s">
         {title}
       </h2>
       <span className="text-muted-foreground text-caption font-mono tabular-nums">{count}</span>
@@ -177,7 +177,7 @@ function EmptyState() {
       >
         <PillIcon strokeWidth={1.5} className="size-5" />
       </span>
-      <h2 className="text-foreground text-heading-s font-medium">No medicines yet</h2>
+      <h2 className="text-foreground text-heading-s">No medicines yet</h2>
       <p className="text-muted-foreground text-body-s max-w-[48ch] leading-relaxed">
         Add what you take and the times you take it. That is what turns your dose timeline into a
         day you can read at a glance.

@@ -126,10 +126,7 @@ export default async function EmergencyPage({ searchParams }: { searchParams: Pr
                 <p className="text-muted-foreground text-overline font-mono uppercase">
                   While you travel
                 </p>
-                <h2
-                  id="tell-heading"
-                  className="font-display text-foreground text-heading-m font-medium tracking-[-0.01em]"
-                >
+                <h2 id="tell-heading" className="text-foreground text-heading-m tracking-[-0.01em]">
                   Tell a hospital I&rsquo;m coming
                 </h2>
                 <p className="text-muted-foreground text-body-m">

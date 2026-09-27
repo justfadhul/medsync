@@ -1,640 +1,366 @@
-# MedSync Design System
+# MedSync Design System — Chroma
 
-**Status:** Active (Phase 0.2 + ADR 0097)
-**Last updated:** 2026-09-21
+**Status:** Active — MedSync Chroma ([ADR 0162](docs/adr/0162-medsync-chroma-design-system.md)), 2026-09-26. Supersedes the Phase 0.2 system (teal + plum-as-place, ADR 0097) and its Fraunces display face.
 **Owner:** Usama Fadhul
 
-This document is the authoritative source for every visual and interactive decision in MedSync. The design system wins on all visual disagreements. Components, layouts, and styles must follow these tokens and rules exactly.
+This document is the authoritative source for every visual and interactive decision in MedSync. The design system wins on all visual disagreements. Tokens live in the `@theme` block of [`app/globals.css`](app/globals.css), generated from the Chroma design system's `tokens.json`; [`/styleguide`](app/styleguide/) is the visual contract.
 
-> Adapted from the Attio design language — precision-first, monochrome base, with teal as the clinical accent.
-
----
-
-## Core Philosophy
-
-- **Clinical Precision.** Pixel-perfect alignment, tight letter-spacing on headlines, engineered for trust in medical contexts.
-- **Calm Authority.** Monochrome base with teal as the action colour and plum as the place colour. Confidence without alarm. Never cold, never decorative.
-- **Data Density.** Compact vitals, labs, patient rows. Every pixel serves the clinician. Information-rich without clutter.
-- **Compassionate UX.** Warm neutral tones, clear hierarchy, human-centered. Progressive disclosure — summaries expand to full charts.
-- **Motion with Purpose.** `cubic-bezier(0.16, 1, 0.3, 1)` for all transitions. Never decorative animation.
-- **Systematic Scale.** 4px base grid, constrained type scale, token-driven theming across all modules.
+MedSync Chroma is MedSync's product and brand language at Attio-level craft: crisp cool neutrals, dense record views, a ⌘K command bar, and colour that tells staff **where they are** in the hospital. It keeps every MedSync safety law: teal still acts, red still means emergency, and the clinical status tokens are carried over unchanged.
 
 ---
 
-## Color Tokens
+## Principles
 
-### Neutrals (primary palette — use for 90%+ of UI)
+- **Colour places, it never judges.** Each domain of the hospital has a hue. Hues mark location (tiles, nav, tags, record bands). Only the clinical status system judges a patient.
+- **Red, amber and green belong to the patient.** The warm half of the wheel, plus green, is reserved for clinical signals. Every decorative and navigational hue sits on the cool side: teal, sky, iris, grape, plum.
+- **Neutral ground, bright objects.** About 85% of any screen is `ink-*`. Colour arrives in small, saturated objects (a 20px tile, a 7px tag dot), which is what makes it pop.
+- **Dense and calm.** 13–14px UI text, 38px rows, 1px hairlines, crisp layered shadows. Everything a clinician needs on one screen; nothing moving that doesn't mean something.
+- **Keyboard first.** ⌘K reaches any place or action; every primary action can show its key.
 
-| Token      | Hex       |
-| ---------- | --------- |
-| `black`    | `#000000` |
-| `white`    | `#FFFFFF` |
-| `gray-50`  | `#FAFAFA` |
-| `gray-100` | `#F5F5F5` |
-| `gray-150` | `#EFEFEF` |
-| `gray-200` | `#E5E5E5` |
-| `gray-300` | `#D4D4D4` |
-| `gray-400` | `#A3A3A3` |
-| `gray-500` | `#737373` |
-| `gray-600` | `#525252` |
-| `gray-700` | `#404040` |
-| `gray-800` | `#262626` |
-| `gray-900` | `#171717` |
-| `gray-950` | `#0A0A0A` |
+## Content fundamentals
 
-### Text colors
+- **State the clinical fact with its basis.** "3 of the last 5 fasting readings above target", never "Glucose trending high". Every StatCard value carries its denominator or window.
+- **Sentence case** for headings, buttons, labels and tags. ALL-CAPS only through `overline`.
+- **Second person to patients** ("Your care team saw your readings"), **clinical third person on staff surfaces** ("Acknowledged by the on-call doctor · 07:40").
+- `·` joins facts on one line; `/` separates breadcrumb levels ("Patients / Diabetes clinic").
+- Dates `DD MMM YYYY` (Ugandan convention), times 24-hour, MRNs `MRN-YYYY-NNNNN` in mono. Units always shown, always smaller than the value.
+- **No emoji** in product UI. **No fabricated data:** mocks carry MRNs, roles and readings, never real names, and say "Illustrative. No real patients." Never state a drug dose that has not been verified and signed off by the Clinical Safety Officer; no dosing of any kind on public pages.
 
-- **Primary text:** `#171717` (gray-900)
-- **Secondary text:** `#525252` (gray-600)
-- **Tertiary/muted text:** `#737373` (gray-500)
-- **Disabled text:** `#A3A3A3` (gray-400)
-- **Placeholder text:** `#A3A3A3`
+---
 
-### Background colors
+## Colour
 
-- **Page:** `#FFFFFF`
-- **Raised/sidebar:** `#FAFAFA` (gray-50)
-- **Hover state:** `#F5F5F5` (gray-100)
-- **Active/pressed:** `#EFEFEF` (gray-150)
-- **Teal-tinted hover:** `#F0FDFA` (teal-50) — for clinical elements
-- **Overlay:** `rgba(0,0,0,0.5)`
+Four jobs, and every colour belongs to exactly one.
 
-### Border colors
+| Job                 | Colour                                  | Where it goes                                                                           |
+| ------------------- | --------------------------------------- | --------------------------------------------------------------------------------------- |
+| **Ground**          | `ink-*` neutrals (a slight cool bias)   | Pages, cards, text, borders, hover and pressed fills                                    |
+| **Action**          | `teal-*`, `primary`, `ring`             | Primary and soft buttons, links, focus, checked and selected controls                   |
+| **Place**           | `sky`, `iris`, `grape`, `plum`, `slate` | Domain tiles, sidebar items, tags, avatars, record bands, chart series, marketing bands |
+| **Clinical signal** | `status-*`, `alert-*`, `red-600`        | Patient state chips, out-of-range values, failed actions, the emergency button          |
 
-- **Default:** `#E5E5E5` (gray-200)
-- **Subtle:** `#EFEFEF` (gray-150)
-- **Strong/hover:** `#D4D4D4` (gray-300)
-- **Active/focus:** `#14B8A6` (teal-500)
-- **Teal subtle:** `#CCFBF1` (teal-100)
+### Ink — the ground
 
-### Primary Teal (clinical accent — trust, calm, medical authority)
+| Token     | Light     | Dark      | Usage                                                                           |
+| --------- | --------- | --------- | ------------------------------------------------------------------------------- |
+| `ink-0`   | `#ffffff` | `#16181b` | Cards and inputs; the brightest surface.                                        |
+| `ink-25`  | `#fbfbfc` | `#131417` | Sidebar and table header ground.                                                |
+| `ink-50`  | `#f6f7f8` | `#1a1c20` | Raised neutral fill: segmented control track, code, kbd.                        |
+| `ink-100` | `#f0f1f3` | `#1f2226` | Hover fill for rows, nav items and ghost buttons; neutral cover tiles.          |
+| `ink-150` | `#e9eaed` | `#262a2f` | Pressed fill; hairline inside dense tables.                                     |
+| `ink-200` | `#e3e5e8` | `#2c3036` | Default 1px border.                                                             |
+| `ink-300` | `#d0d3d9` | `#3a3f46` | Strong border: inputs at rest, secondary button edge.                           |
+| `ink-400` | `#a0a5ae` | `#5b616a` | Placeholders and disabled glyphs only (below AA by design).                     |
+| `ink-500` | `#6c717b` | `#8a9099` | Tertiary text: timestamps, units, attribute labels (4.5:1 on ink-0 and ink-25). |
+| `ink-600` | `#545963` | `#a9aeb6` | Secondary text: descriptions, table cells that are not the key.                 |
+| `ink-700` | `#3d4149` | `#c8ccd2` | Icons in neutral UI; slate tag text.                                            |
+| `ink-800` | `#272a30` | `#e1e3e7` | Strong neutral fill (count discs, kbd in dark).                                 |
+| `ink-900` | `#17191d` | `#eef0f2` | Primary text.                                                                   |
+| `ink-950` | `#0f1012` | `#f7f8f9` | Deepest ink: dark bands, the cover ink block.                                   |
 
-| Token      | Hex       | Usage                                       |
-| ---------- | --------- | ------------------------------------------- |
-| `teal-50`  | `#F0FDFA` | Hover backgrounds, soft fills               |
-| `teal-100` | `#CCFBF1` | Teal borders, badge backgrounds             |
-| `teal-200` | `#99F6E4` | Light accents                               |
-| `teal-300` | `#5EEAD4` | Decorative accents (rare)                   |
-| `teal-400` | `#2DD4BF` | Charts, progress bars                       |
-| `teal-500` | `#14B8A6` | Focus rings, toggles                        |
-| `teal-600` | `#0D9488` | **Primary CTA**, links, active nav ← anchor |
-| `teal-700` | `#0F766E` | Hover state on primary CTA                  |
-| `teal-800` | `#115E59` | Dark teal text on teal backgrounds          |
-| `teal-900` | `#134E4A` | Dark CTA backgrounds                        |
+- Text: `foreground` primary, `ink-600` secondary, `muted-foreground` (`ink-500`) tertiary. `ink-400` is for placeholders and disabled glyphs only.
+- `background` page, `muted` (`ink-25`) for sidebar, table headers and dialog footers, `ink-100` hover, `ink-150` pressed, `border` (`ink-200`) for every hairline, `input` (`ink-300`) for field edges.
 
-### Secondary Plum (place accent — ADR 0097)
+### Teal — the one action colour
 
-Teal is the only **action** colour and red the only **alarm**. Plum is the product's second hue and it means **place, never state**: it says _where you are_ — the hero glow, the active nav item, avatar monograms, the landing emphasis, chart series 2. It is a mulberry (OKLCH hue 342) generated with even lightness steps and chroma that peaks at the anchor, so `plum-50` reads as a tint rather than pink and `plum-900` never goes muddy. Every anchor clears WCAG AA in both modes.
+The ramp is carried unchanged from MedSync and flips with the theme (`teal-50` is the soft fill in light and the deep fill in dark). Build with the role tokens.
 
-| Token      | Hex       | Usage                                  |
-| ---------- | --------- | -------------------------------------- |
-| `plum-50`  | `#FDF3F9` | Active nav fill, soft washes           |
-| `plum-100` | `#FEE4F3` | Avatar monogram fill                   |
-| `plum-200` | `#FECBE9` | Rings, borders on plum fills           |
-| `plum-300` | `#FEA2DC` | Light accents (rare)                   |
-| `plum-400` | `#EA7BC4` | Charts (secondary series, light tints) |
-| `plum-500` | `#C953A3` | Active-item dot                        |
-| `plum-600` | `#9F2F7E` | **Anchor** — active icons, `--chart-2` |
-| `plum-700` | `#87236A` | Emphasis text, the hero corner glow    |
-| `plum-800` | `#6A1952` | Dark plum text on plum fills           |
-| `plum-900` | `#4E113C` | Deep fills (rare)                      |
-| `plum-950` | `#321227` | Deepest — the dark-mode soft fill      |
+| Token      | Light     | Dark      | Usage                                        |
+| ---------- | --------- | --------- | -------------------------------------------- |
+| `teal-50`  | `#f0fdfa` | `#042f2e` | Selected row, soft-button fill.              |
+| `teal-100` | `#ccfbf1` | `#064e45` | Soft-button border; selected hover.          |
+| `teal-200` | `#99f6e4` | `#0f766e` | Selected-control border.                     |
+| `teal-300` | `#5eead4` | `#0d9488` | Chart band fill.                             |
+| `teal-400` | `#2dd4bf` | `#14b8a6` | Chart line (secondary).                      |
+| `teal-500` | `#14b8a6` | `#2dd4bf` | Loader trace; dark-theme action fill.        |
+| `teal-600` | `#0d9488` | `#5eead4` | Focus ring, links, checked controls (light). |
+| `teal-700` | `#0f766e` | `#99f6e4` | Primary button fill (light); link text.      |
+| `teal-800` | `#115e59` | `#ccfbf1` | Primary hover (light).                       |
+| `teal-900` | `#134e4a` | `#f0fdfa` | Italic headline accent.                      |
+| `teal-950` | `#042f2e` | `#f0fdfa` | Deepest teal band.                           |
 
-**Where it lives (the whole product, ADR 0097 §5):** page and band atmospheres (`oklch(… 342)` radials, the corner glow in `--gradient-hero` / `--gradient-band`); the active nav item in every shell and rail (`--sidebar-accent` is plum); the phone tab bar's current tab; `SectionNumber` and section markers; the **current** step of a multi-step form (a **done** step stays teal with its check); every monogram and avatar disc; decorative icon tiles, empty-state discs, the tinted `StatCard`; the italic emphasis in headlines; `--chart-2`.
+| Token           | Light     | Dark      | Usage                                                                                                        |
+| --------------- | --------- | --------- | ------------------------------------------------------------------------------------------------------------ |
+| `teal-solid`    | `#0f766e` | `#2dd4bf` | Full-strength block: domain tile ground, cover block, marketing band, chart series. Pair with teal-on-solid. |
+| `teal-on-solid` | `#ffffff` | `#042f2e` | Text and glyphs on teal-solid (at least 4.5:1 in both themes).                                               |
+| `teal-tint`     | `#f0fdfa` | `#0b2926` | Tag and tile ground, selected nav item in this domain, record-header wash.                                   |
+| `teal-edge`     | `#ccfbf1` | `#134e4a` | 1px border around a teal-tint surface.                                                                       |
+| `teal-text`     | `#0f766e` | `#5eead4` | Words on teal-tint (tag labels, domain nav label). At least 4.5:1 on teal-tint and ink-0.                    |
+| `teal-icon`     | `#0d9488` | `#2dd4bf` | Glyph or 8px tag dot on teal-tint or ink-0 (at least 3:1).                                                   |
 
-**Where it never goes:** buttons and links (teal), focus rings, checked or selected controls, filter and segmented tabs, count badges, status chips and badges, resus / triage state colour, anything that means a state. A plum element sits beside a Critical badge without competing because they differ in hue, value and shape — keep it that way; do not tint a chip plum. The test for a new use is one question: _is this a state?_ If yes, it is a status token or teal; if it says where you are or who this is, it is plum.
+### Place — one hue per domain
 
-**The mechanism:** utilities are `bg-plum-*` / `text-plum-*` and the ramp flips with the theme exactly like teal, so one set of classes covers both modes (no `dark:` variant needed — in dark, `plum-50` _is_ the deep fill). A layout that needs its own hue re-pins `--plum-*` inside a scoped class, the way `medsync-forced-dark` re-pins teal; that is how a per-workspace accent would ship without touching a component.
+| Domain         | Hue     | Covers                                                      |
+| -------------- | ------- | ----------------------------------------------------------- |
+| Patients       | `sky`   | Patient list, records, the patient app, follow-up           |
+| Clinical       | `iris`  | Triage, encounters, notes, the doctor and nurse workspaces  |
+| Pharmacy & lab | `grape` | Prescribing, dispensing, e-pharmacy, lab orders and results |
+| Operations     | `plum`  | Wards and beds, scheduling, the queue, reception            |
+| Admin          | `slate` | Staff and roles, facility setup, audit, billing             |
 
-`--gradient-hero` carries the signature: a plum glow in the bottom-right corner of the deep-teal ground (a radial layered over the teal sweep — a glow, not a diagonal, so the two hues never mix into grey). `--gradient-signature` is the straight teal → plum diagonal for a surface that wants the pairing outright.
+Resus has no domain hue. It wears the clinical state colours from _Resus state colour system_ below, unchanged. The domain map lives in code in [`lib/design/domains.ts`](lib/design/domains.ts).
 
-### Clinical Status Colors
+**Hue roles.** Each hue (and teal) exposes six semantic tokens — build with these rather than raw ramp steps:
 
-Use ONLY for patient status indicators, clinical badges, and validation states.
+- `<hue>-solid` with `<hue>-on-solid`: full-strength blocks (tiles, bands, bars). At least 4.5:1 in both themes.
+- `<hue>-tint`, `<hue>-edge`, `<hue>-text`: the soft surface (tags, active nav, record band). Text at least 4.5:1.
+- `<hue>-icon`: a glyph or dot on tint or card. At least 3:1.
 
-| Status         | Background | Text      | When to use                        |
-| -------------- | ---------- | --------- | ---------------------------------- |
-| **Stable**     | `#DCFCE7`  | `#15803D` | Patient stable, vitals normal      |
-| **Critical**   | `#FEE2E2`  | `#DC2626` | Emergency, critical vitals, alerts |
-| **Caution**    | `#FEF3C7`  | `#D97706` | Warning, borderline vitals         |
-| **Admitted**   | `#CCFBF1`  | `#0F766E` | Currently admitted patients        |
-| **Discharged** | `#F3E8FF`  | `#7C3AED` | Discharged patients                |
-| **Pending**    | `#F5F5F5`  | `#525252` | Awaiting action, unconfirmed       |
+Roles, light / dark:
 
-**CRITICAL:** Red (`#DC2626`) is reserved exclusively for clinical alerts and critical states. Never use red for general UI decoration or non-emergency states.
+| Hue     | solid                 | on-solid              | tint                  | edge                  | text                  | icon                  |
+| ------- | --------------------- | --------------------- | --------------------- | --------------------- | --------------------- | --------------------- |
+| `teal`  | `#0f766e` / `#2dd4bf` | `#ffffff` / `#042f2e` | `#f0fdfa` / `#0b2926` | `#ccfbf1` / `#134e4a` | `#0f766e` / `#5eead4` | `#0d9488` / `#2dd4bf` |
+| `sky`   | `#0369a1` / `#38bdf8` | `#ffffff` / `#082f49` | `#f0f9ff` / `#0c2533` | `#bae6fd` / `#0c4a6e` | `#0369a1` / `#7dd3fc` | `#0284c7` / `#38bdf8` |
+| `iris`  | `#4f46e5` / `#818cf8` | `#ffffff` / `#1e1b4b` | `#eef2ff` / `#1d1f3d` | `#c7d2fe` / `#312e81` | `#4338ca` / `#a5b4fc` | `#4f46e5` / `#818cf8` |
+| `grape` | `#7c3aed` / `#a78bfa` | `#ffffff` / `#2e1065` | `#f5f3ff` / `#231a3d` | `#ddd6fe` / `#4c1d95` | `#6d28d9` / `#c4b5fd` | `#7c3aed` / `#a78bfa` |
+| `plum`  | `#9f2f7e` / `#ed85c8` | `#ffffff` / `#321227` | `#fdf3f9` / `#2a1523` | `#fecbe9` / `#671e51` | `#87236a` / `#fda8dd` | `#c953a3` / `#ed85c8` |
+| `slate` | `#3d4149` / `#c8ccd2` | `#ffffff` / `#16181b` | `#f0f1f3` / `#1f2226` | `#e3e5e8` / `#3a3f46` | `#3d4149` / `#c8ccd2` | `#6c717b` / `#8a9099` |
+
+Ramps (selected steps), light / dark — every ramp flips with the theme like teal:
+
+| Hue     | 50                    | 100                   | 500                   | 600                   | 700                   | 950                   |
+| ------- | --------------------- | --------------------- | --------------------- | --------------------- | --------------------- | --------------------- |
+| `sky`   | `#f0f9ff` / `#082f49` | `#e0f2fe` / `#0c4a6e` | `#0ea5e9` / `#38bdf8` | `#0284c7` / `#7dd3fc` | `#0369a1` / `#bae6fd` | `#082f49` / `#f0f9ff` |
+| `iris`  | `#eef2ff` / `#1e1b4b` | `#e0e7ff` / `#312e81` | `#6366f1` / `#818cf8` | `#4f46e5` / `#a5b4fc` | `#4338ca` / `#c7d2fe` | `#1e1b4b` / `#eef2ff` |
+| `grape` | `#f5f3ff` / `#2e1065` | `#ede9fe` / `#4c1d95` | `#8b5cf6` / `#a78bfa` | `#7c3aed` / `#c4b5fd` | `#6d28d9` / `#ddd6fe` | `#2e1065` / `#f5f3ff` |
+| `plum`  | `#fdf3f9` / `#321227` | `#fee4f3` / `#4a173a` | `#c953a3` / `#cb58a6` | `#9f2f7e` / `#ed85c8` | `#87236a` / `#fda8dd` | `#321227` / `#fdf3f9` |
+
+### Rules
+
+- **Place hues never go on** buttons, links, focus rings, checked controls, counts or status chips.
+- **Tags are square with a dot; statuses are round with an icon.** A grape "Insulin" tag and a violet "Discharged" pill never rely on hue to be told apart.
+- **Workflow states are tags.** Accepted, confirmed, suspended, draft, expired: a square tag in a cool hue (teal = active/enrolled, iris = awaiting someone, sky = in progress, slate = ended), never red, amber or green. `Pill` does this mapping.
+- **Never colour alone.** Every state carries its word; every out-of-range number carries an arrow and its label.
+- **No gradients between hues.** A band is one solid hue. The spectrum strip is flat blocks side by side. No purple-to-blue washes, no glows.
+- **No left-edge accent bars**, ever. State shows through a full border, a tint, a chip, an icon and a word.
+- Every ramp flips with the theme, so one class covers both. Do not write `dark:` overrides for ramp or role tokens.
+
+### Clinical signal
+
+Six states, each a `status-<name>-bg` / `status-<name>-fg` pair carried unchanged from MedSync and owned by the Clinical Safety Officer: **stable, caution, critical, admitted, discharged, pending**. Render them through `StatusPill` (or `Pill` / `ClinicalBadge`, which render it).
+
+| Token                   | Light     | Dark               | Usage                                                                                                                                                             |
+| ----------------------- | --------- | ------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `status-stable-bg`      | `#dcfce7` | `#052e16`          | Patient stable, vitals normal. Badge/pill background; pair with status-stable-fg and always a word.                                                               |
+| `status-stable-fg`      | `#15803d` | `#4ade80`          | Patient stable, vitals normal. Text on status-stable-bg. 4.6:1 light, 8.6:1 dark.                                                                                 |
+| `status-caution-bg`     | `#fef3c7` | `#451a03`          | Warning, borderline vitals. Badge/pill background; pair with status-caution-fg and always a word.                                                                 |
+| `status-caution-fg`     | `#d97706` | `#fcd34d`          | Warning, borderline vitals. Text on status-caution-bg. 2.9:1 light — below AA, flagged, kept exact; 10.4:1 dark.                                                  |
+| `status-critical-bg`    | `#fee2e2` | `#450a0a`          | Emergency, critical vitals, alerts — the only red state. Badge/pill background; pair with status-critical-fg and always a word.                                   |
+| `status-critical-fg`    | `#dc2626` | `#fca5a5`          | Emergency, critical vitals, alerts — the only red state. Text on status-critical-bg. 3.95:1 light at 11px badge text — below AA, flagged, kept exact; 8.5:1 dark. |
+| `status-admitted-bg`    | `#ccfbf1` | `#042f2e`          | Currently admitted patients. Badge/pill background; pair with status-admitted-fg and always a word.                                                               |
+| `status-admitted-fg`    | `#0f766e` | `#5eead4`          | Currently admitted patients. Text on status-admitted-bg. 4.9:1 light, 9.8:1 dark.                                                                                 |
+| `status-discharged-bg`  | `#f3e8ff` | `#2e1065`          | Discharged patients. Badge/pill background; pair with status-discharged-fg and always a word.                                                                     |
+| `status-discharged-fg`  | `#7c3aed` | `#c4b5fd`          | Discharged patients. Text on status-discharged-bg. 4.8:1 light, 8.3:1 dark.                                                                                       |
+| `status-pending-bg`     | `#f5f5f5` | `#262626`          | Awaiting action, unconfirmed. Badge/pill background; pair with status-pending-fg and always a word.                                                               |
+| `status-pending-fg`     | `#525252` | `#a3a3a3`          | Awaiting action, unconfirmed. Text on status-pending-bg. 7.2:1 light, 6.0:1 dark.                                                                                 |
+| `status-critical-fg-aa` | `#b91c1c` | `#fca5a5`          | PROPOSED, needs CSO sign-off: critical chip text at 5.9:1 on status-critical-bg (the carried #dc2626 is 3.95:1). The red-600 fill is unchanged.                   |
+| `status-caution-fg-aa`  | `#92400e` | `#fcd34d`          | PROPOSED, needs CSO sign-off: caution chip text at AA on status-caution-bg (the carried #d97706 is 2.9:1).                                                        |
+| `alert-bg`              | `#fef2f2` | `rgba(0, 0, 0, 0)` | Alert button/field fill. Dark is transparent (outline style); source writes `transparent`.                                                                        |
+| `alert-border`          | `#fee2e2` | `#7f1d1d`          | Alert button border; invalid-input border in dark.                                                                                                                |
+| `alert-fg`              | `#dc2626` | `#fca5a5`          | Alert text. 4.4:1 on alert-bg in light (just under AA); 10.4:1 on dark background.                                                                                |
+
+- Chip text for critical and caution uses the AA pair (`status-critical-fg-aa` 5.9:1, `status-caution-fg-aa`); the carried `-fg` values stay for other uses.
+- **The emergency button is solid `red-600` with white text in both themes** (4.8:1) — clinical emergencies only.
+- In dark, red softens to `#fca5a5` on `#450a0a`: still unmistakably alert, not retina-searing at 3am.
+
+### Semantic aliases
+
+| Token                       | Light             | Dark              | Usage                                                                                      |
+| --------------------------- | ----------------- | ----------------- | ------------------------------------------------------------------------------------------ |
+| `background`                | `#ffffff`         | `#0f1012`         | Page ground.                                                                               |
+| `foreground`                | `{ink-900}`       | `{ink-900}`       | Primary text on background, card, muted and every tint.                                    |
+| `card`                      | `{ink-0}`         | `{ink-0}`         | Cards, panels, table body, inputs.                                                         |
+| `popover`                   | `#ffffff`         | `#1c1e22`         | Menus, dialogs, the command bar.                                                           |
+| `primary`                   | `{teal-solid}`    | `{teal-solid}`    | The one primary action per view. Light fills with teal-700 (white text 5.5:1).             |
+| `primary-foreground`        | `{teal-on-solid}` | `{teal-on-solid}` | Text on primary.                                                                           |
+| `primary-hover`             | `#115e59`         | `#5eead4`         | Primary hover.                                                                             |
+| `secondary`                 | `{ink-0}`         | `{ink-0}`         | Secondary button fill (with ink-300 edge and shadow-control).                              |
+| `muted`                     | `{ink-25}`        | `{ink-25}`        | Sidebar, table header, dialog footer.                                                      |
+| `muted-foreground`          | `{ink-500}`       | `{ink-500}`       | Tertiary text on background, card and muted.                                               |
+| `accent`                    | `{teal-tint}`     | `{teal-tint}`     | Selected row, checked option ground.                                                       |
+| `accent-foreground`         | `{teal-text}`     | `{teal-text}`     | Text on accent.                                                                            |
+| `destructive`               | `#dc2626`         | `#f87171`         | Failed action and clinical emergency text or icon only.                                    |
+| `destructive-foreground`    | `#ffffff`         | `#1a0606`         | Text on a destructive fill.                                                                |
+| `border`                    | `{ink-200}`       | `{ink-200}`       | Every default 1px edge.                                                                    |
+| `input`                     | `{ink-300}`       | `{ink-300}`       | Input edge at rest.                                                                        |
+| `ring`                      | `#0d9488`         | `#2dd4bf`         | Focus ring, solid 2px: 3.7:1 on white, 8.9:1 on the dark ground. Replaces #14b8a6 (2.5:1). |
+| `sidebar`                   | `{ink-25}`        | `{ink-25}`        | Sidebar ground.                                                                            |
+| `sidebar-foreground`        | `{ink-700}`       | `{ink-700}`       | Sidebar item text at rest.                                                                 |
+| `sidebar-border`            | `{ink-200}`       | `{ink-200}`       | Sidebar right edge.                                                                        |
+| `sidebar-accent`            | `{ink-100}`       | `{ink-100}`       | Active item in a neutral area (Home, Inbox). Domain areas use their own <hue>-tint.        |
+| `sidebar-accent-foreground` | `{ink-900}`       | `{ink-900}`       | Active item text in a neutral area.                                                        |
+| `chart-1`                   | `{teal-icon}`     | `{teal-icon}`     | Series 1 and every single-series clinical trend.                                           |
+| `chart-2`                   | `{sky-icon}`      | `{sky-icon}`      | Series 2.                                                                                  |
+| `chart-3`                   | `{iris-icon}`     | `{iris-icon}`     | Series 3.                                                                                  |
+| `chart-4`                   | `{grape-icon}`    | `{grape-icon}`    | Series 4.                                                                                  |
+| `chart-5`                   | `{plum-icon}`     | `{plum-icon}`     | Series 5.                                                                                  |
+
+**Legacy aliases** (kept so existing utilities resolve, ADR 0162): `gray-*` → `ink-*`, `brand-*` and `mint-*` → `teal-*`. New code uses `ink-*` and `teal-*`.
 
 ---
 
 ## Typography
 
-### Font families
+| Family    | Face                                              | Use                                                              |
+| --------- | ------------------------------------------------- | ---------------------------------------------------------------- |
+| `display` | **Bricolage Grotesque** (Google, variable `opsz`) | Marketing headlines, workspace page titles and the wordmark only |
+| `sans`    | **Geist** (Google)                                | All product UI, headings included. Base features `ss01`, `cv11`  |
+| `mono`    | **Geist Mono** (Google)                           | Vitals, labs, MRNs, beds, timestamps, key hints                  |
 
-- **Display/Headlines:** `"Neue Haas Grotesk Display Pro", "Helvetica Neue", Helvetica, Arial, sans-serif`
-- **Body/UI:** `"Neue Haas Grotesk Text Pro", "Helvetica Neue", Helvetica, Arial, sans-serif`
-- **Monospace:** `"SF Mono", "Fira Code", Menlo, Consolas, monospace`
+| Style        | Family  | Size | Line height | Tracking | Weight | Use                                                                               |
+| ------------ | ------- | ---- | ----------- | -------- | ------ | --------------------------------------------------------------------------------- |
+| `display-xl` | display | 72px | 0.98        | -0.045em | 600    | Landing hero only.                                                                |
+| `display-l`  | display | 56px | 1.02        | -0.04em  | 600    | Landing section heads.                                                            |
+| `display-m`  | display | 40px | 1.08        | -0.035em | 600    | Marketing band heads; phone hero.                                                 |
+| `display-s`  | display | 30px | 1.12        | -0.03em  | 600    | Workspace page titles (Ward 4B, Pharmacy).                                        |
+| `heading-l`  | sans    | 22px | 1.25        | -0.02em  | 600    | Record title (the patient header).                                                |
+| `heading-m`  | sans    | 17px | 1.35        | -0.015em | 600    | Dialog and panel titles.                                                          |
+| `heading-s`  | sans    | 14px | 1.4         | -0.01em  | 600    | Card titles, sidebar section names, table key column.                             |
+| `body-l`     | sans    | 16px | 1.6         | -0.006em | 400    | Lead paragraphs, patient-app body.                                                |
+| `body-m`     | sans    | 14px | 1.5         | -0.004em | 400    | Default staff UI text.                                                            |
+| `body-s`     | sans    | 13px | 1.45        | 0        | 400    | Table cells, inputs, buttons, tags.                                               |
+| `label`      | sans    | 13px | 1.4         | -0.003em | 500    | Button labels, nav items, field labels.                                           |
+| `caption`    | sans    | 12px | 1.35        | 0.005em  | 500    | Attribute labels, hints, chip text at 12px.                                       |
+| `overline`   | sans    | 11px | 1.3         | 0.06em   | 600    | ALL-CAPS group labels and vital labels.                                           |
+| `stat`       | mono    | 28px | 1.1         | -0.02em  | 500    | StatCard number, tabular-nums.                                                    |
+| `vital`      | mono    | 22px | 1.2         | -0.01em  | 500    | Vital values, tabular-nums. Out of range: 700 in status-critical-fg with an icon. |
+| `mono-s`     | mono    | 12px | 1.4         | 0.02em   | 400    | MRNs, bed codes, timestamps in tables.                                            |
+| `kbd`        | mono    | 11px | 1           | 0        | 500    | Keyboard hints (⌘K, Esc).                                                         |
 
-### Type scale
+- Utilities: `text-<style>` (for example `text-heading-m`, `text-label`, `text-vital`); each carries its line height, tracking and weight. `font-display` only with a `text-display-*` style (and the wordmark).
+- **Headings are 600 from their token.** Never add `font-medium` or `font-bold` to a heading. 700 is for out-of-range values only.
+- Workspace page titles are `font-display text-display-s`. Product headings below the title are Geist (`text-heading-*`).
+- Default staff text is `body-m` 14; tables, inputs and buttons use `body-s` / `label` 13. Stay on the scale.
+- Bricolage has no italic: an emphasised headline tail is upright, in `teal-700` (`teal-200` on a dark band).
 
-| Name       | Size | Weight | Line-height | Letter-spacing |
-| ---------- | ---- | ------ | ----------- | -------------- |
-| Display XL | 72px | 500    | 1.0         | -0.04em        |
-| Display L  | 56px | 500    | 1.05        | -0.035em       |
-| Display M  | 44px | 500    | 1.1         | -0.03em        |
-| Display S  | 36px | 500    | 1.15        | -0.025em       |
-| Heading L  | 28px | 500    | 1.2         | -0.02em        |
-| Heading M  | 22px | 500    | 1.3         | -0.015em       |
-| Heading S  | 18px | 500    | 1.4         | -0.01em        |
-| Body L     | 17px | 400    | 1.6         | -0.006em       |
-| Body M     | 15px | 400    | 1.6         | -0.004em       |
-| Body S     | 13px | 400    | 1.5         | 0              |
-| Caption    | 11px | 500    | 1.4         | 0.02em         |
-| Overline   | 11px | 600    | 1.4         | 0.08em         |
+### Clinical data
 
-### Weight usage
-
-- **400 (Regular):** Clinical notes, descriptions, body text
-- **500 (Medium):** Patient names, headlines, nav items, labels, button text — workhorse weight
-- **600 (Semibold):** Overlines, lab column headers, emphasis, alerts
-- **700 (Bold):** Rare — critical vitals only (e.g., out-of-range lab values)
-
-### Medical data typography rules
-
-- **Vital signs:** Use monospace, `font-variant-numeric: tabular-nums`, large size (20–28px), weight 500
-- **Lab values out-of-range:** Red-700 `#DC2626`, bold (700), monospace
-- **Lab values normal:** Primary text `#171717` or Green-700 `#15803D`, regular weight
-- **Patient IDs (MRN):** Always monospace, gray-500 `#737373`, letter-spacing 0.02em
-- **Timestamps:** 24-hour format, monospace, gray-400 `#A3A3A3`
-- **Units of measurement:** Smaller font size than the value, gray-400
-
-### Critical typography rules
-
-- Headlines ALWAYS use negative letter-spacing
-- Body text uses near-zero tracking
-- Overlines: ALL-CAPS, 11px, weight 600, letter-spacing 0.08em, color gray-400
-- Medium (500) is the default heading weight, NOT bold (700)
-- Never use font sizes between the defined scale steps
+- Vitals: mono, `tabular-nums`, `text-vital` (22px) at 500, in a `VitalStrip`.
+- Out-of-range values: 700 in `status-critical-fg-aa` with an up/down arrow, and the label names it ("SpO₂ · low").
+- MRNs and IDs: mono (`text-mono-s`), `ink-600`, 0.02em tracking. Timestamps mono, 24-hour. Units smaller than the value, `muted-foreground`.
 
 ---
 
-## Spacing & Layout
+## Spacing and layout
 
-### Base grid: 4px
+- 4px grid (`--spacing: 0.25rem`); the `spacing-*` steps are the Tailwind utilities (`p-6` = 24px). Scale: `0, 2, 4, 6, 8, 10, 12, 16, 20, 24, 32, 40, 48, 56, 64, 80, 96, 120, 160`.
+- Tables scroll inside their own frame with a sticky header; the page never scrolls sideways.
 
-### Spacing scale (px)
+| Token               | Value  | Use                                                     |
+| ------------------- | ------ | ------------------------------------------------------- |
+| `sidebar-width`     | 248px  | Expanded sidebar.                                       |
+| `sidebar-collapsed` | 56px   | Collapsed rail.                                         |
+| `content-max`       | 1280px | Content max-width on record and list pages.             |
+| `topbar-height`     | 48px   | Workspace top bar (breadcrumb, view switcher, actions). |
+| `row-table`         | 38px   | Record table row on desktop (pointer).                  |
+| `row-touch`         | 44px   | Minimum touch target; table rows on tablets and phones. |
+| `tile-sm`           | 20px   | Domain tile in the sidebar and table headers.           |
+| `tile-md`           | 28px   | Domain tile in record headers and the command bar.      |
+| `tile-lg`           | 40px   | Domain tile on the home launcher.                       |
+| `page-pad-desktop`  | 32px   | Page padding, desktop.                                  |
+| `page-pad-mobile`   | 16px   | Page padding, phones.                                   |
+| `grid-gap`          | 16px   | Default grid gap.                                       |
 
-`0, 2, 4, 6, 8, 10, 12, 16, 20, 24, 32, 40, 48, 56, 64, 80, 96, 120, 160`
+## Borders, radii, shadows
 
-### Layout constants
+- Borders are 1px. Hairlines inside tables use `ink-150`.
 
-| Token                  | Value  |
-| ---------------------- | ------ |
-| Sidebar width          | 240px  |
-| Sidebar collapsed      | 56px   |
-| Content max-width      | 1200px |
-| Nav bar height         | 52px   |
-| Patient row height     | 44px   |
-| Compact row height     | 32px   |
-| Page padding (desktop) | 32px   |
-| Page padding (mobile)  | 16px   |
-| Card padding           | 24px   |
-| Module gap             | 64px   |
-| Grid gap (default)     | 16px   |
-| Vitals gap             | 12px   |
+| Token         | Value  | Use                                                              |
+| ------------- | ------ | ---------------------------------------------------------------- |
+| `radius-xs`   | 4px    | Kbd, count discs on small controls, the 8px tag dot container.   |
+| `radius-sm`   | 6px    | Tags, status pills, inputs, small buttons, domain tiles at 20px. |
+| `radius-md`   | 8px    | Buttons, nav items, domain tiles at 28px, menus items.           |
+| `radius-lg`   | 12px   | Cards, panels, tables, domain tiles at 40px, cover blocks.       |
+| `radius-xl`   | 16px   | Dialogs and the command bar.                                     |
+| `radius-2xl`  | 24px   | Marketing bands and hero media.                                  |
+| `radius-full` | 9999px | Avatars, the tag dot, switches.                                  |
 
-### Border radii
+Shadows are a 1px ring plus a short drop; dark adds a faint top highlight instead of more blur.
 
-| Token  | Value  | Usage                 |
-| ------ | ------ | --------------------- |
-| `xs`   | 4px    | Badges, small tags    |
-| `sm`   | 6px    | Inputs, small buttons |
-| `md`   | 8px    | Buttons, dropdowns    |
-| `lg`   | 12px   | Cards, panels         |
-| `xl`   | 16px   | Large cards, modals   |
-| `2xl`  | 20px   | Hero sections         |
-| `full` | 9999px | Avatars, pills        |
+| Token            | Light                                                                                                              | Dark                                                                                                          | Use                                                                     |
+| ---------------- | ------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------- |
+| `shadow-xs`      | `0 1px 2px rgba(16, 18, 22, 0.05)`                                                                                 | `0 1px 2px rgba(0, 0, 0, 0.4)`                                                                                | Panels, stat cards.                                                     |
+| `shadow-control` | `0 1px 2px rgba(16, 18, 22, 0.06), inset 0 -1px 0 rgba(16, 18, 22, 0.04)`                                          | `0 1px 2px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.05)`                                       | Secondary buttons, segmented control thumb, inputs on hover.            |
+| `shadow-primary` | `inset 0 1px 0 rgba(255, 255, 255, 0.16), 0 1px 2px rgba(15, 118, 110, 0.3)`                                       | `inset 0 1px 0 rgba(255, 255, 255, 0.35), 0 1px 2px rgba(0, 0, 0, 0.5)`                                       | Primary button: a top highlight and a teal-tinted drop.                 |
+| `shadow-card`    | `0 0 0 1px rgba(16, 18, 22, 0.06), 0 1px 3px rgba(16, 18, 22, 0.05)`                                               | `0 0 0 1px rgba(255, 255, 255, 0.06), 0 1px 3px rgba(0, 0, 0, 0.5)`                                           | Standard card.                                                          |
+| `shadow-popover` | `0 0 0 1px rgba(16, 18, 22, 0.08), 0 4px 8px -2px rgba(16, 18, 22, 0.06), 0 16px 32px -8px rgba(16, 18, 22, 0.16)` | `0 0 0 1px rgba(255, 255, 255, 0.08), 0 4px 8px -2px rgba(0, 0, 0, 0.5), 0 16px 32px -8px rgba(0, 0, 0, 0.7)` | Menus, dialogs, command bar. The heaviest allowed.                      |
+| `shadow-focus`   | `0 0 0 1px #ffffff, 0 0 0 3px #0d9488`                                                                             | `0 0 0 1px #0f1012, 0 0 0 3px #2dd4bf`                                                                        | Keyboard focus on buttons and tiles: a ground gap and a solid 2px ring. |
 
-### Shadows / Elevation
+`shadow-sm/md/lg` remain for existing call sites (ink-tinted); nothing is heavier than `shadow-popover`.
 
-| Token     | Value                                                                |
-| --------- | -------------------------------------------------------------------- |
-| `xs`      | `0 1px 2px rgba(0,0,0,0.04)`                                         |
-| `sm`      | `0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04)`             |
-| `md`      | `0 4px 6px -1px rgba(0,0,0,0.06), 0 2px 4px -2px rgba(0,0,0,0.04)`   |
-| `lg`      | `0 10px 15px -3px rgba(0,0,0,0.06), 0 4px 6px -4px rgba(0,0,0,0.04)` |
-| `card`    | `0 0 0 1px rgba(0,0,0,0.06), 0 1px 3px rgba(0,0,0,0.04)`             |
-| `popover` | `0 0 0 1px rgba(0,0,0,0.06), 0 12px 24px -4px rgba(0,0,0,0.12)`      |
+- **Focus:** buttons and tiles use `shadow-focus` (a ground gap and a solid 2px `ring`); fields get a `ring` border and a 3px `teal-tint` halo; everything else gets the base `outline: 2px solid ring` (3.7:1 on white, 8.9:1 on the dark ground).
 
 ---
 
 ## Components
 
-### Buttons
+All live in `components/ui/` and `components/medsync/`; `/styleguide` renders each one.
 
-- **Primary (teal):** bg `#0D9488`, text `#fff`, radius 8px, font-weight 500
-- **Secondary:** bg `#fff`, border `1px solid #E5E5E5`, text `#171717`, radius 8px
-- **Ghost:** bg transparent, no border, text `#737373`, radius 8px
-- **Teal Soft:** bg `#F0FDFA`, border `1px solid #CCFBF1`, text `#0D9488`, radius 8px
-- **Emergency:** bg `#DC2626`, text `#fff`, radius 8px — clinical emergencies ONLY
-- **Alert:** bg `#FEF2F2`, border `1px solid #FEE2E2`, text `#DC2626`, radius 8px
+| Component                    | File                                              | Rules                                                                                                                                                                                                                                                                                                                                                  |
+| ---------------------------- | ------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Button                       | `ui/button.tsx`                                   | 32px (sm 26, lg 40), `radius-md`, `label` 13/500. `primary` teal with `shadow-primary`; `secondary` card with `ink-300` edge and `shadow-control`; `ghost`; `soft` (`teal-tint`); `link`; `emergency` (solid red, both themes) and `alert` for clinical signals only. One primary per view; never a place hue. Press moves 0.5px.                      |
+| Kbd                          | `ui/kbd.tsx`                                      | Mono 11/500 key hint on `ink-50`.                                                                                                                                                                                                                                                                                                                      |
+| Input                        | `ui/input.tsx`                                    | 34px, `radius-md`, `input` edge, `shadow-control`; focus `ring` border + 3px `teal-tint` halo; invalid `destructive` border + `alert-bg` halo and an error line that gives the fix with an example. Mono variant for IDs.                                                                                                                              |
+| Label                        | `ui/label.tsx`                                    | `caption` 12/500 in `ink-700`, 6px above the field.                                                                                                                                                                                                                                                                                                    |
+| StatusPill                   | `medsync/status-pill.tsx`                         | Round, 22px, 12/600, a fixed 13px icon per state (check, circle-dot, triangle-alert, bed, log-out, clock) and its word.                                                                                                                                                                                                                                |
+| Tag                          | `medsync/tag.tsx`                                 | Square (`radius-sm`), 22px, 12/500, a 7px dot in `<hue>-icon`, `<hue>-text` on `<hue>-tint` with a `<hue>-edge` border. Never red, amber or green.                                                                                                                                                                                                     |
+| Pill                         | `ui/pill.tsx`                                     | Table-cell chip: clinical tones render `StatusPill`; `neutral`/`active`/`info`/`notice`/`place`/`sensitive` render tags.                                                                                                                                                                                                                               |
+| DomainTile                   | `medsync/domain-tile.tsx`                         | The main carrier of colour. `sm` 20 (sidebar), `md` 28 (headers, command bar), `lg` 40 (launcher). `solid` = `<hue>-solid` + `<hue>-on-solid`; `soft` = tint + icon + edge. Fixed glyphs: Patients `users`, Clinical `stethoscope`, Pharmacy `pill`, Lab `flask-conical`, Wards `bed`, Schedule `calendar`, Admin `shield`.                            |
+| Avatar                       | `medsync/avatar.tsx`                              | Monogram disc: `<hue>-100` fill, `<hue>-800` text; 24 in tables, 40 in record headers; stacks overlap 6px with a 2px `card` ring. Monograms only unless the facility uploads a photo (DPPA 2019).                                                                                                                                                      |
+| Sidebar                      | `medsync/sidebar-nav.tsx`                         | 248px `sidebar` (`ink-25`) column: facility mark (22px `ink-950` square, initial in the display face), a ⌘K search row, 30px items. Domain items carry a `sm` tile; the active item takes its domain's tint and edge; neutral items use a plain 15px `ink-500` glyph and `sidebar-accent`. Counts are mono `muted-foreground`, never a coloured badge. |
+| CommandBar                   | `medsync/command-bar.tsx`                         | ⌘K / Ctrl+K or the sidebar search row. 560px, `radius-xl`, `shadow-popover`; 48px input row; 38px results with a soft domain tile, active row on `ink-100`; overline groups; a key-hint footer on `muted`. Only routes; entities are pre-scoped by the caller.                                                                                         |
+| ViewSwitcher / UnderlineTabs | `medsync/view-switcher.tsx`                       | Segmented control on an `ink-100` track, the on option on `card` with `shadow-control`; underline tabs with a 2px `foreground` underline. Never teal: selection within a view is structural.                                                                                                                                                           |
+| RecordHeader                 | `medsync/record-header.tsx`                       | A 48px band in `<hue>-tint`, a 40px monogram overlapping it, breadcrumb with domain tile, title `heading-l`, up to two actions, a meta row (status, tags, mono line). Never a solid band on a clinical record; never the status in the band colour.                                                                                                    |
+| AttributeList                | `medsync/attribute-list.tsx`                      | Icon + label column in `caption` `muted-foreground`; 34px rows; empty values read "Add a value" in `ink-400`.                                                                                                                                                                                                                                          |
+| RecordTable                  | `ui/data-table.tsx`                               | Sticky 34px header on `muted`, 12/500 `ink-600`; 38px rows with `ink-150` rules and column rules; hover `ink-25`; selected `accent`. Out-of-range numbers 700 in `status-critical-fg-aa` with an arrow.                                                                                                                                                |
+| StatCard                     | `medsync/stat-card.tsx`                           | Padding 14×16, `radius-lg`, `shadow-xs`; a `sm` domain tile and label, the `stat` number (28 mono), an optional proportion bar in the domain's solid colour, the basis as a caption. Never judge the number with red, amber or green.                                                                                                                  |
+| VitalStat / VitalStrip       | `medsync/vital-stat.tsx`                          | One bordered strip, cells split by `ink-150` rules, `vital` 22 mono values, units 11 `muted-foreground`. No tinted cells, no flashing, no place hue.                                                                                                                                                                                                   |
+| Card / Panel                 | `ui/card.tsx`, `medsync/panel.tsx`                | `radius-lg`, 1px `border`; card `shadow-card`, panel `shadow-xs`; titles `heading-s`. Panels crop their content.                                                                                                                                                                                                                                       |
+| SectionNumber / ClinicalPath | `medsync/section-number.tsx`, `clinical-path.tsx` | Neutral ink `[01]` step numbers; mono paths `/ ward ⋮ bed 12` in `ink-600`, the last segment in `foreground`.                                                                                                                                                                                                                                          |
+| ChromaBand                   | `medsync/chroma-band.tsx`                         | Public pages only: one `<hue>-solid` band with `<hue>-on-solid` text, `radius-2xl`, a `display-m` headline, then the flat spectrum strip (teal twice as wide). Never a gradient, never a clinical figure.                                                                                                                                              |
+| Pop-ups                      | `medsync/editor-dialog.tsx`                       | Every pop-up is a centred landscape card (`EditorDialog`: `wide` 5xl, `medium` 3xl), header / scrolling body (≤ 88svh) / footer, ✕, Esc or backdrop close it. Nothing slides in from an edge; the phone navigation menu is the only exception (ADR 0161).                                                                                              |
 
-Button sizes:
+## Interaction and motion
 
-- **Small:** padding `5px 10px`, font-size 11px, radius 6px
-- **Medium:** padding `8px 18px`, font-size 13px, radius 8px
-- **Large:** padding `11px 24px`, font-size 14–15px, radius 8px
+- `ease-expo-out` (`cubic-bezier(0.16, 1, 0.3, 1)`) at `duration-fast` 100ms for hover and press, `duration-normal` 150ms for controls, `duration-slow` 250ms for dialogs and the command bar, `duration-reveal` 400ms; stagger siblings by 40ms.
+- Buttons press 0.5px. Tags and pills may scale in with `ease-spring`. Nothing animates layout size.
+- The utility vocabulary in `globals.css` stays: `tap`, `card-lift`, `scale-in`, `select-flare`, `skeleton-shimmer`, `stagger-children`, `ncd-reveal` — all gated on `prefers-reduced-motion`. **No decorative animation**: clinical alarms never flash, and eyebrow dots don't pulse.
 
-All buttons: font-weight 500, letter-spacing -0.01em, transition `all 150ms cubic-bezier(0.16, 1, 0.3, 1)`
+## Iconography
 
-### Inputs
+- **Lucide**, outlined, 1.75px stroke, round caps and joins. 16px default, 15px in buttons and nav, 13–14px in tables and chips.
+- Neutral glyphs in `ink-500`; inside a DomainTile the glyph is `<hue>-on-solid` (solid) or `<hue>-icon` (soft).
 
-- Padding: `8px 10px`
-- Font-size: 13px
-- Border: `1px solid #E5E5E5`
-- Border-radius: 6px
-- **Focus:** border `#14B8A6` (teal-500), box-shadow `0 0 0 2px rgba(20,184,166,0.15)`
-- **Error:** border `#DC2626`, bg `#FEF2F2`, box-shadow `0 0 0 2px rgba(220,38,38,0.1)`
-- Labels: 11px, weight 500, color `#525252`, margin-bottom 4px
+## Brand mark
 
-### Clinical Status Badges
+There is no logo file. The wordmark is **MedSync** set in `display` at 600. In the sidebar the facility mark is a 22px `ink-950` square with the initial in the display face. Do not draw a symbol.
 
-- Padding: `2px 10px`
-- Font-size: 11px, weight 500
-- Border-radius: 5px
-- Use status color pairs from the Clinical Status Colors table
+## Never
 
-### Patient Summary Card
-
-- Container: border `1px solid #E5E5E5`, radius 12px, shadow `card`
-- Header row: avatar (36px circle, teal-100 bg, teal-700 initials), patient name (15px, weight 500), demographics (11px, gray-500), status badge
-- Vitals strip: grid of 4 columns, each with overline label, large mono value, and unit
-- Vitals use monospace, 20px, weight 500, tabular-nums
-
-### Patient Records Table
-
-- Header: bg `#FAFAFA`, border-bottom `1px solid #E5E5E5`, font-size 10px, weight 600, uppercase, letter-spacing 0.04em, color `#737373`
-- Rows: padding `9px 12px`, border-bottom `1px solid #F5F5F5`, hover bg `#FAFAFA`
-- Avatar column: 26px circle, background = status color bg, initials in status color text
-- MRN column: monospace, gray-500
-- Status column: inline badge
-- Vitals column: monospace, red + bold (600) for critical patients, regular for others
-
-### Cards
-
-- **Standard:** bg `#fff`, border `1px solid #E5E5E5`, shadow `card`, radius 12px, padding 24px
-- **Muted:** bg `#FAFAFA`, border `1px solid #EFEFEF`, no shadow, radius 12px
-- **Teal-tinted:** bg `#F0FDFA`, border `1px solid #CCFBF1`, radius 12px — for clinical highlights
+- Red, amber or green as decoration, tag colours, workflow states or chart series.
+- A place hue on a button, link, focus ring, count or status.
+- Gradients between hues, glows, or saturated full-page backgrounds in the product (bands are for public pages).
+- Emoji in product UI. Inter, Roboto or Space Grotesk.
+- Bold (700) outside out-of-range values; `font-medium` overriding a heading's 600. Borders thicker than 1px. Shadows heavier than `shadow-popover`.
+- In dark: pure black grounds (the page is `#0f1012`), pure white text, or white text on a dark-theme solid (use `<hue>-on-solid`).
 
 ---
 
-### Pop-ups (ADR 0161)
+## Dark mode
 
-- **Every pop-up is a centred landscape card:** `components/medsync/editor-dialog.tsx`, `EditorDialog`. It has a header, a scrolling body (at most 88svh) and a footer, and ✕, Esc or the backdrop close it.
-  - Use `wide` (5xl) for detail panels and catalogues, with sections side by side.
-  - Use `medium` (3xl) for short forms.
-- **No side sheets or drawers** slide in from an edge for content. The phone navigation menu is the only exception, because it is navigation.
+Dark mode remaps surfaces rather than inverting them. Theme switching uses `next-themes` (`attribute="class"`, `defaultTheme="system"`, storage key `medsync-theme`); every token has a `.dark` value in `app/globals.css`, so one utility covers both themes.
 
-## Interaction & Motion
+- Page `#0f1012`, cards and inputs `ink-0` `#16181b`, sidebar `ink-25` `#131417`, popovers `#1c1e22`, borders `ink-200` `#2c3036`.
+- The teal anchor brightens: `primary` is `#2dd4bf` with deep-teal text `#042f2e`. Every place hue inverts the same way, and each `<hue>-on-solid` is dark in dark.
+- Shadows are stronger with a faint white edge on card and popover; `shadow-focus` keeps a ground gap.
+- **Forced themes:** `medsync-forced-light` keeps the Emergency Pathway (E1–E3), crisis/SV and the symptom catalog (S1–S4) light in every theme (ADR 0098, Law 3). `medsync-forced-dark` pins every ramp to its light values inside always-dark bands (the landing's closing band).
 
-### Easing
+## Implementation notes
 
-- **Primary (expo-out):** `cubic-bezier(0.16, 1, 0.3, 1)` — most transitions
-- **Symmetric:** `cubic-bezier(0.45, 0, 0.55, 1)` — looping/reversible animations
-
-### Duration
-
-- **Fast (100ms):** Hover, focus, vitals refresh
-- **Normal (150ms):** Buttons, inputs, badges
-- **Slow (250ms):** Panels, patient drawer, modals
-- **Reveal (400ms):** Dashboard staggered animations
-
-### Stagger: 40ms between sibling items
-
-### Hover states
-
-- **Cards/rows:** bg shifts to `#FAFAFA`, border to `#D4D4D4`
-- **Clinical elements:** bg shifts to `#F0FDFA`, border to `#CCFBF1`
-- **Buttons:** Primary teal → `#0F766E`
-- **Links:** Underline on hover, color stays `#0D9488`
-
-### Focus ring
-
-- `box-shadow: 0 0 0 2px rgba(20,184,166,0.4)` — teal-tinted focus ring
-- Applied to all interactive elements on keyboard focus
-
----
-
-## Patterns & Conventions
-
-### Section numbering
-
-Bracket-number format: `[01]`, `[02]` — teal-600 color (`#0D9488`), font-size 13px, weight 600, teal-50 background, teal-100 border.
-
-### Clinical separators
-
-Module path notation: `/ patient → vitals`, `/ ward ⋮ bed 12`, `/ labs · hematology`. Monospace font, teal-600 color.
-
-### Iconography
-
-- Default size: 16px | Nav: 20px | Inline: 14px
-- Stroke: 1.5px, round line-cap and line-join
-- Style: Outlined only (never filled), geometric, minimal
-- Color: Teal-600 for medical/clinical icons, gray-600 for general UI
-- Medical icon set: Pulse/heartbeat, heart, shield (security), user (patient), pill (medication), clipboard (records)
-
-### CTA blocks
-
-Dark CTA sections use: bg `#134E4A` (teal-900), white headline (22–28px, weight 500), teal-200 subtitle, white primary button + ghost button with `border: 1px solid #0F766E`.
-
-### Clinical data display
-
-- Vitals always in a horizontal strip, monospace, large numbers
-- Out-of-range values immediately visible in red with bold weight
-- Normal values in black or green — never green for "good" on its own (color-blind safety: pair with ✓ or context)
-- Units always present, always smaller than the value
-- MRN format: `MRN-YYYY-NNNNN`
-- All dates in DD MMM YYYY format (Ugandan convention)
-- All times in 24-hour format
-
----
-
-## Anti-patterns (NEVER do these)
-
-- ❌ Rainbow gradients or decorative color backgrounds — plum is the one sanctioned second hue, and only where it means place (§ Secondary Plum)
-- ❌ Bold (700) for headlines — use Medium (500)
-- ❌ Red for non-critical UI — red = clinical emergency ONLY
-- ❌ Decorative animation without functional purpose
-- ❌ Shadows heavier than the defined scale
-- ❌ Font sizes outside the defined type scale
-- ❌ Borders thicker than 1px
-- ❌ Emojis in clinical UI — use outlined icons instead
-- ❌ Color alone to convey status (always pair with text label for accessibility)
-- ❌ Generic fonts (Inter, Roboto, Space Grotesk)
-- ❌ Bright/saturated backgrounds on page sections (stay white/gray-50/teal-50)
-
----
-
-## Implementation notes (Phase 0.2)
-
-The above spec is verbatim from the design system handoff. The notes below capture _how_ Phase 0.2 implements it.
-
-### Tokens live in CSS (Tailwind v4)
-
-Tailwind v4 uses a CSS-first config — there is no `tailwind.config.ts`. All tokens (colors, fonts, radii, shadows, type scale) are declared inside an `@theme` block in [`app/globals.css`](app/globals.css). Tailwind generates the corresponding utilities automatically (`bg-teal-600`, `text-gray-900`, `rounded-md`, `shadow-card`, `text-display-l`, etc.).
-
-### Type scale as Tailwind text-\* utilities
-
-The type scale is exposed as `text-display-xl`, `text-display-l`, `text-display-m`, `text-display-s`, `text-heading-l`, `text-heading-m`, `text-heading-s`, `text-body-l`, `text-body-m`, `text-body-s`, `text-caption`, `text-overline`. Each carries its own line-height, letter-spacing, and weight defaults (see `@theme` block).
-
-### Status pairs as semantic utilities
-
-Each clinical status exposes `bg-status-<name>` and `text-status-<name>`:
-
-- `stable` (#DCFCE7 / #15803D)
-- `critical` (#FEE2E2 / #DC2626)
-- `caution` (#FEF3C7 / #D97706)
-- `admitted` (#CCFBF1 / #0F766E)
-- `discharged` (#F3E8FF / #7C3AED)
-- `pending` (#F5F5F5 / #525252)
-
-The `<ClinicalBadge status="critical">…</ClinicalBadge>` component is the canonical consumer.
-
-### Fonts — fallback chain pending license
-
-`Neue Haas Grotesk Display Pro` and `Neue Haas Grotesk Text Pro` are commercial typefaces (Linotype). Until Usama drops licensed `.woff2` files into `public/fonts/`, the cascade renders the spec's fallbacks (`"Helvetica Neue", Helvetica, Arial, sans-serif`), which is faithful to the intended character on macOS/iOS (renders Helvetica Neue natively) and acceptable everywhere else.
-
-When licensed files arrive:
-
-1. Drop `.woff2` into `public/fonts/neue-haas/`
-2. Replace the `--font-sans` and `--font-display` declarations in `app/globals.css` with `next/font/local` setup in `app/layout.tsx`
-3. Bump CHANGELOG and tag a new ADR if the visual change is meaningful
-
-Monospace falls through SF Mono → Menlo → Consolas → generic monospace. No web font loaded (the chain covers Mac, Linux, Windows natively).
-
-### Dark mode
-
-Dark mode IS shipped — see the dedicated dark-mode section below. Toggle is in the styleguide header. The "no dark mode" decision recorded in ADR-0002 is superseded by ADR-0003.
-
-### Spacing
-
-Tailwind v4's spacing scale is anchored to `--spacing: 0.25rem` (4px), matching the spec's base grid. The spec's px values map to standard utilities: `8 → p-2`, `12 → p-3`, `16 → p-4`, `24 → p-6`, `32 → p-8`, `48 → p-12`, `64 → p-16`, `96 → p-24`, `160 → p-40`. The non-standard `120` uses `p-30` (auto-generated) or `p-[120px]`.
-
-### Live preview
-
-[`/styleguide`](app/styleguide/) renders the full token set, typography scale, button gallery, input states, clinical status badges, vital-stat strip, card variants, and section numbering. This page is the visual contract — review it whenever tokens change. The header has a theme toggle for switching between light and dark.
-
----
-
-# Dark Mode
-
-> Adapted verbatim from the dark-mode handoff. Dark mode is not a simple inversion — surfaces layer, colors brighten selectively, and contrast is carefully managed for low-light clinical environments.
-
-## Core Philosophy (dark)
-
-- **Clinical Precision.** Pixel-perfect alignment, tight letter-spacing, engineered for trust — especially critical in low-light ward contexts.
-- **Calm Authority.** Dark surfaces reduce eye strain during night shifts. Teal glows softly as a calm clinical signal.
-- **Data Density.** Compact vitals, labs, patient rows. High contrast where it matters, receding where it doesn't.
-- **Compassionate UX.** Warm dark grays (never pure black). Soft teal over harsh green. Never clinical-cold.
-- **Progressive Disclosure.** Dark mode enhances focus — surfaces recede, content advances.
-- **Systematic Scale.** Same 4px grid, same spacing tokens, same type scale — only colors flip.
-
-## Surface Mapping — Light → Dark
-
-This is the most important section. Dark mode is built by remapping surfaces, not inverting hex values.
-
-| Surface          | Light Mode        | Dark Mode         |
-| ---------------- | ----------------- | ----------------- |
-| Page background  | `#FFFFFF`         | `#0A0A0A`         |
-| Raised / sidebar | `#FAFAFA`         | `#111111`         |
-| Card surface     | `#FFFFFF`         | `#171717`         |
-| Hover state      | `#F5F5F5`         | `#1E1E1E`         |
-| Active / pressed | `#EFEFEF`         | `#262626`         |
-| Teal hover       | `#F0FDFA`         | `#042F2E`         |
-| Border default   | `#E5E5E5`         | `#262626`         |
-| Border strong    | `#D4D4D4`         | `#404040`         |
-| Border subtle    | `#EFEFEF`         | `#1E1E1E`         |
-| Overlay          | `rgba(0,0,0,0.5)` | `rgba(0,0,0,0.7)` |
-
-**CRITICAL:** Never use pure `#000000` as a background. The minimum is `#0A0A0A`. Pure black creates harsh contrast and is uncomfortable under prolonged use.
-
-## Dark Neutral Scale
-
-| Token         | Hex       | Role                          |
-| ------------- | --------- | ----------------------------- |
-| `neutral-0`   | `#0A0A0A` | Page background               |
-| `neutral-50`  | `#111111` | Raised surfaces, sidebar      |
-| `neutral-100` | `#171717` | Card surfaces                 |
-| `neutral-150` | `#1E1E1E` | Hover state, subtle borders   |
-| `neutral-200` | `#262626` | Active state, default borders |
-| `neutral-300` | `#404040` | Strong borders, dividers      |
-| `neutral-400` | `#525252` | Disabled text, timestamps     |
-| `neutral-500` | `#737373` | Tertiary text, MRNs           |
-| `neutral-600` | `#A3A3A3` | Secondary text                |
-| `neutral-700` | `#D4D4D4` | Body text                     |
-| `neutral-800` | `#E5E5E5` | Primary text                  |
-| `neutral-900` | `#F5F5F5` | Emphasized text, headings     |
-| `neutral-950` | `#FAFAFA` | Maximum emphasis (rare)       |
-
-### Text colors (dark)
-
-- **Primary text:** `#E5E5E5` (neutral-800)
-- **Secondary text:** `#A3A3A3` (neutral-600)
-- **Tertiary/muted text:** `#737373` (neutral-500)
-- **Disabled text:** `#525252` (neutral-400)
-- **Placeholder text:** `#525252`
-- **Maximum emphasis:** `#F5F5F5` (neutral-900) — headings, patient names
-
-**CRITICAL:** Never use pure `#FFFFFF` for text. Cap at `#F5F5F5`.
-
-## Primary Teal (dark — brightened)
-
-| Token      | Hex       | Usage                                            |
-| ---------- | --------- | ------------------------------------------------ |
-| `teal-50`  | `#042F2E` | Dark teal backgrounds, hover fills               |
-| `teal-100` | `#064E45` | Teal borders in dark mode                        |
-| `teal-200` | `#0F766E` | Subtle accents                                   |
-| `teal-300` | `#0D9488` | Secondary teal (was primary in light)            |
-| `teal-400` | `#14B8A6` | Focus rings                                      |
-| `teal-500` | `#2DD4BF` | **Primary CTA, links, active nav** ← dark anchor |
-| `teal-600` | `#5EEAD4` | Emphasis, highlighted values                     |
-| `teal-700` | `#99F6E4` | Bright accents (rare)                            |
-| `teal-800` | `#CCFBF1` | Very bright (use sparingly)                      |
-| `teal-900` | `#F0FDFA` | Near-white teal tint (avoid)                     |
-
-**Key shift:** Primary accent moves from teal-600 (light) to teal-500 (dark) to maintain contrast. teal-50 (#042F2E) becomes the soft fill background.
-
-## Secondary Plum (dark — inverted like teal)
-
-| Token      | Hex       | Usage                                  |
-| ---------- | --------- | -------------------------------------- |
-| `plum-50`  | `#321227` | Active nav fill, soft washes           |
-| `plum-100` | `#4A173A` | Avatar monogram fill                   |
-| `plum-200` | `#671E51` | Rings, borders                         |
-| `plum-300` | `#862E6B` | Subtle accents                         |
-| `plum-400` | `#A94088` | Secondary plum                         |
-| `plum-500` | `#CB58A6` | Active-item dot                        |
-| `plum-600` | `#ED85C8` | **Anchor** — active icons, `--chart-2` |
-| `plum-700` | `#FDA8DD` | Emphasis text                          |
-| `plum-800` | `#FFCDEB` | Text on plum fills                     |
-| `plum-900` | `#FDE7F4` | Very bright (rare)                     |
-| `plum-950` | `#FDF3F9` | Near-white tint (avoid)                |
-
-The hero glow drops to `plum-800` (#6A1952) at 80 % over the dark teal ground.
-
-## Clinical Status (dark)
-
-Ultra-dark saturated backgrounds with bright text — visible without being glaring.
-
-| Status         | Background | Text      | When to use                        |
-| -------------- | ---------- | --------- | ---------------------------------- |
-| **Stable**     | `#052E16`  | `#4ADE80` | Patient stable, vitals normal      |
-| **Critical**   | `#450A0A`  | `#FCA5A5` | Emergency, critical vitals, alerts |
-| **Caution**    | `#451A03`  | `#FCD34D` | Warning, borderline vitals         |
-| **Admitted**   | `#042F2E`  | `#5EEAD4` | Currently admitted patients        |
-| **Discharged** | `#2E1065`  | `#C4B5FD` | Discharged patients                |
-| **Pending**    | `#262626`  | `#A3A3A3` | Awaiting action, unconfirmed       |
-
-**CRITICAL:** Red softens. Never use harsh `#DC2626` — use `#FCA5A5` for text and `#450A0A` for backgrounds. Still unmistakably alert, not retina-searing at 3am.
-
-## Typography (unchanged sizes / weights / tracking)
-
-Same families, same scale, same weights. Only colours flip.
-
-### Medical data typography (dark adjustments)
-
-- **Vital signs:** Monospace, `tabular-nums`, 20–28px, weight 500, color `#E5E5E5`
-- **Lab values out-of-range:** Soft red `#FCA5A5`, bold (700), monospace — NOT harsh `#DC2626`
-- **Lab values normal:** `#E5E5E5` or green `#4ADE80`
-- **Patient IDs (MRN):** Monospace, gray-500 `#737373`
-- **Timestamps:** 24h format, monospace, gray-400 `#525252`
-- **Units:** Smaller than value, color `#404040`
-- **Overlines:** Teal-500 `#5EEAD4` for section labels (in dark mode, teal overlines pop better than gray)
-
-## Spacing & Layout (unchanged)
-
-Same 4px grid, same scale, same layout constants.
-
-## Shadows / Elevation (heavier in dark)
-
-Dark shadows are significantly stronger than light, plus a faint white inner border for edge definition.
-
-| Token     | Value                                                                |
-| --------- | -------------------------------------------------------------------- |
-| `xs`      | `0 1px 2px rgba(0,0,0,0.3)`                                          |
-| `sm`      | `0 1px 3px rgba(0,0,0,0.4), 0 1px 2px rgba(0,0,0,0.3)`               |
-| `md`      | `0 4px 6px -1px rgba(0,0,0,0.4), 0 2px 4px -2px rgba(0,0,0,0.3)`     |
-| `lg`      | `0 10px 15px -3px rgba(0,0,0,0.5), 0 4px 6px -4px rgba(0,0,0,0.3)`   |
-| `card`    | `0 0 0 1px rgba(255,255,255,0.06), 0 1px 3px rgba(0,0,0,0.4)`        |
-| `popover` | `0 0 0 1px rgba(255,255,255,0.08), 0 12px 24px -4px rgba(0,0,0,0.6)` |
-
-**Key difference:** Card and popover use `rgba(255,255,255,0.06–0.08)` for a subtle light edge — what makes elements feel lifted off the dark background.
-
-## Components (dark)
-
-### Buttons (dark)
-
-- **Primary (teal):** bg `#2DD4BF`, text `#042F2E`, radius 8px
-- **Secondary:** bg `#262626`, border `1px solid #404040`, text `#E5E5E5`
-- **Ghost:** bg transparent, text `#737373`
-- **Teal Soft:** bg `#042F2E`, border `1px solid #064E45`, text `#5EEAD4`
-- **Emergency:** bg `#450A0A`, border `1px solid #7F1D1D`, text `#FCA5A5`
-- **Alert (outline):** bg transparent, border `1px solid #7F1D1D`, text `#FCA5A5`
-
-**Key shift:** Primary button inverts — bright teal bg with dark teal text (opposite of light mode).
-
-### Inputs (dark)
-
-- Background: `#171717`
-- Border: `1px solid #262626`
-- Text: `#E5E5E5`
-- **Focus:** border `#14B8A6`, box-shadow `0 0 0 2px rgba(45,212,191,0.2)`
-- **Error:** border `#7F1D1D`, bg `#1C1111`, text `#FCA5A5`
-- Labels: 11px, weight 500, color `#737373`
-
-### Cards (dark)
-
-- **Standard:** bg `#171717`, border `1px solid #262626`, shadow `card`, radius 12px
-- **Muted:** bg `#111111`, border `1px solid #1E1E1E`, radius 12px
-- **Teal-tinted:** bg `#042F2E`, border `1px solid #064E45`, radius 12px
-
-## Interaction & Motion (dark)
-
-### Hover (dark)
-
-- **Cards/rows:** bg shifts to `#111111`, border to `#404040`
-- **Clinical elements:** bg shifts to `#042F2E`, border to `#064E45`
-- **Primary button:** teal-500 → teal-600 (`#5EEAD4`)
-- **Links:** Underline on hover, color `#2DD4BF`
-
-### Focus ring (dark)
-
-`box-shadow: 0 0 0 2px rgba(45,212,191,0.3)` — brighter opacity than light to remain visible.
-
-## Patterns & Conventions (dark)
-
-- **Section numbering:** teal-500 (`#2DD4BF`), bg teal-50 (`#042F2E`), border teal-100 (`#064E45`).
-- **Clinical separators:** Monospace, teal-500 (`#2DD4BF`).
-- **Iconography:** Teal-500 for medical icons, `#A3A3A3` for general UI.
-- **CTA blocks:** bg `#042F2E` (teal-50), border `1px solid #064E45`. Optional subtle glow `box-shadow: 0 0 40px rgba(13,148,136,0.08)`.
-- **Code blocks:** bg `#111111`, border `1px solid #262626`, text `#5EEAD4`.
-- **Overline labels:** `#5EEAD4` (teal-600) — teal pops better than gray on dark.
-
-## Anti-patterns (NEVER in dark)
-
-- ❌ Pure `#000000` backgrounds — use `#0A0A0A` minimum
-- ❌ Harsh red `#DC2626` for text — use soft red `#FCA5A5`
-- ❌ Pure white `#FFFFFF` for text — cap at `#F5F5F5`
-- ❌ Light-mode shadow values — shadows must be 3–5× stronger in dark
-- ❌ Teal-600 (`#0D9488`) as primary CTA — too dim on dark; use teal-500 (`#2DD4BF`)
-- ❌ Bright borders above `#404040` — they look like glowing lines
-- ❌ Decorative glow effects — only subtle functional emphasis
-
-## Dark-mode implementation notes (Phase 0.2-dark)
-
-- Theme switching uses [`next-themes`](https://github.com/pacocoursey/next-themes) with `attribute="class"`, `defaultTheme="system"`, `enableSystem`, storage key `medsync-theme`. The `<ThemeProvider>` wraps the tree in [`app/providers.tsx`](app/providers.tsx). `<html suppressHydrationWarning>` prevents the SSR/CSR class mismatch warning.
-- Token strategy: every semantic, status, and shadow token lives in `:root` (light) and `.dark` (dark) blocks in [`app/globals.css`](app/globals.css); `@theme inline` declares those tokens to Tailwind v4 so utilities like `bg-primary` resolve to the right colour at runtime per theme.
-- Scale tokens (`gray-*`, `teal-*`) also flip — components that use `bg-gray-50` or `border-teal-100` end up rendering the dark-spec equivalent in dark mode. Palette swatches in `/styleguide` use static inline `style={{backgroundColor: hex}}` so the reference display stays accurate regardless of active theme.
-- `<meta name="theme-color">` is set per `prefers-color-scheme` so mobile browser chrome matches.
-- The `ThemeToggle` component is a controlled switch with a Sun/Moon icon crossfade; it cycles light ↔ dark only (system preference still wins on first paint).
+- **Tokens are generated.** `app/globals.css`'s `:root`, `.dark` and `medsync-forced-light` blocks come from the Chroma `tokens.json` (the MedSync Chroma design-system artifact). Change a value there and regenerate rather than hand-editing one block; the three must stay in step.
+- **Fonts:** `app/layout.tsx` loads Bricolage Grotesque (`opsz` axis), Geist and Geist Mono through `next/font/google` into `--font-medsync-display/sans/mono`. `--font-heading` is the sans.
+- `/styleguide` renders every token live (swatches paint with the token and label both themes' hex) and every component. It is the visual contract.
 
 ---
 

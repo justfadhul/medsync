@@ -3,11 +3,11 @@
 @import "shadcn/tailwind.css";
 
 /* ──────────────────────────────────────────────────────────────────────────
-   MedSync Design Tokens — see DESIGN-medsync.md for the authoritative spec.
-   Tokens live as CSS variables in :root / .dark so they flip with the
-   theme class on <html>. @theme inline tells Tailwind v4 to generate
-   utilities that *reference* those variables at runtime (not inline at
-   build time), so a single class like `bg-primary` flips automatically.
+   MedSync Chroma tokens (ADR 0162) — see DESIGN-medsync.md, the authoritative
+   spec. Generated from the Chroma design system's tokens.json: values live as
+   CSS variables in :root / .dark so they flip with the theme class on <html>;
+   @theme inline tells Tailwind v4 to generate utilities that reference them
+   at runtime, so one class (`bg-primary`, `bg-sky-solid`) covers both themes.
    ────────────────────────────────────────────────────────────────────────── */
 
 @custom-variant dark (&:where(.dark, .dark *));
@@ -16,21 +16,22 @@
   /* ─── Spacing base (4px grid) ─────────────────────────────────────────── */
   --spacing: 0.25rem;
 
-  /* ─── Neutral scale ───────────────────────────────────────────────────── */
-  --color-gray-50: var(--gray-50);
-  --color-gray-100: var(--gray-100);
-  --color-gray-150: var(--gray-150);
-  --color-gray-200: var(--gray-200);
-  --color-gray-300: var(--gray-300);
-  --color-gray-400: var(--gray-400);
-  --color-gray-500: var(--gray-500);
-  --color-gray-600: var(--gray-600);
-  --color-gray-700: var(--gray-700);
-  --color-gray-800: var(--gray-800);
-  --color-gray-900: var(--gray-900);
-  --color-gray-950: var(--gray-950);
-
-  /* ─── Teal scale ──────────────────────────────────────────────────────── */
+  /* ─── Colour: ink ground, teal action, five place hues and their roles,
+     clinical signals, semantic aliases, legacy aliases ────────────────── */
+  --color-ink-0: var(--ink-0);
+  --color-ink-25: var(--ink-25);
+  --color-ink-50: var(--ink-50);
+  --color-ink-100: var(--ink-100);
+  --color-ink-150: var(--ink-150);
+  --color-ink-200: var(--ink-200);
+  --color-ink-300: var(--ink-300);
+  --color-ink-400: var(--ink-400);
+  --color-ink-500: var(--ink-500);
+  --color-ink-600: var(--ink-600);
+  --color-ink-700: var(--ink-700);
+  --color-ink-800: var(--ink-800);
+  --color-ink-900: var(--ink-900);
+  --color-ink-950: var(--ink-950);
   --color-teal-50: var(--teal-50);
   --color-teal-100: var(--teal-100);
   --color-teal-200: var(--teal-200);
@@ -41,43 +42,40 @@
   --color-teal-700: var(--teal-700);
   --color-teal-800: var(--teal-800);
   --color-teal-900: var(--teal-900);
-
-  /* ─── Brand + accent: aliases of the teal scale ───────────────────────
-     `brand-*` and `mint-*` are the names the components were written
-     against; both resolve to the teal ramp DESIGN-medsync.md specifies
-     (§ Primary Teal), so `bg-brand-700` is `bg-teal-700`. Keep the aliases,
-     change the values in one place. Clinical status colours are
-     deliberately NOT part of this — red still means emergency. */
-  --color-brand-50: var(--brand-50);
-  --color-brand-100: var(--brand-100);
-  --color-brand-200: var(--brand-200);
-  --color-brand-300: var(--brand-300);
-  --color-brand-400: var(--brand-400);
-  --color-brand-500: var(--brand-500);
-  --color-brand-600: var(--brand-600);
-  --color-brand-700: var(--brand-700);
-  --color-brand-800: var(--brand-800);
-  --color-brand-900: var(--brand-900);
-  --color-brand-950: var(--brand-950);
-
-  --color-mint-50: var(--mint-50);
-  --color-mint-100: var(--mint-100);
-  --color-mint-200: var(--mint-200);
-  --color-mint-300: var(--mint-300);
-  --color-mint-400: var(--mint-400);
-  --color-mint-500: var(--mint-500);
-  --color-mint-600: var(--mint-600);
-  --color-mint-700: var(--mint-700);
-  --color-mint-800: var(--mint-800);
-  --color-mint-900: var(--mint-900);
-  --color-mint-950: var(--mint-950);
-
-  /* ─── Plum: the secondary accent (ADR 0097) ───────────────────────────
-     Colour as *place*, never state — hero glow, active nav, avatars,
-     chart series 2. The CTA stays teal; red stays the only alarm. Flips
-     with the theme exactly like teal (dark 50 is the deep end). A layout
-     may re-pin `--plum-*` the way `medsync-forced-dark` re-pins teal to
-     give one workspace its own hue. */
+  --color-teal-950: var(--teal-950);
+  --color-sky-50: var(--sky-50);
+  --color-sky-100: var(--sky-100);
+  --color-sky-200: var(--sky-200);
+  --color-sky-300: var(--sky-300);
+  --color-sky-400: var(--sky-400);
+  --color-sky-500: var(--sky-500);
+  --color-sky-600: var(--sky-600);
+  --color-sky-700: var(--sky-700);
+  --color-sky-800: var(--sky-800);
+  --color-sky-900: var(--sky-900);
+  --color-sky-950: var(--sky-950);
+  --color-iris-50: var(--iris-50);
+  --color-iris-100: var(--iris-100);
+  --color-iris-200: var(--iris-200);
+  --color-iris-300: var(--iris-300);
+  --color-iris-400: var(--iris-400);
+  --color-iris-500: var(--iris-500);
+  --color-iris-600: var(--iris-600);
+  --color-iris-700: var(--iris-700);
+  --color-iris-800: var(--iris-800);
+  --color-iris-900: var(--iris-900);
+  --color-iris-950: var(--iris-950);
+  --color-grape-50: var(--grape-50);
+  --color-grape-100: var(--grape-100);
+  --color-grape-200: var(--grape-200);
+  --color-grape-300: var(--grape-300);
+  --color-grape-400: var(--grape-400);
+  --color-grape-500: var(--grape-500);
+  --color-grape-600: var(--grape-600);
+  --color-grape-700: var(--grape-700);
+  --color-grape-800: var(--grape-800);
+  --color-grape-900: var(--grape-900);
+  --color-grape-950: var(--grape-950);
   --color-plum-50: var(--plum-50);
   --color-plum-100: var(--plum-100);
   --color-plum-200: var(--plum-200);
@@ -89,19 +87,42 @@
   --color-plum-800: var(--plum-800);
   --color-plum-900: var(--plum-900);
   --color-plum-950: var(--plum-950);
-
-  /* ─── Gradients ───────────────────────────────────────────────────────
-     Large-area, low-contrast washes in the manner of the reference designs:
-     the shift is a lightness step within one hue, never a rainbow. Each is a
-     `bg-gradient-*` utility via Tailwind's --background-image-* namespace. */
-  --background-image-gradient-hero: var(--gradient-hero);
-  --background-image-gradient-band: var(--gradient-band);
-  --background-image-gradient-wash: var(--gradient-wash);
-  --background-image-gradient-accent: var(--gradient-accent);
-  --background-image-gradient-signature: var(--gradient-signature);
-  --background-image-gradient-card: var(--gradient-card);
-
-  /* ─── Clinical Status pairs ───────────────────────────────────────────── */
+  --color-teal-solid: var(--teal-solid);
+  --color-teal-on-solid: var(--teal-on-solid);
+  --color-teal-tint: var(--teal-tint);
+  --color-teal-edge: var(--teal-edge);
+  --color-teal-text: var(--teal-text);
+  --color-teal-icon: var(--teal-icon);
+  --color-sky-solid: var(--sky-solid);
+  --color-sky-on-solid: var(--sky-on-solid);
+  --color-sky-tint: var(--sky-tint);
+  --color-sky-edge: var(--sky-edge);
+  --color-sky-text: var(--sky-text);
+  --color-sky-icon: var(--sky-icon);
+  --color-iris-solid: var(--iris-solid);
+  --color-iris-on-solid: var(--iris-on-solid);
+  --color-iris-tint: var(--iris-tint);
+  --color-iris-edge: var(--iris-edge);
+  --color-iris-text: var(--iris-text);
+  --color-iris-icon: var(--iris-icon);
+  --color-grape-solid: var(--grape-solid);
+  --color-grape-on-solid: var(--grape-on-solid);
+  --color-grape-tint: var(--grape-tint);
+  --color-grape-edge: var(--grape-edge);
+  --color-grape-text: var(--grape-text);
+  --color-grape-icon: var(--grape-icon);
+  --color-plum-solid: var(--plum-solid);
+  --color-plum-on-solid: var(--plum-on-solid);
+  --color-plum-tint: var(--plum-tint);
+  --color-plum-edge: var(--plum-edge);
+  --color-plum-text: var(--plum-text);
+  --color-plum-icon: var(--plum-icon);
+  --color-slate-solid: var(--slate-solid);
+  --color-slate-on-solid: var(--slate-on-solid);
+  --color-slate-tint: var(--slate-tint);
+  --color-slate-edge: var(--slate-edge);
+  --color-slate-text: var(--slate-text);
+  --color-slate-icon: var(--slate-icon);
   --color-status-stable-bg: var(--status-stable-bg);
   --color-status-stable-fg: var(--status-stable-fg);
   --color-status-critical-bg: var(--status-critical-bg);
@@ -114,13 +135,11 @@
   --color-status-discharged-fg: var(--status-discharged-fg);
   --color-status-pending-bg: var(--status-pending-bg);
   --color-status-pending-fg: var(--status-pending-fg);
-
-  /* Alert (soft red, dark switches to outline). */
   --color-alert-bg: var(--alert-bg);
   --color-alert-border: var(--alert-border);
   --color-alert-fg: var(--alert-fg);
-
-  /* ─── Semantic (shadcn-compatible) ────────────────────────────────────── */
+  --color-status-critical-fg-aa: var(--status-critical-fg-aa);
+  --color-status-caution-fg-aa: var(--status-caution-fg-aa);
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
@@ -130,7 +149,6 @@
   --color-primary: var(--primary);
   --color-primary-foreground: var(--primary-foreground);
   --color-primary-hover: var(--primary-hover);
-  --color-primary-active: var(--primary-active);
   --color-secondary: var(--secondary);
   --color-secondary-foreground: var(--secondary-foreground);
   --color-muted: var(--muted);
@@ -142,93 +160,150 @@
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
-
-  /* Sidebar. */
   --color-sidebar: var(--sidebar);
   --color-sidebar-foreground: var(--sidebar-foreground);
-  --color-sidebar-primary: var(--sidebar-primary);
-  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent: var(--sidebar-accent);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
-  --color-sidebar-border: var(--sidebar-border);
-  --color-sidebar-ring: var(--sidebar-ring);
-
-  /* Charts (placeholder; expand when charts ship). */
   --color-chart-1: var(--chart-1);
   --color-chart-2: var(--chart-2);
   --color-chart-3: var(--chart-3);
   --color-chart-4: var(--chart-4);
   --color-chart-5: var(--chart-5);
+  --color-primary-active: var(--primary-active);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-gray-50: var(--gray-50);
+  --color-gray-100: var(--gray-100);
+  --color-gray-150: var(--gray-150);
+  --color-gray-200: var(--gray-200);
+  --color-gray-300: var(--gray-300);
+  --color-gray-400: var(--gray-400);
+  --color-gray-500: var(--gray-500);
+  --color-gray-600: var(--gray-600);
+  --color-gray-700: var(--gray-700);
+  --color-gray-800: var(--gray-800);
+  --color-gray-900: var(--gray-900);
+  --color-gray-950: var(--gray-950);
+  --color-brand-50: var(--brand-50);
+  --color-mint-50: var(--mint-50);
+  --color-brand-100: var(--brand-100);
+  --color-mint-100: var(--mint-100);
+  --color-brand-200: var(--brand-200);
+  --color-mint-200: var(--mint-200);
+  --color-brand-300: var(--brand-300);
+  --color-mint-300: var(--mint-300);
+  --color-brand-400: var(--brand-400);
+  --color-mint-400: var(--mint-400);
+  --color-brand-500: var(--brand-500);
+  --color-mint-500: var(--mint-500);
+  --color-brand-600: var(--brand-600);
+  --color-mint-600: var(--mint-600);
+  --color-brand-700: var(--brand-700);
+  --color-mint-700: var(--mint-700);
+  --color-brand-800: var(--brand-800);
+  --color-mint-800: var(--mint-800);
+  --color-brand-900: var(--brand-900);
+  --color-mint-900: var(--mint-900);
+  --color-brand-950: var(--brand-950);
+  --color-mint-950: var(--mint-950);
 
   /* ─── Fonts (next/font/google variables set in app/layout.tsx) ──────────
-     - --font-medsync-display → Fraunces (serif, opsz axis for editorial H1)
-     - --font-medsync-sans    → Geist Sans (clinical body)
-     - --font-medsync-mono    → Geist Mono (tabular labs / vitals / IDs) */
+     - --font-medsync-display → Bricolage Grotesque (marketing + page titles)
+     - --font-medsync-sans    → Geist (all product UI, headings included)
+     - --font-medsync-mono    → Geist Mono (vitals, labs, MRNs, key hints) */
   --font-sans: var(--font-medsync-sans), ui-sans-serif, system-ui, "Segoe UI", sans-serif;
-  --font-display: var(--font-medsync-display), "Iowan Old Style", "Apple Garamond", Georgia, serif;
-  --font-heading: var(--font-display);
+  --font-display:
+    var(--font-medsync-display), var(--font-medsync-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-heading: var(--font-sans);
   --font-mono: var(--font-medsync-mono), ui-monospace, "SF Mono", Menlo, Consolas, monospace;
 
   /* ─── Type scale ──────────────────────────────────────────────────────── */
   --text-display-xl: 72px;
-  --text-display-xl--line-height: 1;
-  --text-display-xl--letter-spacing: -0.04em;
-  --text-display-xl--font-weight: 500;
+  --text-display-xl--line-height: 0.98;
+  --text-display-xl--letter-spacing: -0.045em;
+  --text-display-xl--font-weight: 600;
 
   --text-display-l: 56px;
-  --text-display-l--line-height: 1.05;
-  --text-display-l--letter-spacing: -0.035em;
-  --text-display-l--font-weight: 500;
+  --text-display-l--line-height: 1.02;
+  --text-display-l--letter-spacing: -0.04em;
+  --text-display-l--font-weight: 600;
 
-  --text-display-m: 44px;
-  --text-display-m--line-height: 1.1;
-  --text-display-m--letter-spacing: -0.03em;
-  --text-display-m--font-weight: 500;
+  --text-display-m: 40px;
+  --text-display-m--line-height: 1.08;
+  --text-display-m--letter-spacing: -0.035em;
+  --text-display-m--font-weight: 600;
 
-  --text-display-s: 36px;
-  --text-display-s--line-height: 1.15;
-  --text-display-s--letter-spacing: -0.025em;
-  --text-display-s--font-weight: 500;
+  --text-display-s: 30px;
+  --text-display-s--line-height: 1.12;
+  --text-display-s--letter-spacing: -0.03em;
+  --text-display-s--font-weight: 600;
 
-  --text-heading-l: 28px;
-  --text-heading-l--line-height: 1.2;
+  --text-heading-l: 22px;
+  --text-heading-l--line-height: 1.25;
   --text-heading-l--letter-spacing: -0.02em;
-  --text-heading-l--font-weight: 500;
+  --text-heading-l--font-weight: 600;
 
-  --text-heading-m: 22px;
-  --text-heading-m--line-height: 1.3;
+  --text-heading-m: 17px;
+  --text-heading-m--line-height: 1.35;
   --text-heading-m--letter-spacing: -0.015em;
-  --text-heading-m--font-weight: 500;
+  --text-heading-m--font-weight: 600;
 
-  --text-heading-s: 18px;
+  --text-heading-s: 14px;
   --text-heading-s--line-height: 1.4;
   --text-heading-s--letter-spacing: -0.01em;
-  --text-heading-s--font-weight: 500;
+  --text-heading-s--font-weight: 600;
 
-  --text-body-l: 17px;
+  --text-body-l: 16px;
   --text-body-l--line-height: 1.6;
   --text-body-l--letter-spacing: -0.006em;
   --text-body-l--font-weight: 400;
 
-  --text-body-m: 15px;
-  --text-body-m--line-height: 1.6;
+  --text-body-m: 14px;
+  --text-body-m--line-height: 1.5;
   --text-body-m--letter-spacing: -0.004em;
   --text-body-m--font-weight: 400;
 
   --text-body-s: 13px;
-  --text-body-s--line-height: 1.5;
+  --text-body-s--line-height: 1.45;
   --text-body-s--letter-spacing: 0;
   --text-body-s--font-weight: 400;
 
-  --text-caption: 11px;
-  --text-caption--line-height: 1.4;
-  --text-caption--letter-spacing: 0.02em;
+  --text-label: 13px;
+  --text-label--line-height: 1.4;
+  --text-label--letter-spacing: -0.003em;
+  --text-label--font-weight: 500;
+
+  --text-caption: 12px;
+  --text-caption--line-height: 1.35;
+  --text-caption--letter-spacing: 0.005em;
   --text-caption--font-weight: 500;
 
   --text-overline: 11px;
-  --text-overline--line-height: 1.4;
-  --text-overline--letter-spacing: 0.08em;
+  --text-overline--line-height: 1.3;
+  --text-overline--letter-spacing: 0.06em;
   --text-overline--font-weight: 600;
+
+  --text-stat: 28px;
+  --text-stat--line-height: 1.1;
+  --text-stat--letter-spacing: -0.02em;
+  --text-stat--font-weight: 500;
+
+  --text-vital: 22px;
+  --text-vital--line-height: 1.2;
+  --text-vital--letter-spacing: -0.01em;
+  --text-vital--font-weight: 500;
+
+  --text-mono-s: 12px;
+  --text-mono-s--line-height: 1.4;
+  --text-mono-s--letter-spacing: 0.02em;
+  --text-mono-s--font-weight: 400;
+
+  --text-kbd: 11px;
+  --text-kbd--line-height: 1;
+  --text-kbd--letter-spacing: 0;
+  --text-kbd--font-weight: 500;
 
   /* ─── Radii ───────────────────────────────────────────────────────────── */
   --radius-xs: 4px;
@@ -236,11 +311,11 @@
   --radius-md: 8px;
   --radius-lg: 12px;
   --radius-xl: 16px;
-  --radius-2xl: 20px;
+  --radius-2xl: 24px;
   --radius-3xl: 24px;
   --radius: 8px;
 
-  /* ─── Shadows (also flip via vars) ────────────────────────────────────── */
+  /* ─── Shadows (flip via vars) ─────────────────────────────────────────── */
   --shadow-xs: var(--shadow-xs-value);
   --shadow-sm: var(--shadow-sm-value);
   --shadow-md: var(--shadow-md-value);
@@ -248,6 +323,8 @@
   --shadow-card: var(--shadow-card-value);
   --shadow-popover: var(--shadow-popover-value);
   --shadow-focus: var(--shadow-focus-value);
+  --shadow-control: var(--shadow-control-value);
+  --shadow-primary: var(--shadow-primary-value);
 
   /* ─── Easing & duration ───────────────────────────────────────────────── */
   --ease-expo-out: cubic-bezier(0.16, 1, 0.3, 1);
@@ -262,23 +339,22 @@
   --duration-reveal: 400ms;
 }
 
-/* ─── Light mode (default) ─────────────────────────────────────────────── */
+/* ─── Light (default) ──────────────────────────────────────────────────── */
 :root {
-  /* Neutrals */
-  --gray-50: #fafafa;
-  --gray-100: #f5f5f5;
-  --gray-150: #efefef;
-  --gray-200: #e5e5e5;
-  --gray-300: #d4d4d4;
-  --gray-400: #a3a3a3;
-  --gray-500: #737373;
-  --gray-600: #525252;
-  --gray-700: #404040;
-  --gray-800: #262626;
-  --gray-900: #171717;
-  --gray-950: #0a0a0a;
-
-  /* Teal */
+  --ink-0: #ffffff;
+  --ink-25: #fbfbfc;
+  --ink-50: #f6f7f8;
+  --ink-100: #f0f1f3;
+  --ink-150: #e9eaed;
+  --ink-200: #e3e5e8;
+  --ink-300: #d0d3d9;
+  --ink-400: #a0a5ae;
+  --ink-500: #6c717b;
+  --ink-600: #545963;
+  --ink-700: #3d4149;
+  --ink-800: #272a30;
+  --ink-900: #17191d;
+  --ink-950: #0f1012;
   --teal-50: #f0fdfa;
   --teal-100: #ccfbf1;
   --teal-200: #99f6e4;
@@ -289,8 +365,87 @@
   --teal-700: #0f766e;
   --teal-800: #115e59;
   --teal-900: #134e4a;
-
-  /* Clinical status */
+  --teal-950: #042f2e;
+  --sky-50: #f0f9ff;
+  --sky-100: #e0f2fe;
+  --sky-200: #bae6fd;
+  --sky-300: #7dd3fc;
+  --sky-400: #38bdf8;
+  --sky-500: #0ea5e9;
+  --sky-600: #0284c7;
+  --sky-700: #0369a1;
+  --sky-800: #075985;
+  --sky-900: #0c4a6e;
+  --sky-950: #082f49;
+  --iris-50: #eef2ff;
+  --iris-100: #e0e7ff;
+  --iris-200: #c7d2fe;
+  --iris-300: #a5b4fc;
+  --iris-400: #818cf8;
+  --iris-500: #6366f1;
+  --iris-600: #4f46e5;
+  --iris-700: #4338ca;
+  --iris-800: #3730a3;
+  --iris-900: #312e81;
+  --iris-950: #1e1b4b;
+  --grape-50: #f5f3ff;
+  --grape-100: #ede9fe;
+  --grape-200: #ddd6fe;
+  --grape-300: #c4b5fd;
+  --grape-400: #a78bfa;
+  --grape-500: #8b5cf6;
+  --grape-600: #7c3aed;
+  --grape-700: #6d28d9;
+  --grape-800: #5b21b6;
+  --grape-900: #4c1d95;
+  --grape-950: #2e1065;
+  --plum-50: #fdf3f9;
+  --plum-100: #fee4f3;
+  --plum-200: #fecbe9;
+  --plum-300: #fea2dc;
+  --plum-400: #ea7bc4;
+  --plum-500: #c953a3;
+  --plum-600: #9f2f7e;
+  --plum-700: #87236a;
+  --plum-800: #6a1952;
+  --plum-900: #4e113c;
+  --plum-950: #321227;
+  --teal-solid: #0f766e;
+  --teal-on-solid: #ffffff;
+  --teal-tint: #f0fdfa;
+  --teal-edge: #ccfbf1;
+  --teal-text: #0f766e;
+  --teal-icon: #0d9488;
+  --sky-solid: #0369a1;
+  --sky-on-solid: #ffffff;
+  --sky-tint: #f0f9ff;
+  --sky-edge: #bae6fd;
+  --sky-text: #0369a1;
+  --sky-icon: #0284c7;
+  --iris-solid: #4f46e5;
+  --iris-on-solid: #ffffff;
+  --iris-tint: #eef2ff;
+  --iris-edge: #c7d2fe;
+  --iris-text: #4338ca;
+  --iris-icon: #4f46e5;
+  --grape-solid: #7c3aed;
+  --grape-on-solid: #ffffff;
+  --grape-tint: #f5f3ff;
+  --grape-edge: #ddd6fe;
+  --grape-text: #6d28d9;
+  --grape-icon: #7c3aed;
+  --plum-solid: #9f2f7e;
+  --plum-on-solid: #ffffff;
+  --plum-tint: #fdf3f9;
+  --plum-edge: #fecbe9;
+  --plum-text: #87236a;
+  --plum-icon: #c953a3;
+  --slate-solid: #3d4149;
+  --slate-on-solid: #ffffff;
+  --slate-tint: #f0f1f3;
+  --slate-edge: #e3e5e8;
+  --slate-text: #3d4149;
+  --slate-icon: #6c717b;
   --status-stable-bg: #dcfce7;
   --status-stable-fg: #15803d;
   --status-critical-bg: #fee2e2;
@@ -303,132 +458,113 @@
   --status-discharged-fg: #7c3aed;
   --status-pending-bg: #f5f5f5;
   --status-pending-fg: #525252;
-
-  /* Alert */
   --alert-bg: #fef2f2;
   --alert-border: #fee2e2;
   --alert-fg: #dc2626;
-
-  /* Semantic */
+  --status-critical-fg-aa: #b91c1c;
+  --status-caution-fg-aa: #92400e;
   --background: #ffffff;
-  --foreground: #171717;
-  --card: #ffffff;
-  --card-foreground: #171717;
+  --foreground: var(--ink-900);
+  --card: var(--ink-0);
+  --card-foreground: var(--ink-900);
   --popover: #ffffff;
-  --popover-foreground: #171717;
-  --primary: #0d9488;
-  --primary-foreground: #ffffff;
-  --primary-hover: #0f766e;
-  --primary-active: #115e59;
-  --secondary: #ffffff;
-  --secondary-foreground: #171717;
-  --muted: #fafafa;
-  --muted-foreground: #737373;
-  --accent: #f0fdfa;
-  --accent-foreground: #0d9488;
+  --popover-foreground: var(--ink-900);
+  --primary: var(--teal-solid);
+  --primary-foreground: var(--teal-on-solid);
+  --primary-hover: #115e59;
+  --secondary: var(--ink-0);
+  --secondary-foreground: var(--ink-900);
+  --muted: var(--ink-25);
+  --muted-foreground: var(--ink-500);
+  --accent: var(--teal-tint);
+  --accent-foreground: var(--teal-text);
   --destructive: #dc2626;
   --destructive-foreground: #ffffff;
-  --border: #e5e5e5;
-  --input: #e5e5e5;
-  --ring: #14b8a6;
+  --border: var(--ink-200);
+  --input: var(--ink-300);
+  --ring: #0d9488;
+  --sidebar: var(--ink-25);
+  --sidebar-foreground: var(--ink-700);
+  --sidebar-border: var(--ink-200);
+  --sidebar-accent: var(--ink-100);
+  --sidebar-accent-foreground: var(--ink-900);
+  --chart-1: var(--teal-icon);
+  --chart-2: var(--sky-icon);
+  --chart-3: var(--iris-icon);
+  --chart-4: var(--grape-icon);
+  --chart-5: var(--plum-icon);
+  --primary-active: #134e4a;
+  --sidebar-primary: var(--primary);
+  --sidebar-primary-foreground: var(--primary-foreground);
+  --sidebar-ring: var(--ring);
 
-  /* Sidebar */
-  --sidebar: #fafafa;
-  --sidebar-foreground: #171717;
-  --sidebar-primary: #0d9488;
-  --sidebar-primary-foreground: #ffffff;
-  --sidebar-accent: var(--plum-50);
-  --sidebar-accent-foreground: var(--plum-800);
-  --sidebar-border: #e5e5e5;
-  --sidebar-ring: #14b8a6;
-
-  /* Charts */
-  --chart-1: #0d9488;
-  --chart-2: var(--plum-600);
-  --chart-3: #5eead4;
-  --chart-4: #525252;
-  --chart-5: #171717;
-
-  /* Brand + mint — both alias the teal ramp (anchor teal-600 #0d9488) */
-  --teal-950: #042f2e;
+  /* Legacy aliases (ADR 0162): gray-* is the ink ramp; brand-* and mint-* are teal. */
+  --gray-50: var(--ink-50);
+  --gray-100: var(--ink-100);
+  --gray-150: var(--ink-150);
+  --gray-200: var(--ink-200);
+  --gray-300: var(--ink-300);
+  --gray-400: var(--ink-400);
+  --gray-500: var(--ink-500);
+  --gray-600: var(--ink-600);
+  --gray-700: var(--ink-700);
+  --gray-800: var(--ink-800);
+  --gray-900: var(--ink-900);
+  --gray-950: var(--ink-950);
   --brand-50: var(--teal-50);
-  --brand-100: var(--teal-100);
-  --brand-200: var(--teal-200);
-  --brand-300: var(--teal-300);
-  --brand-400: var(--teal-400);
-  --brand-500: var(--teal-500);
-  --brand-600: var(--teal-600);
-  --brand-700: var(--teal-700);
-  --brand-800: var(--teal-800);
-  --brand-900: var(--teal-900);
-  --brand-950: var(--teal-950);
-
   --mint-50: var(--teal-50);
+  --brand-100: var(--teal-100);
   --mint-100: var(--teal-100);
+  --brand-200: var(--teal-200);
   --mint-200: var(--teal-200);
+  --brand-300: var(--teal-300);
   --mint-300: var(--teal-300);
+  --brand-400: var(--teal-400);
   --mint-400: var(--teal-400);
+  --brand-500: var(--teal-500);
   --mint-500: var(--teal-500);
+  --brand-600: var(--teal-600);
   --mint-600: var(--teal-600);
+  --brand-700: var(--teal-700);
   --mint-700: var(--teal-700);
+  --brand-800: var(--teal-800);
   --mint-800: var(--teal-800);
+  --brand-900: var(--teal-900);
   --mint-900: var(--teal-900);
+  --brand-950: var(--teal-950);
   --mint-950: var(--teal-950);
 
-  /* Plum — mulberry, OKLCH h 342, even lightness steps, chroma peaking at 600 */
-  --plum-50: #fdf3f9;
-  --plum-100: #fee4f3;
-  --plum-200: #fecbe9;
-  --plum-300: #fea2dc;
-  --plum-400: #ea7bc4;
-  --plum-500: #c953a3;
-  --plum-600: #9f2f7e;
-  --plum-700: #87236a;
-  --plum-800: #6a1952;
-  --plum-900: #4e113c;
-  --plum-950: #321227;
-
-  /* Gradients (light). The hero carries the signature: a plum glow in one
-     corner of the deep-teal ground — a glow, not a sweep, so the two hues
-     never mix into grey along a long diagonal. */
-  --gradient-hero:
-    radial-gradient(120% 120% at 100% 100%, rgba(135, 35, 106, 0.85) 0%, transparent 55%),
-    linear-gradient(158deg, #115e59 0%, #0f766e 58%, #0d9488 100%);
-  --gradient-band:
-    radial-gradient(120% 120% at 100% 100%, rgba(135, 35, 106, 0.85) 0%, transparent 55%),
-    linear-gradient(180deg, #115e59 0%, #0f766e 100%);
-  --gradient-wash: linear-gradient(180deg, #f0fdfa 0%, #ffffff 100%);
-  --gradient-accent: linear-gradient(150deg, #5eead4 0%, #99f6e4 100%);
-  --gradient-signature: linear-gradient(135deg, #0f766e 0%, #9f2f7e 100%);
-  --gradient-card: linear-gradient(165deg, #ffffff 0%, #f0fdfa 100%);
-
-  /* Shadows (light) */
-  --shadow-xs-value: 0 1px 2px rgba(0, 0, 0, 0.04);
-  --shadow-sm-value: 0 1px 3px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.04);
-  --shadow-md-value: 0 4px 6px -1px rgba(0, 0, 0, 0.06), 0 2px 4px -2px rgba(0, 0, 0, 0.04);
-  --shadow-lg-value: 0 10px 15px -3px rgba(0, 0, 0, 0.06), 0 4px 6px -4px rgba(0, 0, 0, 0.04);
-  --shadow-card-value: 0 0 0 1px rgba(0, 0, 0, 0.06), 0 1px 3px rgba(0, 0, 0, 0.04);
-  --shadow-popover-value: 0 0 0 1px rgba(0, 0, 0, 0.06), 0 12px 24px -4px rgba(0, 0, 0, 0.12);
-  --shadow-focus-value: 0 0 0 2px rgba(20, 184, 166, 0.4);
+  /* Shadows */
+  --shadow-xs-value: 0 1px 2px rgba(16, 18, 22, 0.05);
+  --shadow-control-value: 0 1px 2px rgba(16, 18, 22, 0.06), inset 0 -1px 0 rgba(16, 18, 22, 0.04);
+  --shadow-primary-value:
+    inset 0 1px 0 rgba(255, 255, 255, 0.16), 0 1px 2px rgba(15, 118, 110, 0.3);
+  --shadow-card-value: 0 0 0 1px rgba(16, 18, 22, 0.06), 0 1px 3px rgba(16, 18, 22, 0.05);
+  --shadow-popover-value:
+    0 0 0 1px rgba(16, 18, 22, 0.08), 0 4px 8px -2px rgba(16, 18, 22, 0.06),
+    0 16px 32px -8px rgba(16, 18, 22, 0.16);
+  --shadow-focus-value: 0 0 0 1px #ffffff, 0 0 0 3px #0d9488;
+  --shadow-sm-value: 0 1px 3px rgba(16, 18, 22, 0.06), 0 1px 2px rgba(16, 18, 22, 0.04);
+  --shadow-md-value: 0 4px 6px -1px rgba(16, 18, 22, 0.06), 0 2px 4px -2px rgba(16, 18, 22, 0.04);
+  --shadow-lg-value: 0 10px 15px -3px rgba(16, 18, 22, 0.08), 0 4px 6px -4px rgba(16, 18, 22, 0.05);
 }
 
-/* ─── Dark mode ─────────────────────────────────────────────────────────── */
+/* ─── Dark ─────────────────────────────────────────────────────────────── */
 .dark {
-  /* Neutrals (per dark spec: same role positions, inverted hex) */
-  --gray-50: #111111;
-  --gray-100: #171717;
-  --gray-150: #1e1e1e;
-  --gray-200: #262626;
-  --gray-300: #404040;
-  --gray-400: #525252;
-  --gray-500: #737373;
-  --gray-600: #a3a3a3;
-  --gray-700: #d4d4d4;
-  --gray-800: #e5e5e5;
-  --gray-900: #f5f5f5;
-  --gray-950: #fafafa;
-
-  /* Teal (per dark spec) */
+  --ink-0: #16181b;
+  --ink-25: #131417;
+  --ink-50: #1a1c20;
+  --ink-100: #1f2226;
+  --ink-150: #262a2f;
+  --ink-200: #2c3036;
+  --ink-300: #3a3f46;
+  --ink-400: #5b616a;
+  --ink-500: #8a9099;
+  --ink-600: #a9aeb6;
+  --ink-700: #c8ccd2;
+  --ink-800: #e1e3e7;
+  --ink-900: #eef0f2;
+  --ink-950: #f7f8f9;
   --teal-50: #042f2e;
   --teal-100: #064e45;
   --teal-200: #0f766e;
@@ -439,8 +575,87 @@
   --teal-700: #99f6e4;
   --teal-800: #ccfbf1;
   --teal-900: #f0fdfa;
-
-  /* Clinical status (dark spec) */
+  --teal-950: #f0fdfa;
+  --sky-50: #082f49;
+  --sky-100: #0c4a6e;
+  --sky-200: #075985;
+  --sky-300: #0369a1;
+  --sky-400: #0284c7;
+  --sky-500: #38bdf8;
+  --sky-600: #7dd3fc;
+  --sky-700: #bae6fd;
+  --sky-800: #e0f2fe;
+  --sky-900: #f0f9ff;
+  --sky-950: #f0f9ff;
+  --iris-50: #1e1b4b;
+  --iris-100: #312e81;
+  --iris-200: #3730a3;
+  --iris-300: #4338ca;
+  --iris-400: #4f46e5;
+  --iris-500: #818cf8;
+  --iris-600: #a5b4fc;
+  --iris-700: #c7d2fe;
+  --iris-800: #e0e7ff;
+  --iris-900: #eef2ff;
+  --iris-950: #eef2ff;
+  --grape-50: #2e1065;
+  --grape-100: #4c1d95;
+  --grape-200: #5b21b6;
+  --grape-300: #6d28d9;
+  --grape-400: #7c3aed;
+  --grape-500: #a78bfa;
+  --grape-600: #c4b5fd;
+  --grape-700: #ddd6fe;
+  --grape-800: #ede9fe;
+  --grape-900: #f5f3ff;
+  --grape-950: #f5f3ff;
+  --plum-50: #321227;
+  --plum-100: #4a173a;
+  --plum-200: #671e51;
+  --plum-300: #862e6b;
+  --plum-400: #a94088;
+  --plum-500: #cb58a6;
+  --plum-600: #ed85c8;
+  --plum-700: #fda8dd;
+  --plum-800: #ffcdeb;
+  --plum-900: #fde7f4;
+  --plum-950: #fdf3f9;
+  --teal-solid: #2dd4bf;
+  --teal-on-solid: #042f2e;
+  --teal-tint: #0b2926;
+  --teal-edge: #134e4a;
+  --teal-text: #5eead4;
+  --teal-icon: #2dd4bf;
+  --sky-solid: #38bdf8;
+  --sky-on-solid: #082f49;
+  --sky-tint: #0c2533;
+  --sky-edge: #0c4a6e;
+  --sky-text: #7dd3fc;
+  --sky-icon: #38bdf8;
+  --iris-solid: #818cf8;
+  --iris-on-solid: #1e1b4b;
+  --iris-tint: #1d1f3d;
+  --iris-edge: #312e81;
+  --iris-text: #a5b4fc;
+  --iris-icon: #818cf8;
+  --grape-solid: #a78bfa;
+  --grape-on-solid: #2e1065;
+  --grape-tint: #231a3d;
+  --grape-edge: #4c1d95;
+  --grape-text: #c4b5fd;
+  --grape-icon: #a78bfa;
+  --plum-solid: #ed85c8;
+  --plum-on-solid: #321227;
+  --plum-tint: #2a1523;
+  --plum-edge: #671e51;
+  --plum-text: #fda8dd;
+  --plum-icon: #ed85c8;
+  --slate-solid: #c8ccd2;
+  --slate-on-solid: #16181b;
+  --slate-tint: #1f2226;
+  --slate-edge: #3a3f46;
+  --slate-text: #c8ccd2;
+  --slate-icon: #8a9099;
   --status-stable-bg: #052e16;
   --status-stable-fg: #4ade80;
   --status-critical-bg: #450a0a;
@@ -453,112 +668,31 @@
   --status-discharged-fg: #c4b5fd;
   --status-pending-bg: #262626;
   --status-pending-fg: #a3a3a3;
-
-  /* Alert — dark mode uses outline (transparent bg + red border + soft red text) */
   --alert-bg: transparent;
   --alert-border: #7f1d1d;
   --alert-fg: #fca5a5;
-
-  /* Semantic (dark spec) */
-  --background: #0a0a0a;
-  --foreground: #e5e5e5;
-  --card: #171717;
-  --card-foreground: #e5e5e5;
-  --popover: #171717;
-  --popover-foreground: #e5e5e5;
-  --primary: #2dd4bf;
-  --primary-foreground: #042f2e;
+  --status-critical-fg-aa: #fca5a5;
+  --status-caution-fg-aa: #fcd34d;
+  --background: #0f1012;
+  --popover: #1c1e22;
   --primary-hover: #5eead4;
-  --primary-active: #99f6e4;
-  --secondary: #262626;
-  --secondary-foreground: #e5e5e5;
-  --muted: #111111;
-  --muted-foreground: #a3a3a3;
-  --accent: #042f2e;
-  --accent-foreground: #5eead4;
-  --destructive: #fca5a5;
-  --destructive-foreground: #042f2e;
-  --border: #262626;
-  --input: #262626;
+  --destructive: #f87171;
+  --destructive-foreground: #1a0606;
   --ring: #2dd4bf;
+  --primary-active: #99f6e4;
 
-  /* Sidebar */
-  --sidebar: #111111;
-  --sidebar-foreground: #e5e5e5;
-  --sidebar-primary: #2dd4bf;
-  --sidebar-primary-foreground: #042f2e;
-  --sidebar-accent: var(--plum-50);
-  --sidebar-accent-foreground: var(--plum-800);
-  --sidebar-border: #262626;
-  --sidebar-ring: #2dd4bf;
-
-  /* Charts (brighter to read on dark) */
-  --chart-1: #2dd4bf;
-  --chart-2: var(--plum-600);
-  --chart-3: #99f6e4;
-  --chart-4: #a3a3a3;
-  --chart-5: #e5e5e5;
-
-  /* Brand + mint (dark) — alias the inverted teal ramp; 950 is the light
-     end so the scale flips like the rest (forced-dark pins it back). */
-  --teal-950: #f0fdfa;
-  --brand-50: var(--teal-50);
-  --brand-100: var(--teal-100);
-  --brand-200: var(--teal-200);
-  --brand-300: var(--teal-300);
-  --brand-400: var(--teal-400);
-  --brand-500: var(--teal-500);
-  --brand-600: var(--teal-600);
-  --brand-700: var(--teal-700);
-  --brand-800: var(--teal-800);
-  --brand-900: var(--teal-900);
-  --brand-950: var(--teal-950);
-
-  --mint-50: var(--teal-50);
-  --mint-100: var(--teal-100);
-  --mint-200: var(--teal-200);
-  --mint-300: var(--teal-300);
-  --mint-400: var(--teal-400);
-  --mint-500: var(--teal-500);
-  --mint-600: var(--teal-600);
-  --mint-700: var(--teal-700);
-  --mint-800: var(--teal-800);
-  --mint-900: var(--teal-900);
-  --mint-950: var(--teal-950);
-
-  /* Plum (dark) — inverted like teal: 50 is the deep end, 600 the bright anchor */
-  --plum-50: #321227;
-  --plum-100: #4a173a;
-  --plum-200: #671e51;
-  --plum-300: #862e6b;
-  --plum-400: #a94088;
-  --plum-500: #cb58a6;
-  --plum-600: #ed85c8;
-  --plum-700: #fda8dd;
-  --plum-800: #ffcdeb;
-  --plum-900: #fde7f4;
-  --plum-950: #fdf3f9;
-
-  /* Gradients (dark — same hue, dropped in lightness so they read as depth) */
-  --gradient-hero:
-    radial-gradient(120% 120% at 100% 100%, rgba(106, 25, 82, 0.8) 0%, transparent 55%),
-    linear-gradient(158deg, #021a19 0%, #042f2e 58%, #134e4a 100%);
-  --gradient-band:
-    radial-gradient(120% 120% at 100% 100%, rgba(106, 25, 82, 0.8) 0%, transparent 55%),
-    linear-gradient(180deg, #042f2e 0%, #115e59 100%);
-  --gradient-wash: linear-gradient(180deg, #0b1a19 0%, #0a0a0a 100%);
-  --gradient-accent: linear-gradient(150deg, #0f766e 0%, #115e59 100%);
-  --gradient-signature: linear-gradient(135deg, #134e4a 0%, #6a1952 100%);
-  --gradient-card: linear-gradient(165deg, #171717 0%, #0f1f1e 100%);
-
-  /* Shadows (dark — 3-5x stronger + faint white inner edge per spec) */
-  --shadow-xs-value: 0 1px 2px rgba(0, 0, 0, 0.3);
-  --shadow-sm-value: 0 1px 3px rgba(0, 0, 0, 0.4), 0 1px 2px rgba(0, 0, 0, 0.3);
-  --shadow-md-value: 0 4px 6px -1px rgba(0, 0, 0, 0.4), 0 2px 4px -2px rgba(0, 0, 0, 0.3);
-  --shadow-lg-value: 0 10px 15px -3px rgba(0, 0, 0, 0.5), 0 4px 6px -4px rgba(0, 0, 0, 0.3);
-  --shadow-card-value: 0 0 0 1px rgba(255, 255, 255, 0.06), 0 1px 3px rgba(0, 0, 0, 0.4);
-  --shadow-popover-value: 0 0 0 1px rgba(255, 255, 255, 0.08), 0 12px 24px -4px rgba(0, 0, 0, 0.6);
-  --shadow-focus-value: 0 0 0 2px rgba(45, 212, 191, 0.3);
+  /* Shadows */
+  --shadow-xs-value: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow-control-value: 0 1px 2px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  --shadow-primary-value: inset 0 1px 0 rgba(255, 255, 255, 0.35), 0 1px 2px rgba(0, 0, 0, 0.5);
+  --shadow-card-value: 0 0 0 1px rgba(255, 255, 255, 0.06), 0 1px 3px rgba(0, 0, 0, 0.5);
+  --shadow-popover-value:
+    0 0 0 1px rgba(255, 255, 255, 0.08), 0 4px 8px -2px rgba(0, 0, 0, 0.5),
+    0 16px 32px -8px rgba(0, 0, 0, 0.7);
+  --shadow-focus-value: 0 0 0 1px #0f1012, 0 0 0 3px #2dd4bf;
+  --shadow-sm-value: 0 1px 3px rgba(0, 0, 0, 0.5), 0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow-md-value: 0 4px 6px -1px rgba(0, 0, 0, 0.5), 0 2px 4px -2px rgba(0, 0, 0, 0.4);
+  --shadow-lg-value: 0 10px 15px -3px rgba(0, 0, 0, 0.6), 0 4px 6px -4px rgba(0, 0, 0, 0.4);
 }
 
 /* ─── Landing-page animations ─────────────────────────────────────────────
@@ -808,22 +942,24 @@
 
 /* ADR 0098 Law 3: the Emergency Pathway and the symptom catalog are
    permanently light. This re-pins every :root token on the scoped element
-   so its subtree ignores `.dark` — the forced-dark utility above, mirrored.
-   Applied to the E1–E3, crisis/SV and S1–S4 wrappers only. */
+   so its subtree ignores `.dark`. Applied to the E1–E3, crisis/SV and S1–S4
+   wrappers only. Generated with the :root block — keep them in step. */
 @utility medsync-forced-light {
   color-scheme: light;
-  --gray-50: #fafafa;
-  --gray-100: #f5f5f5;
-  --gray-150: #efefef;
-  --gray-200: #e5e5e5;
-  --gray-300: #d4d4d4;
-  --gray-400: #a3a3a3;
-  --gray-500: #737373;
-  --gray-600: #525252;
-  --gray-700: #404040;
-  --gray-800: #262626;
-  --gray-900: #171717;
-  --gray-950: #0a0a0a;
+  --ink-0: #ffffff;
+  --ink-25: #fbfbfc;
+  --ink-50: #f6f7f8;
+  --ink-100: #f0f1f3;
+  --ink-150: #e9eaed;
+  --ink-200: #e3e5e8;
+  --ink-300: #d0d3d9;
+  --ink-400: #a0a5ae;
+  --ink-500: #6c717b;
+  --ink-600: #545963;
+  --ink-700: #3d4149;
+  --ink-800: #272a30;
+  --ink-900: #17191d;
+  --ink-950: #0f1012;
   --teal-50: #f0fdfa;
   --teal-100: #ccfbf1;
   --teal-200: #99f6e4;
@@ -834,6 +970,87 @@
   --teal-700: #0f766e;
   --teal-800: #115e59;
   --teal-900: #134e4a;
+  --teal-950: #042f2e;
+  --sky-50: #f0f9ff;
+  --sky-100: #e0f2fe;
+  --sky-200: #bae6fd;
+  --sky-300: #7dd3fc;
+  --sky-400: #38bdf8;
+  --sky-500: #0ea5e9;
+  --sky-600: #0284c7;
+  --sky-700: #0369a1;
+  --sky-800: #075985;
+  --sky-900: #0c4a6e;
+  --sky-950: #082f49;
+  --iris-50: #eef2ff;
+  --iris-100: #e0e7ff;
+  --iris-200: #c7d2fe;
+  --iris-300: #a5b4fc;
+  --iris-400: #818cf8;
+  --iris-500: #6366f1;
+  --iris-600: #4f46e5;
+  --iris-700: #4338ca;
+  --iris-800: #3730a3;
+  --iris-900: #312e81;
+  --iris-950: #1e1b4b;
+  --grape-50: #f5f3ff;
+  --grape-100: #ede9fe;
+  --grape-200: #ddd6fe;
+  --grape-300: #c4b5fd;
+  --grape-400: #a78bfa;
+  --grape-500: #8b5cf6;
+  --grape-600: #7c3aed;
+  --grape-700: #6d28d9;
+  --grape-800: #5b21b6;
+  --grape-900: #4c1d95;
+  --grape-950: #2e1065;
+  --plum-50: #fdf3f9;
+  --plum-100: #fee4f3;
+  --plum-200: #fecbe9;
+  --plum-300: #fea2dc;
+  --plum-400: #ea7bc4;
+  --plum-500: #c953a3;
+  --plum-600: #9f2f7e;
+  --plum-700: #87236a;
+  --plum-800: #6a1952;
+  --plum-900: #4e113c;
+  --plum-950: #321227;
+  --teal-solid: #0f766e;
+  --teal-on-solid: #ffffff;
+  --teal-tint: #f0fdfa;
+  --teal-edge: #ccfbf1;
+  --teal-text: #0f766e;
+  --teal-icon: #0d9488;
+  --sky-solid: #0369a1;
+  --sky-on-solid: #ffffff;
+  --sky-tint: #f0f9ff;
+  --sky-edge: #bae6fd;
+  --sky-text: #0369a1;
+  --sky-icon: #0284c7;
+  --iris-solid: #4f46e5;
+  --iris-on-solid: #ffffff;
+  --iris-tint: #eef2ff;
+  --iris-edge: #c7d2fe;
+  --iris-text: #4338ca;
+  --iris-icon: #4f46e5;
+  --grape-solid: #7c3aed;
+  --grape-on-solid: #ffffff;
+  --grape-tint: #f5f3ff;
+  --grape-edge: #ddd6fe;
+  --grape-text: #6d28d9;
+  --grape-icon: #7c3aed;
+  --plum-solid: #9f2f7e;
+  --plum-on-solid: #ffffff;
+  --plum-tint: #fdf3f9;
+  --plum-edge: #fecbe9;
+  --plum-text: #87236a;
+  --plum-icon: #c953a3;
+  --slate-solid: #3d4149;
+  --slate-on-solid: #ffffff;
+  --slate-tint: #f0f1f3;
+  --slate-edge: #e3e5e8;
+  --slate-text: #3d4149;
+  --slate-icon: #6c717b;
   --status-stable-bg: #dcfce7;
   --status-stable-fg: #15803d;
   --status-critical-bg: #fee2e2;
@@ -849,99 +1066,96 @@
   --alert-bg: #fef2f2;
   --alert-border: #fee2e2;
   --alert-fg: #dc2626;
+  --status-critical-fg-aa: #b91c1c;
+  --status-caution-fg-aa: #92400e;
   --background: #ffffff;
-  --foreground: #171717;
-  --card: #ffffff;
-  --card-foreground: #171717;
+  --foreground: var(--ink-900);
+  --card: var(--ink-0);
+  --card-foreground: var(--ink-900);
   --popover: #ffffff;
-  --popover-foreground: #171717;
-  --primary: #0d9488;
-  --primary-foreground: #ffffff;
-  --primary-hover: #0f766e;
-  --primary-active: #115e59;
-  --secondary: #ffffff;
-  --secondary-foreground: #171717;
-  --muted: #fafafa;
-  --muted-foreground: #737373;
-  --accent: #f0fdfa;
-  --accent-foreground: #0d9488;
+  --popover-foreground: var(--ink-900);
+  --primary: var(--teal-solid);
+  --primary-foreground: var(--teal-on-solid);
+  --primary-hover: #115e59;
+  --secondary: var(--ink-0);
+  --secondary-foreground: var(--ink-900);
+  --muted: var(--ink-25);
+  --muted-foreground: var(--ink-500);
+  --accent: var(--teal-tint);
+  --accent-foreground: var(--teal-text);
   --destructive: #dc2626;
   --destructive-foreground: #ffffff;
-  --border: #e5e5e5;
-  --input: #e5e5e5;
-  --ring: #14b8a6;
-  --sidebar: #fafafa;
-  --sidebar-foreground: #171717;
-  --sidebar-primary: #0d9488;
-  --sidebar-primary-foreground: #ffffff;
-  --sidebar-border: #e5e5e5;
-  --sidebar-ring: #14b8a6;
-  --chart-1: #0d9488;
-  --chart-3: #5eead4;
-  --chart-4: #525252;
-  --chart-5: #171717;
-  --teal-950: #042f2e;
+  --border: var(--ink-200);
+  --input: var(--ink-300);
+  --ring: #0d9488;
+  --sidebar: var(--ink-25);
+  --sidebar-foreground: var(--ink-700);
+  --sidebar-border: var(--ink-200);
+  --sidebar-accent: var(--ink-100);
+  --sidebar-accent-foreground: var(--ink-900);
+  --chart-1: var(--teal-icon);
+  --chart-2: var(--sky-icon);
+  --chart-3: var(--iris-icon);
+  --chart-4: var(--grape-icon);
+  --chart-5: var(--plum-icon);
+  --primary-active: #134e4a;
+  --sidebar-primary: var(--primary);
+  --sidebar-primary-foreground: var(--primary-foreground);
+  --sidebar-ring: var(--ring);
+  --gray-50: var(--ink-50);
+  --gray-100: var(--ink-100);
+  --gray-150: var(--ink-150);
+  --gray-200: var(--ink-200);
+  --gray-300: var(--ink-300);
+  --gray-400: var(--ink-400);
+  --gray-500: var(--ink-500);
+  --gray-600: var(--ink-600);
+  --gray-700: var(--ink-700);
+  --gray-800: var(--ink-800);
+  --gray-900: var(--ink-900);
+  --gray-950: var(--ink-950);
   --brand-50: var(--teal-50);
-  --brand-100: var(--teal-100);
-  --brand-200: var(--teal-200);
-  --brand-300: var(--teal-300);
-  --brand-400: var(--teal-400);
-  --brand-500: var(--teal-500);
-  --brand-600: var(--teal-600);
-  --brand-700: var(--teal-700);
-  --brand-800: var(--teal-800);
-  --brand-900: var(--teal-900);
-  --brand-950: var(--teal-950);
   --mint-50: var(--teal-50);
+  --brand-100: var(--teal-100);
   --mint-100: var(--teal-100);
+  --brand-200: var(--teal-200);
   --mint-200: var(--teal-200);
+  --brand-300: var(--teal-300);
   --mint-300: var(--teal-300);
+  --brand-400: var(--teal-400);
   --mint-400: var(--teal-400);
+  --brand-500: var(--teal-500);
   --mint-500: var(--teal-500);
+  --brand-600: var(--teal-600);
   --mint-600: var(--teal-600);
+  --brand-700: var(--teal-700);
   --mint-700: var(--teal-700);
+  --brand-800: var(--teal-800);
   --mint-800: var(--teal-800);
+  --brand-900: var(--teal-900);
   --mint-900: var(--teal-900);
+  --brand-950: var(--teal-950);
   --mint-950: var(--teal-950);
-  --plum-50: #fdf3f9;
-  --plum-100: #fee4f3;
-  --plum-200: #fecbe9;
-  --plum-300: #fea2dc;
-  --plum-400: #ea7bc4;
-  --plum-500: #c953a3;
-  --plum-600: #9f2f7e;
-  --plum-700: #87236a;
-  --plum-800: #6a1952;
-  --plum-900: #4e113c;
-  --plum-950: #321227;
-  --gradient-wash: linear-gradient(180deg, #f0fdfa 0%, #ffffff 100%);
-  --gradient-accent: linear-gradient(150deg, #5eead4 0%, #99f6e4 100%);
-  --gradient-signature: linear-gradient(135deg, #0f766e 0%, #9f2f7e 100%);
-  --gradient-card: linear-gradient(165deg, #ffffff 0%, #f0fdfa 100%);
-  --shadow-xs-value: 0 1px 2px rgba(0, 0, 0, 0.04);
-  --shadow-sm-value: 0 1px 3px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.04);
-  --shadow-md-value: 0 4px 6px -1px rgba(0, 0, 0, 0.06), 0 2px 4px -2px rgba(0, 0, 0, 0.04);
-  --shadow-lg-value: 0 10px 15px -3px rgba(0, 0, 0, 0.06), 0 4px 6px -4px rgba(0, 0, 0, 0.04);
-  --shadow-card-value: 0 0 0 1px rgba(0, 0, 0, 0.06), 0 1px 3px rgba(0, 0, 0, 0.04);
-  --shadow-popover-value: 0 0 0 1px rgba(0, 0, 0, 0.06), 0 12px 24px -4px rgba(0, 0, 0, 0.12);
-  --shadow-focus-value: 0 0 0 2px rgba(20, 184, 166, 0.4);
+  --shadow-xs-value: 0 1px 2px rgba(16, 18, 22, 0.05);
+  --shadow-control-value: 0 1px 2px rgba(16, 18, 22, 0.06), inset 0 -1px 0 rgba(16, 18, 22, 0.04);
+  --shadow-primary-value:
+    inset 0 1px 0 rgba(255, 255, 255, 0.16), 0 1px 2px rgba(15, 118, 110, 0.3);
+  --shadow-card-value: 0 0 0 1px rgba(16, 18, 22, 0.06), 0 1px 3px rgba(16, 18, 22, 0.05);
+  --shadow-popover-value:
+    0 0 0 1px rgba(16, 18, 22, 0.08), 0 4px 8px -2px rgba(16, 18, 22, 0.06),
+    0 16px 32px -8px rgba(16, 18, 22, 0.16);
+  --shadow-focus-value: 0 0 0 1px #ffffff, 0 0 0 3px #0d9488;
+  --shadow-sm-value: 0 1px 3px rgba(16, 18, 22, 0.06), 0 1px 2px rgba(16, 18, 22, 0.04);
+  --shadow-md-value: 0 4px 6px -1px rgba(16, 18, 22, 0.06), 0 2px 4px -2px rgba(16, 18, 22, 0.04);
+  --shadow-lg-value: 0 10px 15px -3px rgba(16, 18, 22, 0.08), 0 4px 6px -4px rgba(16, 18, 22, 0.05);
 }
 
 /* ─── Forced-dark sections ───────────────────────────────────────────────
-   The mid-band (§08) and final-CTA (§16) are intentionally always-dark
-   surfaces regardless of theme — light teal text on a deep teal ground in
-   both light and dark modes. But the brand/mint (= teal) scales flip
-   between modes (brand-50 = #f0fdfa light, #042f2e dark), so any brand
-   utility on these sections would inverse in dark mode and the text would
-   disappear into the background.
-
-   This utility pins every teal variable to its light-mode value within the
-   scoped element and its descendants, and re-points brand/mint at them
-   there (a var() alias resolves on the element that declares it, so the
-   :root aliases would not follow). `text-brand-50` then always resolves
-   to the light shade these dark surfaces were designed against, and the
-   950 step stays deep so the band's own `bg-brand-950` does not turn
-   near-white in dark. */
+   Always-dark bands (the landing FAQ band, the doctor rail's marks) sit on a
+   deep ground in both themes, but the ramps flip between modes, so a ramp
+   utility on them would invert in dark and vanish. This pins every ramp to
+   its light values within the scoped element (and re-points brand/mint, since
+   a var() alias resolves on the element that declares it). */
 @utility medsync-forced-dark {
   --teal-50: #f0fdfa;
   --teal-100: #ccfbf1;
@@ -954,32 +1168,39 @@
   --teal-800: #115e59;
   --teal-900: #134e4a;
   --teal-950: #042f2e;
-
-  --brand-50: var(--teal-50);
-  --brand-100: var(--teal-100);
-  --brand-200: var(--teal-200);
-  --brand-300: var(--teal-300);
-  --brand-400: var(--teal-400);
-  --brand-500: var(--teal-500);
-  --brand-600: var(--teal-600);
-  --brand-700: var(--teal-700);
-  --brand-800: var(--teal-800);
-  --brand-900: var(--teal-900);
-  --brand-950: var(--teal-950);
-
-  --mint-50: var(--teal-50);
-  --mint-100: var(--teal-100);
-  --mint-200: var(--teal-200);
-  --mint-300: var(--teal-300);
-  --mint-400: var(--teal-400);
-  --mint-500: var(--teal-500);
-  --mint-600: var(--teal-600);
-  --mint-700: var(--teal-700);
-  --mint-800: var(--teal-800);
-  --mint-900: var(--teal-900);
-  --mint-950: var(--teal-950);
-
-  /* Plum pinned to its light values for the same reason as teal above. */
+  --sky-50: #f0f9ff;
+  --sky-100: #e0f2fe;
+  --sky-200: #bae6fd;
+  --sky-300: #7dd3fc;
+  --sky-400: #38bdf8;
+  --sky-500: #0ea5e9;
+  --sky-600: #0284c7;
+  --sky-700: #0369a1;
+  --sky-800: #075985;
+  --sky-900: #0c4a6e;
+  --sky-950: #082f49;
+  --iris-50: #eef2ff;
+  --iris-100: #e0e7ff;
+  --iris-200: #c7d2fe;
+  --iris-300: #a5b4fc;
+  --iris-400: #818cf8;
+  --iris-500: #6366f1;
+  --iris-600: #4f46e5;
+  --iris-700: #4338ca;
+  --iris-800: #3730a3;
+  --iris-900: #312e81;
+  --iris-950: #1e1b4b;
+  --grape-50: #f5f3ff;
+  --grape-100: #ede9fe;
+  --grape-200: #ddd6fe;
+  --grape-300: #c4b5fd;
+  --grape-400: #a78bfa;
+  --grape-500: #8b5cf6;
+  --grape-600: #7c3aed;
+  --grape-700: #6d28d9;
+  --grape-800: #5b21b6;
+  --grape-900: #4c1d95;
+  --grape-950: #2e1065;
   --plum-50: #fdf3f9;
   --plum-100: #fee4f3;
   --plum-200: #fecbe9;
@@ -991,14 +1212,28 @@
   --plum-800: #6a1952;
   --plum-900: #4e113c;
   --plum-950: #321227;
-
-  /* Gradients on a forced-dark band use the deep end of the ramp in both modes. */
-  --gradient-hero:
-    radial-gradient(120% 120% at 100% 100%, rgba(135, 35, 106, 0.85) 0%, transparent 55%),
-    linear-gradient(158deg, #042f2e 0%, #134e4a 58%, #0f766e 100%);
-  --gradient-band:
-    radial-gradient(120% 120% at 100% 100%, rgba(135, 35, 106, 0.85) 0%, transparent 55%),
-    linear-gradient(180deg, #042f2e 0%, #115e59 100%);
+  --brand-50: var(--teal-50);
+  --mint-50: var(--teal-50);
+  --brand-100: var(--teal-100);
+  --mint-100: var(--teal-100);
+  --brand-200: var(--teal-200);
+  --mint-200: var(--teal-200);
+  --brand-300: var(--teal-300);
+  --mint-300: var(--teal-300);
+  --brand-400: var(--teal-400);
+  --mint-400: var(--teal-400);
+  --brand-500: var(--teal-500);
+  --mint-500: var(--teal-500);
+  --brand-600: var(--teal-600);
+  --mint-600: var(--teal-600);
+  --brand-700: var(--teal-700);
+  --mint-700: var(--teal-700);
+  --brand-800: var(--teal-800);
+  --mint-800: var(--teal-800);
+  --brand-900: var(--teal-900);
+  --mint-900: var(--teal-900);
+  --brand-950: var(--teal-950);
+  --mint-950: var(--teal-950);
 }
 
 /* Base layer — minimal global rules. Components own their styles. */
@@ -1011,7 +1246,7 @@
 
   html {
     font-family: var(--font-sans);
-    font-feature-settings: "ss01", "cv01", "cv11";
+    font-feature-settings: "ss01", "cv11";
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     text-rendering: optimizeLegibility;
@@ -1046,9 +1281,10 @@
   }
 
   /* Uniform keyboard-focus ring for any interactive element that doesn't
-     opt out (links, bare buttons, summary, etc.). Pointer/touch focus is
-     left alone via :focus-visible. Components that own their own focus
-     ring (e.g. components/ui/button.tsx) cancel the default and re-style. */
+     opt out (links, bare buttons, summary, etc.): a solid 2px `ring`
+     (3.7:1 on white, 8.9:1 on the dark ground). Pointer/touch focus is left
+     alone via :focus-visible. Components that own their own focus ring
+     (e.g. components/ui/button.tsx) cancel the default and re-style. */
   :where(a, button, summary, [role="button"], [tabindex]):focus-visible {
     outline: 2px solid var(--color-ring);
     outline-offset: 2px;

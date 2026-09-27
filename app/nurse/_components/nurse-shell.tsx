@@ -3,9 +3,11 @@ import type { ReactNode } from "react";
 import Link from "next/link";
 import { ShieldCheckIcon } from "lucide-react";
 
-import { cn } from "@/lib/utils";
+import { Avatar } from "@/components/medsync/avatar";
+import { SIDEBAR_CLASS, SidebarSearch, SidebarWorkspace } from "@/components/medsync/sidebar-nav";
+import { Tag } from "@/components/medsync/tag";
 import { NURSE_FEATURE_AREAS, nurseFeaturePath } from "../_lib/features";
-import { NurseSidebarItem } from "./nurse-sidebar-item";
+import { NurseCommandBar, NurseSidebarItem } from "./nurse-sidebar-item";
 import { SidebarGate } from "./sidebar-gate";
 
 const CADRE_LABEL: Record<string, string> = {
@@ -30,8 +32,8 @@ const LEVEL_LABEL: Record<string, string> = {
 };
 
 /**
- * Nurse workspace shell. Mirrors the doctor shell architecture:
- * 240px sidebar (lg+), 52px top bar with hospital + cadre/grade +
+ * Nurse workspace shell. Mirrors the doctor shell architecture (MedSync
+ * Chroma, ADR 0162): 248px sidebar (lg+), 48px top bar with hospital + cadre/grade +
  * in-charge pills, persistent identity. The cadre + grade pills are
  * the operational anchor — a nurse must always know their scope.
  *
@@ -46,7 +48,6 @@ export function NurseShell({ scope, children }: { scope: NurseScope; children: R
     return true;
   });
 
-  const initial = (scope.fullName ?? scope.userEmail).slice(0, 1).toUpperCase();
   const cadreLabel = CADRE_LABEL[scope.cadreCode] ?? scope.cadreCode;
   const gradeLabel = scope.cadreGradeCode ? GRADE_LABEL[scope.cadreGradeCode] : null;
   const cadrePill = gradeLabel ? `${gradeLabel} ${cadreLabel}` : cadreLabel;
@@ -54,27 +55,14 @@ export function NurseShell({ scope, children }: { scope: NurseScope; children: R
   return (
     <div className="bg-background text-foreground flex min-h-svh w-full">
       <SidebarGate>
-        <aside
-          aria-label="Nurse workspace navigation"
-          className="bg-muted/40 border-border hidden w-[240px] shrink-0 flex-col border-r lg:flex"
-        >
-          <div className="border-border flex flex-col gap-0.5 border-b px-5 py-3">
-            <Link
-              href="/"
-              className="font-display text-foreground text-body-m font-medium tracking-[-0.01em] transition-opacity hover:opacity-80"
-            >
-              MedSync
-            </Link>
-            <span
-              className="text-muted-foreground truncate font-mono text-[10px] tracking-[0.12em] uppercase"
-              title={scope.hospitalName}
-            >
-              {scope.hospitalName}
-            </span>
+        <aside aria-label="Nurse workspace navigation" className={SIDEBAR_CLASS}>
+          <div className="flex flex-col gap-1.5 p-2">
+            <SidebarWorkspace name={scope.hospitalName} sub="Nursing workspace" href="/nurse" />
+            <SidebarSearch />
           </div>
 
-          <nav className="flex-1 overflow-y-auto p-2">
-            <ul className="flex flex-col gap-px">
+          <nav className="flex-1 overflow-y-auto px-2 pb-2">
+            <ul className="flex flex-col gap-0.5">
               {navItems.map((item) => (
                 <li key={item.slug}>
                   <NurseSidebarItem
@@ -89,23 +77,15 @@ export function NurseShell({ scope, children }: { scope: NurseScope; children: R
             </ul>
           </nav>
 
-          <div className="border-border border-t p-3">
-            <div className="flex items-center gap-2.5 px-1 py-1.5">
-              <div
-                aria-hidden
-                className="bg-plum-100 text-caption text-plum-800 flex size-7 shrink-0 items-center justify-center rounded-full font-mono font-semibold"
-              >
-                {initial}
-              </div>
+          <div className="border-sidebar-border border-t p-2">
+            <div className="flex items-center gap-2 px-1.5 py-1.5">
+              <Avatar name={scope.fullName ?? scope.userEmail} hue="iris" size="md" />
               <div className="min-w-0 flex-1">
-                <p className="text-foreground truncate text-[12px] font-medium">
+                <p className="text-foreground text-label truncate">
                   {scope.fullName ?? scope.userEmail}
                 </p>
-                <p className="text-muted-foreground inline-flex items-center gap-1 font-mono text-[10px] tracking-[0.1em] uppercase">
-                  <ShieldCheckIcon
-                    className="text-brand-600 dark:text-brand-400 size-3"
-                    aria-hidden
-                  />
+                <p className="text-muted-foreground inline-flex items-center gap-1 text-[11px]">
+                  <ShieldCheckIcon className="size-3" aria-hidden />
                   MFA · AAL2
                 </p>
               </div>
@@ -115,12 +95,9 @@ export function NurseShell({ scope, children }: { scope: NurseScope; children: R
       </SidebarGate>
 
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="border-border glass sticky top-0 z-30 flex h-[52px] items-center justify-between gap-3 border-b px-4 sm:px-6">
+        <header className="border-border glass sticky top-0 z-30 flex h-12 items-center justify-between gap-3 border-b px-4 sm:px-6">
           <div className="flex items-center gap-2.5 lg:hidden">
-            <Link
-              href="/nurse"
-              className="font-display text-foreground text-body-m font-medium tracking-[-0.01em]"
-            >
+            <Link href="/nurse" className="font-display text-foreground text-body-m font-semibold">
               MedSync
             </Link>
           </div>
@@ -128,49 +105,39 @@ export function NurseShell({ scope, children }: { scope: NurseScope; children: R
           <div className="hidden min-w-0 items-center gap-2 lg:flex">
             <span
               aria-label={`Signed into ${scope.hospitalName} as ${cadrePill}`}
-              className="text-muted-foreground inline-flex min-w-0 items-center gap-1.5 font-mono text-[10px] tracking-[0.14em] uppercase"
+              className="text-muted-foreground text-caption inline-flex min-w-0 items-center gap-1.5 font-normal"
             >
-              <span
-                aria-hidden
-                className="pulse-dot bg-brand-500 ring-brand-500/20 size-1.5 shrink-0 rounded-full ring-2"
-              />
-              <span className="truncate" title={scope.hospitalName}>
+              <span className="text-foreground truncate font-medium" title={scope.hospitalName}>
                 {scope.hospitalName}
               </span>
               <span className="text-muted-foreground/70" aria-hidden>
                 ·
               </span>
-              <span className="text-muted-foreground/70">
-                {LEVEL_LABEL[scope.hospitalLevel] ?? scope.hospitalLevel}
-              </span>
+              <span>{LEVEL_LABEL[scope.hospitalLevel] ?? scope.hospitalLevel}</span>
               <span className="text-muted-foreground/70" aria-hidden>
                 ·
               </span>
               <span className="truncate">{scope.departmentName}</span>
             </span>
-            <span
-              className={cn(
-                "scale-in ml-2 inline-flex items-center gap-1 rounded-full px-2 py-0.5 font-mono text-[10px] tracking-[0.12em] uppercase",
-                scope.isEnrolled
-                  ? "bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-200"
-                  : "bg-brand-100 text-brand-800 dark:bg-brand-900/40 dark:text-brand-200",
-              )}
-              title={`Cadre: ${cadrePill}`}
-            >
+            {/* Cadre and in-charge say who you are, not a clinical state: tags, never amber. */}
+            <Tag hue="iris" className="ml-2" title={`Cadre: ${cadrePill}`}>
               {cadrePill}
-            </span>
+            </Tag>
             {scope.isInCharge ? (
-              <span
-                className="scale-in inline-flex items-center gap-1 rounded-full bg-blue-100 px-2 py-0.5 font-mono text-[10px] tracking-[0.12em] text-blue-800 uppercase dark:bg-blue-900/40 dark:text-blue-200"
-                style={{ animationDelay: "80ms" }}
-                title="You are currently ward in-charge"
-              >
+              <Tag hue="plum" title="You are currently ward in-charge">
                 In-charge
-              </span>
+              </Tag>
             ) : null}
           </div>
 
           <div className="flex items-center justify-end gap-3">
+            <NurseCommandBar
+              items={navItems.map((item) => ({
+                href: nurseFeaturePath(item.slug),
+                label: item.label,
+                iconKey: item.iconKey,
+              }))}
+            />
             <Link
               href="/sign-out"
               className="text-muted-foreground hover:text-foreground text-[12px] underline-offset-4 transition-colors hover:underline"

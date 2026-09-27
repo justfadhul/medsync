@@ -85,10 +85,7 @@ export default async function BreakGlassPage() {
           <span className="bg-brand-500 size-1 rounded-full" />
           Break-glass · platform-level patient access
         </span>
-        <h1
-          className="font-display text-foreground text-heading-l sm:text-display-s leading-[1.1] tracking-[-0.02em]"
-          style={{ fontWeight: 400 }}
-        >
+        <h1 className="font-display text-display-s text-foreground" style={{ fontWeight: 400 }}>
           Break-glass
         </h1>
         <p className="text-muted-foreground max-w-[68ch] text-[13.5px]">
@@ -145,7 +142,7 @@ export default async function BreakGlassPage() {
                         <span className="scale-in bg-brand-500/15 text-brand-800 dark:text-brand-200 inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 font-mono text-[10px] tracking-[0.14em] uppercase">
                           <span
                             aria-hidden
-                            className="pulse-dot bg-brand-600 dark:bg-brand-300 size-1.5 rounded-full"
+                            className="bg-brand-600 dark:bg-brand-300 size-1.5 rounded-full"
                           />
                           active
                         </span>

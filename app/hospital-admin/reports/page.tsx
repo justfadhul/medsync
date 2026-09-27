@@ -91,18 +91,16 @@ export default async function ReportsPage({ searchParams }: PageProps) {
     <div className="mx-auto flex w-full max-w-4xl flex-col gap-6 px-4 py-8 sm:px-6 sm:py-10">
       <header className="flex flex-col gap-2">
         <span className="text-muted-foreground inline-flex w-fit items-center gap-1.5 font-mono text-[10px] tracking-[0.16em] uppercase">
-          <span aria-hidden className="bg-brand-500 ring-brand-500/20 size-1 rounded-full ring-2" />
+          <span aria-hidden className="bg-slate-icon ring-slate-edge size-1 rounded-full ring-2" />
           {scope.hospitalName} · Reports
         </span>
-        <h1 className="font-display text-foreground sm:text-heading-l text-[24px] leading-[1.15] font-medium tracking-[-0.015em]">
-          Reports
-        </h1>
+        <h1 className="font-display text-display-s text-foreground">Reports</h1>
         <p className="text-muted-foreground max-w-2xl text-[13.5px] leading-relaxed">
           How this hospital&apos;s booked access is running. Every figure states the window it was
           measured over and what it was divided by; a rate with fewer than {MIN_RATE_SAMPLE} in the
           denominator is not printed.
         </p>
-        <div className="bg-brand-500/60 dark:bg-brand-400/50 h-px w-10" aria-hidden />
+        <div className="bg-ink-300 h-px w-10" aria-hidden />
       </header>
 
       <nav aria-label="Report window" className="flex flex-wrap items-center gap-2">
@@ -196,7 +194,7 @@ export default async function ReportsPage({ searchParams }: PageProps) {
         className="border-border bg-card flex flex-col rounded-lg border"
       >
         <div className="flex flex-col gap-1 px-6 py-5">
-          <h2 id="lines-heading" className="text-foreground text-heading-s font-medium">
+          <h2 id="lines-heading" className="text-foreground text-heading-s">
             By service line
           </h2>
           <p className="text-muted-foreground text-body-s max-w-xl leading-relaxed">
@@ -215,7 +213,7 @@ export default async function ReportsPage({ searchParams }: PageProps) {
         className="border-border bg-card flex flex-col rounded-lg border"
       >
         <div className="flex flex-col gap-1 px-6 py-5">
-          <h2 id="sessions-heading" className="text-foreground text-heading-s font-medium">
+          <h2 id="sessions-heading" className="text-foreground text-heading-s">
             By clinic day
           </h2>
           <p className="text-muted-foreground text-body-s max-w-xl leading-relaxed">
@@ -261,7 +259,7 @@ function Metric({
       <span
         className={cn(
           "text-foreground font-medium tabular-nums",
-          value.length > 12 ? "text-body-m" : "font-display text-heading-m leading-none",
+          value.length > 12 ? "text-body-m" : "text-heading-m leading-none",
         )}
       >
         {value}

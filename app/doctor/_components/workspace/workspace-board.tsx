@@ -427,7 +427,7 @@ export function WorkspaceBoard(props: WorkspaceBoardProps) {
                 if (l.collapsed && lane === "all" && !q) {
                   return (
                     <details key={l.id} className="group flex flex-col gap-2">
-                      <summary className="text-heading-s text-foreground flex cursor-default list-none items-baseline gap-2 font-medium [&::-webkit-details-marker]:hidden">
+                      <summary className="text-heading-s text-foreground flex cursor-default list-none items-baseline gap-2 [&::-webkit-details-marker]:hidden">
                         <ChevronRightIcon
                           aria-hidden
                           className="text-muted-foreground size-4 self-center transition-transform duration-150 group-open:rotate-90 motion-reduce:transition-none"
@@ -446,7 +446,7 @@ export function WorkspaceBoard(props: WorkspaceBoardProps) {
                   >
                     <h2
                       id={`lane-${l.id}`}
-                      className="text-heading-s text-foreground flex items-baseline gap-2 font-medium"
+                      className="text-heading-s text-foreground flex items-baseline gap-2"
                     >
                       {heading}
                     </h2>
@@ -470,7 +470,7 @@ export function WorkspaceBoard(props: WorkspaceBoardProps) {
         {wide ? (
           <aside
             aria-label="Patient"
-            className="border-border bg-card sticky top-[76px] hidden h-[calc(100svh-96px)] w-90 shrink-0 overflow-y-auto rounded-xl border p-5 xl:block"
+            className="border-border bg-card sticky top-[76px] hidden h-[calc(100svh-96px)] w-90 shrink-0 overflow-y-auto rounded-lg border p-5 xl:block"
           >
             {selected ? (
               <PatientPanel row={selected} section={section} />

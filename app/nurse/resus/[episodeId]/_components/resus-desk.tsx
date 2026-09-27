@@ -808,7 +808,7 @@ function VitalsBand({
                   step={f.step}
                   value={form[f.key] ?? ""}
                   onChange={(e) => setForm((s) => ({ ...s, [f.key]: e.target.value }))}
-                  className="border-border bg-card text-foreground text-body-s focus:border-mint-500 focus:ring-mint-500/25 w-16 rounded-md border px-1.5 py-1 font-mono tabular-nums outline-none focus:ring-2"
+                  className="border-border bg-card text-foreground text-body-s focus:border-ring focus:ring-mint-500/25 w-16 rounded-md border px-1.5 py-1 font-mono tabular-nums outline-none focus:ring-2"
                 />
               </label>
             ))}
@@ -864,7 +864,7 @@ function AnaphylaxisBar({
   const [prescribeOpen, setPrescribeOpen] = useState(false);
   const dose = getResusDose(ANAPHYLAXIS_PROTOCOL.firstLineDoseId);
   return (
-    <div className="border-border bg-card rounded-xl border">
+    <div className="border-border bg-card rounded-lg border">
       <div className="flex items-center justify-between gap-2 px-3.5 py-2">
         <div className="min-w-0">
           <p className="text-foreground/80 text-[12px] font-medium">
@@ -943,9 +943,7 @@ function StepPanel({
         <span className="bg-foreground/90 text-background text-body-m flex size-8 items-center justify-center rounded-lg font-mono font-semibold">
           {step}
         </span>
-        <h2 className="font-display text-foreground text-heading-s font-medium tracking-[-0.01em]">
-          {cat.title}
-        </h2>
+        <h2 className="text-foreground text-heading-s tracking-[-0.01em]">{cat.title}</h2>
       </div>
 
       {/* Assess */}
@@ -1148,7 +1146,7 @@ function TeamPanel({
   }
 
   return (
-    <div className="border-border bg-card rounded-xl border p-3">
+    <div className="border-border bg-card rounded-lg border p-3">
       <div className="mb-2 flex items-baseline justify-between">
         <h2 className="text-foreground/80 text-[12px] font-medium">Team</h2>
         <span className="text-muted-foreground/70 font-mono text-[10px]">

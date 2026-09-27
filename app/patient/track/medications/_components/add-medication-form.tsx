@@ -160,7 +160,7 @@ export function AddMedicationForm({ onAdded }: { onAdded?: () => void }) {
               }}
               // `Input`'s recipe plus the system focus ring and the 44px floor
               // the time inputs and "Add a time" in this very form already keep.
-              className="border-input bg-card text-foreground text-body-s focus-visible:border-brand-500 focus-visible:shadow-focus ease-expo-out min-h-11 rounded-sm border px-2.5 py-2 transition-all duration-150 outline-none"
+              className="border-input bg-card text-foreground text-body-s focus-visible:border-ring focus-visible:shadow-focus ease-expo-out min-h-11 rounded-sm border px-2.5 py-2 transition-all duration-150 outline-none"
             >
               {PATTERNS.map((p) => (
                 <option key={p.value} value={p.value}>

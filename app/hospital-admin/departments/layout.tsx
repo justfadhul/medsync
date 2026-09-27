@@ -25,7 +25,7 @@ export default async function ServicesHubLayout({ children }: { children: ReactN
     <div className="mx-auto flex w-full max-w-6xl flex-col gap-5 px-4 py-6 sm:px-6 sm:py-8">
       <header className="flex flex-col gap-2">
         <div className="flex flex-wrap items-start justify-between gap-3">
-          <h1 className="font-display text-foreground sm:text-heading-l text-[24px] leading-[1.15] font-medium tracking-[-0.015em]">
+          <h1 className="font-display text-display-s text-foreground">
             Departments &amp; services
           </h1>
           {problems > 0 ? (

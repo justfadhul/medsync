@@ -74,7 +74,7 @@ export function DeclareIntakeForm({ departments, hospitalName, submissionId = nu
         aria-labelledby="closed-heading"
         className="bg-card dark:shadow-card flex flex-col gap-3 rounded-xl p-4 shadow-xs"
       >
-        <h2 id="closed-heading" className="text-heading-s font-medium">
+        <h2 id="closed-heading" className="text-heading-s">
           Go to the hospital.
         </h2>
         {/* The clause "the emergency entrance is open at all hours" belongs
@@ -109,9 +109,7 @@ export function DeclareIntakeForm({ departments, hospitalName, submissionId = nu
         </>
       ) : (
         <fieldset className="flex flex-col gap-2">
-          <legend className="text-heading-s mb-2 font-medium">
-            Which clinic were you told to go to?
-          </legend>
+          <legend className="text-heading-s mb-2">Which clinic were you told to go to?</legend>
           {/* A native radio, visible rather than sr-only: it is the control a
               patient recognises, and `required` then blocks the submit and
               focuses it without a line of JavaScript. */}

@@ -24,9 +24,7 @@ export default async function NurseMarPage({ searchParams }: PageProps) {
           <span className="text-muted-foreground font-mono text-[10px] tracking-[0.16em] uppercase">
             Medication administration
           </span>
-          <h1 className="font-display text-foreground text-[26px] leading-tight font-medium tracking-[-0.015em]">
-            Pick a patient first
-          </h1>
+          <h1 className="font-display text-display-s text-foreground">Pick a patient first</h1>
           <p className="text-muted-foreground max-w-[56ch] text-[12.5px]">
             Open a patient from your panel, then tap &ldquo;Administer medication&rdquo; — the form
             here will know who you&rsquo;re charting for. Real prescription orders land with the
@@ -35,7 +33,7 @@ export default async function NurseMarPage({ searchParams }: PageProps) {
         </header>
         <Link
           href="/nurse/patients"
-          className="border-border bg-card hover:bg-muted/30 card-lift tap group text-body-s inline-flex w-fit items-center gap-2 rounded-xl border px-4 py-2.5 transition-colors"
+          className="border-border bg-card hover:bg-muted/30 card-lift tap group text-body-s inline-flex w-fit items-center gap-2 rounded-lg border px-4 py-2.5 transition-colors"
         >
           Open patient panel
           <span
@@ -92,7 +90,7 @@ export default async function NurseMarPage({ searchParams }: PageProps) {
         <span className="text-muted-foreground font-mono text-[10px] tracking-[0.16em] uppercase">
           Administer medication · {summary.patientCode}
         </span>
-        <h1 className="font-display text-foreground text-[24px] leading-tight font-medium tracking-[-0.015em]">
+        <h1 className="font-display text-display-s text-foreground">
           {summary.firstName} {summary.surname}
         </h1>
         <p className="text-muted-foreground text-[12px] leading-relaxed">

@@ -138,7 +138,7 @@ function ClinicDayDialog({
         <div className="flex min-h-0 flex-1 flex-col">
           <SheetHeader>
             <div className="flex items-center gap-2">
-              <Pill tone="admitted">Clinic day</Pill>
+              <Pill tone="place">Clinic day</Pill>
               {session.status !== "published" ? (
                 <Pill tone="neutral">{SESSION_STATUS_LABEL[session.status] ?? session.status}</Pill>
               ) : null}

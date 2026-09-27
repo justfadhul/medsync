@@ -67,7 +67,7 @@ export function MonthView({
               aria-label={d.toLocaleDateString(undefined, { dateStyle: "full" })}
               onClick={() => onDayClick(d)}
               className={cn(
-                "border-border/60 group hover:bg-muted/40 focus-visible:ring-brand-500/40 flex flex-col items-stretch gap-1 border-t border-l p-1.5 text-left transition-colors first:border-l-0 focus-visible:ring-2 focus-visible:outline-none",
+                "border-border/60 group hover:bg-muted/40 focus-visible:ring-ring flex flex-col items-stretch gap-1 border-t border-l p-1.5 text-left transition-colors first:border-l-0 focus-visible:ring-2 focus-visible:outline-none",
                 !inMonth && "bg-muted/20",
               )}
             >

@@ -71,7 +71,7 @@ export function OpenBreakGlassForm({ patients }: { patients: ReadonlyArray<Combo
           required
           rows={3}
           placeholder="e.g. PDPO follow-up on case MS-2026-00184; confirm dispensing chain for amlodipine refills"
-          className="border-input bg-card text-body-s focus-visible:border-brand-500 w-full rounded-sm border px-2.5 py-2 leading-snug outline-none focus-visible:shadow-[0_0_0_2px_rgba(20,184,166,0.15)]"
+          className="border-input bg-card text-body-s focus-visible:border-ring w-full rounded-sm border px-2.5 py-2 leading-snug outline-none focus-visible:shadow-[0_0_0_3px_var(--teal-tint),0_0_0_1px_var(--ring)]"
         />
       </Field>
 

@@ -89,7 +89,7 @@ export default function AboutPage() {
                   >
                     “
                   </span>
-                  <p className="font-display text-heading-m text-foreground max-w-[40ch] text-balance italic">
+                  <p className="font-display text-heading-m text-foreground max-w-[40ch] text-balance">
                     {founder.pullQuote}
                   </p>
                 </blockquote>

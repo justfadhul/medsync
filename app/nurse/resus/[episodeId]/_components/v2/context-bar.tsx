@@ -144,7 +144,7 @@ export function ContextBar() {
       onBlur={(e) => {
         if (!e.currentTarget.contains(e.relatedTarget as Node | null)) setHeld(null);
       }}
-      className="border-border bg-card flex flex-wrap items-center gap-2 rounded-xl border px-3 py-2"
+      className="border-border bg-card flex flex-wrap items-center gap-2 rounded-lg border px-3 py-2"
     >
       <span className="text-overline text-muted-foreground mr-1 uppercase">Context</span>
       {visible.map((f) => (

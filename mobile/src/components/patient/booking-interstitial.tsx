@@ -109,7 +109,7 @@ const makeStyles = (c: Palette) =>
       textAlign: "center",
     },
     body: {
-      fontFamily: font.bodyMedium,
+      fontFamily: font.bodySemiBold,
       fontSize: 17,
       lineHeight: 25,
       color: c.foreground,

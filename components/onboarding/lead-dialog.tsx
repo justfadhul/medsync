@@ -82,10 +82,7 @@ export function LeadDialog({ source, trigger }: { source: LeadInput["source"]; t
                   onSubmit={(e) => void onSubmit(e)}
                   className="flex flex-col gap-5 p-5 sm:p-6"
                 >
-                  <h2
-                    id={`lead-${source}-title`}
-                    className="font-display text-heading-l text-foreground"
-                  >
+                  <h2 id={`lead-${source}-title`} className="text-heading-l text-foreground">
                     {hospitalDoor ? LEAD.title : LEAD.hospitalTitle}
                   </h2>
                   {sent ? (

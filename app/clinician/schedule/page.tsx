@@ -24,11 +24,12 @@ interface PageProps {
   searchParams: Promise<{ aff?: string }>;
 }
 
+// Workflow states are tags, never a patient's clinical colours (ADR 0162).
 const STATUS_TONES: Record<string, PillTone> = {
-  pending_approval: "pending",
-  confirmed: "stable",
-  arrived: "admitted",
-  in_progress: "admitted",
+  pending_approval: "notice",
+  confirmed: "active",
+  arrived: "info",
+  in_progress: "info",
 };
 
 const STATUS_LABEL: Record<string, string> = {
@@ -117,7 +118,7 @@ export default async function ClinicianSchedulePage({ searchParams }: PageProps)
     <div className="mx-auto flex w-full max-w-5xl flex-col gap-4 px-4 py-5 sm:px-6">
       <header className="flex flex-col gap-1">
         <span className="text-muted-foreground inline-flex w-fit items-center gap-1.5 font-mono text-[10px] tracking-[0.16em] uppercase">
-          <span aria-hidden className="bg-brand-500 ring-brand-500/20 size-1 rounded-full ring-2" />
+          <span aria-hidden className="bg-iris-icon ring-iris-edge size-1 rounded-full ring-2" />
           {scope.hospitalName} · {scope.departmentName}
         </span>
         <SectionRule
@@ -136,19 +137,21 @@ export default async function ClinicianSchedulePage({ searchParams }: PageProps)
 
       <section className="grid grid-cols-3 gap-3" aria-label="Schedule stats">
         <StatCard
+          domain="operations"
           label="Booked"
           value={list.length}
           hint="next 14 days"
           icon={<ListChecksIcon className="size-4" aria-hidden />}
-          tinted
         />
         <StatCard
+          domain="operations"
           label="Awaiting approval"
           value={pendingCount}
           hint="need your answer"
           icon={<CircleIcon className="size-4" aria-hidden />}
         />
         <StatCard
+          domain="operations"
           label="Urgent"
           value={urgentCount}
           hint="alert-triggered"

@@ -42,7 +42,7 @@ const LABEL = "text-overline uppercase";
  *  `shadow-focus` is the system's 2px ring; both it and `brand-500` hold in
  *  dark on their own, so no `dark:` override to fight the ramp flip. */
 const CONTROL =
-  "border-input bg-card text-foreground text-body-s ease-expo-out rounded-sm border px-2.5 py-2 transition-all duration-150 outline-none placeholder:text-gray-400 focus-visible:border-brand-500 focus-visible:shadow-focus";
+  "border-input bg-card text-foreground text-body-s ease-expo-out rounded-sm border px-2.5 py-2 transition-all duration-150 outline-none placeholder:text-gray-400 focus-visible:border-ring focus-visible:shadow-focus";
 
 export interface ProfileDefaults {
   phone: string;
@@ -69,7 +69,7 @@ export function ProfileForm({
   return (
     <form action={formAction} className={cn("flex flex-col gap-4", className)}>
       <section className="bg-card dark:shadow-card flex flex-col gap-3 rounded-xl p-4 shadow-xs">
-        <h2 className="text-foreground text-heading-s font-medium">Contact</h2>
+        <h2 className="text-foreground text-heading-s">Contact</h2>
         <div className="flex flex-col gap-1.5">
           <Label htmlFor="phone" className={LABEL}>
             Phone
@@ -107,7 +107,7 @@ export function ProfileForm({
       </section>
 
       <section className="bg-card dark:shadow-card flex flex-col gap-3 rounded-xl p-4 shadow-xs">
-        <h2 className="text-foreground text-heading-s font-medium">Health</h2>
+        <h2 className="text-foreground text-heading-s">Health</h2>
         <div className="flex flex-col gap-1.5">
           <Label htmlFor="known_conditions" className={LABEL}>
             Known conditions (optional)
@@ -127,7 +127,7 @@ export function ProfileForm({
       </section>
 
       <section className="bg-card dark:shadow-card flex flex-col gap-3 rounded-xl p-4 shadow-xs">
-        <h2 className="text-foreground text-heading-s font-medium">Next of kin</h2>
+        <h2 className="text-foreground text-heading-s">Next of kin</h2>
         <p className="text-muted-foreground text-body-s leading-relaxed">
           Someone to contact in an emergency. Both name and phone, or leave the whole section blank.
         </p>

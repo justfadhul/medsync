@@ -190,7 +190,7 @@ export function RowButton({
       className={cn(
         "group flex w-full items-center gap-3 px-4 py-3 text-left transition-colors duration-100",
         "hover:bg-gray-50",
-        "focus-visible:ring-brand-500/40 focus-visible:ring-2 focus-visible:outline-none focus-visible:ring-inset",
+        "focus-visible:ring-ring focus-visible:ring-2 focus-visible:outline-none focus-visible:ring-inset",
       )}
     >
       {children}
@@ -240,7 +240,7 @@ export function Field({
 
 export const inputClass = cn(
   "border-input bg-card text-foreground text-body-s w-full min-w-0 rounded-sm border px-2.5 py-2",
-  "outline-none focus-visible:border-brand-500 focus-visible:shadow-[0_0_0_2px_rgba(20,184,166,0.15)]",
+  "outline-none focus-visible:border-ring focus-visible:shadow-[0_0_0_3px_var(--teal-tint),0_0_0_1px_var(--ring)]",
 );
 
 export function Select({

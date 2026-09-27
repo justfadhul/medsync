@@ -4,59 +4,59 @@ import { cva } from "class-variance-authority";
 
 import { cn } from "@/lib/utils";
 
+/**
+ * MedSync Chroma button (ADR 0162): 32px default, `label` 13/500, `radius-md`.
+ * One teal primary per view; place hues never colour a button; red is the
+ * emergency button only.
+ */
 const buttonVariants = cva(
   [
-    "inline-flex shrink-0 items-center justify-center gap-2 whitespace-nowrap",
-    "font-medium [letter-spacing:-0.01em] outline-none select-none",
-    "transition-all duration-150 ease-expo-out",
+    "inline-flex shrink-0 items-center justify-center gap-1.5 whitespace-nowrap",
+    "border border-transparent font-medium [letter-spacing:-0.003em] outline-none select-none",
+    "transition-[background-color,border-color,color,box-shadow,transform] duration-100 ease-expo-out",
     "focus-visible:shadow-focus",
-    "disabled:pointer-events-none disabled:opacity-50",
-    "active:not(:disabled):translate-y-px",
-    "[&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+    "disabled:pointer-events-none disabled:opacity-45",
+    "motion-safe:active:not(:disabled):translate-y-[0.5px]",
+    "[&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-[15px]",
   ].join(" "),
   {
     variants: {
       variant: {
-        // White on teal-600 is 3.7:1 (fails AA for button text); teal-700 is
-        // 5.5:1 (landing v4, ADR 0099). Dark keeps the token pair (bright
-        // teal-500 fill, deep-teal text) because the teal scale inverts there.
-        primary: [
-          "bg-teal-700 text-white hover:bg-teal-800 active:bg-teal-900",
-          "dark:bg-primary dark:text-primary-foreground dark:hover:bg-primary-hover dark:active:bg-primary-active",
-        ].join(" "),
+        // Light: teal-700 fill (white text 5.5:1); dark: the bright teal with
+        // deep-teal text. Both come from the `primary` role token.
+        primary:
+          "bg-primary text-primary-foreground border-teal-800 shadow-primary hover:bg-primary-hover active:bg-primary-active dark:border-teal-500",
         secondary:
-          "bg-secondary text-secondary-foreground border border-gray-200 dark:border-gray-300 hover:bg-muted hover:border-gray-300 active:bg-gray-150",
+          "bg-secondary text-secondary-foreground border-ink-300 shadow-control hover:bg-ink-50 active:bg-ink-100",
         ghost:
-          "bg-transparent text-muted-foreground hover:bg-muted hover:text-foreground active:bg-gray-150",
-        brandSoft:
-          "bg-accent text-accent-foreground border border-brand-100 hover:bg-brand-100/70 hover:border-brand-200 dark:hover:bg-brand-100/40",
-        // The reference palette's signature call to action: mint fill carrying
-        // deep-teal text, rather than a filled brand button. Both scales flip
-        // in dark mode, so the pairing holds without a dark: override.
-        mint: "bg-mint-300 text-brand-900 hover:bg-mint-200 active:bg-mint-400 dark:bg-mint-700 dark:text-brand-100 dark:hover:bg-mint-800",
+          "bg-transparent text-ink-600 hover:bg-ink-100 hover:text-foreground active:bg-ink-150",
+        soft: "bg-teal-tint text-teal-text border-teal-edge hover:border-teal-200",
+        /** @deprecated ADR 0162 — the soft teal button is `soft`. */
+        brandSoft: "bg-teal-tint text-teal-text border-teal-edge hover:border-teal-200",
+        /** @deprecated ADR 0162 — Chroma has no mint CTA; it renders as `primary`. */
+        mint: "bg-primary text-primary-foreground border-teal-800 shadow-primary hover:bg-primary-hover active:bg-primary-active dark:border-teal-500",
         // Solid red with white text in BOTH themes: the one red thing stays
-        // unmistakable. The old dark pair (burgundy, pink text) vanished on a
-        // critical-tinted surface, and the catalog's interrupt sheet is exactly
-        // that burgundy. Tailwind's red ramp does not invert with the theme:
+        // unmistakable. Tailwind's red ramp does not invert with the theme:
         // white on its 600 step is 4.8:1, on the 700 step 6.5:1.
         emergency: [
-          "bg-destructive text-white",
+          "bg-destructive text-white border-red-700",
           "hover:bg-red-700 active:bg-red-800",
           "dark:bg-red-600 dark:hover:bg-red-700 dark:active:bg-red-800",
         ].join(" "),
         alert:
-          "bg-alert-bg border border-alert-border text-alert-fg hover:bg-red-50 dark:hover:bg-status-critical-bg/40",
-        link: "text-primary underline-offset-4 hover:underline px-0",
+          "bg-alert-bg border-alert-border text-alert-fg hover:bg-red-50 dark:hover:bg-status-critical-bg/40",
+        link: "text-teal-text h-auto border-0 px-0 underline-offset-[3px] hover:underline",
       },
       size: {
-        sm: "px-2.5 py-[5px] text-caption rounded-sm gap-1.5 [&_svg:not([class*='size-'])]:size-3",
-        md: "px-[18px] py-2 text-body-s rounded-md",
-        lg: "px-6 py-[11px] text-body-m rounded-md",
-        iconSm: "size-7 rounded-sm [&_svg:not([class*='size-'])]:size-3.5",
-        icon: "size-9 rounded-md",
+        sm: "h-[26px] rounded-sm px-2 text-caption gap-1 [&_svg:not([class*='size-'])]:size-[13px]",
+        md: "h-8 rounded-md px-3 text-label",
+        lg: "h-10 rounded-md px-4 text-body-m font-medium",
+        iconSm: "size-[26px] rounded-sm [&_svg:not([class*='size-'])]:size-[13px]",
+        icon: "size-8 rounded-md",
         iconLg: "size-11 rounded-md [&_svg:not([class*='size-'])]:size-5",
       },
     },
+    compoundVariants: [{ variant: "link", className: "h-auto px-0" }],
     defaultVariants: {
       variant: "primary",
       size: "md",

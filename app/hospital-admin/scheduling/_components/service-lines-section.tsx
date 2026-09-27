@@ -61,8 +61,8 @@ const MODE_LABEL: Record<string, string> = {
 
 const MODE_TONE: Record<string, PillTone> = {
   slot: "neutral",
-  session: "admitted",
-  open_queue: "discharged",
+  session: "info",
+  open_queue: "notice",
 };
 
 export const REASON_LABEL: Record<string, string> = {
@@ -130,7 +130,7 @@ export function ServiceLinesSection({
         <div className="flex min-w-0 flex-col gap-0.5">
           <span className="flex min-w-0 items-center gap-1.5">
             <span className="text-foreground truncate font-medium">{row.name}</span>
-            {row.isDefault ? <Pill tone="stable">Default</Pill> : null}
+            {row.isDefault ? <Pill tone="active">Default</Pill> : null}
             {row.confidential ? <Pill tone="sensitive">Confidential</Pill> : null}
             {row.active ? null : <Pill tone="neutral">Inactive</Pill>}
           </span>

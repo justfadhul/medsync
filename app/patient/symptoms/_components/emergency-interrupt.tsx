@@ -73,10 +73,7 @@ export function EmergencyInterrupt({
       >
         {item && calm ? (
           <div className="flex flex-col gap-4 px-5 pt-3 pb-6">
-            <h2
-              id="interrupt-title"
-              className="font-display text-foreground text-heading-m leading-tight font-medium"
-            >
+            <h2 id="interrupt-title" className="text-foreground text-heading-m leading-tight">
               You don&rsquo;t have to go through this alone.
             </h2>
             <p id="interrupt-item" className="text-muted-foreground text-body-l leading-relaxed">
@@ -112,7 +109,7 @@ export function EmergencyInterrupt({
             </p>
             <h2
               id="interrupt-title"
-              className="font-display text-status-critical-fg text-heading-m leading-tight font-medium"
+              className="text-status-critical-fg text-heading-m leading-tight"
             >
               {t(CATALOG, "tier.E")}
             </h2>
@@ -192,7 +189,7 @@ export function EmergencyBanner({
   const phone = dialable(emergencyPhone);
   return (
     <div className="bg-status-critical-bg border-status-critical-fg/30 flex flex-col gap-3 rounded-xl border p-4">
-      <p className="text-status-critical-fg text-heading-s font-medium">{t(CATALOG, "tier.E")}</p>
+      <p className="text-status-critical-fg text-heading-s">{t(CATALOG, "tier.E")}</p>
       <p className="text-foreground text-body-s leading-relaxed">
         If this is happening now, do not book — call, or open the Emergency sheet.
       </p>

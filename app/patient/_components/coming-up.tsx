@@ -80,7 +80,7 @@ export function ComingUp({
       {ticket ? (
         <Link
           href={`/patient/queue/${ticket.id}`}
-          className="tap bg-card border-border md:hover:bg-muted flex flex-col gap-1 rounded-xl border p-4"
+          className="tap bg-card border-border md:hover:bg-muted flex flex-col gap-1 rounded-lg border p-4"
         >
           <span className="text-foreground text-body-m font-medium">
             {INTAKE_TITLE[ticket.status] ?? "You are already in today's line."}
@@ -108,14 +108,14 @@ function VisitCard({ visit, now }: { visit: AppointmentRow; now: Date }) {
   const arrivable = canArrive(visit, localDateKey(now, DEFAULT_TIME_ZONE));
 
   return (
-    <div className="bg-card border-border flex flex-col gap-3 rounded-xl border p-4">
+    <div className="bg-card border-border flex flex-col gap-3 rounded-lg border p-4">
       <div className="flex items-center gap-3">
         {/* Plum: who this is (ADR 0097). Initials off the "Your clinician"
             fallback would be initials of a placeholder, so that gets a glyph. */}
         <span
           aria-hidden
           data-place
-          className="bg-plum-100 text-plum-800 text-body-s grid size-11 shrink-0 place-items-center rounded-full font-mono font-medium"
+          className="text-body-s grid size-11 shrink-0 place-items-center rounded-full bg-sky-100 font-mono font-medium text-sky-800"
         >
           {visit.clinicianName === CLINICIAN_FALLBACK ? (
             <StethoscopeIcon className="size-5" strokeWidth={1.5} />

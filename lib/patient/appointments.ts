@@ -50,21 +50,22 @@ const LIVE_STATUSES = [
   "in_progress",
 ] as const;
 
+/**
+ * Appointment states are scheduling workflow, not a patient's clinical state,
+ * so they render as square tags in cool place hues — never red, amber or
+ * green (ADR 0162, MedSync Chroma). The word always carries the meaning.
+ */
 export const STATUS_TONES: Record<string, PillTone> = {
-  requested: "pending",
-  pending_approval: "pending",
-  confirmed: "stable",
-  arrived: "admitted",
-  in_progress: "admitted",
-  completed: "discharged",
+  requested: "notice",
+  pending_approval: "notice",
+  confirmed: "active",
+  arrived: "info",
+  in_progress: "info",
+  completed: "neutral",
   cancelled: "neutral",
-  no_show: "caution",
+  no_show: "neutral",
   rescheduled: "neutral",
-  // Amber, not critical. A clinic declining a request is a scheduling
-  // outcome; red on a MedSync surface means a clinician has declared a life
-  // threat, and spending it here is how a patient learns to ignore it where
-  // it matters. Same tone as `no_show`, which is the same class of event.
-  declined: "caution",
+  declined: "neutral",
 };
 
 export const STATUS_LABEL: Record<string, string> = {

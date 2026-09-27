@@ -76,14 +76,11 @@ export default async function DoctorPatientSummaryPage({ params }: PageProps) {
       {/* Header — name + identity strip */}
       <header className="flex flex-col gap-2">
         <span className="text-muted-foreground inline-flex items-center gap-1.5 font-mono text-[10px] tracking-[0.16em] uppercase">
-          <span
-            aria-hidden
-            className="pulse-dot bg-brand-500 ring-brand-500/20 size-1 rounded-full ring-2"
-          />
+          <span aria-hidden className="bg-iris-icon ring-iris-edge size-1 rounded-full ring-2" />
           Patient summary
         </span>
         <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1">
-          <h1 className="font-display text-foreground text-heading-l leading-[1.1] font-medium tracking-[-0.015em]">
+          <h1 className="font-display text-display-s text-foreground">
             {summary.firstName} {summary.surname}
           </h1>
           <span className="text-muted-foreground font-mono text-[12px] tabular-nums">
@@ -99,7 +96,7 @@ export default async function DoctorPatientSummaryPage({ params }: PageProps) {
 
       {/* Access basis strip — small, but always visible (defensible: the doctor
           should know on what basis they're reading this record). */}
-      <div className="border-border bg-card flex items-center gap-3 rounded-xl border px-4 py-2.5">
+      <div className="border-border bg-card flex items-center gap-3 rounded-lg border px-4 py-2.5">
         <span
           aria-hidden
           className="bg-brand-50 ring-brand-200/60 dark:bg-brand-950/40 dark:ring-brand-800/40 inline-flex size-7 shrink-0 items-center justify-center rounded-full ring-1"
@@ -119,7 +116,7 @@ export default async function DoctorPatientSummaryPage({ params }: PageProps) {
       {/* Two-column main */}
       <div className="stagger-children grid gap-4 lg:grid-cols-3">
         {/* Demographics + contact */}
-        <section className="border-border bg-card flex flex-col gap-3 rounded-xl border p-4 lg:col-span-1">
+        <section className="border-border bg-card flex flex-col gap-3 rounded-lg border p-4 lg:col-span-1">
           <h2 className="text-muted-foreground font-mono text-[10.5px] tracking-[0.14em] uppercase">
             Contact
           </h2>
@@ -129,7 +126,7 @@ export default async function DoctorPatientSummaryPage({ params }: PageProps) {
         </section>
 
         {/* Known conditions */}
-        <section className="border-border bg-card flex flex-col gap-3 rounded-xl border p-4 lg:col-span-2">
+        <section className="border-border bg-card flex flex-col gap-3 rounded-lg border p-4 lg:col-span-2">
           <h2 className="text-muted-foreground font-mono text-[10.5px] tracking-[0.14em] uppercase">
             Known conditions
           </h2>
@@ -215,7 +212,7 @@ function PlaceholderSection({
   Icon: typeof PhoneIcon;
 }) {
   return (
-    <section className="border-border bg-card/40 text-muted-foreground flex items-start gap-3 rounded-xl border border-dashed p-4 lg:col-span-1">
+    <section className="border-border bg-card/40 text-muted-foreground flex items-start gap-3 rounded-lg border border-dashed p-4 lg:col-span-1">
       <span
         aria-hidden
         className="bg-muted/60 text-muted-foreground inline-flex size-8 shrink-0 items-center justify-center rounded-full"
@@ -245,7 +242,7 @@ function NoAccessScreen({ patientId }: { patientId: string }) {
         Patient panel
       </Link>
 
-      <div className="border-border bg-card flex flex-col items-start gap-3 rounded-xl border p-6">
+      <div className="border-border bg-card flex flex-col items-start gap-3 rounded-lg border p-6">
         <span
           aria-hidden
           className="inline-flex size-10 items-center justify-center rounded-full bg-amber-50 text-amber-700 ring-1 ring-amber-200/70 dark:bg-amber-950/40 dark:text-amber-300 dark:ring-amber-800/40"

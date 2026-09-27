@@ -21,7 +21,7 @@ export function TriageAcuitySnippet({ metrics }: { metrics: TriageMetrics }) {
   return (
     <section
       aria-label="Triage acuity today"
-      className="border-border bg-card flex flex-col gap-3 rounded-xl border p-4"
+      className="border-border bg-card flex flex-col gap-3 rounded-lg border p-4"
     >
       <div className="flex items-baseline justify-between gap-2">
         <h2 className="text-muted-foreground font-mono text-[10.5px] tracking-[0.14em] uppercase">

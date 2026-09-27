@@ -1,9 +1,8 @@
 "use client";
 
 import type { ReceptionIconKey } from "../_lib/features";
+import type { Domain } from "@/lib/design/domains";
 import type { LucideIcon } from "lucide-react";
-import Link from "next/link";
-import { usePathname } from "next/navigation";
 import {
   CalendarPlusIcon,
   ClipboardListIcon,
@@ -14,7 +13,8 @@ import {
   UserPlusIcon,
 } from "lucide-react";
 
-import { cn } from "@/lib/utils";
+import { CommandBar } from "@/components/medsync/command-bar";
+import { SidebarNavItem } from "@/components/medsync/sidebar-nav";
 
 const ICONS: Record<ReceptionIconKey, LucideIcon> = {
   overview: LayoutDashboardIcon,
@@ -26,6 +26,16 @@ const ICONS: Record<ReceptionIconKey, LucideIcon> = {
   flow: ListChecksIcon,
 };
 
+/** Which part of the hospital each item belongs to (ADR 0162); none = neutral. */
+const DOMAIN: Partial<Record<ReceptionIconKey, Domain>> = {
+  incoming: "operations",
+  expected: "operations",
+  intake: "patients",
+  book: "operations",
+  find: "patients",
+  flow: "operations",
+};
+
 interface Props {
   href: string;
   label: string;
@@ -34,32 +44,34 @@ interface Props {
 }
 
 export function ReceptionSidebarItem({ href, label, iconKey, exact }: Props) {
-  const pathname = usePathname();
-  const isActive = exact ? pathname === href : pathname === href || pathname.startsWith(`${href}/`);
-  const Icon = ICONS[iconKey];
-
   return (
-    <Link
+    <SidebarNavItem
       href={href}
-      aria-current={isActive ? "page" : undefined}
-      className={cn(
-        "group tap ease-expo-out text-body-s flex items-center gap-2.5 rounded-md px-2.5 py-1.5 transition-colors duration-150",
-        isActive
-          ? "bg-plum-50 text-plum-800 ring-plum-600/10 font-medium ring-1 ring-inset"
-          : "text-muted-foreground hover:bg-muted hover:text-foreground",
-      )}
-    >
-      <Icon
-        aria-hidden
-        className={cn(
-          "size-3.5 shrink-0 transition-colors duration-150",
-          isActive ? "text-plum-600" : "text-muted-foreground/80 group-hover:text-foreground",
-        )}
-      />
-      <span className="truncate">{label}</span>
-      {isActive ? (
-        <span aria-hidden className="bg-plum-500/80 ml-auto size-1 rounded-full" />
-      ) : null}
-    </Link>
+      label={label}
+      icon={ICONS[iconKey]}
+      domain={DOMAIN[iconKey]}
+      exact={exact}
+    />
+  );
+}
+
+/** The workspace's ⌘K bar: every section, with the sidebar's icons and domains. */
+export function ReceptionCommandBar({
+  items,
+}: {
+  items: ReadonlyArray<{ href: string; label: string; hint?: string; iconKey: ReceptionIconKey }>;
+}) {
+  return (
+    <CommandBar
+      entries={items.map((i) => ({
+        id: i.href,
+        label: i.label,
+        hint: i.hint,
+        href: i.href,
+        icon: ICONS[i.iconKey],
+        group: "Navigate",
+        domain: DOMAIN[i.iconKey],
+      }))}
+    />
   );
 }

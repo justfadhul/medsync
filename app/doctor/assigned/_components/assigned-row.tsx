@@ -21,7 +21,7 @@ const ACUITY_CHIP: Record<number, string> = {
 };
 
 const SELECT =
-  "border-input bg-card text-foreground rounded-sm border px-2 py-1.5 text-[12.5px] outline-none transition-[border-color,box-shadow] duration-200 focus-visible:border-brand-500 focus-visible:ring-2 focus-visible:ring-brand-500/30";
+  "border-input bg-card text-foreground rounded-sm border px-2 py-1.5 text-[12.5px] outline-none transition-[border-color,box-shadow] duration-200 focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring";
 
 export function AssignedRow({ row }: { row: AssignedEncounterRow }) {
   const router = useRouter();
@@ -69,7 +69,7 @@ export function AssignedRow({ row }: { row: AssignedEncounterRow }) {
   }
 
   return (
-    <li className="border-border bg-card card-lift flex flex-col gap-2 rounded-xl border p-4">
+    <li className="border-border bg-card card-lift flex flex-col gap-2 rounded-lg border p-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-2.5">
           {row.acuity ? (

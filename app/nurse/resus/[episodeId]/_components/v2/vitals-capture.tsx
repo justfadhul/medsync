@@ -169,7 +169,7 @@ export function VitalsCapture({
         if (e.key === "Escape") close();
       }}
       aria-label="Record vitals"
-      className="border-border bg-card flex flex-col gap-3 rounded-xl border p-3"
+      className="border-border bg-card flex flex-col gap-3 rounded-lg border p-3"
     >
       <div className="grid grid-cols-3 gap-2 sm:grid-cols-5 xl:grid-cols-9">
         {CAPTURE_FIELDS.map((f) => {

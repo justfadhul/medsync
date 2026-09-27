@@ -26,15 +26,10 @@ export default async function DoctorCosignQueuePage() {
     <div className="stagger-children mx-auto flex w-full max-w-5xl flex-col gap-6 px-6 py-8 lg:py-10">
       <header className="flex flex-col gap-2">
         <span className="text-muted-foreground inline-flex items-center gap-1.5 font-mono text-[10px] tracking-[0.16em] uppercase">
-          <span
-            aria-hidden
-            className="pulse-dot bg-brand-500 ring-brand-500/20 size-1 rounded-full ring-2"
-          />
+          <span aria-hidden className="bg-iris-icon ring-iris-edge size-1 rounded-full ring-2" />
           Review queue
         </span>
-        <h1 className="font-display text-foreground text-[26px] leading-[1.15] font-medium tracking-[-0.015em]">
-          Pending co-sign requests
-        </h1>
+        <h1 className="font-display text-display-s text-foreground">Pending co-sign requests</h1>
         <p className="text-muted-foreground max-w-[60ch] text-[12.5px] leading-relaxed">
           Junior doctors&rsquo; flagged actions for {scope.hospitalName}. Approve to execute; return
           with feedback to send back with notes. Every decision is audited.
@@ -51,7 +46,7 @@ export default async function DoctorCosignQueuePage() {
           {queue.map((r) => (
             <li
               key={r.id}
-              className="border-border bg-card hover:border-foreground/15 flex flex-col gap-3 rounded-xl border p-5 transition-[border-color,box-shadow] duration-200 hover:shadow-xs"
+              className="border-border bg-card hover:border-foreground/15 flex flex-col gap-3 rounded-lg border p-5 transition-[border-color,box-shadow] duration-200 hover:shadow-xs"
             >
               <div className="flex items-start justify-between gap-3">
                 <div className="flex flex-col gap-1">

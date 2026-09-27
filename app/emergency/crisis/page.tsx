@@ -42,7 +42,7 @@ export default async function CrisisPage() {
           </Link>
         </nav>
         <header className="flex flex-col gap-2">
-          <h1 className="font-display text-foreground text-heading-l font-medium tracking-[-0.015em]">
+          <h1 className="font-display text-display-s text-foreground">
             You don&rsquo;t have to go through this alone.
           </h1>
           <p className="text-foreground text-body-m leading-relaxed">

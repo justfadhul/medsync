@@ -54,10 +54,7 @@ export function Section({
       aria-labelledby={`board-${id}`}
       className="flex flex-col gap-2"
     >
-      <h2
-        id={`board-${id}`}
-        className="text-heading-s text-foreground flex items-baseline gap-2 font-medium"
-      >
+      <h2 id={`board-${id}`} className="text-heading-s text-foreground flex items-baseline gap-2">
         {title}
         <span className="text-caption text-muted-foreground font-mono tabular-nums">{count}</span>
       </h2>

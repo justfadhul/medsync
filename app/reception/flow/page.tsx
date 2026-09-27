@@ -65,10 +65,10 @@ export default async function ReceptionFlowPage() {
 
       <header className="flex flex-col gap-2">
         <span className="text-muted-foreground text-overline inline-flex items-center gap-1.5 font-mono uppercase">
-          <span aria-hidden className="bg-brand-500 ring-brand-500/20 size-1 rounded-full ring-2" />
+          <span aria-hidden className="bg-plum-icon ring-plum-edge size-1 rounded-full ring-2" />
           {scope.hospitalName} · Today&rsquo;s flow
         </span>
-        <h1 className="font-display text-foreground text-heading-l">Who&rsquo;s where</h1>
+        <h1 className="font-display text-display-s text-foreground">Who&rsquo;s where</h1>
         <p className="text-muted-foreground text-body-s max-w-[60ch] leading-relaxed">
           Operational status only — answers &ldquo;has Mr. X arrived?&rdquo;, &ldquo;where is my
           patient in the queue?&rdquo;. No clinical detail.
@@ -77,7 +77,7 @@ export default async function ReceptionFlowPage() {
       </header>
 
       {rows.length === 0 ? (
-        <div className="border-border bg-card flex items-center gap-5 rounded-xl border p-6">
+        <div className="border-border bg-card flex items-center gap-5 rounded-lg border p-6">
           <svg viewBox="0 0 96 56" aria-hidden className="text-border h-12 w-auto shrink-0">
             <rect x="0" y="2" width="84" height="10" rx="4" fill="currentColor" opacity="0.5" />
             <rect x="0" y="20" width="64" height="10" rx="4" fill="currentColor" opacity="0.3" />
@@ -89,7 +89,7 @@ export default async function ReceptionFlowPage() {
           </p>
         </div>
       ) : (
-        <div className="border-border bg-card overflow-x-auto rounded-xl border">
+        <div className="border-border bg-card overflow-x-auto rounded-lg border">
           <table className="w-full border-collapse text-left">
             <thead className="border-border bg-muted/30 border-b">
               <tr className="text-muted-foreground text-overline font-mono uppercase">
@@ -116,7 +116,7 @@ export default async function ReceptionFlowPage() {
                 return (
                   <tr
                     key={`${r.patientUserId ?? "unknown"}-${i}`}
-                    className="hover:bg-brand-50/40 ease-expo-out transition-colors duration-150"
+                    className="hover:bg-ink-25 ease-expo-out transition-colors duration-150"
                   >
                     <td className="text-foreground text-body-s px-4 py-2.5 font-mono tabular-nums">
                       {who}

@@ -122,11 +122,11 @@ export default async function NursePatientSummaryPage({ params }: PageProps) {
 
       <header className="flex flex-col gap-2">
         <span className="text-muted-foreground inline-flex items-center gap-1.5 font-mono text-[10px] tracking-[0.16em] uppercase">
-          <span aria-hidden className="bg-brand-500 ring-brand-500/20 size-1 rounded-full ring-2" />
+          <span aria-hidden className="bg-iris-icon ring-iris-edge size-1 rounded-full ring-2" />
           Patient summary
         </span>
         <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1">
-          <h1 className="font-display text-foreground text-heading-l leading-[1.1] font-medium tracking-[-0.015em]">
+          <h1 className="font-display text-display-s text-foreground">
             {summary.firstName} {summary.surname}
           </h1>
           <span className="text-muted-foreground font-mono text-[12px] tabular-nums">
@@ -140,7 +140,7 @@ export default async function NursePatientSummaryPage({ params }: PageProps) {
         </p>
       </header>
 
-      <div className="border-border bg-card ring-brand-500/5 flex items-center gap-3 rounded-xl border px-4 py-2.5 ring-1">
+      <div className="border-border bg-card ring-brand-500/5 flex items-center gap-3 rounded-lg border px-4 py-2.5 ring-1">
         <ShieldAlertIcon
           className="text-brand-600 dark:text-brand-400 size-4 shrink-0"
           aria-hidden
@@ -156,7 +156,7 @@ export default async function NursePatientSummaryPage({ params }: PageProps) {
       </div>
 
       <div className="grid gap-4 lg:grid-cols-3">
-        <section className="border-border bg-card flex flex-col gap-3 rounded-xl border p-4 lg:col-span-1">
+        <section className="border-border bg-card flex flex-col gap-3 rounded-lg border p-4 lg:col-span-1">
           <h2 className="text-muted-foreground font-mono text-[10.5px] tracking-[0.14em] uppercase">
             Contact
           </h2>
@@ -165,7 +165,7 @@ export default async function NursePatientSummaryPage({ params }: PageProps) {
           <Field label="Preferred language" value={summary.preferredLanguage ?? "—"} />
         </section>
 
-        <section className="border-border bg-card flex flex-col gap-3 rounded-xl border p-4 lg:col-span-2">
+        <section className="border-border bg-card flex flex-col gap-3 rounded-lg border p-4 lg:col-span-2">
           <h2 className="text-muted-foreground font-mono text-[10.5px] tracking-[0.14em] uppercase">
             Known conditions
           </h2>
@@ -186,7 +186,7 @@ export default async function NursePatientSummaryPage({ params }: PageProps) {
         </section>
 
         {/* Recent observations */}
-        <section className="border-border bg-card flex flex-col gap-3 rounded-xl border p-4 lg:col-span-2">
+        <section className="border-border bg-card flex flex-col gap-3 rounded-lg border p-4 lg:col-span-2">
           <div className="flex items-baseline justify-between gap-2">
             <h2 className="text-muted-foreground font-mono text-[10.5px] tracking-[0.14em] uppercase">
               Recent vitals
@@ -232,7 +232,7 @@ export default async function NursePatientSummaryPage({ params }: PageProps) {
         </section>
 
         {/* Recent MAR */}
-        <section className="border-border bg-card flex flex-col gap-3 rounded-xl border p-4 lg:col-span-1">
+        <section className="border-border bg-card flex flex-col gap-3 rounded-lg border p-4 lg:col-span-1">
           <div className="flex items-baseline justify-between gap-2">
             <h2 className="text-muted-foreground font-mono text-[10.5px] tracking-[0.14em] uppercase">
               Recent meds
@@ -332,7 +332,7 @@ function NoAccessScreen() {
         Patient panel
       </Link>
 
-      <div className="border-border bg-card reveal-up flex flex-col items-start gap-3 rounded-xl border p-6">
+      <div className="border-border bg-card reveal-up flex flex-col items-start gap-3 rounded-lg border p-6">
         <span
           aria-hidden
           className="scale-in inline-flex size-10 items-center justify-center rounded-full bg-amber-50 text-amber-700 ring-1 ring-amber-200/70 dark:bg-amber-950/40 dark:text-amber-300 dark:ring-amber-800/40"

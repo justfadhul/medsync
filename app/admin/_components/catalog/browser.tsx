@@ -96,7 +96,7 @@ export function CatalogBrowser({ sections }: BrowserProps) {
               }}
               className={cn(
                 "text-body-s shrink-0 rounded-md px-3 py-1.5 font-medium transition-colors outline-none",
-                "focus-visible:ring-brand-500/40 focus-visible:ring-2",
+                "focus-visible:ring-ring focus-visible:ring-2",
                 s.key === active
                   ? "bg-brand-50 text-brand-700 dark:bg-brand-950/40 dark:text-brand-300"
                   : "text-muted-foreground hover:bg-muted hover:text-foreground",
@@ -134,7 +134,7 @@ export function CatalogBrowser({ sections }: BrowserProps) {
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 placeholder={`Filter ${current?.label.toLowerCase() ?? "rows"}…`}
-                className="border-input bg-background focus-visible:border-brand-500 min-w-[200px] rounded-md border px-2.5 py-1 text-[12px] outline-none"
+                className="border-input bg-background focus-visible:border-ring min-w-[200px] rounded-md border px-2.5 py-1 text-[12px] outline-none"
               />
             </DataTableToolbar>
           }

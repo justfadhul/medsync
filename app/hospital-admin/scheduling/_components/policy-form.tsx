@@ -191,7 +191,7 @@ export function PolicyForm({
   if (departments.length === 0) {
     return (
       <section className="border-border bg-card flex flex-col gap-2 rounded-lg border p-6">
-        <h2 className="text-foreground text-heading-s font-medium">No departments yet</h2>
+        <h2 className="text-foreground text-heading-s">No departments yet</h2>
         <p className="text-muted-foreground text-body-s leading-relaxed">
           Booking policy is set per department. Add a department to this hospital first, then come
           back and set its bookable hours.
@@ -312,7 +312,7 @@ export function PolicyForm({
                     key={day.value}
                     className={[
                       "text-body-s ease-expo-out cursor-pointer rounded-md border px-3 py-2 transition-colors duration-150",
-                      "focus-within:border-brand-500 focus-within:shadow-[0_0_0_2px_rgba(132,118,231,0.18)]",
+                      "focus-within:border-ring focus-within:shadow-[0_0_0_2px_rgba(132,118,231,0.18)]",
                       checked
                         ? "border-brand-300 bg-accent text-accent-foreground font-medium"
                         : "border-input bg-background text-muted-foreground hover:border-gray-300",
@@ -395,7 +395,7 @@ export function PolicyForm({
             <label
               className={[
                 "text-body-s ease-expo-out flex cursor-pointer items-start gap-3 rounded-md border p-3 transition-colors duration-150",
-                "focus-within:border-brand-500 focus-within:shadow-[0_0_0_2px_rgba(132,118,231,0.18)]",
+                "focus-within:border-ring focus-within:shadow-[0_0_0_2px_rgba(132,118,231,0.18)]",
                 values.twoReminders
                   ? "border-input bg-background hover:border-gray-300"
                   : "border-brand-300 bg-accent",
@@ -423,7 +423,7 @@ export function PolicyForm({
             <label
               className={[
                 "text-body-s ease-expo-out flex cursor-pointer items-start gap-3 rounded-md border p-3 transition-colors duration-150",
-                "focus-within:border-brand-500 focus-within:shadow-[0_0_0_2px_rgba(132,118,231,0.18)]",
+                "focus-within:border-ring focus-within:shadow-[0_0_0_2px_rgba(132,118,231,0.18)]",
                 values.twoReminders
                   ? "border-brand-300 bg-accent"
                   : "border-input bg-background hover:border-gray-300",

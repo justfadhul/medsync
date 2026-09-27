@@ -319,7 +319,12 @@ const makeStyles = (c: Palette) =>
     profileText: { flex: 1, gap: 2 },
     // The link's own padding would push its word off the name's left edge.
     profileLink: { alignSelf: "flex-start", marginLeft: -space[2] },
-    profileName: { fontFamily: font.bodyMedium, fontSize: 17, lineHeight: 23, color: c.foreground },
+    profileName: {
+      fontFamily: font.bodySemiBold,
+      fontSize: 17,
+      lineHeight: 23,
+      color: c.foreground,
+    },
     profileCode: {
       fontFamily: font.body,
       fontSize: 13.5,

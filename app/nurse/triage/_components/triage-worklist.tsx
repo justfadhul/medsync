@@ -40,7 +40,7 @@ export function TriageWorklist({
 }) {
   if (rows.length === 0) {
     return (
-      <div className="border-border bg-card relative isolate flex flex-col items-center gap-2.5 overflow-hidden rounded-xl border p-12 text-center">
+      <div className="border-border bg-card relative isolate flex flex-col items-center gap-2.5 overflow-hidden rounded-lg border p-12 text-center">
         <div
           aria-hidden
           className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(ellipse_at_top,rgba(159,47,126,0.04),transparent_65%)]"
@@ -57,7 +57,7 @@ export function TriageWorklist({
   }
 
   return (
-    <ul className="border-border bg-card divide-border/60 stagger-children flex flex-col divide-y overflow-hidden rounded-xl border">
+    <ul className="border-border bg-card divide-border/60 stagger-children flex flex-col divide-y overflow-hidden rounded-lg border">
       {rows.map((r) => {
         const name = r.displayName ?? r.patientUnknownLabel ?? "Unidentified patient";
         const triaged = r.priorLevel != null;
@@ -80,7 +80,7 @@ export function TriageWorklist({
           >
             <Link
               href={`${basePath}/${r.intakeId}`}
-              className="group hover:bg-mint-50/40 dark:hover:bg-mint-50/[0.04] flex min-w-0 flex-1 items-center gap-3 px-4 py-3 text-left transition-colors"
+              className="group hover:bg-ink-25 flex min-w-0 flex-1 items-center gap-3 px-4 py-3 text-left transition-colors"
             >
               {/* Acuity dot rail — L1 pulses: a Red patient waiting is live */}
               <span

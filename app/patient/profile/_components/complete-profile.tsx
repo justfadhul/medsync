@@ -38,7 +38,7 @@ export function CompleteProfile({
   return (
     <section
       aria-labelledby="complete-head"
-      className="border-border bg-card shadow-card flex flex-col gap-4 rounded-xl border p-5"
+      className="border-border bg-card shadow-card flex flex-col gap-4 rounded-lg border p-5"
     >
       <div className="flex flex-col gap-1">
         {welcome ? (
@@ -46,7 +46,7 @@ export function CompleteProfile({
             {PROFILE.welcomeTitle}
           </p>
         ) : null}
-        <h2 id="complete-head" className="text-heading-m text-foreground font-medium">
+        <h2 id="complete-head" className="text-heading-m text-foreground">
           {PROFILE.title}
         </h2>
         <p className="text-body-m text-muted-foreground">

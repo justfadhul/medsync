@@ -70,7 +70,7 @@ describe("the dialog shows rows as they came, and colours only the clinic's dela
     const tones = [...src.matchAll(/<Pill tone="(\w+)">(\w+)<\/Pill>/g)].map(
       (m) => `${m[1]}:${m[2]}`,
     );
-    expect(tones.sort()).toEqual(["caution:Stale", "critical:Urgent"]);
+    expect(tones.sort()).toEqual(["critical:Urgent", "notice:Stale"]);
     // Stale is measured from createdAt — the clinic's clock, not a patient attribute.
     expect(src).toMatch(/now - r\.createdAt\.getTime\(\)/);
     expect(src).not.toMatch(/patientCode\s*[=!]==/);

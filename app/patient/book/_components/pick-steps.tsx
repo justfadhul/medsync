@@ -82,7 +82,7 @@ export function SlotStep({
         {clinician.seenBefore && !desk && !forMember ? (
           <>
             {" "}
-            <Pill tone="stable">Seen you before</Pill>
+            <Pill tone="active">Seen you before</Pill>
           </>
         ) : null}
       </p>

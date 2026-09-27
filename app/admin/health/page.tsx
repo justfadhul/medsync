@@ -110,9 +110,7 @@ export default async function HealthPage() {
     <div className="flex flex-col">
       <header className="border-border border-b px-4 py-6 sm:px-8 sm:py-8">
         <div className="mx-auto flex w-full max-w-[1200px] flex-col gap-1">
-          <h1 className="font-display text-foreground sm:text-heading-l text-[24px] leading-tight font-medium tracking-[-0.018em]">
-            Platform health
-          </h1>
+          <h1 className="font-display text-display-s text-foreground">Platform health</h1>
           <p className="text-muted-foreground text-[13.5px]">
             Aggregate, operational only. Patient-level data never appears here. Sentry counts, SMS-
             delivery analytics, trend charts and auto-alerting ship in a later gate.
@@ -152,7 +150,7 @@ function HealthTile({ label, value, hint, href, sensitive }: HealthTileData) {
         "group border-border bg-card relative flex flex-col gap-2 rounded-lg border p-5 transition-all outline-none",
         "shadow-[0_0_0_1px_rgba(0,0,0,0.02),0_1px_3px_rgba(0,0,0,0.04)]",
         "hover:border-foreground/15 hover:shadow-[0_0_0_1px_rgba(0,0,0,0.04),0_4px_12px_rgba(0,0,0,0.05)]",
-        "focus-visible:ring-brand-500/40 focus-visible:ring-2",
+        "focus-visible:ring-ring focus-visible:ring-2",
         sensitive &&
           "border-amber-400/60 bg-amber-50/40 ring-1 ring-amber-500/15 ring-inset dark:border-amber-500/40 dark:bg-amber-950/15",
       )}
@@ -165,7 +163,7 @@ function HealthTile({ label, value, hint, href, sensitive }: HealthTileData) {
           <ShieldAlertIcon className="size-3.5 text-amber-600 dark:text-amber-400" aria-hidden />
         ) : null}
       </div>
-      <span className="text-foreground font-display text-[32px] leading-none font-medium tracking-[-0.02em] tabular-nums">
+      <span className="text-foreground text-display-s leading-none tracking-[-0.02em] tabular-nums">
         {value}
       </span>
       <span className="text-muted-foreground text-[11.5px] leading-relaxed">{hint}</span>

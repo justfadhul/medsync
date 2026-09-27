@@ -51,8 +51,8 @@ export function AdministerForm({
       <div
         className={
           state.queuedForReview
-            ? "border-border bg-card scale-in flex flex-col items-start gap-3 rounded-xl border p-5 ring-1 ring-amber-500/15"
-            : "border-border bg-card scale-in ring-brand-500/10 flex flex-col items-start gap-3 rounded-xl border p-5 ring-1"
+            ? "border-border bg-card scale-in flex flex-col items-start gap-3 rounded-lg border p-5 ring-1 ring-amber-500/15"
+            : "border-border bg-card scale-in ring-brand-500/10 flex flex-col items-start gap-3 rounded-lg border p-5 ring-1"
         }
       >
         <span
@@ -61,7 +61,7 @@ export function AdministerForm({
           className={
             state.queuedForReview
               ? "scale-in inline-flex size-9 items-center justify-center rounded-full bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300"
-              : "scale-in bg-brand-100 text-brand-700 dark:bg-brand-900/60 dark:text-brand-300 inline-flex size-9 items-center justify-center rounded-full"
+              : "scale-in bg-iris-tint text-iris-icon inline-flex size-9 items-center justify-center rounded-full"
           }
         >
           {state.queuedForReview ? (

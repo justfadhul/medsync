@@ -203,7 +203,7 @@ export function ClinicsView(props: {
           ) : null}
         </section>
       ) : (
-        <section className="border-border bg-card overflow-hidden rounded-xl border print:hidden">
+        <section className="border-border bg-card overflow-hidden rounded-lg border print:hidden">
           {visible.length ? (
             <ul className="divide-border divide-y">
               {visible.map((c) => (

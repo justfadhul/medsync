@@ -11,9 +11,9 @@ import { font, space } from "@/theme/tokens";
  *
  * Every number here came from `clinician_rating_summary`, which is built from
  * `visit_ratings` rows patients wrote after visits that happened. Nothing is
- * rounded up, padded, or invented on day one. The star is amber (the caution
- * token) because it is the one warm colour the palette has that is not red;
- * red stays the emergency affordance's.
+ * rounded up, padded, or invented on day one. The star is in the page's own
+ * ink: amber is a clinical signal under MedSync Chroma (ADR 0162), never
+ * decoration, and red stays the emergency affordance's.
  */
 export function Rating({
   rating,
@@ -35,7 +35,7 @@ export function Rating({
       accessible
       accessibilityLabel={`${rating.average.toFixed(1)} out of 5, ${reviews}`}
     >
-      <Ionicons name="star" size={sm ? 14 : 16} color={colors.status.cautionFg} />
+      <Ionicons name="star" size={sm ? 14 : 16} color={colors.foreground} />
       <Text style={[styles.number, sm && styles.numberSm]}>{rating.average.toFixed(1)}</Text>
       <Text style={[styles.muted, sm && styles.mutedSm]}>· {reviews}</Text>
     </View>
@@ -75,7 +75,7 @@ export function StarInput({
             <Ionicons
               name={lit ? "star" : "star-outline"}
               size={28}
-              color={lit ? colors.status.cautionFg : colors.mutedForeground}
+              color={lit ? colors.foreground : colors.mutedForeground}
             />
           </Pressable>
         );

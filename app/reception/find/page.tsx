@@ -75,10 +75,10 @@ export default async function ReceptionFindPage({ searchParams }: PageProps) {
 
       <header className="reveal-up flex flex-col gap-2" style={{ animationDelay: "50ms" }}>
         <span className="text-muted-foreground text-overline inline-flex items-center gap-1.5 font-mono uppercase">
-          <span aria-hidden className="bg-brand-500 ring-brand-500/20 size-1 rounded-full ring-2" />
+          <span aria-hidden className="bg-plum-icon ring-plum-edge size-1 rounded-full ring-2" />
           {scope.hospitalName} · Find a patient
         </span>
-        <h1 className="font-display text-foreground text-heading-l">
+        <h1 className="font-display text-display-s text-foreground">
           Search by name or patient code
         </h1>
         <p className="text-muted-foreground text-body-s max-w-[60ch] leading-relaxed">
@@ -137,7 +137,7 @@ export default async function ReceptionFindPage({ searchParams }: PageProps) {
               {board.map((b) => (
                 <li
                   key={b.intakeId}
-                  className="border-border bg-card flex flex-col gap-3 rounded-xl border p-4 sm:flex-row sm:items-center sm:justify-between"
+                  className="border-border bg-card flex flex-col gap-3 rounded-lg border p-4 sm:flex-row sm:items-center sm:justify-between"
                 >
                   <div className="flex min-w-0 flex-col gap-0.5">
                     <span className="text-foreground text-body-s truncate font-medium">
@@ -190,7 +190,7 @@ export default async function ReceptionFindPage({ searchParams }: PageProps) {
         </h2>
 
         {query.length >= 3 && hits.length === 0 ? (
-          <div className="border-border bg-card reveal-up flex items-center gap-4 rounded-xl border p-4">
+          <div className="border-border bg-card reveal-up flex items-center gap-4 rounded-lg border p-4">
             <svg viewBox="0 0 64 64" aria-hidden className="text-border h-10 w-10 shrink-0">
               <circle
                 cx="27"
@@ -229,7 +229,7 @@ export default async function ReceptionFindPage({ searchParams }: PageProps) {
             {hits.map((h) => (
               <li
                 key={h.patientUserId}
-                className="border-border bg-card flex items-center justify-between gap-3 rounded-xl border p-4"
+                className="border-border bg-card flex items-center justify-between gap-3 rounded-lg border p-4"
               >
                 <div className="flex flex-col gap-0.5">
                   <span className="text-foreground text-body-s font-mono font-medium tabular-nums">

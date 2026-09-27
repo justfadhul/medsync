@@ -190,7 +190,7 @@ export function SchedulingSettingsSheet({ defaults }: { defaults: SettingsRow })
                 // `dark:text-brand-200` would fight the flip and sit dark-on-dark.
                 <p
                   role="status"
-                  className="border-brand-500/30 bg-brand-50/50 text-brand-900 ncd-reveal text-body-s rounded-md border px-3 py-2"
+                  className="border-border bg-muted text-foreground ncd-reveal text-body-s rounded-md border px-3 py-2"
                 >
                   Saved. Patients see the new slot grid from now on.
                 </p>

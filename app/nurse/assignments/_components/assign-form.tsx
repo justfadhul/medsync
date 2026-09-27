@@ -35,10 +35,10 @@ export function AssignForm({
 
   if (state.ok) {
     return (
-      <div className="border-border bg-card scale-in ring-brand-500/10 flex flex-col items-start gap-3 rounded-xl border p-5 ring-1">
+      <div className="border-border bg-card scale-in ring-brand-500/10 flex flex-col items-start gap-3 rounded-lg border p-5 ring-1">
         <span
           aria-hidden
-          className="scale-in bg-brand-100 text-brand-700 dark:bg-brand-900/60 dark:text-brand-300 inline-flex size-9 items-center justify-center rounded-full"
+          className="scale-in bg-iris-tint text-iris-icon inline-flex size-9 items-center justify-center rounded-full"
           style={{ animationDelay: "90ms" }}
         >
           <ClipboardPenIcon className="size-4" />

@@ -22,12 +22,10 @@ export default async function DoctorProfilePage() {
     <div className="mx-auto flex w-full max-w-3xl flex-col gap-6 px-4 py-6 lg:px-6 lg:py-9">
       <header className="flex flex-col gap-2">
         <span className="text-muted-foreground text-overline inline-flex items-center gap-1.5 font-mono uppercase">
-          <span aria-hidden className="bg-brand-500 ring-brand-500/20 size-1 rounded-full ring-2" />
+          <span aria-hidden className="bg-iris-icon ring-iris-edge size-1 rounded-full ring-2" />
           {scope.hospitalName} · {scope.departmentName} · Profile
         </span>
-        <h1 className="font-display text-foreground text-heading-l leading-[1.15] font-medium tracking-[-0.015em]">
-          Your profile
-        </h1>
+        <h1 className="font-display text-display-s text-foreground">Your profile</h1>
         <p className="text-muted-foreground text-body-s max-w-[60ch] leading-relaxed">
           Your photo is shown to patients who can book you and to colleagues. Without one they see
           your initial.
@@ -36,9 +34,9 @@ export default async function DoctorProfilePage() {
 
       <section
         aria-labelledby="photo-head"
-        className="bg-card border-border shadow-card flex flex-col gap-3 rounded-xl border p-6"
+        className="bg-card border-border shadow-card flex flex-col gap-3 rounded-lg border p-6"
       >
-        <h2 id="photo-head" className="text-foreground text-heading-s font-medium">
+        <h2 id="photo-head" className="text-foreground text-heading-s">
           Photo
         </h2>
         <PhotoForm
@@ -50,9 +48,9 @@ export default async function DoctorProfilePage() {
 
       <section
         aria-labelledby="identity-head"
-        className="bg-card border-border shadow-card flex flex-col gap-3 rounded-xl border p-6"
+        className="bg-card border-border shadow-card flex flex-col gap-3 rounded-lg border p-6"
       >
-        <h2 id="identity-head" className="text-foreground text-heading-s font-medium">
+        <h2 id="identity-head" className="text-foreground text-heading-s">
           Identity
         </h2>
         <dl className="grid gap-x-4 gap-y-3 sm:grid-cols-2">

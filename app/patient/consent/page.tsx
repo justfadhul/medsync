@@ -85,7 +85,7 @@ export default async function PatientConsentPage() {
       </ul>
 
       <section className="bg-card dark:shadow-card flex flex-col gap-3 rounded-xl p-5 shadow-xs">
-        <h2 className="text-heading-s font-medium">Coming next</h2>
+        <h2 className="text-heading-s">Coming next</h2>
         <p className="text-muted-foreground text-body-s max-w-[60ch] leading-relaxed">
           None of this is built yet. It is listed so you know what this page is for, not so it looks
           busy.

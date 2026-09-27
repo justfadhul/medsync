@@ -98,7 +98,7 @@ export function BoardingBanner() {
     >
       <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
         <BedIcon aria-hidden className="size-5 text-teal-700" />
-        <h2 id="boarding-title" className="text-heading-s text-foreground font-medium">
+        <h2 id="boarding-title" className="text-heading-s text-foreground">
           Awaiting bed — {where}
         </h2>
         {since ? (

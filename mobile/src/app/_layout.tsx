@@ -1,11 +1,6 @@
 import { useEffect } from "react";
-import {
-  Fraunces_400Regular,
-  Fraunces_400Regular_Italic,
-  Fraunces_500Medium,
-  useFonts,
-} from "@expo-google-fonts/fraunces";
-import { Geist_400Regular, Geist_500Medium } from "@expo-google-fonts/geist";
+import { BricolageGrotesque_600SemiBold, useFonts } from "@expo-google-fonts/bricolage-grotesque";
+import { Geist_400Regular, Geist_500Medium, Geist_600SemiBold } from "@expo-google-fonts/geist";
 import { Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 
@@ -16,7 +11,7 @@ import { ThemeProvider, useTheme } from "@/theme/theme";
  * Hold the NATIVE splash until the brand fonts are in memory.
  *
  * Without this the first frame renders the wordmark in the system face and
- * then swaps to Fraunces — a visible flash of the wrong typography on the one
+ * then swaps to Bricolage Grotesque — a visible flash of the wrong typography on the one
  * screen whose whole job is the brand. Holding the native splash means the
  * handoff happens while nothing is on screen, and because its background is
  * `brand-950` — the same colour the React splash starts on — the transition
@@ -30,11 +25,10 @@ void SplashScreen.preventAutoHideAsync();
 
 export default function RootLayout() {
   const [fontsLoaded, fontError] = useFonts({
-    Fraunces_400Regular,
-    Fraunces_500Medium,
-    Fraunces_400Regular_Italic,
+    BricolageGrotesque_600SemiBold,
     Geist_400Regular,
     Geist_500Medium,
+    Geist_600SemiBold,
   });
 
   useEffect(() => {

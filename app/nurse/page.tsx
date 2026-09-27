@@ -43,13 +43,10 @@ export default async function NurseOverviewPage() {
 
       <header className="reveal-up flex flex-col gap-2">
         <span className="text-muted-foreground inline-flex items-center gap-1.5 font-mono text-[10px] tracking-[0.16em] uppercase">
-          <span
-            aria-hidden
-            className="pulse-dot bg-brand-500 ring-brand-500/20 size-1 rounded-full ring-2"
-          />
+          <span aria-hidden className="bg-iris-icon ring-iris-edge size-1 rounded-full ring-2" />
           {scope.hospitalName} · {scope.departmentName}
         </span>
-        <h1 className="font-display text-foreground text-heading-l leading-[1.15] font-medium tracking-[-0.015em] lg:text-[32px]">
+        <h1 className="font-display text-display-s text-foreground">
           {firstName ? `Welcome, ${firstName}.` : "Welcome."}
         </h1>
         <p className="text-muted-foreground max-w-[60ch] text-[13.5px] leading-relaxed">
@@ -145,7 +142,7 @@ function DirectionCard({
       className={
         tone === "primary"
           ? "group card-lift tap bg-foreground text-background hover:bg-foreground/90 flex items-start gap-3 rounded-xl p-5 transition-colors"
-          : "group card-lift tap border-border bg-card hover:bg-muted/30 flex items-start gap-3 rounded-xl border p-5 transition-colors"
+          : "group card-lift tap border-border bg-card hover:bg-muted/30 flex items-start gap-3 rounded-lg border p-5 transition-colors"
       }
     >
       <span
@@ -153,7 +150,7 @@ function DirectionCard({
         className={
           tone === "primary"
             ? "bg-background/15 text-background inline-flex size-9 shrink-0 items-center justify-center rounded-full transition-transform duration-200 group-hover:scale-105"
-            : "bg-muted text-foreground/80 group-hover:bg-brand-50 group-hover:text-brand-700 dark:group-hover:bg-brand-950/40 dark:group-hover:text-brand-300 inline-flex size-9 shrink-0 items-center justify-center rounded-full transition-colors duration-200"
+            : "bg-muted text-foreground/80 group-hover:bg-iris-tint group-hover:text-iris-icon inline-flex size-9 shrink-0 items-center justify-center rounded-full transition-colors duration-200"
         }
       >
         <Icon className="size-4" />
@@ -194,7 +191,7 @@ function PlaceholderCard({
   Icon: typeof UsersIcon;
 }) {
   return (
-    <div className="border-border bg-card/40 text-muted-foreground flex items-start gap-3 rounded-xl border border-dashed p-5">
+    <div className="border-border bg-card/40 text-muted-foreground flex items-start gap-3 rounded-lg border border-dashed p-5">
       <span
         aria-hidden
         className="bg-muted/60 text-muted-foreground inline-flex size-9 shrink-0 items-center justify-center rounded-full"

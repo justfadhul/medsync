@@ -45,7 +45,7 @@ export default async function PatientHouseholdPage() {
       />
 
       <section aria-labelledby="members-heading" className="flex flex-col gap-3">
-        <h2 id="members-heading" className="text-heading-s font-medium">
+        <h2 id="members-heading" className="text-heading-s">
           On your list
         </h2>
         {members.length === 0 ? (
@@ -82,7 +82,7 @@ export default async function PatientHouseholdPage() {
       </section>
 
       <section aria-labelledby="add-heading" className="flex flex-col gap-3">
-        <h2 id="add-heading" className="text-heading-s font-medium">
+        <h2 id="add-heading" className="text-heading-s">
           Add someone
         </h2>
         <AddMemberForm />
@@ -90,7 +90,7 @@ export default async function PatientHouseholdPage() {
 
       {members.length > 0 ? (
         <section aria-labelledby="their-visits" className="flex flex-col gap-3">
-          <h2 id="their-visits" className="text-heading-s font-medium">
+          <h2 id="their-visits" className="text-heading-s">
             Visits you booked for them
           </h2>
           {visits.length === 0 ? (

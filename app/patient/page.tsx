@@ -154,7 +154,7 @@ export default async function PatientHome() {
         ) : null}
 
         <section aria-labelledby="get-seen" className="flex flex-col gap-3">
-          <h2 id="get-seen" className="text-heading-s font-medium">
+          <h2 id="get-seen" className="text-heading-s">
             Get seen
           </h2>
           <PatientDoors />
@@ -201,7 +201,7 @@ function CatalogEntry({ watermark }: { watermark: boolean }) {
   return (
     <section aria-labelledby="whats-wrong" className="flex flex-col gap-3">
       <div className="flex flex-col gap-1">
-        <h2 id="whats-wrong" className="text-heading-s font-medium">
+        <h2 id="whats-wrong" className="text-heading-s">
           What&rsquo;s wrong?
         </h2>
         <p className="text-muted-foreground text-body-s">

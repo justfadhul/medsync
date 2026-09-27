@@ -61,7 +61,7 @@ export function AgreementGate({
       aria-labelledby="agreement-title"
       className="border-border bg-card shadow-card flex flex-col gap-5 rounded-lg border p-5 sm:p-6"
     >
-      <h2 id="agreement-title" className="text-heading-s text-foreground font-medium">
+      <h2 id="agreement-title" className="text-heading-s text-foreground">
         {P.agreementTitle}
       </h2>
       <p className="text-body-m text-muted-foreground text-pretty">{P.agreementLead}</p>

@@ -13,9 +13,7 @@ export const metadata: Metadata = {
 export default function OfflinePage() {
   return (
     <main className="bg-background mx-auto flex min-h-svh w-full max-w-xl flex-col gap-4 px-4 py-8 sm:px-6">
-      <h1 className="font-display text-foreground text-heading-m font-medium tracking-[-0.015em]">
-        You are offline
-      </h1>
+      <h1 className="font-display text-display-s text-foreground">You are offline</h1>
       <p className="text-muted-foreground text-body-m leading-relaxed">
         MedSync needs a connection to show your visits or book a day. Your booking code is in the
         text message we sent you, and the hospital can find your booking at the desk.

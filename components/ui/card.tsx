@@ -11,8 +11,8 @@ function Card({
 }: React.ComponentProps<"div"> & { tone?: CardTone }) {
   const toneClasses: Record<CardTone, string> = {
     standard: "bg-card text-card-foreground border border-border shadow-card",
-    muted: "bg-muted text-card-foreground border border-gray-150",
-    tealTinted: "bg-accent text-card-foreground border border-brand-100",
+    muted: "bg-muted text-card-foreground border border-ink-150",
+    tealTinted: "bg-teal-tint text-card-foreground border border-teal-edge",
   };
 
   return (
@@ -75,7 +75,7 @@ function CardFooter({ className, ...props }: React.ComponentProps<"div">) {
     <div
       data-slot="card-footer"
       className={cn(
-        "border-gray-150 -mx-6 -mb-6 flex items-center gap-2 border-t px-6 py-4",
+        "border-ink-150 bg-muted -mx-6 -mb-6 flex items-center gap-2 rounded-b-lg border-t px-6 py-4",
         className,
       )}
       {...props}

@@ -194,7 +194,7 @@ function RecCard({
               onChange={(e) => setDraft(e.target.value)}
               rows={2}
               autoFocus
-              className="border-input bg-background focus-visible:border-mint-500 mt-0.5 rounded-md border p-2 text-[12.5px] outline-none"
+              className="border-input bg-background focus-visible:border-ring mt-0.5 rounded-md border p-2 text-[12.5px] outline-none"
             />
           ) : (
             <p className="text-foreground text-[12.5px] leading-snug font-medium">

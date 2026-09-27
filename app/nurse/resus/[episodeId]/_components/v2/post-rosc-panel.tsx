@@ -193,7 +193,7 @@ export function PostRoscPanel() {
     <section
       data-testid="post-rosc-panel"
       aria-labelledby="post-rosc-heading"
-      className="border-border bg-card shadow-card rounded-xl border"
+      className="border-border bg-card shadow-card rounded-lg border"
     >
       <RoscHeader />
       <div id="post-rosc-bundle">{collapsed ? null : <PostRoscBundle />}</div>

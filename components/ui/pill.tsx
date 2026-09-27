@@ -1,49 +1,52 @@
+import type { ClinicalStatus } from "@/components/medsync/status-pill";
+import type { Hue } from "@/lib/design/domains";
 import type { ReactNode } from "react";
+import { LockIcon } from "lucide-react";
 
-import { cn } from "@/lib/utils";
+import { StatusPill } from "@/components/medsync/status-pill";
+import { Tag } from "@/components/medsync/tag";
 
 /**
- * Compact pill — for status, type, and other taxonomy values inside a table
- * cell or a list row. Tone maps to DESIGN-medsync.md clinical status colours.
+ * Compact chip for a table cell or list row (ADR 0162, MedSync Chroma).
  *
- * It lives here rather than in `data-table.tsx` for the same reason
- * `lib/patient/appointments.ts` keeps its constants out of a `server-only`
- * module: `data-table.tsx` is `"use client"` for the sortable table's
- * keyboard handling, and a `<span>` with a class map has no business dragging
- * that module into the bundle of every Server Component that shows a status.
- * `data-table.tsx` re-exports everything below, so existing importers across
- * the doctor, nurse, admin and hospital-admin surfaces are untouched.
+ * Two shapes, never told apart by hue alone:
+ *   - the six CLINICAL tones render the round `StatusPill` (icon + word) in the
+ *     CSO-owned status tokens — use them only for a patient's clinical state;
+ *   - every other tone renders a square `Tag` with a dot in a cool place hue.
+ *     Workflow states (active, confirmed, expired…) are tags, never
+ *     red/amber/green: those colours belong to the patient.
+ *
+ * It lives here rather than in `data-table.tsx` so Server Components can show
+ * a chip without pulling the client-only sortable table into their bundle;
+ * `data-table.tsx` re-exports everything below.
  */
 export type PillTone =
   | "neutral"
-  | "stable"
-  | "caution"
-  | "critical"
-  | "admitted"
-  | "discharged"
-  | "pending"
-  | "sensitive"
+  | "active"
   | "info"
-  | "notice";
+  | "notice"
+  | "place"
+  | "sensitive"
+  | ClinicalStatus;
 
-// The six clinical statuses resolve to the design-system status tokens, so a Pill
-// and a ClinicalBadge render the same status identically. The tokens are defined
-// in both :root and .dark (app/globals.css), so they flip on their own — no dark:
-// variants here, and none wanted: a hand-written override would drift again.
-const PILL_TONES: Record<PillTone, string> = {
-  neutral: "bg-gray-100 text-gray-700",
-  stable: "bg-status-stable-bg text-status-stable-fg",
-  caution: "bg-status-caution-bg text-status-caution-fg",
-  critical: "bg-status-critical-bg text-status-critical-fg",
-  admitted: "bg-status-admitted-bg text-status-admitted-fg",
-  discharged: "bg-status-discharged-bg text-status-discharged-fg",
-  pending: "bg-status-pending-bg text-status-pending-fg",
-  sensitive: "bg-status-caution-bg text-status-caution-fg ring-status-caution-fg/25 ring-1",
-  // ADR 0095: two more non-clinical tones so every availability kind has its
-  // own tint. Tailwind's own ramps, so these carry dark: variants themselves.
-  info: "bg-blue-100 text-blue-800 dark:bg-blue-950/50 dark:text-blue-200",
-  notice: "bg-orange-100 text-orange-800 dark:bg-orange-950/50 dark:text-orange-200",
+const TAG_HUE: Record<Exclude<PillTone, ClinicalStatus>, Hue> = {
+  neutral: "slate",
+  // Teal tags mean "enrolled / active in MedSync".
+  active: "teal",
+  info: "sky",
+  notice: "iris",
+  place: "plum",
+  sensitive: "slate",
 };
+
+const CLINICAL = new Set<PillTone>([
+  "stable",
+  "caution",
+  "critical",
+  "admitted",
+  "discharged",
+  "pending",
+]);
 
 export interface PillProps {
   tone?: PillTone;
@@ -52,15 +55,26 @@ export interface PillProps {
 }
 
 export function Pill({ tone = "neutral", children, className }: PillProps) {
+  if (CLINICAL.has(tone)) {
+    return (
+      <StatusPill status={tone as ClinicalStatus} className={className}>
+        {children}
+      </StatusPill>
+    );
+  }
+  if (tone === "sensitive") {
+    return (
+      <span
+        className={`bg-slate-tint text-slate-text border-slate-edge text-caption inline-flex h-[22px] w-fit items-center gap-1 rounded-sm border px-2 font-medium whitespace-nowrap ${className ?? ""}`}
+      >
+        <LockIcon aria-hidden className="size-3" />
+        {children}
+      </span>
+    );
+  }
   return (
-    <span
-      className={cn(
-        "text-caption inline-flex items-center rounded px-2 py-0.5 font-medium",
-        PILL_TONES[tone],
-        className,
-      )}
-    >
+    <Tag hue={TAG_HUE[tone as Exclude<PillTone, ClinicalStatus>]} className={className}>
       {children}
-    </span>
+    </Tag>
   );
 }

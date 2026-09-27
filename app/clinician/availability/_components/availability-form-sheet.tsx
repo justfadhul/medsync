@@ -165,7 +165,7 @@ function FormContent({ block, onClose }: { block: AvailabilityRow | null; onClos
                 type="datetime-local"
                 required
                 defaultValue={defaultStarts}
-                className="border-border text-foreground text-body-s focus-visible:ring-brand-500/40 rounded-md border bg-transparent px-2.5 py-1.5 outline-none focus-visible:ring-2"
+                className="border-border text-foreground text-body-s focus-visible:ring-ring rounded-md border bg-transparent px-2.5 py-1.5 outline-none focus-visible:ring-2"
                 onChange={syncIsoHidden("starts_at")}
               />
               <input type="hidden" name="starts_at" defaultValue={toIso(defaultStarts)} />
@@ -178,7 +178,7 @@ function FormContent({ block, onClose }: { block: AvailabilityRow | null; onClos
                 type="datetime-local"
                 required
                 defaultValue={defaultEnds}
-                className="border-border text-foreground text-body-s focus-visible:ring-brand-500/40 rounded-md border bg-transparent px-2.5 py-1.5 outline-none focus-visible:ring-2"
+                className="border-border text-foreground text-body-s focus-visible:ring-ring rounded-md border bg-transparent px-2.5 py-1.5 outline-none focus-visible:ring-2"
                 onChange={syncIsoHidden("ends_at")}
               />
               <input type="hidden" name="ends_at" defaultValue={toIso(defaultEnds)} />
@@ -192,7 +192,7 @@ function FormContent({ block, onClose }: { block: AvailabilityRow | null; onClos
                 name="recurrence"
                 value={recurrence}
                 onChange={(e) => setRecurrence(e.target.value as "none" | "weekly")}
-                className="border-border text-foreground text-body-s focus-visible:ring-brand-500/40 rounded-md border bg-transparent px-2 py-1.5 outline-none focus-visible:ring-2"
+                className="border-border text-foreground text-body-s focus-visible:ring-ring rounded-md border bg-transparent px-2 py-1.5 outline-none focus-visible:ring-2"
               >
                 <option value="none">One-off</option>
                 <option value="weekly">Repeat weekly</option>
@@ -202,7 +202,7 @@ function FormContent({ block, onClose }: { block: AvailabilityRow | null; onClos
                   name="recurrence_weekday"
                   value={weekday}
                   onChange={(e) => setWeekday(Number(e.target.value))}
-                  className="border-border text-foreground text-body-s focus-visible:ring-brand-500/40 rounded-md border bg-transparent px-2 py-1.5 outline-none focus-visible:ring-2"
+                  className="border-border text-foreground text-body-s focus-visible:ring-ring rounded-md border bg-transparent px-2 py-1.5 outline-none focus-visible:ring-2"
                 >
                   {WEEKDAYS.map((d) => (
                     <option key={d.value} value={d.value}>
@@ -233,7 +233,7 @@ function FormContent({ block, onClose }: { block: AvailabilityRow | null; onClos
               rows={2}
               defaultValue={block?.notes ?? ""}
               maxLength={1000}
-              className="border-border text-foreground placeholder:text-muted-foreground text-body-s focus-visible:ring-brand-500/40 min-h-16 resize-y rounded-md border bg-transparent px-2.5 py-1.5 outline-none focus-visible:ring-2"
+              className="border-border text-foreground placeholder:text-muted-foreground text-body-s focus-visible:ring-ring min-h-16 resize-y rounded-md border bg-transparent px-2.5 py-1.5 outline-none focus-visible:ring-2"
               placeholder="Visible only to you + your admins."
             />
           </div>

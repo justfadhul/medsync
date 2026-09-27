@@ -1,12 +1,11 @@
 "use client";
 
-import { useRouter } from "next/navigation";
-import { useEffect, useId, useMemo, useState } from "react";
-import { Combobox as ComboboxPrimitive } from "@base-ui/react/combobox";
-import { Dialog as DialogPrimitive } from "@base-ui/react/dialog";
+import type { CommandEntry } from "@/components/medsync/command-bar";
+import type { Domain } from "@/lib/design/domains";
+import type { LucideIcon } from "lucide-react";
+import { useCallback, useMemo } from "react";
 import {
   AlertTriangleIcon,
-  ArrowRightIcon,
   BedIcon,
   Building2Icon,
   CalendarClockIcon,
@@ -16,14 +15,13 @@ import {
   LayoutDashboardIcon,
   PrinterIcon,
   ScrollTextIcon,
-  SearchIcon,
   ShieldCheckIcon,
   StethoscopeIcon,
   UserCheckIcon,
   UsersIcon,
 } from "lucide-react";
 
-import { cn } from "@/lib/utils";
+import { CommandBar } from "@/components/medsync/command-bar";
 import { hubPaletteEntries } from "../departments/palette-actions";
 import { useHospitalScope } from "./scope-provider";
 
@@ -48,15 +46,7 @@ import { useHospitalScope } from "./scope-provider";
  * hospital_id from useHospitalScope().
  */
 
-interface NavEntry {
-  id: string;
-  label: string;
-  hint: string;
-  href: string;
-  icon: typeof LayoutDashboardIcon;
-  /** Palette group: "Navigate", "Actions", or a feature's entity group (contract §6). */
-  group: string;
-}
+type NavEntry = CommandEntry;
 
 /**
  * Departments & services actions (§5.11). Each routes to the hub's own screen — the palette never
@@ -70,6 +60,7 @@ const HUB_ACTIONS: ReadonlyArray<NavEntry> = [
     hint: "Departments & services · Clinics",
     href: "/hospital-admin/departments/clinics?add=1",
     icon: CalendarPlusIcon,
+    domain: "operations",
   },
   {
     id: "act-report",
@@ -78,6 +69,7 @@ const HUB_ACTIONS: ReadonlyArray<NavEntry> = [
     hint: "Something unavailable — a test, a ward, equipment",
     href: "/hospital-admin/departments/availability?report=1",
     icon: AlertTriangleIcon,
+    domain: "operations",
   },
   {
     id: "act-print",
@@ -86,6 +78,7 @@ const HUB_ACTIONS: ReadonlyArray<NavEntry> = [
     hint: "One A4 landscape page per week",
     href: "/hospital-admin/departments/clinics?view=timetable&print=1",
     icon: PrinterIcon,
+    domain: "operations",
   },
   {
     id: "act-head",
@@ -94,10 +87,11 @@ const HUB_ACTIONS: ReadonlyArray<NavEntry> = [
     hint: "Choose the department, then its head",
     href: "/hospital-admin/departments?assign=head",
     icon: UserCheckIcon,
+    domain: "operations",
   },
 ];
 
-const GROUP_ICONS: Record<string, typeof LayoutDashboardIcon> = {
+const GROUP_ICONS: Record<string, LucideIcon> = {
   Departments: Building2Icon,
   Wards: BedIcon,
   Clinics: StethoscopeIcon,
@@ -116,7 +110,7 @@ interface HospitalCommandPaletteProps {
   }>;
 }
 
-const PALETTE_ICONS: Record<string, typeof LayoutDashboardIcon> = {
+const PALETTE_ICONS: Record<string, LucideIcon> = {
   overview: LayoutDashboardIcon,
   staff: UsersIcon,
   departments: Building2Icon,
@@ -126,230 +120,56 @@ const PALETTE_ICONS: Record<string, typeof LayoutDashboardIcon> = {
   profile: FileTextIcon,
 };
 
+/** Matches the sidebar's domains (hospital-sidebar-item.tsx). */
+const PALETTE_DOMAIN: Record<string, Domain> = {
+  staff: "admin",
+  departments: "operations",
+  scheduling: "operations",
+  intake: "operations",
+  admins: "admin",
+  audit: "admin",
+  profile: "admin",
+};
+
 export function HospitalCommandPalette({ navEntries }: HospitalCommandPaletteProps) {
-  const router = useRouter();
   const scope = useHospitalScope();
-  const [open, setOpen] = useState(false);
-  const [query, setQuery] = useState("");
-  const [entities, setEntities] = useState<ReadonlyArray<NavEntry> | null>(null);
-  const inputId = useId();
-
-  // Entities load once, the first time the palette opens (pre-scoped on the server).
-  useEffect(() => {
-    if (!open || entities) return;
-    let live = true;
-    hubPaletteEntries()
-      .then((rows) => {
-        if (live)
-          setEntities(
-            rows.map((r) => ({ ...r, icon: GROUP_ICONS[r.group] ?? LayoutDashboardIcon })),
-          );
-      })
-      .catch(() => live && setEntities([]));
-    return () => {
-      live = false;
-    };
-  }, [open, entities]);
-  const titleId = useId();
-
-  useEffect(() => {
-    function onKey(e: KeyboardEvent) {
-      const isToggle = (e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k";
-      if (isToggle) {
-        e.preventDefault();
-        setOpen((v) => !v);
-      }
-    }
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, []);
 
   const entries: ReadonlyArray<NavEntry> = useMemo(
-    () =>
-      navEntries.map((e) => ({
+    () => [
+      ...navEntries.map((e) => ({
         id: e.id,
         label: e.label,
         hint: e.hint,
         href: e.href,
         icon: PALETTE_ICONS[e.iconKey] ?? LayoutDashboardIcon,
         group: "Navigate",
+        domain: PALETTE_DOMAIN[e.iconKey],
       })),
+      ...HUB_ACTIONS,
+    ],
     [navEntries],
   );
 
-  const filtered = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    // Entities only once the admin types: an empty palette stays the short list of places.
-    const all = q
-      ? [...entries, ...HUB_ACTIONS, ...(entities ?? [])]
-      : [...entries, ...HUB_ACTIONS];
-    if (!q) return all;
-    return all
-      .filter((item) => item.label.toLowerCase().includes(q) || item.hint.toLowerCase().includes(q))
-      .slice(0, 40);
-  }, [query, entries, entities]);
-  const groups = useMemo(
+  // Departments, wards, clinics and tests load once, pre-scoped on the server.
+  const loadEntities = useCallback(
     () =>
-      GROUP_ORDER.map((g) => ({ g, items: filtered.filter((i) => i.group === g) })).filter(
-        (x) => x.items.length > 0,
+      hubPaletteEntries().then((rows) =>
+        rows.map((r) => ({
+          ...r,
+          icon: GROUP_ICONS[r.group] ?? LayoutDashboardIcon,
+          domain: "operations" as const,
+        })),
       ),
-    [filtered],
+    [],
   );
 
-  function handleSelect(item: NavEntry) {
-    setOpen(false);
-    setQuery("");
-    router.push(item.href);
-  }
-
-  const isMac =
-    typeof navigator !== "undefined" && /mac|iphone|ipad|ipod/i.test(navigator.platform);
-  const modKey = isMac ? "⌘" : "Ctrl";
-
   return (
-    <>
-      <button
-        type="button"
-        onClick={() => setOpen(true)}
-        aria-label="Open command palette"
-        className={cn(
-          "border-border bg-background hover:bg-muted text-muted-foreground",
-          "inline-flex items-center gap-2 rounded-md border px-2.5 py-1.5 text-[12px] transition-colors",
-          "focus-visible:ring-brand-500/40 focus-visible:ring-2 focus-visible:outline-none",
-        )}
-      >
-        <SearchIcon className="size-3.5" aria-hidden />
-        <span className="hidden md:inline">Jump to…</span>
-        <kbd
-          aria-hidden
-          className="border-border text-muted-foreground hidden rounded border bg-gray-50 px-1.5 py-0.5 font-mono text-[10px] tracking-wider md:inline-flex"
-        >
-          {modKey} K
-        </kbd>
-      </button>
-
-      <DialogPrimitive.Root
-        open={open}
-        onOpenChange={(o) => {
-          setOpen(o);
-          if (!o) setQuery("");
-        }}
-      >
-        <DialogPrimitive.Portal>
-          <DialogPrimitive.Backdrop
-            className={cn(
-              "fixed inset-0 z-50 bg-black/30 supports-backdrop-filter:backdrop-blur-[1px]",
-              "data-open:animate-in data-open:fade-in-0 data-closed:animate-out data-closed:fade-out-0",
-              "ease-expo-out duration-150",
-              "motion-reduce:animate-none motion-reduce:duration-0",
-            )}
-          />
-          <DialogPrimitive.Popup
-            aria-labelledby={titleId}
-            className={cn(
-              "bg-popover text-popover-foreground border-border fixed top-[15svh] left-1/2 z-50 w-full max-w-160 -translate-x-1/2 overflow-hidden rounded-xl border shadow-2xl outline-none",
-              "data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95",
-              "ease-expo-out duration-150",
-              "motion-reduce:animate-none motion-reduce:duration-0",
-            )}
-          >
-            <DialogPrimitive.Title id={titleId} className="sr-only">
-              {scope.hospitalName} command palette
-            </DialogPrimitive.Title>
-
-            <ComboboxPrimitive.Root
-              items={filtered}
-              open
-              inputValue={query}
-              onInputValueChange={setQuery}
-            >
-              <div className="border-border flex items-center gap-3 border-b px-4 py-3">
-                <SearchIcon className="text-muted-foreground size-4 shrink-0" aria-hidden />
-                <label htmlFor={inputId} className="sr-only">
-                  Search workspace
-                </label>
-                <ComboboxPrimitive.Input
-                  id={inputId}
-                  placeholder="Jump to a section, department, ward, clinic or test…"
-                  autoFocus
-                  className={cn(
-                    "text-foreground placeholder:text-muted-foreground flex-1 bg-transparent text-[14px] tracking-[-0.004em] outline-none",
-                  )}
-                />
-                <kbd
-                  aria-hidden
-                  className="border-border text-muted-foreground hidden rounded border bg-gray-50 px-1.5 py-0.5 font-mono text-[10px] tracking-wider sm:inline-flex"
-                >
-                  ESC
-                </kbd>
-              </div>
-
-              <ComboboxPrimitive.List className="max-h-[60svh] overflow-y-auto p-2">
-                <ComboboxPrimitive.Empty className="text-muted-foreground text-body-s px-3 py-8 text-center empty:hidden">
-                  No matches for &ldquo;{query}&rdquo;.
-                </ComboboxPrimitive.Empty>
-
-                {groups.map(({ g, items }) => (
-                  <ComboboxPrimitive.Group key={g} items={items}>
-                    <ComboboxPrimitive.GroupLabel className="text-muted-foreground px-3 pt-3 pb-1 font-mono text-[10px] font-semibold tracking-[0.14em] uppercase">
-                      {g}
-                    </ComboboxPrimitive.GroupLabel>
-                    {items.map((item) => (
-                      <ComboboxPrimitive.Item
-                        key={item.id}
-                        value={item}
-                        onClick={() => handleSelect(item)}
-                        className={cn(
-                          "group flex cursor-pointer items-center gap-3 rounded-md px-3 py-2 text-[13.5px] outline-none",
-                          "data-highlighted:bg-muted",
-                        )}
-                      >
-                        <item.icon
-                          className="text-muted-foreground group-data-highlighted:text-foreground size-4 shrink-0"
-                          aria-hidden
-                        />
-                        <span className="flex-1 truncate">
-                          <span className="text-foreground font-medium">{item.label}</span>
-                          <span className="text-muted-foreground ml-2 text-[12.5px]">
-                            {item.hint}
-                          </span>
-                        </span>
-                        <ArrowRightIcon
-                          className="text-muted-foreground size-3.5 shrink-0 opacity-0 transition-opacity group-data-highlighted:opacity-100"
-                          aria-hidden
-                        />
-                      </ComboboxPrimitive.Item>
-                    ))}
-                  </ComboboxPrimitive.Group>
-                ))}
-              </ComboboxPrimitive.List>
-
-              <div className="border-border bg-muted/30 text-muted-foreground text-caption flex items-center justify-between border-t px-4 py-2">
-                <div className="flex items-center gap-3">
-                  <span className="inline-flex items-center gap-1">
-                    <kbd className="border-border bg-background rounded border px-1 py-0.5 font-mono text-[10px]">
-                      ↑↓
-                    </kbd>
-                    to navigate
-                  </span>
-                  <span className="inline-flex items-center gap-1">
-                    <kbd className="border-border bg-background rounded border px-1 py-0.5 font-mono text-[10px]">
-                      ↵
-                    </kbd>
-                    to select
-                  </span>
-                </div>
-                <span
-                  className="hidden truncate sm:inline"
-                  title={`Scoped to ${scope.hospitalName}`}
-                >
-                  Scoped to {scope.hospitalName}
-                </span>
-              </div>
-            </ComboboxPrimitive.Root>
-          </DialogPrimitive.Popup>
-        </DialogPrimitive.Portal>
-      </DialogPrimitive.Root>
-    </>
+    <CommandBar
+      entries={entries}
+      groupOrder={GROUP_ORDER}
+      scopeLabel={scope.hospitalName}
+      placeholder="Jump to a section, department, ward, clinic or test…"
+      loadEntities={loadEntities}
+    />
   );
 }

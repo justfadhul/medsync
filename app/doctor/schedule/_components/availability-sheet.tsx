@@ -120,12 +120,12 @@ export function AvailabilitySheetButton({
             </div>
 
             {blocks.length === 0 ? (
-              <div className="border-border bg-card flex flex-col items-start gap-3 rounded-xl border p-5">
+              <div className="border-border bg-card flex flex-col items-start gap-3 rounded-lg border p-5">
                 {/* No `dark:` overrides: the brand ramp inverts in dark mode, so
                     a hand-written dark step fights the flip and loses contrast. */}
                 <span
                   aria-hidden
-                  className="bg-plum-50 text-plum-700 ring-plum-200/70 inline-flex size-9 items-center justify-center rounded-full ring-1"
+                  className="bg-plum-tint text-plum-icon ring-plum-edge inline-flex size-9 items-center justify-center rounded-full ring-1"
                 >
                   <CalendarClockIcon className="size-4" />
                 </span>
@@ -145,7 +145,7 @@ export function AvailabilitySheetButton({
                 </Button>
               </div>
             ) : (
-              <ul className="border-border bg-card divide-border/60 stagger-children flex flex-col divide-y overflow-hidden rounded-xl border">
+              <ul className="border-border bg-card divide-border/60 stagger-children flex flex-col divide-y overflow-hidden rounded-lg border">
                 {blocks.map((b) => (
                   <li key={b.id}>
                     <BlockRow block={b} onEdit={() => openEdit(b)} />
@@ -194,7 +194,7 @@ function BlockRow({ block, onEdit }: { block: DoctorAvailabilityRow; onEdit: () 
       onClick={onEdit}
       className={cn(
         "hover:bg-muted/40 active:bg-muted/60 group flex w-full items-center gap-3 px-4 py-3 text-left transition-colors duration-200 outline-none",
-        "focus-visible:ring-brand-500/40 focus-visible:ring-2 focus-visible:ring-inset",
+        "focus-visible:ring-ring focus-visible:ring-2 focus-visible:ring-inset",
       )}
     >
       <div className="flex w-28 shrink-0 flex-col">

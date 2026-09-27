@@ -109,10 +109,7 @@ export function StatusPanel({ id }: { id: string }) {
   return (
     <section aria-labelledby="status-heading" className="flex flex-col gap-5">
       <header className="flex flex-col gap-1">
-        <h1
-          id="status-heading"
-          className="font-display text-foreground text-heading-l font-medium tracking-[-0.015em]"
-        >
+        <h1 id="status-heading" className="font-display text-display-s text-foreground">
           {view?.facility.name ?? "Your pre-alert"}
         </h1>
         <p className="text-muted-foreground text-body-s">

@@ -107,7 +107,7 @@ export function PendingDialog({
         return (
           <span className="inline-flex items-center gap-2 whitespace-nowrap">
             {waitingLabel(age)}
-            {age >= STALE_MS ? <Pill tone="caution">Stale</Pill> : null}
+            {age >= STALE_MS ? <Pill tone="notice">Stale</Pill> : null}
           </span>
         );
       },
@@ -127,6 +127,7 @@ export function PendingDialog({
   return (
     <>
       <StatButton
+        domain="operations"
         label="Pending"
         value={value}
         hint="awaiting a clinician"

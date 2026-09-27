@@ -70,12 +70,12 @@ function DetailContent({ item, onClose }: { item: PendingAffiliationRow; onClose
         <div className="flex flex-col gap-4">
           <div className="flex items-center gap-2">
             <Pill tone="neutral">Staff affiliation</Pill>
-            <Pill tone="pending">Pending review</Pill>
-            {item.reviewNote ? <Pill tone="caution">Info requested</Pill> : null}
+            <Pill tone="notice">Pending review</Pill>
+            {item.reviewNote ? <Pill tone="notice">Info requested</Pill> : null}
           </div>
 
           <div className="flex flex-col gap-1.5">
-            <h2 className="font-display text-foreground text-[24px] leading-[1.15] font-medium tracking-[-0.015em]">
+            <h2 className="text-foreground text-heading-l leading-[1.15] tracking-[-0.015em]">
               {item.fullName}
             </h2>
             <p className="text-muted-foreground text-body-s leading-snug">
@@ -83,7 +83,7 @@ function DetailContent({ item, onClose }: { item: PendingAffiliationRow; onClose
             </p>
           </div>
 
-          <div className="bg-brand-500/60 dark:bg-brand-400/50 h-px w-10" aria-hidden />
+          <div className="bg-ink-300 h-px w-10" aria-hidden />
 
           <dl className="flex flex-wrap items-baseline gap-x-6 gap-y-1.5 text-[11.5px]">
             <Meta label="Received" value={`${days} day${days === 1 ? "" : "s"} ago`} mono />
@@ -404,7 +404,7 @@ function LicenceCard({
     >
       <input type="hidden" name="bucket" value={bucket} />
       <input type="hidden" name="path" value={path} />
-      <div className="bg-plum-50 text-plum-700 ring-plum-200/70 flex size-9 shrink-0 items-center justify-center rounded ring-1">
+      <div className="bg-slate-tint text-slate-icon ring-slate-edge flex size-9 shrink-0 items-center justify-center rounded ring-1">
         <FileTextIcon className="size-4" aria-hidden />
       </div>
       <div className="flex min-w-0 flex-1 flex-col">

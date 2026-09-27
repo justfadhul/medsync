@@ -99,9 +99,7 @@ export function SlotPreview({
 
       <div className="flex flex-col gap-2 px-4 py-4 sm:px-6">
         <p className="text-foreground text-body-s flex items-baseline gap-2">
-          <span className="font-display text-heading-m font-medium tabular-nums">
-            {slots.length}
-          </span>
+          <span className="text-heading-m tabular-nums">{slots.length}</span>
           <span>
             {slots.length === 1 ? "bookable appointment" : "bookable appointments"} in the next{" "}
             {days} days

@@ -64,9 +64,7 @@ export default async function DoctorResusBoardPage() {
           />
           {scope.hospitalName} · {scope.departmentName} · Resus
         </span>
-        <h1 className="font-display text-foreground sm:text-heading-l text-[24px] leading-[1.15] font-medium tracking-[-0.015em]">
-          Resuscitation board
-        </h1>
+        <h1 className="font-display text-display-s text-foreground">Resuscitation board</h1>
         <p className="text-muted-foreground text-body-s max-w-2xl leading-relaxed">
           The ABCDE surface for any patient at Red/L1 or a Step-0 life-threat. Opening a resus
           starts the immutable record and summons the team. The app records what the team does — the

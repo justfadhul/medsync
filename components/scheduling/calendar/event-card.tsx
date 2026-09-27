@@ -46,7 +46,7 @@ export function EventCard({
     rows.footer ? "gap-0.5 py-2" : rows.time ? "gap-0.5 py-1" : "gap-0 py-0.5",
     d.cardClasses,
     d.clickable
-      ? "ease-expo-out focus-visible:ring-brand-500/40 z-10 shadow-xs transition-shadow duration-150 hover:shadow-md focus-visible:ring-2 focus-visible:outline-none"
+      ? "ease-expo-out focus-visible:ring-ring z-10 shadow-xs transition-shadow duration-150 hover:shadow-md focus-visible:ring-2 focus-visible:outline-none"
       : "pointer-events-none",
     d.urgent && "ring-1 ring-rose-500/70",
   );

@@ -113,7 +113,7 @@ export function RapidRedButton({
               <ZapIcon className="size-2.5" aria-hidden />
               Rapid · Level 1 resus
             </span>
-            <DialogTitle className="text-heading-s leading-tight font-medium">
+            <DialogTitle className="text-heading-s leading-tight">
               Immediate life threat — {patientLabel}
             </DialogTitle>
             <DialogDescription className="text-[12px]">

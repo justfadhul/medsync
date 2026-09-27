@@ -101,7 +101,7 @@ export function PendingQueue({ rows, selectedAffiliationId }: PendingQueueProps)
       header: "",
       cell: (row) =>
         row.reviewNote ? (
-          <Pill tone="caution">Info requested</Pill>
+          <Pill tone="notice">Info requested</Pill>
         ) : (
           <span className="text-muted-foreground text-caption">—</span>
         ),

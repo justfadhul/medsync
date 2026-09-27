@@ -37,7 +37,7 @@ export function PatientLine({
       <span
         className={
           size === "panel"
-            ? "text-heading-s text-foreground font-medium"
+            ? "text-heading-s text-foreground"
             : "text-body-m text-foreground truncate font-medium"
         }
       >

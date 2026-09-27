@@ -109,15 +109,13 @@ export function ProviderScreen({
             {provider.photoUrl ? null : (
               <span
                 aria-hidden
-                className="bg-plum-50 text-plum-700 text-heading-s grid size-14 shrink-0 place-items-center rounded-full font-mono font-medium"
+                className="bg-sky-tint text-sky-text text-heading-s grid size-14 shrink-0 place-items-center rounded-full font-mono"
               >
                 {initials ?? <StethoscopeIcon strokeWidth={1.5} className="size-6" />}
               </span>
             )}
             <div className="flex min-w-0 flex-col gap-0.5">
-              <h1 className="font-display text-foreground text-heading-l leading-tight font-medium tracking-[-0.015em]">
-                {provider.fullName}
-              </h1>
+              <h1 className="font-display text-display-s text-foreground">{provider.fullName}</h1>
               <p className="text-muted-foreground text-body-s">
                 {[provider.cadreName, provider.departmentName].filter(Boolean).join(" · ")}
               </p>

@@ -350,9 +350,7 @@ export function TriageDesk({
           {row.entryTypeName}
         </span>
       )}
-      <h1 className="font-display text-foreground text-[20px] leading-tight font-medium tracking-[-0.01em]">
-        {name}
-      </h1>
+      <h1 className="font-display text-display-s text-foreground">{name}</h1>
       <span className="text-muted-foreground text-caption font-mono tabular-nums">
         {metaBits.join(" · ")}
       </span>
@@ -1212,7 +1210,7 @@ function VitalTile({
     <div
       className={cn(
         tileShell(i.tone),
-        "focus-within:border-mint-500 focus-within:ring-mint-500/20 dark:focus-within:border-mint-400 focus-within:ring-2",
+        "focus-within:border-ring focus-within:ring-mint-500/20 focus-within:ring-2",
       )}
     >
       <div className="flex items-start justify-between gap-2">
@@ -1267,12 +1265,7 @@ function SelectTile({
 }) {
   const isMod = label.startsWith("Air");
   return (
-    <div
-      className={cn(
-        tileShell(i.tone),
-        "focus-within:border-mint-500 dark:focus-within:border-mint-400",
-      )}
-    >
+    <div className={cn(tileShell(i.tone), "focus-within:border-ring")}>
       <div className="flex items-start justify-between gap-2">
         <TileLabel>{label}</TileLabel>
         <DeltaPill i={i} mod={isMod} />
@@ -1370,12 +1363,7 @@ function PillSelectTile({
   options: ReadonlyArray<readonly [string, string]>;
 }) {
   return (
-    <div
-      className={cn(
-        tileShell("normal"),
-        "focus-within:border-mint-500 dark:focus-within:border-mint-400",
-      )}
-    >
+    <div className={cn(tileShell("normal"), "focus-within:border-ring")}>
       <TileLabel>{label}</TileLabel>
       <div className="relative flex items-center">
         <span className="text-foreground text-heading-s font-mono leading-none font-semibold">

@@ -23,9 +23,7 @@ export default async function NurseAssignmentsPage() {
   if (!scope.isInCharge) {
     return (
       <div className="mx-auto flex w-full max-w-2xl flex-col gap-4 px-6 py-10">
-        <h1 className="font-display text-foreground text-heading-m font-medium">
-          Assignment board
-        </h1>
+        <h1 className="font-display text-display-s text-foreground">Assignment board</h1>
         <p className="text-muted-foreground text-[12.5px]">
           The assignment board is for the ward in-charge. Your nurse-in-charge can pair you with
           patients for today&rsquo;s shift.
@@ -94,12 +92,10 @@ export default async function NurseAssignmentsPage() {
     <div className="stagger-children mx-auto flex w-full max-w-6xl flex-col gap-8 px-6 py-8 lg:py-10">
       <header className="flex flex-col gap-2">
         <span className="text-muted-foreground inline-flex items-center gap-1.5 font-mono text-[10px] tracking-[0.16em] uppercase">
-          <span aria-hidden className="bg-brand-500 ring-brand-500/20 size-1 rounded-full ring-2" />
+          <span aria-hidden className="bg-iris-icon ring-iris-edge size-1 rounded-full ring-2" />
           {scope.hospitalName} · Assignment board
         </span>
-        <h1 className="font-display text-foreground text-[26px] leading-tight font-medium tracking-[-0.015em]">
-          Patients ↔ nurses
-        </h1>
+        <h1 className="font-display text-display-s text-foreground">Patients ↔ nurses</h1>
         <p className="text-muted-foreground max-w-[60ch] text-[12.5px]">
           Pair patients with nurses on shift. As ward in-charge you can re-pair any time — previous
           pairings get an end-time and the new one becomes the active row.
@@ -108,7 +104,7 @@ export default async function NurseAssignmentsPage() {
 
       <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
         {/* Active assignments table */}
-        <section className="border-border bg-card overflow-hidden rounded-xl border">
+        <section className="border-border bg-card overflow-hidden rounded-lg border">
           <div className="border-border flex items-center justify-between border-b px-4 py-2.5">
             <h2 className="text-muted-foreground font-mono text-[10.5px] tracking-[0.14em] uppercase">
               Active · {active.length}
@@ -162,10 +158,7 @@ export default async function NurseAssignmentsPage() {
               </thead>
               <tbody className="divide-border/60 divide-y">
                 {active.map((r) => (
-                  <tr
-                    key={r.id}
-                    className="hover:bg-brand-50/40 dark:hover:bg-brand-950/15 transition-colors"
-                  >
+                  <tr key={r.id} className="hover:bg-ink-25 transition-colors">
                     <td className="px-4 py-2 font-mono text-[12px] tabular-nums">
                       <Link
                         href={`/nurse/patients/${r.patientId}`}
@@ -194,7 +187,7 @@ export default async function NurseAssignmentsPage() {
         </section>
 
         {/* Assign form */}
-        <aside className="border-border bg-card flex flex-col gap-3 rounded-xl border p-4">
+        <aside className="border-border bg-card flex flex-col gap-3 rounded-lg border p-4">
           <h2 className="text-muted-foreground font-mono text-[10.5px] tracking-[0.14em] uppercase">
             Assign a patient
           </h2>

@@ -161,7 +161,7 @@ const makeStyles = (c: Palette) =>
       textAlign: "center",
     },
     when: {
-      fontFamily: font.bodyMedium,
+      fontFamily: font.bodySemiBold,
       fontSize: 17,
       lineHeight: 23,
       color: c.foreground,

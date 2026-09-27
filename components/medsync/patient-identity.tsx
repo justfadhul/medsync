@@ -88,7 +88,7 @@ export function PatientAvatar({
       aria-hidden
       className={cn(
         // brand-* is role-inverted by `.dark` in globals.css, so no `dark:` override.
-        "bg-plum-100 text-plum-800 ring-plum-200/70 grid shrink-0 place-items-center rounded-full font-mono font-medium tabular-nums ring-1",
+        "ring-sky-edge grid shrink-0 place-items-center rounded-full bg-sky-100 font-mono font-medium text-sky-800 tabular-nums ring-1",
         AVATAR_SIZE[size],
         className,
       )}

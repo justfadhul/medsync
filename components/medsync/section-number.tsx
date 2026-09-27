@@ -6,15 +6,18 @@ interface SectionNumberProps extends HTMLAttributes<HTMLSpanElement> {
   n: number;
 }
 
+/**
+ * The bracket number `[01]` that anchors the eye through a dense form. Neutral
+ * ink under MedSync Chroma (ADR 0162): place hues belong to the hospital's
+ * domains, and a step number is structure, not a place.
+ */
 export function SectionNumber({ n, className, ...props }: SectionNumberProps) {
   return (
     <span
       data-slot="section-number"
       className={cn(
-        "inline-flex items-center justify-center px-2 py-0.5",
-        "bg-plum-50 text-plum-700 border-plum-100 border",
-        "text-body-s font-mono leading-none font-semibold tabular-nums",
-        "rounded-xs",
+        "bg-ink-50 text-ink-700 border-ink-200 inline-flex h-[22px] items-center justify-center rounded-xs border px-1.5",
+        "font-mono text-[12px] leading-none font-semibold tabular-nums",
         className,
       )}
       {...props}

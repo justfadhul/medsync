@@ -86,7 +86,7 @@ function PatientHeader() {
         <span className="text-muted-foreground font-mono text-[9.5px] tracking-[0.18em] uppercase">
           Patient view
         </span>
-        <span className="font-display text-foreground text-[14px] leading-tight font-medium">
+        <span className="text-foreground text-[14px] leading-tight font-semibold">
           Good morning.
         </span>
       </div>
@@ -118,7 +118,7 @@ function LogReadingCard() {
 
       <div className="flex items-end justify-between gap-4">
         <div className="flex flex-col">
-          <span className="font-display text-foreground tabular text-[34px] leading-none font-medium">
+          <span className="text-foreground tabular font-mono text-[34px] leading-none font-medium">
             11.6
           </span>
           <span className="text-muted-foreground mt-1.5 text-[10.5px]">Yesterday</span>
@@ -234,7 +234,7 @@ function TodayMedsCard() {
           </li>
         ))}
       </ul>
-      <p className="text-muted-foreground/80 text-[10px] italic">Tap a card to confirm a dose.</p>
+      <p className="text-muted-foreground/80 text-[10px]">Tap a card to confirm a dose.</p>
     </div>
   );
 }
@@ -320,7 +320,7 @@ function SmsReminderChip() {
         "border-border bg-card border shadow-sm",
       )}
     >
-      <span className="bg-plum-50 text-plum-700 inline-flex size-7 items-center justify-center rounded-full">
+      <span className="bg-sky-tint text-sky-icon inline-flex size-7 items-center justify-center rounded-full">
         <MessageSquareIcon className="size-3.5" strokeWidth={1.75} />
       </span>
       <div className="flex flex-1 flex-col">
@@ -347,7 +347,7 @@ function ReportConcernCard() {
         "hover:border-brand-300 transition-colors duration-150",
       )}
     >
-      <span className="bg-plum-50 text-plum-700 inline-flex size-7 shrink-0 items-center justify-center rounded-md">
+      <span className="bg-sky-tint text-sky-icon inline-flex size-7 shrink-0 items-center justify-center rounded-md">
         <ShieldIcon className="size-3.5" strokeWidth={1.75} />
       </span>
       <div className="flex flex-1 flex-col gap-0.5">

@@ -67,7 +67,7 @@ export function WardsView({
       ) : null}
 
       {visible.length ? (
-        <section className="border-border bg-card overflow-hidden rounded-xl border">
+        <section className="border-border bg-card overflow-hidden rounded-lg border">
           <div className="text-muted-foreground border-border hidden grid-cols-[1.4fr_1fr_1fr_0.8fr_1fr_1fr] gap-3 border-b px-4 py-2 font-mono text-[10.5px] tracking-[0.12em] uppercase md:grid">
             <span>Ward</span>
             <span>Department</span>

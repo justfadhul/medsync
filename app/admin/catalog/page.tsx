@@ -90,9 +90,7 @@ export default async function CatalogPage() {
     <div className="flex flex-col">
       <header className="border-border border-b px-4 py-6 sm:px-8 sm:py-8">
         <div className="mx-auto flex w-full max-w-[1200px] flex-col gap-1">
-          <h1 className="font-display text-foreground sm:text-heading-l text-[24px] leading-tight font-medium tracking-[-0.018em]">
-            Catalog
-          </h1>
+          <h1 className="font-display text-display-s text-foreground">Catalog</h1>
           <p className="text-muted-foreground max-w-[60ch] text-[13.5px]">
             Seeded reference data — read-only. Editing is deferred behind preview + four-eyes +
             audit (per kickoff Area 4); role → permission edits are the quietest catastrophic risk

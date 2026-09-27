@@ -112,7 +112,7 @@ export function DepartmentsView(props: {
           onPick={() => setAdding(true)}
         />
       ) : (
-        <section className="border-border bg-card overflow-hidden rounded-xl border">
+        <section className="border-border bg-card overflow-hidden rounded-lg border">
           {DEPARTMENT_KINDS.map((kind) => {
             const rows = visible.filter((d) => d.kind === kind);
             if (!rows.length) return null;
@@ -139,7 +139,10 @@ export function DepartmentsView(props: {
                               />
                               {d.isStart ? (
                                 <span className="text-caption text-foreground inline-flex items-center gap-1 font-medium">
-                                  <span aria-hidden className="bg-plum-500 size-1.5 rounded-full" />
+                                  <span
+                                    aria-hidden
+                                    className="bg-plum-icon size-1.5 rounded-full"
+                                  />
                                   Start department
                                 </span>
                               ) : null}
@@ -258,14 +261,14 @@ function FirstRunDoors({
   ].filter((d): d is NonNullable<typeof d> => d !== null);
   return (
     <section aria-labelledby="first-run" className="flex flex-col gap-3">
-      <h2 id="first-run" className="text-foreground text-heading-s font-medium">
+      <h2 id="first-run" className="text-foreground text-heading-s">
         Set up what your hospital runs
       </h2>
       <div className={cn("grid gap-3", doors.length === 3 ? "md:grid-cols-3" : "md:grid-cols-2")}>
         {doors.map((d) => (
           <div
             key={d.title}
-            className="border-border bg-card flex flex-col gap-3 rounded-xl border p-5"
+            className="border-border bg-card flex flex-col gap-3 rounded-lg border p-5"
           >
             <d.icon className="text-muted-foreground size-5" aria-hidden />
             <h3 className="text-foreground text-body-m font-medium">{d.title}</h3>
@@ -1110,8 +1113,8 @@ function DepartmentPanel({
                 </div>
                 {inUse || dept.isStart ? (
                   <p className="text-body-s text-muted-foreground">
-                    <span className="text-foreground font-medium">Archive department:</span>{" "}
-                    not possible while it&apos;s {dept.isStart ? "the start department" : "in use"}.{" "}
+                    <span className="text-foreground font-medium">Archive department:</span> not
+                    possible while it&apos;s {dept.isStart ? "the start department" : "in use"}.{" "}
                     {inUse
                       ? `${staff} staff · ${booked} booked session${booked === 1 ? "" : "s"} · ${wardCount} ward${wardCount === 1 ? "" : "s"}. Reassign first.`
                       : "Choose another start department first."}

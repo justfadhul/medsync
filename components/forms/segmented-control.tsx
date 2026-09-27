@@ -79,9 +79,9 @@ export function SegmentedControl({
             className={cn(
               "border-input bg-card text-foreground text-body-s flex-1 cursor-pointer rounded-sm border px-3 py-2",
               "ease-expo-out transition-all duration-150 select-none",
-              "hover:border-brand-300 hover:bg-brand-50/40 dark:hover:bg-brand-50/10",
-              "focus-within:border-brand-500 focus-within:shadow-[0_0_0_2px_rgba(20,184,166,0.15)]",
-              "dark:focus-within:border-brand-400 dark:focus-within:shadow-[0_0_0_2px_rgba(45,212,191,0.2)]",
+              "hover:border-brand-300 hover:bg-ink-25",
+              "focus-within:border-ring focus-within:shadow-[0_0_0_3px_var(--teal-tint),0_0_0_1px_var(--ring)]",
+              "",
               isSelected &&
                 "border-brand-500 bg-brand-50/60 dark:border-brand-400 dark:bg-brand-50/15",
               invalid && !isSelected && "border-destructive bg-alert-bg",

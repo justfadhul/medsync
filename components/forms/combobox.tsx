@@ -98,8 +98,8 @@ export function Combobox({
         className={cn(
           "border-input bg-card text-foreground relative flex w-full items-center gap-2 rounded-sm border px-2.5 py-2",
           "ease-expo-out text-body-s text-left transition-all duration-150 outline-none",
-          "focus-within:border-brand-500 focus-within:shadow-[0_0_0_2px_rgba(20,184,166,0.15)]",
-          "dark:focus-within:border-brand-400 dark:focus-within:shadow-[0_0_0_2px_rgba(45,212,191,0.2)]",
+          "focus-within:border-ring focus-within:shadow-[0_0_0_3px_var(--teal-tint),0_0_0_1px_var(--ring)]",
+          "",
           "disabled:bg-muted disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50",
           "data-[disabled]:bg-muted data-[disabled]:pointer-events-none data-[disabled]:cursor-not-allowed data-[disabled]:opacity-50",
           invalid &&

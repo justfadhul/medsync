@@ -110,3 +110,6 @@ export * from "./onboarding";
 
 // ─── Departments & services hub (migration 0080 — GATED, ADRs 0150–0160) ─
 export * from "./services-hub";
+
+// ─── Tester feedback (/feedback, migration 0081) ─────────────────────────
+export * from "./tester-feedback";

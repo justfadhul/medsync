@@ -112,7 +112,7 @@ export function ClosedSummary() {
     <section
       data-testid="closed-summary"
       aria-labelledby="closed-summary-heading"
-      className="border-border bg-card shadow-card space-y-2 rounded-xl border px-4 py-4 sm:px-6"
+      className="border-border bg-card shadow-card space-y-2 rounded-lg border px-4 py-4 sm:px-6"
     >
       <div className="flex flex-wrap items-start justify-between gap-2">
         <h2 id="closed-summary-heading" className="text-heading-s text-foreground">
@@ -214,7 +214,7 @@ export function AfterDeathChecklist() {
     <section
       data-testid="after-death"
       aria-labelledby="after-death-heading"
-      className="border-border bg-card shadow-card rounded-xl border"
+      className="border-border bg-card shadow-card rounded-lg border"
     >
       <header className="border-border flex flex-wrap items-baseline justify-between gap-2 border-b px-4 py-3 sm:px-6">
         <h2 id="after-death-heading" className="text-heading-s text-foreground">

@@ -193,9 +193,7 @@ export function ArrestAlarm({
         >
           <TriangleAlertIcon aria-hidden className="size-6 shrink-0" />
           <div className="min-w-0 flex-1">
-            <p className="text-heading-s font-medium">
-              Cardiac arrest{a.place ? ` — ${a.place}` : ""}
-            </p>
+            <p className="text-heading-s">Cardiac arrest{a.place ? ` — ${a.place}` : ""}</p>
             <p className="text-body-s">
               Declared {hhmm(a.atMs)} ·{" "}
               {!a.sounding

@@ -128,7 +128,7 @@ export async function SchedulingOverviewCard({
         {isPanel ? null : (
           <Link
             href="/hospital-admin/scheduling"
-            className="text-muted-foreground hover:text-foreground text-caption focus-visible:ring-brand-500/40 group inline-flex min-h-11 items-center gap-1 rounded transition-colors outline-none focus-visible:ring-2"
+            className="text-muted-foreground hover:text-foreground text-caption focus-visible:ring-ring group inline-flex min-h-11 items-center gap-1 rounded transition-colors outline-none focus-visible:ring-2"
           >
             View
             <ArrowRightIcon
@@ -198,9 +198,7 @@ function Stat({
   return (
     <div className="border-border/60 hover:border-border rounded-md border p-3 transition-colors">
       <span className="text-muted-foreground text-overline font-mono uppercase">{label}</span>
-      <div
-        className={cn("text-heading-l mt-1 font-mono leading-none font-medium tabular-nums", cls)}
-      >
+      <div className={cn("text-heading-l mt-1 font-mono leading-none tabular-nums", cls)}>
         {value}
       </div>
       {hint ? <span className="text-muted-foreground text-caption">{hint}</span> : null}

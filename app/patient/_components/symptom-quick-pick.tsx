@@ -38,7 +38,7 @@ export function SymptomQuickPick({
   return (
     <section aria-labelledby="feeling-today" className="flex flex-col gap-3">
       <div className="flex flex-col gap-1">
-        <h2 id="feeling-today" className="text-heading-s font-medium">
+        <h2 id="feeling-today" className="text-heading-s">
           How are you feeling today?
         </h2>
         <p className="text-muted-foreground text-body-s">

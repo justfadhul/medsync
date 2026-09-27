@@ -61,7 +61,7 @@ function Panel({ founder: f }: { founder: Founder }) {
   return (
     <div className="grid gap-4 lg:grid-cols-12 lg:gap-8">
       <div className="flex flex-col gap-1 lg:col-span-4">
-        <h3 className="text-foreground text-xl font-medium">{f.displayName}</h3>
+        <h3 className="text-foreground text-heading-l">{f.displayName}</h3>
         {f.role ? <p className="text-muted-foreground text-sm">{f.role}</p> : null}
       </div>
       <div className="flex flex-col items-start gap-4 lg:col-span-8">

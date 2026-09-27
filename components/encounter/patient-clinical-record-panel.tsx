@@ -54,7 +54,7 @@ export async function PatientClinicalRecordPanel({
         className={
           rec.allergies.length > 0
             ? "rounded-xl border border-amber-300/70 bg-amber-50 p-4 ring-1 ring-amber-200/60 dark:border-amber-800/50 dark:bg-amber-950/30 dark:ring-amber-800/30"
-            : "border-border bg-card rounded-xl border p-4"
+            : "border-border bg-card rounded-lg border p-4"
         }
       >
         <h3 className="inline-flex items-center gap-1.5 font-mono text-[10.5px] tracking-[0.14em] uppercase">
@@ -139,7 +139,7 @@ function Shell({ children }: { children: React.ReactNode }) {
   return (
     <section className="flex flex-col gap-4">
       <span className="text-muted-foreground inline-flex items-center gap-1.5 font-mono text-[10px] tracking-[0.16em] uppercase">
-        <span aria-hidden className="bg-brand-500 ring-brand-500/20 size-1 rounded-full ring-2" />
+        <span aria-hidden className="bg-iris-icon ring-iris-edge size-1 rounded-full ring-2" />
         Clinical record
       </span>
       {children}
@@ -159,7 +159,7 @@ function ListCard({
   empty: string;
 }) {
   return (
-    <div className="border-border bg-card flex flex-col gap-2 rounded-xl border p-4">
+    <div className="border-border bg-card flex flex-col gap-2 rounded-lg border p-4">
       <h3 className="text-muted-foreground inline-flex items-center gap-1.5 font-mono text-[10.5px] tracking-[0.14em] uppercase">
         <Icon className="size-3.5" aria-hidden />
         {title}
@@ -200,7 +200,7 @@ function ListCard({
 
 function EmptyNote({ title, body }: { title: string; body: string }) {
   return (
-    <div className="border-border bg-card/40 text-muted-foreground rounded-xl border border-dashed p-4">
+    <div className="border-border bg-card/40 text-muted-foreground rounded-lg border border-dashed p-4">
       <span className="text-foreground/80 text-body-s font-medium">{title}</span>
       <p className="mt-1 text-[11.5px] leading-relaxed">{body}</p>
     </div>

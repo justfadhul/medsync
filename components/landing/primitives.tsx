@@ -31,9 +31,9 @@ export const THEME_FAB =
 export const CONTAINER = "mx-auto w-full max-w-300 px-4 sm:px-8";
 
 /**
- * A heading whose `em` tail renders as the page's one italic accent: teal-900,
- * three words or fewer per heading (landing v4 rule — the landing is
- * monochrome + teal; no plum).
+ * A heading whose `em` tail renders as the page's one accent: upright (the
+ * Chroma display face, Bricolage Grotesque, has no italic — ADR 0162) in
+ * teal-700, three words or fewer per heading.
  */
 export function Emph({ text, em, onDark }: Heading & { onDark?: boolean }) {
   const at = em ? text.lastIndexOf(em) : -1;
@@ -41,8 +41,8 @@ export function Emph({ text, em, onDark }: Heading & { onDark?: boolean }) {
   return (
     <>
       {text.slice(0, at)}
-      {/* On the teal-900 band the accent is teal-200 (≈ 7.5:1). */}
-      <em className={cn("italic", onDark ? "text-teal-200" : "text-teal-900")}>{em}</em>
+      {/* On the teal-900 band the accent is teal-200 (≈ 7.5:1); teal-700 on white is 5.5:1. */}
+      <em className={cn("not-italic", onDark ? "text-teal-200" : "text-teal-700")}>{em}</em>
       {text.slice(at + em.length)}
     </>
   );

@@ -18,7 +18,7 @@ export function Gap() {
           >
             “
           </span>
-          <blockquote className="font-display text-heading-l sm:text-display-s text-foreground text-balance italic">
+          <blockquote className="font-display text-heading-l sm:text-display-s text-foreground text-balance">
             {GAP.quote}
           </blockquote>
           <figcaption className="text-body-s text-muted-foreground">— {GAP.attribution}</figcaption>

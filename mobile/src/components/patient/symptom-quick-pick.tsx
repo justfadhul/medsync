@@ -115,7 +115,7 @@ const makeStyles = (c: Palette) =>
       paddingBottom: space[2],
     },
     sheetTitle: {
-      fontFamily: font.display,
+      fontFamily: font.bodySemiBold,
       fontSize: 22,
       lineHeight: 28,
       letterSpacing: -0.3,
