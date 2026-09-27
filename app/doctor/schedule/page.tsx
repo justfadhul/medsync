@@ -81,8 +81,8 @@ export default async function DoctorSchedulePage() {
 
   return (
     // The page flows: title, the strip, then the calendar at its fixed height
-    // beside its two rails, each rail capped at that height and scrolling
-    // inside. The shell's sidebar sits to the left of all of it on lg+.
+    // beside its two rails (xl+; under them below), each rail capped at that
+    // height and scrolling inside. The shell's sidebar sits to the left on lg+.
     <div className="mx-auto flex w-full max-w-7xl flex-col gap-4 px-4 py-5 sm:px-6">
       <header className="flex flex-col gap-1">
         <div className="flex flex-wrap items-center gap-2">
@@ -114,13 +114,15 @@ export default async function DoctorSchedulePage() {
 
       <StatRail stats={stats} windowLabel={windowLabel} />
 
-      <div className="grid min-w-0 gap-4 lg:grid-cols-[minmax(0,1fr)_20rem]">
+      {/* The rails sit beside the calendar from 1280px, where the week keeps ~120px
+          columns; below it they go underneath so the week's columns stay readable. */}
+      <div className="grid min-w-0 gap-4 xl:grid-cols-[minmax(0,1fr)_20rem]">
         <DoctorCalendar
           events={events}
           windowLabel={windowLabel}
           action={<AvailabilitySheetButton blocks={availabilityBlocks} />}
         />
-        <div className="flex min-w-0 flex-col gap-4">
+        <div className="grid min-w-0 content-start gap-4 md:grid-cols-2 xl:flex xl:flex-col">
           {!settings.autoConfirm ? <PendingApprovalsRail rows={pending} /> : null}
           <QueueRail entries={queue} encounterEngineLive={encounterEngineLive()} />
         </div>

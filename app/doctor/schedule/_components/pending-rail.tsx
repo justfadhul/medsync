@@ -32,7 +32,11 @@ export function PendingApprovalsRail({ rows }: { rows: ReadonlyArray<PendingRow>
       className="max-h-[max(60svh,520px)] lg:max-h-[min(72svh,760px)]"
     >
       {rows.length === 0 ? (
-        <p className="text-muted-foreground text-body-s px-5 py-4">Nothing waiting for you.</p>
+        <div className="px-4 py-4">
+          <p className="border-border text-muted-foreground text-body-s rounded-[10px] border border-dashed px-3 py-3">
+            Nothing waiting for you.
+          </p>
+        </div>
       ) : (
         <ul className="divide-border/60 min-h-0 flex-1 divide-y overflow-auto px-3">
           {rows.map((r) => (

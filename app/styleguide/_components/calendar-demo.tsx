@@ -117,12 +117,10 @@ export function CalendarDemo() {
     ];
   }, []);
 
-  const kinds = events.flatMap((e) => (e.kind === "availability" ? [e.availabilityKind] : []));
-
   return (
     <div className="flex flex-col gap-3">
       <MedSyncCalendar events={events} defaultView="week" />
-      <AvailabilityLegend kinds={kinds} />
+      <AvailabilityLegend events={events} />
       <p className="text-muted-foreground max-w-prose text-[11.5px] italic">
         Sample data only — illustrative, never real clinical content. Status colours follow{" "}
         <code className="font-mono">DESIGN-medsync.md</code> semantic tokens; red is reserved for

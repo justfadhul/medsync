@@ -3,7 +3,7 @@
 import type { CalendarView } from "./helpers";
 import type { CalendarEvent, OnEventClick } from "./types";
 import type { ReactNode } from "react";
-import { useId, useMemo, useState } from "react";
+import { useEffect, useId, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { ChevronLeftIcon, ChevronRightIcon, SearchIcon } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -39,12 +39,13 @@ import { WeekView } from "./week-view";
  *   - a fixed height (60svh, at least 520px; 72svh capped at 760px on
  *     lg+) so the timeline scrolls inside it and the page flows around it
  *
- * Control bar: prev / Today / next and the range at left; at right the
- * view switcher, a search over what the cards say, and the caller's one
- * `action` (the doctor's Availability button sits there).
+ * Control bar: prev / Today / next and the range at left; at right a
+ * search over what the cards say (⌘F / Ctrl+F focuses it) and the caller's
+ * `action` (the doctor's Availability and Set availability). Under it, the
+ * view tabs as underlines on the bar's rule.
  *
- * Mobile: the responsive container hides the month view via
- * `allowedViews`; default becomes day on small screens.
+ * Under 1024px the week falls back to one day with a strip of the week's
+ * days above it; `mobile` also hides the month view.
  */
 export function MedSyncCalendar({
   events,
@@ -53,6 +54,7 @@ export function MedSyncCalendar({
   onEventClick,
   onRangeChange,
   action,
+  selectedId = null,
   timeZoneLabel = "EAT",
   className,
   mobile = false,
@@ -63,8 +65,10 @@ export function MedSyncCalendar({
   onEventClick?: OnEventClick;
   /** Fired when the user nav's prev/next so the server can refetch a different window. */
   onRangeChange?: (cursor: Date, view: CalendarView) => void;
-  /** The one action at the control bar's end — the reference's "+ Create" position. */
+  /** The control bar's buttons at its end — one secondary, one primary at most. */
   action?: ReactNode;
+  /** The event whose detail is open, drawn selected on the grid. */
+  selectedId?: string | null;
   /**
    * The zone named in the timeline's top-left cell. The hospitals run on
    * East Africa Time (DEFAULT_TIME_ZONE); `Intl` names it by its offset,
@@ -81,10 +85,29 @@ export function MedSyncCalendar({
   const [cursor, setCursor] = useState<Date>(() => defaultDate ?? new Date());
   const [query, setQuery] = useState("");
   const searchId = useId();
+  const searchRef = useRef<HTMLInputElement>(null);
+  const findKey = useSyncExternalStore(noSubscribe, platformFindKey, () => null);
+
+  // Seven columns need about 1024px; under it the week reads as a day with a strip of the week's days.
+  const narrow = useSyncExternalStore(subscribeNarrow, isNarrow, () => false);
+  const shownView: CalendarView = narrow && view === "week" ? "day" : view;
 
   const allowedViews = mobile
     ? (["day", "week", "agenda"] as const)
     : (["day", "week", "month", "agenda"] as const);
+
+  // ⌘F / Ctrl+F finds in the calendar, as the hint in the search box says.
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if ((e.metaKey || e.ctrlKey) && !e.shiftKey && !e.altKey && e.key.toLowerCase() === "f") {
+        e.preventDefault();
+        searchRef.current?.focus();
+        searchRef.current?.select();
+      }
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
 
   const parsedEvents = useMemo(
     () =>
@@ -102,30 +125,26 @@ export function MedSyncCalendar({
 
   function shift(delta: number) {
     const next =
-      view === "month"
+      shownView === "month"
         ? addMonths(cursor, delta)
-        : view === "week"
-          ? addDays(cursor, delta * 7)
-          : view === "day"
-            ? addDays(cursor, delta)
-            : addDays(cursor, delta * 7);
+        : shownView === "day"
+          ? addDays(cursor, delta)
+          : addDays(cursor, delta * 7);
     setCursor(next);
-    onRangeChange?.(next, view);
+    onRangeChange?.(next, shownView);
   }
 
   const headerLabel =
-    view === "month"
+    shownView === "month"
       ? formatMonthYear(cursor)
-      : view === "week"
-        ? formatWeekRange(startOfWeek(cursor))
-        : view === "day"
-          ? formatDay(cursor)
-          : formatWeekRange(startOfWeek(cursor));
+      : shownView === "day"
+        ? formatDay(cursor)
+        : formatWeekRange(startOfWeek(cursor));
 
   function goToday() {
     const today = startOfDay(new Date());
     setCursor(today);
-    onRangeChange?.(today, view);
+    onRangeChange?.(today, shownView);
   }
 
   return (
@@ -136,43 +155,38 @@ export function MedSyncCalendar({
       )}
       aria-label="Calendar"
     >
-      {/* ── Control bar ───────────────────────────────────────── */}
-      <header className="border-border flex flex-wrap items-center justify-between gap-3 border-b px-3 py-2.5 sm:px-4">
-        <div className="flex items-center gap-2">
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            onClick={() => shift(-1)}
-            aria-label="Previous"
-          >
-            <ChevronLeftIcon className="size-4" />
-          </Button>
-          <Button type="button" variant="ghost" className="min-h-11" onClick={goToday}>
-            Today
-          </Button>
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            onClick={() => shift(1)}
-            aria-label="Next"
-          >
-            <ChevronRightIcon className="size-4" />
-          </Button>
-          <h2 className="text-foreground text-body-m ml-1 font-medium tracking-[-0.005em]">
-            {headerLabel}
-          </h2>
-        </div>
+      {/* ── Control bar: range and actions, then the view tabs on the rule ── */}
+      <header className="border-border flex flex-col gap-1 border-b px-3 pt-2.5 sm:px-4">
+        <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
+          <div className="flex min-w-0 items-center gap-1">
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              onClick={() => shift(-1)}
+              aria-label="Previous"
+            >
+              <ChevronLeftIcon className="size-4" />
+            </Button>
+            <Button type="button" variant="secondary" className="min-h-11" onClick={goToday}>
+              Today
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              onClick={() => shift(1)}
+              aria-label="Next"
+            >
+              <ChevronRightIcon className="size-4" />
+            </Button>
+            <h2 className="text-foreground text-heading-s ml-2 truncate font-medium">
+              {headerLabel}
+            </h2>
+          </div>
 
-        <div className="flex min-w-0 flex-wrap items-center gap-2">
-          <CalendarViewSwitcher
-            value={view}
-            onChange={(v) => setView(v)}
-            allowedViews={allowedViews}
-          />
-          <div className="flex items-center gap-1.5">
-            <div className="relative w-44 sm:w-52">
+          <div className="flex min-w-0 flex-wrap items-center gap-2">
+            <div className="relative w-52 sm:w-64">
               <SearchIcon
                 className="text-muted-foreground pointer-events-none absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2"
                 aria-hidden
@@ -181,28 +195,42 @@ export function MedSyncCalendar({
                 Search the calendar
               </label>
               <Input
+                ref={searchRef}
                 id={searchId}
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 placeholder="Search patient, code, title"
-                className="min-h-11 rounded-md pl-8"
+                className={cn("min-h-11 rounded-md pl-8", findKey && "pr-14")}
               />
+              {findKey ? (
+                <kbd
+                  aria-hidden
+                  className="border-border text-muted-foreground bg-muted pointer-events-none absolute top-1/2 right-2 -translate-y-1/2 rounded border px-1.5 py-0.5 font-sans text-[11px] leading-none"
+                >
+                  {findKey}
+                </kbd>
+              ) : null}
             </div>
-            {/* One element is both the visible count and the announcement; empty says nothing. */}
-            <span
-              aria-live="polite"
-              className="text-muted-foreground font-mono text-[10.5px] tabular-nums"
-            >
-              {query.trim() ? `${visibleEvents.length} of ${parsedEvents.length} match` : ""}
-            </span>
+            {action}
           </div>
-          {action}
+        </div>
+
+        <div className="flex flex-wrap items-end justify-between gap-2">
+          <CalendarViewSwitcher
+            value={shownView}
+            onChange={(v) => setView(v)}
+            allowedViews={narrow ? allowedViews.filter((v) => v !== "week") : allowedViews}
+          />
+          {/* One element is both the visible count and the announcement; empty says nothing. */}
+          <span aria-live="polite" className="text-muted-foreground pb-2 text-[11px] tabular-nums">
+            {query.trim() ? `${visibleEvents.length} of ${parsedEvents.length} match` : ""}
+          </span>
         </div>
       </header>
 
       {/* ── View region ───────────────────────────────────────── */}
       <div className="min-h-0 min-w-0 flex-1 overflow-hidden">
-        {view === "month" ? (
+        {shownView === "month" ? (
           <MonthView
             cursor={cursor}
             events={visibleEvents}
@@ -213,28 +241,52 @@ export function MedSyncCalendar({
             onEventClick={onEventClick}
           />
         ) : null}
-        {view === "week" ? (
+        {shownView === "week" ? (
           <WeekView
             cursor={cursor}
             events={visibleEvents}
             onEventClick={onEventClick}
+            selectedId={selectedId}
             timeZoneLabel={timeZoneLabel}
           />
         ) : null}
-        {view === "day" ? (
+        {shownView === "day" ? (
           <DayView
             cursor={cursor}
             events={visibleEvents}
             onEventClick={onEventClick}
+            selectedId={selectedId}
             timeZoneLabel={timeZoneLabel}
+            onDayPick={narrow ? setCursor : undefined}
           />
         ) : null}
-        {view === "agenda" ? (
-          <AgendaView cursor={cursor} events={visibleEvents} onEventClick={onEventClick} />
+        {shownView === "agenda" ? (
+          <AgendaView
+            cursor={cursor}
+            events={visibleEvents}
+            onEventClick={onEventClick}
+            selectedId={selectedId}
+          />
         ) : null}
       </div>
     </section>
   );
+}
+
+const NARROW_QUERY = "(max-width: 1023px)";
+function subscribeNarrow(onChange: () => void): () => void {
+  const mq = window.matchMedia(NARROW_QUERY);
+  mq.addEventListener("change", onChange);
+  return () => mq.removeEventListener("change", onChange);
+}
+function isNarrow(): boolean {
+  return window.matchMedia(NARROW_QUERY).matches;
+}
+function noSubscribe(): () => void {
+  return () => {};
+}
+function platformFindKey(): string {
+  return /Mac|iPhone|iPad/.test(navigator.platform) ? "⌘F" : "Ctrl F";
 }
 
 /** Re-export for external callers. */

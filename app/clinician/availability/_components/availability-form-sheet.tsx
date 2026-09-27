@@ -8,6 +8,7 @@ import { useActionState, useEffect, useState } from "react";
 import { Trash2Icon } from "lucide-react";
 
 import { EditorDialog } from "@/components/medsync/editor-dialog";
+import { HUE, kindTone } from "@/components/scheduling/calendar/tones";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -18,6 +19,7 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
+import { cn } from "@/lib/utils";
 import { cancelAvailabilityBlockAction, setAvailabilityBlockAction } from "../actions";
 
 const KIND_OPTIONS: ReadonlyArray<{ value: AvailabilityKind; label: string; hint: string }> = [
@@ -94,10 +96,24 @@ function FormContent({ block, onClose }: { block: AvailabilityRow | null; onClos
     ? toDatetimeLocal(new Date(block.endsAtIso))
     : toDatetimeLocal(addHours(roundToNextHour(new Date()), 1));
 
+  const KindIcon = kindTone(kind).icon;
+
   return (
     <>
       <SheetHeader>
-        <SheetTitle>{isEdit ? "Edit block" : "Add availability"}</SheetTitle>
+        {/* The chosen kind's icon tile, in the calendar's own tone for it (tones.ts). */}
+        <div className="flex items-center gap-3">
+          <span
+            aria-hidden
+            className={cn(
+              "ease-expo-out grid size-9 shrink-0 place-items-center rounded-[10px] border transition-colors duration-150",
+              HUE[kindTone(kind).hue].chip,
+            )}
+          >
+            <KindIcon className={cn("size-4", HUE[kindTone(kind).hue].icon)} />
+          </span>
+          <SheetTitle>{isEdit ? "Edit block" : "Add availability"}</SheetTitle>
+        </div>
         <SheetDescription>
           {isEdit
             ? "Update the block, then save. Cancelling a bookable block with live appointments is refused — reschedule those first."
@@ -131,7 +147,10 @@ function FormContent({ block, onClose }: { block: AvailabilityRow | null; onClos
                     className="accent-brand-600 mt-0.5 size-4"
                   />
                   <div className="flex flex-col">
-                    <span className="text-foreground text-body-s font-medium">{k.label}</span>
+                    <span className="text-foreground text-body-s inline-flex items-center gap-1.5 font-medium">
+                      <OptionIcon kind={k.value} />
+                      {k.label}
+                    </span>
                     <span className="text-muted-foreground text-caption leading-tight">
                       {k.hint}
                     </span>
@@ -186,9 +205,10 @@ function FormContent({ block, onClose }: { block: AvailabilityRow | null; onClos
           </div>
 
           <div className="flex flex-col gap-2">
-            <Label>Recurrence</Label>
+            <Label htmlFor="availability-recurrence">Recurrence</Label>
             <div className="flex items-center gap-2">
               <select
+                id="availability-recurrence"
                 name="recurrence"
                 value={recurrence}
                 onChange={(e) => setRecurrence(e.target.value as "none" | "weekly")}
@@ -199,6 +219,7 @@ function FormContent({ block, onClose }: { block: AvailabilityRow | null; onClos
               </select>
               {recurrence === "weekly" ? (
                 <select
+                  aria-label="Weekday"
                   name="recurrence_weekday"
                   value={weekday}
                   onChange={(e) => setWeekday(Number(e.target.value))}
@@ -375,4 +396,10 @@ function syncIsoHidden(name: "starts_at" | "ends_at") {
       hidden.value = toIso(e.currentTarget.value);
     }
   };
+}
+
+function OptionIcon({ kind }: { kind: string }) {
+  const tone = kindTone(kind);
+  const Icon = tone.icon;
+  return <Icon className={cn("size-3.5 shrink-0", HUE[tone.hue].icon)} aria-hidden />;
 }

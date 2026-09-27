@@ -98,7 +98,9 @@ export function QueueRail({
             Waiting · {waiting.length}
           </h3>
           {waiting.length === 0 ? (
-            <p className="text-muted-foreground text-body-s">No one waiting right now.</p>
+            <p className="border-border text-muted-foreground text-body-s rounded-[10px] border border-dashed px-3 py-3">
+              No one waiting right now.
+            </p>
           ) : (
             <ul className="stagger-children flex flex-col gap-1">
               {waiting.map((e) => (

@@ -8,11 +8,13 @@ import {
   daysBetween,
   describeEvent,
   eventDayKey,
+  formatTime,
   isSameMonth,
   isToday,
   monthGridRange,
   WEEKDAY_SHORT,
 } from "./helpers";
+import { HUE, STATUS_TONE } from "./tones";
 
 type ParsedEvent = CalendarEvent & { startsAt: Date; endsAt: Date };
 
@@ -44,7 +46,7 @@ export function MonthView({
         {WEEKDAY_SHORT.map((label) => (
           <div
             key={label}
-            className="text-muted-foreground px-2 py-1.5 text-center font-mono text-[10px] tracking-[0.12em] uppercase"
+            className="text-muted-foreground bg-muted px-2 py-2 text-left text-[13px] font-semibold"
           >
             {label}
           </div>
@@ -67,15 +69,16 @@ export function MonthView({
               aria-label={d.toLocaleDateString(undefined, { dateStyle: "full" })}
               onClick={() => onDayClick(d)}
               className={cn(
-                "border-border/60 group hover:bg-muted/40 focus-visible:ring-ring flex flex-col items-stretch gap-1 border-t border-l p-1.5 text-left transition-colors first:border-l-0 focus-visible:ring-2 focus-visible:outline-none",
-                !inMonth && "bg-muted/20",
+                "border-border group hover:bg-muted/60 focus-visible:shadow-focus ease-expo-out flex flex-col items-stretch gap-1 border-t border-l p-1.5 text-left transition-colors duration-150 first:border-l-0 focus-visible:outline-none",
+                !inMonth && "bg-muted/40",
+                today && "bg-accent/40",
               )}
             >
               <span
                 className={cn(
-                  "text-caption inline-flex h-5 w-5 items-center justify-center self-start rounded-full font-mono tabular-nums",
+                  "inline-flex size-6 items-center justify-center self-start rounded-full text-[13px] tabular-nums",
                   today
-                    ? "bg-primary text-primary-foreground"
+                    ? "text-primary-foreground bg-teal-700 font-semibold"
                     : inMonth
                       ? "text-foreground"
                       : "text-muted-foreground/60",
@@ -86,6 +89,7 @@ export function MonthView({
               <ul className="flex flex-col gap-0.5">
                 {visible.map((ev) => {
                   const desc = describeEvent(ev);
+                  const Mark = desc.status ? STATUS_TONE[desc.status].icon : desc.kindIcon;
                   return (
                     <li key={ev.id}>
                       <span
@@ -93,15 +97,31 @@ export function MonthView({
                           e.stopPropagation();
                           if (desc.clickable) onEventClick?.(ev);
                         }}
+                        title={[desc.kindLabel, desc.statusWord, desc.title]
+                          .filter(Boolean)
+                          .join(" · ")}
                         className={cn(
-                          "flex min-w-0 items-baseline gap-1 rounded-[3px] border px-1 py-0.5 text-[10.5px]",
-                          desc.cardClasses,
-                          desc.clickable ? "cursor-pointer" : "italic",
-                          desc.urgent && "ring-1 ring-rose-500/60",
+                          "border-border flex min-w-0 cursor-pointer items-center gap-1 rounded-[6px] border px-1 py-0.5 text-[11px]",
+                          desc.struck ? "bg-muted border-dashed" : "bg-card",
                         )}
                       >
-                        <span className="shrink-0 font-medium">{desc.kindLabel}</span>
-                        <span className={cn("truncate", desc.struck && "line-through")}>
+                        <Mark
+                          className={cn(
+                            "size-3 shrink-0",
+                            desc.status ? STATUS_TONE[desc.status].mark : HUE[desc.hue].icon,
+                          )}
+                          aria-hidden
+                        />
+                        <span className="text-muted-foreground shrink-0 tabular-nums">
+                          {formatTime(ev.startsAt)}
+                        </span>
+                        <span
+                          className={cn(
+                            "text-foreground truncate font-medium",
+                            desc.struck && "line-through",
+                          )}
+                        >
+                          {desc.status === "urgent" ? "Urgent · " : ""}
                           {desc.title}
                         </span>
                       </span>
@@ -109,7 +129,7 @@ export function MonthView({
                   );
                 })}
                 {extra > 0 ? (
-                  <li className="text-muted-foreground px-1 font-mono text-[10px] tabular-nums">
+                  <li className="text-muted-foreground px-1 text-[11px] tabular-nums">
                     +{extra} more
                   </li>
                 ) : null}

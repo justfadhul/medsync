@@ -83,7 +83,8 @@ export function AvailabilitySheetButton({
 
   return (
     <>
-      {/* size="sm" is ~24px tall; min-h-11 restores the 44px touch floor. */}
+      {/* The calendar bar's pair: the list as the secondary, a new block as the one primary.
+          size="sm" is ~24px tall; min-h-11 restores the 44px touch floor. */}
       <Button
         type="button"
         variant="secondary"
@@ -93,6 +94,10 @@ export function AvailabilitySheetButton({
       >
         <CalendarClockIcon className="size-3.5" aria-hidden />
         Availability
+      </Button>
+      <Button type="button" size="sm" className="min-h-11" onClick={openCreate}>
+        <CalendarPlusIcon className="size-3.5" aria-hidden />
+        Set availability
       </Button>
 
       <EditorDialog width="medium" open={listOpen} onOpenChange={setListOpen}>

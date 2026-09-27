@@ -27,6 +27,7 @@ export type PillTone =
   | "notice"
   | "place"
   | "sensitive"
+  | "custom"
   | ClinicalStatus;
 
 const TAG_HUE: Record<Exclude<PillTone, ClinicalStatus>, Hue> = {
@@ -37,6 +38,8 @@ const TAG_HUE: Record<Exclude<PillTone, ClinicalStatus>, Hue> = {
   notice: "iris",
   place: "plum",
   sensitive: "slate",
+  // A clinician's own named calendar block (the `custom` availability kind).
+  custom: "grape",
 };
 
 const CLINICAL = new Set<PillTone>([

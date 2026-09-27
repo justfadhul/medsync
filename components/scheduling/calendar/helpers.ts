@@ -1,11 +1,14 @@
+import type { Hue, StatusKey } from "./tones";
 import type { CalendarEvent } from "./types";
 import type { PillTone } from "@/components/ui/pill";
+import type { LucideIcon } from "lucide-react";
 
 import {
   DEFAULT_TIME_ZONE,
   localDateKey,
   localWeekdayAndMinutes,
 } from "@/supabase/functions/_shared/slots";
+import { HUE, kindTone, STATUS_TONE, statusKeyFor } from "./tones";
 
 /**
  * Calendar date math + status helpers. Native Date + Intl only —
@@ -24,28 +27,6 @@ export interface DateRange {
   start: Date;
   end: Date;
 }
-
-/** Status semantic colour tone — feeds the calendar event card. */
-export type StatusTone =
-  | "pending"
-  | "confirmed"
-  | "arrived"
-  | "completed"
-  | "cancelled"
-  | "no_show";
-
-export const STATUS_TONES: Record<string, StatusTone> = {
-  requested: "pending",
-  pending_approval: "pending",
-  confirmed: "confirmed",
-  arrived: "arrived",
-  in_progress: "arrived",
-  completed: "completed",
-  cancelled: "cancelled",
-  declined: "cancelled",
-  no_show: "no_show",
-  rescheduled: "cancelled",
-};
 
 export const STATUS_LABEL: Record<string, string> = {
   requested: "Requested",
@@ -77,110 +58,87 @@ export const AVAILABILITY_KIND_LABEL: Record<string, string> = {
 };
 
 /**
- * Card fill + border per tone (DESIGN-medsync.md status pairs and brand
- * tints). No left-edge bars — state is the tint plus the label pill's word.
- * A missed appointment is muted, not red: red is for genuine emergencies,
- * and the urgent ring is the one place the calendar spends it.
+ * Pill tone per availability kind, for the list rows and sheets that show a
+ * kind as a Pill — read from the calendar's one colour map (tones.ts), so a
+ * list and the grid cannot disagree. Nothing here is red, amber or green: a
+ * doctor's day off is not a clinical signal.
  */
-export const CARD_TONE_CLASSES: Record<StatusTone, string> = {
-  pending: "bg-amber-50 border-amber-200 dark:bg-amber-950/30 dark:border-amber-900",
-  // brand-* and gray-* are role-inverted by `.dark` in globals.css — no `dark:` override.
-  confirmed: "bg-brand-50 border-brand-200",
-  arrived: "bg-green-50 border-green-200 dark:bg-green-950/30 dark:border-green-900",
-  completed: "bg-muted border-border text-muted-foreground",
-  cancelled: "bg-muted/60 border-border text-muted-foreground",
-  no_show: "bg-muted border-border text-muted-foreground",
-};
+export const AVAILABILITY_KIND_TONES: Record<string, PillTone> = Object.fromEntries(
+  Object.keys(AVAILABILITY_KIND_LABEL).map((k) => [k, kindTone(k).pill]),
+);
 
-export const SESSION_CARD_CLASSES = "bg-brand-100 border-brand-300";
-export const MUTED_CARD_CLASSES = "bg-muted/50 border-border/70 text-muted-foreground";
+/** Background-band fill per availability kind: a faint tint, or the hatch for time off. */
+export const AVAILABILITY_CARD_CLASSES: Record<string, string> = Object.fromEntries(
+  Object.keys(AVAILABILITY_KIND_LABEL).map((k) => [k, HUE[kindTone(k).hue].band]),
+);
 
-/**
- * Pill tone per availability kind — the one map every list, sheet and
- * legend reads (ADR 0095). `leave` and `unavailable` used to share "caution";
- * the owner asked to tell every kind apart at a glance, so each has its own
- * tint — and the word still carries the state, never the colour alone.
- * Nothing here is "critical": red is for genuine emergencies, and a
- * doctor's day off is not one.
- */
-export const AVAILABILITY_KIND_TONES: Record<string, PillTone> = {
-  bookable: "admitted",
-  teaching: "info",
-  ward_round: "discharged",
-  admin: "neutral",
-  leave: "caution",
-  unavailable: "notice",
-  custom: "stable",
-};
-
-/**
- * Card fill + border per kind, matching the pill tones above. Bookable used
- * to be the only tinted block with the rest receding into the muted grey;
- * ADR 0095 gives each its own tint for the same reason as the tones.
- */
-export const AVAILABILITY_CARD_CLASSES: Record<string, string> = {
-  bookable: "bg-brand-50 border-brand-200",
-  teaching: "bg-blue-50 border-blue-200 dark:bg-blue-950/30 dark:border-blue-900",
-  ward_round: "bg-status-discharged-bg border-violet-200 dark:border-violet-900",
-  admin: "bg-gray-100 border-gray-300",
-  leave: "bg-status-caution-bg border-amber-300 dark:border-amber-800",
-  unavailable: "bg-orange-50 border-orange-300 dark:bg-orange-950/30 dark:border-orange-800",
-  custom: "bg-status-stable-bg border-green-300 dark:border-green-800",
-};
-
-/** What a card says and how it is tinted — one description shared by every view and the search. */
+/** What a card says and how it is toned — one description shared by every view and the search. */
 export interface EventDescription {
   /** The kind, as a word: "Appointment", "Clinic day", "Leave", … Carries "Urgent" for an urgent appointment. */
   kindLabel: string;
   pillTone: PillTone;
-  /** The status word beside the pill, when the kind has a status. */
+  /** The status word, when the kind has a status. */
   statusWord: string | null;
   title: string;
   subtitle: string | null;
   /** Monogram chip text: patient initials, or a clinic day's booked count. */
   monogram: string | null;
+  /** Availability only: the background band's fill. Cards are white; colour lives in chips. */
   cardClasses: string;
+  /** The kind's hue and icon (a clinic day or an availability block). Appointments are neutral. */
+  hue: Hue;
+  kindIcon: LucideIcon;
+  /** Appointments only: which round status pill the card carries. */
+  status: StatusKey | null;
   urgent: boolean;
-  /** Cancelled / missed / completed — the title is struck through. */
+  /** Cancelled / missed — the card recedes and the title is struck through. */
   struck: boolean;
   clickable: boolean;
 }
 
 export function describeEvent(ev: CalendarEvent): EventDescription {
   if (ev.kind === "appointment") {
-    const tone = STATUS_TONES[ev.status] ?? "pending";
+    const status = statusKeyFor(ev.status, ev.priority);
     const urgent = ev.priority === "urgent";
     const kind = ev.type === "virtual" ? "Video visit" : "Appointment";
     return {
       kindLabel: urgent ? `Urgent ${kind.toLowerCase()}` : kind,
-      pillTone: urgent ? "critical" : APPOINTMENT_PILL_TONE[tone],
+      pillTone: status === "urgent" ? "critical" : status === "pending" ? "pending" : "neutral",
       statusWord: STATUS_LABEL[ev.status] ?? ev.status,
       title: ev.patientName,
       subtitle: ev.reason.replace(/_/g, " "),
       monogram: initials(ev.patientName),
-      cardClasses: CARD_TONE_CLASSES[tone],
+      cardClasses: "",
+      hue: "neutral",
+      kindIcon: kindTone("appointment").icon,
+      status,
       urgent,
-      struck: tone === "cancelled" || tone === "no_show",
+      struck: STATUS_TONE[status].struck,
       clickable: true,
     };
   }
   if (ev.kind === "session") {
     const live = ev.status === "published";
+    const tone = kindTone("session");
     return {
       kindLabel: "Clinic day",
-      pillTone: live ? "admitted" : "neutral",
+      pillTone: live ? tone.pill : "neutral",
       statusWord: live ? null : (SESSION_STATUS_LABEL[ev.status] ?? ev.status),
       title: ev.serviceLineName,
       subtitle: `${ev.bookedCount} of ${ev.capacity} places`,
       monogram: String(ev.bookedCount),
-      cardClasses: live ? SESSION_CARD_CLASSES : MUTED_CARD_CLASSES,
+      cardClasses: "",
+      hue: live ? tone.hue : "neutral",
+      kindIcon: tone.icon,
+      status: null,
       urgent: false,
       struck: ev.status === "cancelled",
       clickable: true,
     };
   }
-  // A custom block IS its label; the pill still says "Custom" so the kind is named.
+  // A custom block IS its label; the kind word stays in the label pill's aria text.
   const kindLabel = AVAILABILITY_KIND_LABEL[ev.availabilityKind] ?? ev.availabilityKind;
+  const tone = kindTone(ev.availabilityKind);
   return {
     kindLabel,
     pillTone: AVAILABILITY_KIND_TONES[ev.availabilityKind] ?? "neutral",
@@ -188,21 +146,15 @@ export function describeEvent(ev: CalendarEvent): EventDescription {
     title: ev.availabilityKind === "custom" ? (ev.label ?? "Custom") : kindLabel,
     subtitle: ev.location,
     monogram: null,
-    cardClasses: AVAILABILITY_CARD_CLASSES[ev.availabilityKind] ?? MUTED_CARD_CLASSES,
+    cardClasses: AVAILABILITY_CARD_CLASSES[ev.availabilityKind] ?? HUE.neutral.band,
+    hue: tone.hue,
+    kindIcon: tone.icon,
+    status: null,
     urgent: false,
     struck: false,
     clickable: false,
   };
 }
-
-const APPOINTMENT_PILL_TONE: Record<StatusTone, PillTone> = {
-  pending: "caution",
-  confirmed: "admitted",
-  arrived: "stable",
-  completed: "neutral",
-  cancelled: "neutral",
-  no_show: "neutral",
-};
 
 /**
  * "Amina Okello" → "AO". A bare code ("MRN-2026-00012", or "MS-…") is not a
@@ -236,6 +188,104 @@ export function cardRows(heightPx: number): {
     subtitle: heightPx >= 80,
     footer: heightPx >= 112,
   };
+}
+
+/**
+ * Side-by-side lanes for cards that overlap on the grid. Items are vertical
+ * pixel extents (not times: two back-to-back 15-minute bookings both grow to
+ * the 44px minimum and would collide). Returns, per input index, the card's
+ * lane and the lane count of its overlap cluster, so a lone card keeps the
+ * full column and only a real collision splits it.
+ */
+export function packLanes(
+  items: ReadonlyArray<{ start: number; end: number }>,
+): Array<{ lane: number; lanes: number }> {
+  const out: Array<{ lane: number; lanes: number }> = items.map(() => ({ lane: 0, lanes: 1 }));
+  const order = items
+    .map((_, i) => i)
+    .sort((a, b) => items[a]!.start - items[b]!.start || items[b]!.end - items[a]!.end);
+  let cluster: number[] = [];
+  let laneEnds: number[] = [];
+  let clusterEnd = -Infinity;
+  const close = () => {
+    for (const i of cluster) out[i]!.lanes = laneEnds.length;
+    cluster = [];
+    laneEnds = [];
+  };
+  for (const i of order) {
+    const { start, end } = items[i]!;
+    if (start >= clusterEnd) {
+      close();
+      clusterEnd = -Infinity;
+    }
+    let lane = laneEnds.findIndex((e) => e <= start);
+    if (lane === -1) {
+      lane = laneEnds.length;
+      laneEnds.push(end);
+    } else laneEnds[lane] = end;
+    out[i]!.lane = lane;
+    cluster.push(i);
+    clusterEnd = Math.max(clusterEnd, end);
+  }
+  close();
+  return out;
+}
+
+/**
+ * Where a band's kind chip goes: the first stretch of the band, from its
+ * top, that no card covers — cards sit over bands, and a chip half under a
+ * card reads as a fragment ("…able"). Null when cards cover the whole band.
+ */
+export function bandChipOffset(
+  band: { top: number; height: number },
+  cards: ReadonlyArray<{ top: number; height: number }>,
+  chipPx: number,
+): number | null {
+  const sorted = [...cards].sort((a, b) => a.top - b.top);
+  let y = band.top;
+  for (const c of sorted) {
+    if (c.top + c.height <= y) continue;
+    if (c.top >= y + chipPx) break;
+    y = c.top + c.height;
+  }
+  return y + chipPx <= band.top + band.height ? y - band.top : null;
+}
+
+export type ArrowKey = "ArrowUp" | "ArrowDown" | "ArrowLeft" | "ArrowRight";
+
+/**
+ * Arrow-key travel between cards in a week: up and down walk the day's
+ * cards by time, left and right jump to the nearest-in-time card of the
+ * closest day that has one. Null when there is nowhere to go.
+ */
+export function nextCardIndex(
+  cards: ReadonlyArray<{ col: number; top: number }>,
+  from: number,
+  key: ArrowKey,
+): number | null {
+  const cur = cards[from];
+  if (!cur) return null;
+  let best: number | null = null;
+  let bestScore = Infinity;
+  cards.forEach((c, i) => {
+    if (i === from) return;
+    let score: number;
+    if (key === "ArrowDown" || key === "ArrowUp") {
+      if (c.col !== cur.col) return;
+      const d = key === "ArrowDown" ? c.top - cur.top : cur.top - c.top;
+      if (d < 0 || (d === 0 && (key === "ArrowDown" ? i < from : i > from))) return;
+      score = d;
+    } else {
+      const dc = key === "ArrowRight" ? c.col - cur.col : cur.col - c.col;
+      if (dc <= 0) return;
+      score = dc * 1e6 + Math.abs(c.top - cur.top);
+    }
+    if (score < bestScore) {
+      bestScore = score;
+      best = i;
+    }
+  });
+  return best;
 }
 
 /** Case-insensitive match on the words a card shows: title, patient name and code. */

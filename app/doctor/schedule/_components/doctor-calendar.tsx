@@ -63,6 +63,7 @@ export function DoctorCalendar({
         events={events}
         defaultView="week"
         action={action}
+        selectedId={selected ? `a-${selected.id}` : (session?.id ?? null)}
         onEventClick={(ev) => {
           if (ev.kind === "session") {
             setSession(ev);
@@ -91,13 +92,7 @@ export function DoctorCalendar({
         <p className="text-muted-foreground text-caption">
           Showing {windowLabel}; dates outside it draw empty until a reload.
         </p>
-        <AvailabilityLegend
-          kinds={[
-            ...new Set(
-              events.flatMap((e) => (e.kind === "availability" ? [e.availabilityKind] : [])),
-            ),
-          ]}
-        />
+        <AvailabilityLegend events={events} />
       </div>
       <AppointmentDetailSheet item={selected} onOpenChange={(open) => !open && setSelected(null)} />
       <ClinicDayDialog session={session} onClose={() => setSession(null)} />
@@ -138,7 +133,7 @@ function ClinicDayDialog({
         <div className="flex min-h-0 flex-1 flex-col">
           <SheetHeader>
             <div className="flex items-center gap-2">
-              <Pill tone="place">Clinic day</Pill>
+              <Pill tone="info">Clinic day</Pill>
               {session.status !== "published" ? (
                 <Pill tone="neutral">{SESSION_STATUS_LABEL[session.status] ?? session.status}</Pill>
               ) : null}
