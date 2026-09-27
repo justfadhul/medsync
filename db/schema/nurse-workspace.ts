@@ -5,9 +5,11 @@ import {
   boolean,
   check,
   index,
+  integer,
   jsonb,
   numeric,
   pgTable,
+  smallint,
   text,
   timestamp,
   uniqueIndex,
@@ -146,21 +148,148 @@ export const clinicalObservations = pgTable(
     // (migration 0036) — distinguishes triage vitals from routine obs.
     triageRecordId: uuid("triage_record_id"),
 
+    // ── CFC fact columns (migration 0071, GATED; E3) ──
+    // A CFC row has concept_id set, observation_kind = 'fact' and state = 'fact'; it is insert-only
+    // (trigger). Legacy rows leave these null. FKs (clinical_concepts, devices, diagnostic_reports,
+    // encounter_orders) are enforced in SQL: emr.ts imports this file.
+    conceptId: text("concept_id"),
+    logicalId: uuid("logical_id"),
+    version: integer("version"),
+    supersedesId: uuid("supersedes_id").references((): AnyPgColumn => clinicalObservations.id, {
+      onDelete: "restrict",
+    }),
+    category: text("category"),
+    valueType: text("value_type"),
+    valueNum: numeric("value_num"),
+    valueComparator: text("value_comparator"),
+    /** UCUM, as reported. */
+    valueUnit: text("value_unit"),
+    valueCanonical: numeric("value_canonical"),
+    valueCode: text("value_code"),
+    valueBool: boolean("value_bool"),
+    presence: text("presence"),
+    specimen: text("specimen"),
+    calibration: text("calibration"),
+    fastingState: text("fasting_state"),
+    challenge: text("challenge"),
+    challengeMinutes: integer("challenge_minutes"),
+    method: text("method"),
+    certification: text("certification"),
+    pointOfCare: boolean("point_of_care"),
+    deviceId: uuid("device_id"),
+    context: jsonb("context").notNull().default({}),
+    source: text("source"),
+    trust: smallint("trust"),
+    status: text("status"),
+    sensitivity: text("sensitivity"),
+    /** Clinical time. Knowledge time is created_at; a legacy row's effective time is recorded_at. */
+    effectiveAt: timestamp("effective_at", { withTimezone: true }),
+    authorCadre: text("author_cadre"),
+    noteCiphertext: text("note_ciphertext"),
+    reportId: uuid("report_id"),
+    orderId: uuid("order_id"),
+    entryMode: text("entry_mode"),
+    clientKey: text("client_key"),
+
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [
+    // 0038 added etco2 + urine_output (this list had drifted); 0071 adds 'fact'.
     check(
       "obs_kind_check",
-      sql`${t.observationKind} IN ('bp','hr','temperature','rr','spo2','glucose','pain','weight','height','intake','output','gcs','other','acvpu')`,
+      sql`${t.observationKind} IN ('bp','hr','temperature','rr','spo2','glucose','pain','weight','height','intake','output','gcs','other','acvpu','etco2','urine_output','fact')`,
     ),
-    check("obs_state_check", sql`${t.state} IN ('active','corrected')`),
+    check("obs_state_check", sql`${t.state} IN ('active','corrected','fact')`),
+    check(
+      "obs_category_check",
+      sql`${t.category} IS NULL OR ${t.category} IN ('laboratory','vital_sign','anthropometric','symptom','sign','exam','history','social','event','derived')`,
+    ),
+    check(
+      "obs_value_type_check",
+      sql`${t.valueType} IS NULL OR ${t.valueType} IN ('quantity','coded','ordinal','boolean','presence','as_typed')`,
+    ),
+    check(
+      "obs_comparator_check",
+      sql`${t.valueComparator} IS NULL OR ${t.valueComparator} IN ('<','<=','>','>=')`,
+    ),
+    check(
+      "obs_presence_check",
+      sql`${t.presence} IS NULL OR ${t.presence} IN ('present','absent','unknown')`,
+    ),
+    check(
+      "obs_fasting_check",
+      sql`${t.fastingState} IS NULL OR ${t.fastingState} IN ('fasting','non_fasting','unknown')`,
+    ),
+    check(
+      "obs_source_check",
+      sql`${t.source} IS NULL OR ${t.source} IN ('lab','poc_staff','clinician','patient_reported','device_synced','imported')`,
+    ),
+    check("obs_trust_check", sql`${t.trust} IS NULL OR ${t.trust} BETWEEN 1 AND 4`),
+    check(
+      "obs_status_check",
+      sql`${t.status} IS NULL OR ${t.status} IN ('preliminary','final','amended','corrected','entered_in_error','cancelled')`,
+    ),
+    check(
+      "obs_sensitivity_check",
+      sql`${t.sensitivity} IS NULL OR ${t.sensitivity} IN ('standard','restricted')`,
+    ),
+    check(
+      "obs_entry_mode_check",
+      sql`${t.entryMode} IS NULL OR ${t.entryMode} IN ('direct','transcribed','interface')`,
+    ),
+    check(
+      "obs_fact_tagging",
+      sql`(${t.conceptId} IS NOT NULL) = (${t.observationKind} = 'fact') AND (${t.conceptId} IS NOT NULL) = (${t.state} = 'fact')`,
+    ),
+    check(
+      "obs_cfc_shape",
+      sql`${t.conceptId} IS NULL OR (
+        ${t.logicalId} IS NOT NULL AND ${t.version} IS NOT NULL AND (${t.version} = 1) = (${t.supersedesId} IS NULL)
+        AND ${t.category} IS NOT NULL AND ${t.valueType} IS NOT NULL AND ${t.source} IS NOT NULL AND ${t.trust} IS NOT NULL
+        AND ${t.status} IS NOT NULL AND ${t.sensitivity} IS NOT NULL AND ${t.effectiveAt} IS NOT NULL
+        AND ${t.numericValue1} IS NULL AND ${t.numericValue2} IS NULL AND ${t.unit} IS NULL AND ${t.notes} IS NULL AND ${t.painScale} IS NULL
+        AND (${t.reportId} IS NULL OR ${t.entryMode} IS NOT NULL)
+        AND (${t.status} <> 'entered_in_error' OR ${t.noteCiphertext} IS NOT NULL))`,
+    ),
+    check(
+      "obs_value_matches_type",
+      sql`${t.conceptId} IS NULL
+        OR (${t.valueType} = 'quantity' AND ${t.valueNum} IS NOT NULL AND ${t.valueUnit} IS NOT NULL AND ${t.valueCanonical} IS NOT NULL)
+        OR (${t.valueType} IN ('coded','ordinal') AND ${t.valueCode} IS NOT NULL)
+        OR (${t.valueType} = 'boolean' AND ${t.valueBool} IS NOT NULL)
+        OR (${t.valueType} = 'presence' AND ${t.presence} IS NOT NULL)
+        OR (${t.valueType} = 'as_typed' AND ${t.conceptId} = 'obs.uncatalogued' AND ${t.noteCiphertext} IS NOT NULL)`,
+    ),
     index("clinical_observations_patient_kind_idx").on(
       t.patientUserId,
       t.observationKind,
       t.recordedAt,
     ),
     index("clinical_observations_recorded_by_idx").on(t.recordedByUserId, t.recordedAt),
+    index("obs_cfc_patient_concept_time")
+      .on(t.patientUserId, t.conceptId, t.effectiveAt.desc())
+      .where(sql`${t.conceptId} IS NOT NULL`),
+    index("obs_cfc_supersedes")
+      .on(t.supersedesId)
+      .where(sql`${t.supersedesId} IS NOT NULL`),
+    // The SQL index also INCLUDEs (patient_user_id, value_canonical, fasting_state, specimen, trust),
+    // which Drizzle cannot express; the migration is the source for it.
+    index("obs_cfc_sweep")
+      .on(t.conceptId, t.effectiveAt)
+      .where(sql`${t.status} IN ('final','amended','corrected')`),
+    index("obs_cfc_hospital_time")
+      .on(t.hospitalId, t.effectiveAt.desc())
+      .where(sql`${t.conceptId} IS NOT NULL`),
+    index("obs_cfc_report")
+      .on(t.reportId)
+      .where(sql`${t.reportId} IS NOT NULL`),
+    uniqueIndex("obs_cfc_logical_version")
+      .on(t.logicalId, t.version)
+      .where(sql`${t.logicalId} IS NOT NULL`),
+    uniqueIndex("obs_cfc_client_key")
+      .on(t.clientKey)
+      .where(sql`${t.clientKey} IS NOT NULL`),
   ],
 );
 

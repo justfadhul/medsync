@@ -3,11 +3,13 @@
 import type { BoardV2Row } from "@/lib/resus/board-v2";
 import type { FlowBadge, PatientFlowRow } from "@/lib/workspace/flow";
 import type { LaneId } from "@/lib/workspace/lanes";
+import Link from "next/link";
 
 import { StepChip } from "@/app/nurse/resus/_components/board-v2-rows";
 import { AMBER_CHIP } from "@/app/nurse/resus/[episodeId]/_components/v2/close-out-words";
 import { cn } from "@/lib/utils";
 import { AcuityChip } from "./acuity-chip";
+import { PRIMARY_BUTTON } from "./buttons";
 import { when } from "./clock";
 import { Elapsed } from "./elapsed";
 import { PatientLine } from "./patient-line";
@@ -16,12 +18,26 @@ import { OverflowMenu, PrimaryAction } from "./row-actions";
 /** Time in stage, in the lane's own words (elapsed only — Law 5). */
 const TIME_WORD: Record<LaneId, [string, string]> = {
   resus: ["T+", ""],
+  critical_results: ["released", "ago"],
   triage: ["waiting", ""],
   unassigned: ["triaged", "ago"],
   waiting: ["waiting", ""],
   in_progress: ["active", "ago"],
+  results_to_review: ["released", "ago"],
+  to_cosign: ["requested", "ago"],
   needs_closing: ["open", ""],
   done: ["", ""],
+};
+
+/**
+ * The record's lanes (E8) are answered on their own pages: results are acknowledged on
+ * /doctor/results (critical first), note co-signatures in /doctor/cosign-queue. The label stays
+ * the projection's ("Review result", "Co-sign").
+ */
+const EMR_LANE_HREF: Partial<Record<LaneId, string>> = {
+  critical_results: "/doctor/results",
+  results_to_review: "/doctor/results",
+  to_cosign: "/doctor/cosign-queue",
 };
 
 /**
@@ -165,7 +181,18 @@ export function WorkspaceRow({
         </span>
       </button>
       <div className="flex shrink-0 items-center gap-1 max-sm:ml-auto">
-        <PrimaryAction row={row} tabIndex={tab} />
+        {EMR_LANE_HREF[row.lane] && row.primary ? (
+          <Link
+            href={EMR_LANE_HREF[row.lane]!}
+            data-primary
+            tabIndex={tab}
+            className={PRIMARY_BUTTON}
+          >
+            {row.primary.label}
+          </Link>
+        ) : (
+          <PrimaryAction row={row} tabIndex={tab} />
+        )}
         <OverflowMenu row={row} tabIndex={tab} />
       </div>
     </li>

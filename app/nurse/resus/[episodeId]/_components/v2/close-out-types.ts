@@ -30,6 +30,8 @@ export interface CloseOutDraft {
   devices: string | null;
   /** Outstanding-action keys NOT carried forward. */
   dropped: string[];
+  /** Outstanding tests from the facility menu (A5), proposed to the receiving clinician. */
+  tests: { testId: string; reason: string }[];
   escort: string;
   /** Null = default from the chosen unit / destination. */
   receivingUnit: string | null;

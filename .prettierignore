@@ -25,3 +25,9 @@ bionic-islet-bench
 
 # Generated datasets (COD-AB geography, MoH NHFR registry, password list): regenerated, never hand-formatted
 data/
+# The signed EMR specs stay byte-identical to what the owner signed (docs/emr/STOP-REPORTS.md).
+docs/emr/PROMPT-ENCOUNTER-EMR.md
+docs/emr/SPEC-CLINICAL-FACT-CONTRACT-v1.md
+docs/emr/SPEC-NCD-ENGINE-DIABETES-PACK-v1.md
+docs/emr/emr-clinical-reference.md
+docs/emr/clinical-fact-concepts.v1.json

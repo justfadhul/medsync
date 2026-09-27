@@ -1,6 +1,7 @@
 import type { PatientSummary } from "@/lib/doctor/patient-access";
 import type { CaptureMap } from "@/lib/ncd/engine/evaluate";
 import type { Metadata } from "next";
+import lazy from "next/dynamic";
 import Link from "next/link";
 import { Suspense } from "react";
 import { eq } from "drizzle-orm";
@@ -10,6 +11,7 @@ import { db } from "@/db";
 import { encounters } from "@/db/schema/scheduling";
 import { fetchPatientSummaryAudited } from "@/lib/doctor/patient-access";
 import { requireDoctorScope } from "@/lib/doctor/scope";
+import { emrV1LiveFor } from "@/lib/emr/feature";
 import { encounterEngineLive, ncdClerkshipLive } from "@/lib/encounter/feature";
 import { loadEncounterRecord } from "@/lib/encounter/record";
 import { toEncounterScope } from "@/lib/encounter/workspace-scope";
@@ -22,16 +24,34 @@ import { NcdClerkship } from "./_components/ncd-clerkship";
 import { VisitStatus } from "./_components/visit-status";
 import { saveNcdDraftAction } from "./actions";
 
+// The clerking desk loads only under EMR v1: next/dynamic keeps it (and its client island) out of
+// this route's static graph, so a flag-off visit downloads nothing new (lazy-loading guide,
+// "Importing Server Components"; tests/emr/ui/flag-off.test.ts walks the graph).
+const EmrDesk = lazy(() => import("./_desk/desk-page").then((m) => m.DeskPage));
+
 export const metadata: Metadata = { title: "Encounter · Doctor · MedSync" };
 export const dynamic = "force-dynamic";
 
 interface PageProps {
   params: Promise<{ encounterId: string }>;
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 }
 
-export default async function DoctorEncounterPage({ params }: PageProps) {
+export default async function DoctorEncounterPage({ params, searchParams }: PageProps) {
   const { encounterId } = await params;
   const scope = await requireDoctorScope();
+
+  // EMR v1 (flag per hospital): the clerking desk. Off, everything below renders as before.
+  if (emrV1LiveFor(scope.hospitalId)) {
+    const { template } = await searchParams;
+    return (
+      <EmrDesk
+        encounterId={encounterId}
+        scope={scope}
+        template={typeof template === "string" ? template : undefined}
+      />
+    );
+  }
 
   if (!encounterEngineLive()) {
     return (

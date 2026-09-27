@@ -45,6 +45,8 @@ vi.mock("@/lib/encounter/feature", () => ({
 }));
 vi.mock("server-only", () => ({}));
 
+process.env.MEDSYNC_PHI_KEY ??= (await import("@/lib/encryption")).generateKey();
+const { decrypt } = await import("@/lib/encryption");
 const { loadNcdDraft, saveNcdDraft } = await import("@/lib/ncd/draft");
 const { DIABETES_CATALOG } = await import("@/lib/ncd/catalog/diabetes");
 const { recorded } = await import("@/lib/ncd/catalog/schema");
@@ -118,20 +120,24 @@ describe("loading a draft", () => {
 });
 
 describe("saving a draft", () => {
-  it("stores the values under a recognisable, versioned shape", async () => {
+  it("stores the values under a recognisable, versioned shape, encrypted (E4)", async () => {
     await expect(saveNcdDraft("e1", "a1", DIABETES_CATALOG, { fpg: recorded(7.4) })).resolves.toBe(
       true,
     );
     expect(inserted).toHaveLength(1);
-    expect(inserted[0]).toMatchObject({
-      encounterId: "e1",
-      authorId: "a1",
-      payload: {
-        kind: "ncd_capture",
-        catalogId: DIABETES_CATALOG.id,
-        catalogVersion: DIABETES_CATALOG.version,
-        values: { fpg: recorded(7.4) },
-      },
+    const row = inserted[0] as { encounterId: string; authorId: string; payload: { enc: string } };
+    expect(row).toMatchObject({ encounterId: "e1", authorId: "a1" });
+    expect(Object.keys(row.payload)).toEqual(["enc"]);
+    expect(JSON.parse(decrypt(row.payload.enc))).toEqual({
+      kind: "ncd_capture",
+      catalogId: DIABETES_CATALOG.id,
+      catalogVersion: DIABETES_CATALOG.version,
+      values: { fpg: recorded(7.4) },
+    });
+    // What it wrote reads back.
+    rows.push({ payload: row.payload });
+    await expect(loadNcdDraft("e1", "a1", DIABETES_CATALOG)).resolves.toEqual({
+      fpg: recorded(7.4),
     });
   });
 

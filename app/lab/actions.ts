@@ -15,6 +15,7 @@ import {
   LabResultEntrySchema,
 } from "@/lib/lab/result-entry";
 import { logger } from "@/lib/logger";
+import { emrEnter, emrReject, emrRelease } from "./_lib/emr";
 
 /**
  * Lab result entry / release / reject — privileged server actions.
@@ -28,6 +29,13 @@ import { logger } from "@/lib/logger";
  * the critical flag is computed (inert until CRITICAL_VALUES_CSO_SIGNED).
  */
 export type LabActionResult = { ok: true; resultId?: string } | { ok: false; error: string };
+/** Where EMR v1 is on, EMR-shaped calls return the EMR contract (id, serverTime, warnings). */
+type EmrLabResult = NonNullable<Awaited<ReturnType<typeof emrEnter>>>;
+
+async function viaEmr(r: EmrLabResult | null): Promise<EmrLabResult | null> {
+  if (r?.ok) revalidatePath("/lab");
+  return r;
+}
 
 /** Postgres unique-violation (SQLSTATE 23505) — the 0051 one-per-order backstop. */
 function isUniqueViolation(e: unknown): boolean {
@@ -74,7 +82,9 @@ async function resultInHospital(resultId: string, hospitalId: string) {
 }
 
 /** Enter (append) a result for an order — recorded as 'entered', NOT released. */
-export async function enterLabResultAction(raw: unknown): Promise<LabActionResult> {
+export async function enterLabResultAction(raw: unknown): Promise<LabActionResult | EmrLabResult> {
+  const emr = await viaEmr(await emrEnter(raw));
+  if (emr) return emr;
   if (!labResultsLive()) return { ok: false, error: "Lab results module is not active." };
   const scope = await requireLabTechScope();
   const parsed = LabResultEntrySchema.safeParse(raw);
@@ -164,7 +174,11 @@ export async function enterLabResultAction(raw: unknown): Promise<LabActionResul
 }
 
 /** Deliberately release an entered result → visible to the clinician as final. */
-export async function releaseLabResultAction(raw: unknown): Promise<LabActionResult> {
+export async function releaseLabResultAction(
+  raw: unknown,
+): Promise<LabActionResult | EmrLabResult> {
+  const emr = await viaEmr(await emrRelease(raw));
+  if (emr) return emr;
   if (!labResultsLive()) return { ok: false, error: "Lab results module is not active." };
   const scope = await requireLabTechScope();
   const parsed = LabReleaseSchema.safeParse(raw);
@@ -215,7 +229,9 @@ export async function releaseLabResultAction(raw: unknown): Promise<LabActionRes
 }
 
 /** Reject an entered result (e.g. haemolysed specimen) with a reason. */
-export async function rejectLabResultAction(raw: unknown): Promise<LabActionResult> {
+export async function rejectLabResultAction(raw: unknown): Promise<LabActionResult | EmrLabResult> {
+  const emr = await viaEmr(await emrReject(raw));
+  if (emr) return emr;
   if (!labResultsLive()) return { ok: false, error: "Lab results module is not active." };
   const scope = await requireLabTechScope();
   const parsed = LabRejectSchema.safeParse(raw);

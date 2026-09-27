@@ -113,7 +113,8 @@ const WEB_RED_FILL = new RegExp(
     String.raw`destructive-foreground`,
     // A red Button or Badge variant, literal or inside a ternary.
     String.raw`variant=(?:["'](?:${RED_BUTTON_VARIANTS.join("|")}|destructive)["']|\{[^}]*["'](?:${RED_BUTTON_VARIANTS.join("|")}|destructive)["'])`,
-    String.raw`["']critical["']`,
+    // A tone literal; a lane's `short:`/`label:` word ("Critical") is copy, not a tone.
+    String.raw`(?<!(?:short|label):\s*)["']critical["']`,
     String.raw`\b(?:bg|text|border(?:-[lrtbxyse])?|ring|fill|stroke|from|to|via|outline|shadow|decoration)-(?:red|rose)-\d`,
     String.raw`(?:bg|border|text)-alert-(?:bg|border|fg)`,
     String.raw`#(?:${RED_ROSE_HEX})\b`,
@@ -288,6 +289,55 @@ describe("red is reserved — the doctor workspace", () => {
   });
 });
 
+// ─── The EMR chart (UI-BRIEF §2) ─────────────────────────────────────────────
+
+describe("red is reserved — the EMR chart and printouts", () => {
+  const EMR = tree("components/emr", "app/doctor/encounters/[encounterId]/print");
+
+  /**
+   * The one file that may name the critical token: status-word.tsx, whose ResultValueText paints a
+   * result value critical only when the payload says so (a signed REF-CRIT entry; none today),
+   * always beside the word. Awaiting acknowledgement, not recorded and offline are amber; Died and
+   * record states are neutral words.
+   */
+  const RED_ALLOWED: readonly string[] = ["components/emr/status-word.tsx"];
+
+  it("the allowlist is real — the file exists and paints red", () => {
+    for (const p of RED_ALLOWED)
+      expect(stripComments(readFileSync(resolve(ROOT, p), "utf8")), p).toMatch(WEB_RED_FILL);
+  });
+
+  it("no other EMR file names the critical token, a red class or a red hex", () => {
+    expect(EMR.length).toBeGreaterThan(15);
+    for (const [path, src] of EMR) {
+      if (RED_ALLOWED.includes(path)) continue;
+      const m = WEB_RED_FILL.exec(src);
+      expect(m, `${path}: ${m?.[0]}`).toBeNull();
+    }
+  });
+
+  it("the critical value always carries the word and an icon", () => {
+    const src = readFileSync(resolve(ROOT, "components/emr/status-word.tsx"), "utf8");
+    expect(src).toMatch(/<StatusWord tone="critical">Critical<\/StatusWord>/);
+    expect(src).toMatch(/critical: OctagonAlertIcon/);
+  });
+
+  it("the safety bar's critical-results line is amber, not red (gate-a E.1 ⑦)", () => {
+    const bar = readFileSync(resolve(ROOT, "components/emr/safety-bar.tsx"), "utf8");
+    expect(bar).toMatch(/<StatusWord tone="caution">\{bar\.criticalText\}<\/StatusWord>/);
+  });
+
+  it("every StatusWord carries words", () => {
+    for (const [path, src] of EMR) {
+      for (const i of each(src, /<StatusWord\b/g)) {
+        const el = elementAt(src, i);
+        expect(el.selfClosing, `${path}: self-closing ${el.tag}`).toBe(false);
+        expect(el.children, `${path}: empty ${el.tag}`).not.toBe("");
+      }
+    }
+  });
+});
+
 describe("never colour alone — web status indicators carry a word", () => {
   it("every Pill / Badge / ClinicalBadge has visible children and is not aria-hidden", () => {
     for (const [path, src] of WEB) {
@@ -341,7 +391,8 @@ describe("red is reserved — the Expo app", () => {
       String.raw`critical(?:Bg|Fg)\b`,
       String.raw`status\.critical`,
       String.raw`tone=["']critical["']`,
-      String.raw`["']critical["']`,
+      // A tone literal; a lane's `short:`/`label:` word ("Critical") is copy, not a tone.
+      String.raw`(?<!(?:short|label):\s*)["']critical["']`,
       String.raw`#(?:${RED_ROSE_HEX})\b`,
       // A named colour is a raw colour too.
       String.raw`["'](?:red|crimson|firebrick|darkred|tomato)["']`,

@@ -34,7 +34,7 @@ export async function Workspace({
   return (
     <WorkspaceBoard
       rows={rows}
-      visibleLaneIds={visibleLanes({ mayAssign: data.mayAssign }).map((l) => l.id)}
+      visibleLaneIds={visibleLanes({ mayAssign: data.mayAssign, emr: data.emr }).map((l) => l.id)}
       scope={data.scope}
       mayAssign={data.mayAssign}
       hospitalId={scope.hospitalId}

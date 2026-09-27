@@ -54,7 +54,7 @@ describe.skipIf(!RLS_TESTS_ENABLED)("RLS: encounter clinical_documentation acces
   afterAll(async () => {
     await serviceSql`DELETE FROM public.encounters WHERE id = ${encounterId}`.catch(() => {});
     await cleanup();
-  }, 30_000);
+  }, 120_000);
 
   test("has_clinical_relationship: TRUE for the attending (active_encounter)", async () => {
     const { data, error } = await attending.client.rpc("has_clinical_relationship", {
@@ -99,11 +99,15 @@ describe.skipIf(!RLS_TESTS_ENABLED)("RLS: encounter clinical_documentation acces
   });
 
   test("no client can UPDATE documentation (append-only; service-role writes only)", async () => {
-    const { error } = await attending.client
+    const { data, error } = await attending.client
       .from("clinical_documentation")
       .update({ status: "draft" })
-      .eq("encounter_id", encounterId);
-    // Either RLS denies (no write policy) or the append-only trigger raises.
-    expect(error).not.toBeNull();
+      .eq("encounter_id", encounterId)
+      .select("id");
+    // With no UPDATE policy, PostgREST refuses silently: an error, or zero rows changed.
+    expect(error !== null || (data ?? []).length === 0).toBe(true);
+    const [row] = await serviceSql<{ status: string }[]>`
+      SELECT status FROM public.clinical_documentation WHERE encounter_id = ${encounterId} LIMIT 1`;
+    expect(row?.status).not.toBe("draft");
   });
 });

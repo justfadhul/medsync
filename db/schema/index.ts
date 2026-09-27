@@ -113,3 +113,6 @@ export * from "./services-hub";
 
 // ─── Tester feedback (/feedback, migration 0081) ─────────────────────────
 export * from "./tester-feedback";
+
+// ─── EMR record spine (migration 0071 — GATED, HARMONISATION §3) ────────
+export * from "./emr";

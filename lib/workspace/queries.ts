@@ -8,17 +8,21 @@ import type {
   FlowIntake,
   FlowResult,
   FlowResus,
+  FlowTask,
   FlowTriage,
   ResusSection,
 } from "./flow";
 import type { LaneId } from "./lanes";
+import type { EmrDb } from "@/lib/emr/db";
 import type { BoardV2Row, ResusBoardV2Data } from "@/lib/resus/board-v2";
 import { and, eq, gte, inArray, isNotNull, isNull, ne, or, sql } from "drizzle-orm";
 
 import { endedWord } from "@/app/nurse/resus/[episodeId]/_components/v2/close-out-words";
 import { db } from "@/db";
-import { clinicalCosignPolicies } from "@/db/schema/doctor-workspace";
-import { clinicalDocumentation } from "@/db/schema/encounter";
+import { staffAffiliations } from "@/db/schema/clinician-profiles";
+import { clinicalCosignPolicies, clinicalCosignRequests } from "@/db/schema/doctor-workspace";
+import { clinicalNotes, diagnosticReports } from "@/db/schema/emr";
+import { clinicalDocumentation, encounterOrders } from "@/db/schema/encounter";
 import { entryTypes, patientIntakes } from "@/db/schema/patient-intakes";
 import { patientProfiles } from "@/db/schema/patient-profiles";
 import { resusEpisodes } from "@/db/schema/resus";
@@ -26,11 +30,16 @@ import { encounters } from "@/db/schema/scheduling";
 import { triageRecords } from "@/db/schema/triage";
 import { users } from "@/db/schema/users";
 import { computeAgeYears } from "@/lib/age";
+import { emrV1LiveFor } from "@/lib/emr/feature";
+import { OPEN_RESULT_ORDER, openResultFor } from "@/lib/emr/read/results";
+import { SENIOR_CADRES } from "@/lib/emr/write/facts";
 import { fetchResusBoardV2, OPENABLE_LOOKBACK_MS } from "@/lib/resus/board-v2";
 import { revealPatientIdentities } from "@/lib/scheduling/patient-identity";
 import { resolveTriageAuthority } from "@/lib/triage/authority";
 import { DEFAULT_TIME_ZONE, startOfLocalDay } from "@/supabase/functions/_shared/slots";
-import { computeFlow } from "./flow";
+import { computeFlow, ENCOUNTER_IDLE_MS } from "./flow";
+
+export { ENCOUNTER_IDLE_MS };
 
 /**
  * The workspace's one query layer (prompt §6 "Data access"). It reads what the
@@ -39,6 +48,7 @@ import { computeFlow } from "./flow";
  * (tests/workspace/queries.test.ts counts them):
  *
  *   A  policies · open intakes · open + today's encounters · the resus v2 board
+ *      (+ under EMR v1: results to acknowledge · note co-signs, E8)
  *   B  triage records · patient profiles · deaths (resus, encounter)
  *   C  one audited name reveal for the patients actually on the board
  *
@@ -48,10 +58,6 @@ import { computeFlow } from "./flow";
  * decrypted or logged (Q9: one `clinical_phi_access_log` row per patient per
  * load, fail closed).
  */
-
-/** D3: an open encounter with no activity for 24 h needs closing. GATE A default; a
- *  per-hospital setting waits for a hospital that asks (as resus v2 kept its idle rules). */
-export const ENCOUNTER_IDLE_MS = 24 * 60 * 60_000;
 
 /** Never more rows than a board can show; a department past this has a bigger problem. */
 const ROW_CAP = 300;
@@ -70,6 +76,8 @@ export interface WorkspaceData {
   /** The scope the board was built for: Department only for whoever may assign (D8). */
   scope: "mine" | "department";
   nowIso: string;
+  /** EMR v1 is on here: the record's lanes (E8) are shown. */
+  emr: boolean;
 }
 
 const RESUS_DIED = ["died_after_cpr", "died_cpr_not_attempted"];
@@ -98,6 +106,11 @@ export async function loadWorkspace(args: {
 }): Promise<WorkspaceData> {
   const { viewer, scope, lanes, nowMs = Date.now() } = args;
   const dayStart = startOfLocalDay(new Date(nowMs), DEFAULT_TIME_ZONE);
+  // 0071's columns and tables exist only once the owner applied it, which EMR v1 waits for.
+  const emr = emrV1LiveFor(viewer.hospitalId);
+  // The encounter clinician's own drafts only: a reviewer's draft is theirs to sign, not the owner's.
+  const ownDraft = sql`${clinicalNotes.encounterId} = ${encounters.id} and ${clinicalNotes.state} = 'draft' and ${clinicalNotes.authorUserId} = ${encounters.clinicianUserId}`;
+  const unsignedDraft = sql`exists (select 1 from ${clinicalNotes} where ${ownDraft})`;
 
   /* ── A ─────────────────────────────────────────────────────────────── */
   const openIntakePatients = db
@@ -109,7 +122,7 @@ export async function loadWorkspace(args: {
     .from(resusEpisodes)
     .where(and(eq(resusEpisodes.hospitalId, viewer.hospitalId), eq(resusEpisodes.state, "active")));
 
-  const [authority, intakeRows, encounterRows, board] = await Promise.all([
+  const [authority, intakeRows, encounterRows, board, tasks] = await Promise.all([
     triageAuthorityFor(viewer.hospitalId, viewer.cadreCode),
     db
       .select({
@@ -147,6 +160,13 @@ export async function loadWorkspace(args: {
           sql`(select max(${clinicalDocumentation.createdAt}) from ${clinicalDocumentation} where ${clinicalDocumentation.encounterId} = ${encounters.id})`.mapWith(
             clinicalDocumentation.createdAt,
           ),
+        lastActivityAt: (emr ? sql`${encounters.lastActivityAt}` : sql`null`).mapWith(
+          encounters.lastActivityAt,
+        ),
+        unsignedNoteAt: (emr
+          ? sql`(select max(${clinicalNotes.updatedAt}) from ${clinicalNotes} where ${ownDraft})`
+          : sql`null`
+        ).mapWith(clinicalNotes.updatedAt),
       })
       .from(encounters)
       .leftJoin(users, eq(users.id, encounters.clinicianUserId))
@@ -176,11 +196,20 @@ export async function loadWorkspace(args: {
                   )
                 : eq(encounters.clinicianUserId, viewer.userId),
             ),
+            // §5.11: a visit ended, any day, with a note still unsigned (the viewer's own).
+            emr
+              ? and(
+                  eq(encounters.state, "completed"),
+                  eq(encounters.clinicianUserId, viewer.userId),
+                  unsignedDraft,
+                )
+              : undefined,
           ),
         ),
       )
       .limit(ROW_CAP),
     fetchResusBoardV2({ hospitalId: viewer.hospitalId, clinicianUserId: viewer.userId, nowMs }),
+    emr ? loadEmrTasks(db as unknown as EmrDb, viewer) : ([] as FlowTask[]),
   ]);
 
   const resus = resusFromBoard(board);
@@ -190,6 +219,7 @@ export async function loadWorkspace(args: {
         ...intakeRows.map((r) => r.patientUserId),
         ...encounterRows.map((r) => r.patientUserId),
         ...resus.map((r) => r.patientId),
+        ...tasks.map((t) => t.patientId),
       ].filter((id): id is string => !!id),
     ),
   ];
@@ -310,11 +340,18 @@ export async function loadWorkspace(args: {
         createdAtMs: r.createdAt.getTime(),
         startedAtMs: r.startedAt.getTime(),
         endedAtMs: r.endedAt?.getTime() ?? null,
-        lastActivityAtMs: Math.max(r.updatedAt.getTime(), r.lastDocAt?.getTime() ?? 0),
+        // HARMONISATION §2: max(updated_at, latest doc, last_activity_at).
+        lastActivityAtMs: Math.max(
+          r.updatedAt.getTime(),
+          r.lastDocAt?.getTime() ?? 0,
+          r.lastActivityAt?.getTime() ?? 0,
+        ),
+        unsignedNoteAtMs: r.unsignedNoteAt?.getTime() ?? null,
       }),
     ),
     resus,
     deaths,
+    tasks,
   });
 
   /* ── C ─────────────────────────────────────────────────────────────── */
@@ -353,7 +390,103 @@ export async function loadWorkspace(args: {
     mayAssign: authority.mayTriage,
     scope: boardScope,
     nowIso: now.toISOString(),
+    emr,
   };
+}
+
+const RELEASED = ["final", "amended", "corrected"];
+
+/**
+ * The E8 lane sources, in two reads (EMR v1 only):
+ *  - released results (final/amended/corrected) on events-lifecycle orders whose CURRENT version has
+ *    no acknowledgement, where I placed the order or cover its orderer (D-EMR-07). Legacy `resulted`
+ *    orders never enter. ponytail: "cover" = the orderer holds an active affiliation in my department
+ *    here — lib/emr/write/results.ts requireResponsible's rule; a cover rota replaces both.
+ *  - pending `sign_note` co-sign requests I may answer: a co-signing cadre, not my own request, and
+ *    requested from my department.
+ * A restricted result or note is never named on a board (label null).
+ */
+export async function loadEmrTasks(database: EmrDb, viewer: WorkspaceViewer): Promise<FlowTask[]> {
+  const r = diagnosticReports;
+  const o = encounterOrders;
+  const c = clinicalCosignRequests;
+  const [results, cosigns] = await Promise.all([
+    database
+      .select({
+        id: r.id,
+        patientUserId: r.patientUserId,
+        critical: r.critical,
+        at: r.recordedAt,
+        encounterId: o.encounterId,
+        text: o.text,
+        restricted: sql<boolean>`(${r.sensitivity} <> 'standard' or ${o.sensitivity} <> 'standard')`,
+      })
+      .from(r)
+      .innerJoin(o, eq(o.id, r.orderId))
+      .where(
+        and(
+          eq(r.hospitalId, viewer.hospitalId),
+          eq(o.lifecycle, "events"),
+          inArray(r.status, RELEASED),
+          // The current version of the chain, and nobody has acknowledged that version.
+          sql`not exists (select 1 from ${diagnosticReports} n where n.logical_id = ${r.logicalId} and n.version > ${r.version})`,
+          // Unacknowledged and mine (placed or covered), or forwarded to me.
+          openResultFor(viewer),
+        ),
+      )
+      .orderBy(...OPEN_RESULT_ORDER)
+      .limit(ROW_CAP),
+    // cosignNote's own cadre rule, so the lane never offers what the write refuses.
+    SENIOR_CADRES.includes(viewer.cadreCode)
+      ? database
+          .select({
+            id: c.id,
+            patientUserId: c.patientUserId,
+            at: c.createdAt,
+            encounterId: clinicalNotes.encounterId,
+            noteType: clinicalNotes.noteType,
+            sensitivity: clinicalNotes.sensitivity,
+          })
+          .from(c)
+          .innerJoin(clinicalNotes, eq(clinicalNotes.id, c.noteId))
+          .innerJoin(staffAffiliations, eq(staffAffiliations.id, c.requestedByAffiliationId))
+          .where(
+            and(
+              eq(c.hospitalId, viewer.hospitalId),
+              eq(c.actionKind, "sign_note"),
+              eq(c.state, "pending_review"),
+              ne(c.requestedByUserId, viewer.userId),
+              eq(staffAffiliations.departmentId, viewer.departmentId),
+            ),
+          )
+          .limit(ROW_CAP)
+      : [],
+  ]);
+  return [
+    ...results.map(
+      (x): FlowTask => ({
+        id: x.id,
+        patientId: x.patientUserId,
+        kind: x.critical ? "critical_result" : "result_to_review",
+        encounterId: x.encounterId,
+        atMs: x.at.getTime(),
+        label: x.restricted ? null : x.text,
+      }),
+    ),
+    ...cosigns.map(
+      (x): FlowTask => ({
+        id: x.id,
+        patientId: x.patientUserId,
+        kind: "cosign",
+        encounterId: x.encounterId,
+        atMs: x.at.getTime(),
+        label:
+          x.sensitivity === "standard"
+            ? `${x.noteType[0]!.toUpperCase()}${x.noteType.slice(1).replace(/_/g, " ")} note`
+            : null,
+      }),
+    ),
+  ];
 }
 
 /** Who may triage and assign here (D8): this hospital's `clinical_cosign_policies`, resolved. */

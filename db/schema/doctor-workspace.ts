@@ -86,7 +86,8 @@ export const clinicalCosignPolicies = pgTable(
     ),
     check(
       "cosign_policy_action_check",
-      sql`${t.actionKind} IN ('prescription_routine','prescription_controlled','order_high_cost_imaging','admit_patient','discharge_patient')`,
+      // 0036 widened the policy kinds; mirror it so db:generate never narrows them.
+      sql`${t.actionKind} IN ('prescription_routine','prescription_controlled','order_high_cost_imaging','admit_patient','discharge_patient','high_alert_med_administration','independent_complex_procedure','triage_patient','triage_downgrade')`,
     ),
     index("cosign_policy_lookup_idx").on(t.hospitalId, t.cadreCode, t.actionKind),
   ],
@@ -124,18 +125,26 @@ export const clinicalCosignRequests = pgTable(
     expiresAt: timestamp("expires_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+    // Note co-sign (migration 0071): set exactly when action_kind = 'sign_note'. FK to
+    // clinical_notes enforced in SQL: emr.ts imports this file.
+    noteId: uuid("note_id"),
   },
   (t) => [
     check(
       "cosign_state_check",
       sql`${t.state} IN ('pending_review','approved','returned','cancelled','expired')`,
     ),
+    // 0036's kinds (this list had drifted at 0030's five) + 0071's sign_note.
     check(
       "cosign_action_kind_check",
-      sql`${t.actionKind} IN ('prescription_routine','prescription_controlled','order_high_cost_imaging','admit_patient','discharge_patient')`,
+      sql`${t.actionKind} IN ('prescription_routine','prescription_controlled','order_high_cost_imaging','admit_patient','discharge_patient','high_alert_med_administration','independent_complex_procedure','triage_patient','triage_downgrade','sign_note')`,
     ),
+    check("cosign_note_link", sql`(${t.actionKind} = 'sign_note') = (${t.noteId} IS NOT NULL)`),
     index("cosign_requester_idx").on(t.requestedByUserId, t.createdAt),
     index("cosign_patient_idx").on(t.patientUserId, t.createdAt),
+    index("cosign_note_idx")
+      .on(t.noteId)
+      .where(sql`${t.noteId} IS NOT NULL`),
   ],
 );
 
@@ -164,7 +173,7 @@ export const clinicalPhiAccessLog = pgTable(
   (t) => [
     check(
       "phi_access_basis_check",
-      sql`${t.accessBasis} IN ('care_team','active_encounter','department_recent','break_glass')`,
+      sql`${t.accessBasis} IN ('care_team','active_encounter','department_recent','break_glass','assigned','open_intake')`,
     ),
     index("phi_access_patient_idx").on(t.patientUserId, t.createdAt),
     index("phi_access_clinician_idx").on(t.clinicianUserId, t.createdAt),

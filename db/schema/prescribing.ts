@@ -16,10 +16,12 @@ import {
   pgTable,
   text,
   timestamp,
+  uniqueIndex,
   uuid,
 } from "drizzle-orm/pg-core";
 
 import { authUsers } from "./_auth";
+import { medicationStatements } from "./emr";
 import { hospitalDepartments } from "./hospital-departments";
 import { hospitals } from "./hospitals";
 import { resusEpisodes } from "./resus";
@@ -79,12 +81,37 @@ export const prescriptions = pgTable(
     state: text("state").notNull().default("active"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+    // OPD prescription from the encounter (migration 0074, GATED; EMR Phase 7).
+    frequency: text("frequency"),
+    duration: text("duration"),
+    quantity: text("quantity"),
+    instructionsCiphertext: text("instructions_ciphertext"),
+    prescriberCadre: text("prescriber_cadre"),
+    /** Codes of the safety checks that fired and the prescriber confirmed. */
+    confirmedFlags: jsonb("confirmed_flags")
+      .notNull()
+      .default(sql`'[]'::jsonb`),
+    confirmReasonCiphertext: text("confirm_reason_ciphertext"),
+    clientKey: text("client_key"),
+    sensitivity: text("sensitivity").notNull().default("standard"),
+    medicationStatementId: uuid("medication_statement_id").references(
+      () => medicationStatements.id,
+      { onDelete: "restrict" },
+    ),
   },
   (t) => [
     check(
       "prescriptions_state_check",
       sql`${t.state} IN ('active','administered','completed','cancelled')`,
     ),
+    check("prescriptions_sensitivity_check", sql`${t.sensitivity} IN ('standard','restricted')`),
+    check(
+      "prescriptions_confirm_reason",
+      sql`${t.confirmedFlags} = '[]'::jsonb OR ${t.confirmReasonCiphertext} IS NOT NULL`,
+    ),
+    uniqueIndex("prescriptions_client_key")
+      .on(t.clientKey)
+      .where(sql`${t.clientKey} IS NOT NULL`),
     index("prescriptions_patient_idx").on(t.patientUserId, t.createdAt),
     index("prescriptions_encounter_idx").on(t.encounterId),
   ],

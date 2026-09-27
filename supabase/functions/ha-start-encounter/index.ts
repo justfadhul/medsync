@@ -20,6 +20,14 @@
  *   - A nurse at the hospital (rooming support).
  *   - Admin / superadmin.
  *
+ * One encounter per visit (HARMONISATION R2, ADR 0139): an OPEN encounter
+ * (planned or in progress) already linked to this visit — its intake, its
+ * booking, or the `visit_id` given — is reused instead of inserting a second.
+ * A planned one (a triage assignment) is started; an in-progress one is
+ * returned as is, so a retried call is idempotent. EMR v1 callers may also
+ * pass `visit_id`, `encounter_type` and `template_id`; without them the old
+ * behaviour is unchanged.
+ *
  * After this point, scheduling hands off. The clinical module (when
  * it ships) owns the encounter row's vitals, notes, completion, etc.
  */
@@ -51,7 +59,137 @@ const InputSchema = z.object({
   appointment_id: z.string().uuid().optional(),
   queue_entry_id: z.string().uuid().optional(),
   reason: z.string().min(8, "Reason ≥ 8 chars required (audited)."),
+  // EMR v1 (optional)
+  visit_id: z.string().uuid().optional(),
+  encounter_type: z
+    .enum([
+      "opd",
+      "inpatient",
+      "emergency",
+      "follow_up",
+      "tele",
+      "antenatal",
+      "procedure",
+      "virtual",
+      "community",
+    ])
+    .optional(),
+  template_id: z.string().max(80).optional(),
 });
+type Input = z.infer<typeof InputSchema>;
+
+/** The EMR columns a caller asked for; nothing when it asked for none (old behaviour). */
+function emrColumns(input: Input): Record<string, string> {
+  return {
+    ...(input.visit_id ? { visit_id: input.visit_id } : {}),
+    ...(input.encounter_type ? { encounter_type: input.encounter_type } : {}),
+    ...(input.template_id ? { template_id: input.template_id } : {}),
+  };
+}
+
+const OPEN_INTAKE = ["arrived", "awaiting_triage", "triaged"];
+
+/**
+ * A caller-supplied `visit_id` must be this patient's intake at this hospital. The FK only proves the
+ * intake exists; without this a caller could attach another patient's visit and read its complaint.
+ */
+async function visitBelongs(
+  visitId: string | undefined,
+  patientUserId: string,
+  hospitalId: string,
+): Promise<boolean> {
+  if (!visitId) return true;
+  const { data } = await serviceClient()
+    .from("patient_intakes")
+    .select("id")
+    .eq("id", visitId)
+    .eq("patient_user_id", patientUserId)
+    .eq("hospital_id", hospitalId)
+    .maybeSingle();
+  return !!data;
+}
+
+/**
+ * The open encounter this visit already has, if any: linked by the given visit, by the booking, or
+ * through the patient's open intake for this visit (its encounter, or an encounter whose visit it is).
+ */
+async function findOpenEncounter(o: {
+  hospitalId: string;
+  patientUserId: string;
+  visitId: string | null;
+  appointmentId: string | null;
+  departmentId: string | null;
+}): Promise<{ id: string; state: string; clinician_user_id: string } | null> {
+  const sb = serviceClient();
+  let intakes = sb
+    .from("patient_intakes")
+    .select("id, encounter_id")
+    .eq("hospital_id", o.hospitalId)
+    .eq("patient_user_id", o.patientUserId)
+    .in("status", OPEN_INTAKE);
+  if (o.appointmentId) intakes = intakes.eq("appointment_id", o.appointmentId);
+  else if (o.departmentId) {
+    // Today's visit only, like the intake link below: a stale open encounter from an earlier day
+    // belongs in Needs closing and must not be reused or block today's call.
+    const startOfDay = startOfLocalDay(new Date(), DEFAULT_TIME_ZONE).toISOString();
+    intakes = intakes
+      .eq("receiving_department_id", o.departmentId)
+      .or(`arrived_at.gte."${startOfDay}",checked_in_at.gte."${startOfDay}"`);
+  } else intakes = intakes.eq("id", o.visitId ?? crypto.randomUUID());
+  const { data } = await intakes;
+  const rows = (data ?? []) as { id: string; encounter_id: string | null }[];
+  const visitIds = [...new Set([o.visitId, ...rows.map((r) => r.id)].filter(Boolean))];
+  const encounterIds = rows.map((r) => r.encounter_id).filter(Boolean);
+  const links = [
+    ...(visitIds.length ? [`visit_id.in.(${visitIds.join(",")})`] : []),
+    ...(encounterIds.length ? [`id.in.(${encounterIds.join(",")})`] : []),
+    ...(o.appointmentId ? [`appointment_id.eq.${o.appointmentId}`] : []),
+  ];
+  if (!links.length) return null;
+  const { data: found } = await sb
+    .from("encounters")
+    .select("id, state, clinician_user_id")
+    .eq("hospital_id", o.hospitalId)
+    .eq("patient_user_id", o.patientUserId)
+    .in("state", ["planned", "in_progress"])
+    .or(links.join(","))
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  return (found as { id: string; state: string; clinician_user_id: string } | null) ?? null;
+}
+
+/**
+ * Reuse an open encounter for this clinician: start a planned one, return an in-progress one.
+ * An in-progress encounter held by someone else is refused (the patient is being seen).
+ */
+async function reuseOpenEncounter(
+  open: { id: string; state: string; clinician_user_id: string },
+  clinicianUserId: string,
+  input: Input,
+  nowIso: string,
+): Promise<{ ok: true; id: string } | { ok: false; conflict: string }> {
+  if (open.state === "in_progress") {
+    return open.clinician_user_id === clinicianUserId
+      ? { ok: true, id: open.id }
+      : { ok: false, conflict: "This patient is already being seen — the visit is open." };
+  }
+  const { data } = await serviceClient()
+    .from("encounters")
+    .update({
+      state: "in_progress",
+      started_at: nowIso,
+      clinician_user_id: clinicianUserId,
+      ...emrColumns(input),
+    })
+    .eq("id", open.id)
+    .eq("state", "planned")
+    .select("id")
+    .maybeSingle();
+  return data
+    ? { ok: true, id: open.id }
+    : { ok: false, conflict: "The encounter changed meanwhile — refresh and try again." };
+}
 
 Deno.serve(async (request: Request) => {
   const origin = request.headers.get("origin");
@@ -86,13 +224,15 @@ Deno.serve(async (request: Request) => {
   if (queueEntryId && !appointmentId) {
     const { data: qe, error: qeErr } = await sb
       .from("queue_entries")
-      .select("id, hospital_id, department_id, patient_user_id, appointment_id, state")
+      .select(
+        "id, hospital_id, department_id, patient_user_id, appointment_id, state, encounter_id, called_by_user_id",
+      )
       .eq("id", queueEntryId)
       .maybeSingle();
     if (qeErr) return serverError(qeErr.message, init);
     if (!qe) return notFound(init, "queue entry not found");
     if (!qe.appointment_id) {
-      return await startFromQueueRow(request, init, caller.id, input.reason, qe as QueueRow);
+      return await startFromQueueRow(request, init, caller.id, input, qe as QueueRow);
     }
     appointmentId = qe.appointment_id;
   }
@@ -120,6 +260,22 @@ Deno.serve(async (request: Request) => {
   // (no arrived step, no queue entry).
   const okFromArrived = appt.status === "arrived";
   const okFromConfirmedVirtual = appt.status === "confirmed" && appt.type === "virtual";
+  if (!(await visitBelongs(input.visit_id, appt.patient_user_id, appt.hospital_id))) {
+    return badRequest("visit_id is not this patient's visit at this hospital", init);
+  }
+  const open = await findOpenEncounter({
+    hospitalId: appt.hospital_id,
+    patientUserId: appt.patient_user_id,
+    visitId: input.visit_id ?? null,
+    appointmentId: appt.id,
+    departmentId: appt.department_id,
+  });
+  // A retried start of a visit already under way returns that encounter.
+  if (appt.status === "in_progress" && open?.state === "in_progress") {
+    if (open.clinician_user_id !== appt.clinician_user_id)
+      return conflict("This patient is already being seen — the visit is open.", init);
+    return ok({ appointment_id: appt.id, encounter_id: open.id, status: "in_progress" }, init);
+  }
   if (!okFromArrived && !okFromConfirmedVirtual) {
     return badRequest(
       `Appointment is in '${appt.status}' — must be arrived (or confirmed+virtual) to start.`,
@@ -148,24 +304,33 @@ Deno.serve(async (request: Request) => {
     return serverError("audit write failed", init);
   }
 
-  // 1. Create encounter.
+  // 1. Reuse this visit's open encounter, or create one.
   const nowIso = new Date().toISOString();
-  const { data: encounter, error: eErr } = await sb
-    .from("encounters")
-    .insert({
-      hospital_id: appt.hospital_id,
-      appointment_id: appt.id,
-      patient_user_id: appt.patient_user_id,
-      clinician_user_id: appt.clinician_user_id,
-      department_id: appt.department_id,
-      started_at: nowIso,
-      state: "in_progress",
-    })
-    .select("id")
-    .single();
-  if (eErr || !encounter) {
-    log.error("encounter insert failed", { requestId, reason: eErr?.message });
-    return serverError("encounter create failed", init);
+  let encounter: { id: string };
+  if (open) {
+    const reused = await reuseOpenEncounter(open, appt.clinician_user_id, input, nowIso);
+    if (!reused.ok) return conflict(reused.conflict, init);
+    encounter = { id: reused.id };
+  } else {
+    const { data, error: eErr } = await sb
+      .from("encounters")
+      .insert({
+        hospital_id: appt.hospital_id,
+        appointment_id: appt.id,
+        patient_user_id: appt.patient_user_id,
+        clinician_user_id: appt.clinician_user_id,
+        department_id: appt.department_id,
+        started_at: nowIso,
+        state: "in_progress",
+        ...emrColumns(input),
+      })
+      .select("id")
+      .single();
+    if (eErr || !data) {
+      log.error("encounter insert failed", { requestId, reason: eErr?.message });
+      return serverError("encounter create failed", init);
+    }
+    encounter = data;
   }
 
   // 2. Flip appointment to in_progress.
@@ -231,6 +396,8 @@ interface QueueRow {
   department_id: string;
   patient_user_id: string;
   state: string;
+  encounter_id: string | null;
+  called_by_user_id: string | null;
 }
 
 /**
@@ -243,9 +410,10 @@ async function startFromQueueRow(
   request: Request,
   init: { origin: string | null; requestId: string },
   callerId: string,
-  reason: string,
+  input: Input,
   qe: QueueRow,
 ): Promise<Response> {
+  const reason = input.reason;
   const requestId = init.requestId;
   const sb = serviceClient();
 
@@ -270,8 +438,18 @@ async function startFromQueueRow(
     }
   }
 
+  // A retried call of a patient this caller already called returns that encounter.
+  if (qe.state === "being_seen" && qe.called_by_user_id === callerId && qe.encounter_id) {
+    return ok(
+      { queue_entry_id: qe.id, encounter_id: qe.encounter_id, status: "in_progress" },
+      init,
+    );
+  }
   if (qe.state !== "waiting") {
     return badRequest(`Queue entry is '${qe.state}' — only a waiting patient can be called.`, init);
+  }
+  if (!(await visitBelongs(input.visit_id, qe.patient_user_id, qe.hospital_id))) {
+    return badRequest("visit_id is not this patient's visit at this hospital", init);
   }
 
   const { ipAddress, userAgent } = networkContext(request);
@@ -305,21 +483,46 @@ async function startFromQueueRow(
   if (claimErr) return serverError(claimErr.message, init);
   if (!claimed) return conflict("This patient has already been called.", init);
 
-  // 2. Create the encounter; on failure, hand the patient back to the line.
-  const { data: encounter, error: eErr } = await sb
-    .from("encounters")
-    .insert({
-      hospital_id: qe.hospital_id,
-      appointment_id: null,
-      patient_user_id: qe.patient_user_id,
-      clinician_user_id: callerId,
-      department_id: qe.department_id,
-      encounter_type: "opd",
-      started_at: nowIso,
-      state: "in_progress",
-    })
-    .select("id")
-    .single();
+  // 2. Reuse this visit's open encounter (a triage assignment's planned one), or create one;
+  //    on failure, hand the patient back to the line.
+  const open = await findOpenEncounter({
+    hospitalId: qe.hospital_id,
+    patientUserId: qe.patient_user_id,
+    visitId: input.visit_id ?? null,
+    appointmentId: null,
+    departmentId: qe.department_id,
+  });
+  let encounter: { id: string } | null = null;
+  let eErr: { message: string } | null = null;
+  if (open) {
+    const reused = await reuseOpenEncounter(open, callerId, input, nowIso);
+    if (reused.ok) encounter = { id: reused.id };
+    else {
+      await sb
+        .from("queue_entries")
+        .update({ state: "waiting", called_at: null, called_by_user_id: null })
+        .eq("id", qe.id);
+      return conflict(reused.conflict, init);
+    }
+  } else {
+    const r = await sb
+      .from("encounters")
+      .insert({
+        hospital_id: qe.hospital_id,
+        appointment_id: null,
+        patient_user_id: qe.patient_user_id,
+        clinician_user_id: callerId,
+        department_id: qe.department_id,
+        encounter_type: "opd",
+        started_at: nowIso,
+        state: "in_progress",
+        ...emrColumns(input),
+      })
+      .select("id")
+      .single();
+    encounter = r.data;
+    eErr = r.error;
+  }
   if (eErr || !encounter) {
     log.error("encounter insert failed", { requestId, reason: eErr?.message });
     await sb

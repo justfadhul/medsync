@@ -11,7 +11,12 @@ import { encounters } from "@/db/schema/scheduling";
 import { triageRecords } from "@/db/schema/triage";
 import { users } from "@/db/schema/users";
 import { DOCTOR_CADRE_CODES } from "@/lib/doctor/scope";
-import { findOpenEncounterToday, linkEncounterToVisit } from "@/lib/encounter/handoff";
+import {
+  findOpenEncounterToday,
+  linkEncounterToVisit,
+  visitIdFor,
+  visitSet,
+} from "@/lib/encounter/handoff";
 import { logger } from "@/lib/logger";
 
 /**
@@ -130,6 +135,7 @@ export async function assignDoctorFromIntake(args: {
   if (!tr) return { ok: false, error: "Triage this patient before assigning a doctor." };
 
   const deptId = tr.departmentId ?? intake.receivingDepartmentId ?? null;
+  const visitId = visitIdFor(intake.hospitalId, args.intakeId);
 
   // The target must be a real assignable doctor at this hospital.
   const doctors = await listAssignableDoctors({
@@ -156,7 +162,7 @@ export async function assignDoctorFromIntake(args: {
       }
       await db
         .update(encounters)
-        .set({ clinicianUserId: args.doctorUserId })
+        .set({ clinicianUserId: args.doctorUserId, ...visitSet(visitId) })
         .where(eq(encounters.id, existing.id));
       return { ok: true, encounterId: existing.id, action: "reassigned" };
     }
@@ -185,7 +191,7 @@ export async function assignDoctorFromIntake(args: {
     if (visitOpen?.state === "planned") {
       await db
         .update(encounters)
-        .set({ clinicianUserId: args.doctorUserId, triageRecordId: tr.id })
+        .set({ clinicianUserId: args.doctorUserId, triageRecordId: tr.id, ...visitSet(visitId) })
         .where(eq(encounters.id, visitOpen.id));
       return {
         ok: true,
@@ -200,6 +206,7 @@ export async function assignDoctorFromIntake(args: {
           error: "This patient is already being seen by another doctor — the visit is open.",
         };
       }
+      if (visitId) await linkEncounterToVisit(visitOpen.id, tr.id, null, visitId);
       return { ok: true, encounterId: visitOpen.id, action: "assigned" };
     }
 
@@ -211,7 +218,7 @@ export async function assignDoctorFromIntake(args: {
           error: "This patient is already being seen by another doctor — the visit is open.",
         };
       }
-      await linkEncounterToVisit(open.id, tr.id, intake.appointmentId);
+      await linkEncounterToVisit(open.id, tr.id, intake.appointmentId, visitId);
       return { ok: true, encounterId: open.id, action: "assigned" };
     }
 
@@ -227,6 +234,7 @@ export async function assignDoctorFromIntake(args: {
         // The booking this visit answers (ADR 0101 R4) — so ending the
         // encounter completes the appointment.
         appointmentId: intake.appointmentId,
+        ...(visitId ? { visitId } : {}),
         state: "planned",
       })
       .returning({ id: encounters.id });

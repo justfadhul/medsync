@@ -4,6 +4,7 @@ import type {
   FlowEncounter,
   FlowIntake,
   FlowResus,
+  FlowTask,
   FlowTriage,
 } from "@/lib/workspace/flow";
 import { describe, expect, it } from "vitest";
@@ -22,6 +23,7 @@ import {
   NOW,
   OTHER_DOC,
   resus,
+  task,
   triage,
 } from "./fixtures";
 
@@ -44,6 +46,8 @@ function mulberry32(seed: number) {
 
 function world(seed: number) {
   const rnd = mulberry32(seed);
+  // The EMR sources draw from their own stream, so the pre-EMR boards stay exactly as they were.
+  const emr = mulberry32(seed + 1_000_003);
   const pick = <T>(xs: readonly T[]) => xs[Math.floor(rnd() * xs.length)]!;
   const ago = () => Math.floor(rnd() * 40 * DAY);
   const intakes: FlowIntake[] = [];
@@ -51,6 +55,7 @@ function world(seed: number) {
   const encounters: FlowEncounter[] = [];
   const resusRows: FlowResus[] = [];
   const deaths: FlowDeath[] = [];
+  const tasks: FlowTask[] = [];
   const patientCount = 1 + Math.floor(rnd() * 12);
   for (let p = 0; p < patientCount; p++) {
     const pid = rnd() < 0.1 ? null : `p${p}`;
@@ -88,6 +93,8 @@ function world(seed: number) {
           startedAtMs: created,
           lastActivityAtMs: created + Math.floor(rnd() * (NOW - created)),
           endedAtMs: rnd() < 0.5 ? NOW - Math.floor(rnd() * 2 * DAY) : null,
+          // EMR: some encounters carry an unsigned draft, fresh or idle (§5.11).
+          unsignedNoteAtMs: emr() < 0.15 ? NOW - Math.floor(emr() * 3 * DAY) : null,
         }),
       );
     }
@@ -96,6 +103,16 @@ function world(seed: number) {
         resus(`r${p}-${r}`, pid, {
           section: pick(["arrest", "active", "boarding", "needs_closing", "ended"] as const),
           startedAtMs: NOW - ago(),
+        }),
+      );
+    }
+    // E8 lane sources: results and co-signs the loader has already scoped to me.
+    const kinds = ["critical_result", "result_to_review", "cosign"] as const;
+    const taskCount = emr() < 0.3 ? 1 + Math.floor(emr() * 2) : 0;
+    for (let k = 0; k < taskCount; k++) {
+      tasks.push(
+        task(`k${p}-${k}`, pid, kinds[Math.floor(emr() * 3)]!, {
+          atMs: NOW - Math.floor(emr() * 40 * DAY),
         }),
       );
     }
@@ -127,6 +144,7 @@ function world(seed: number) {
     ),
     resus: resusRows,
     deaths,
+    tasks,
   });
 }
 
@@ -147,6 +165,11 @@ describe("the flow projection's invariants hold for random boards", () => {
         ...src.intakes.map((i) => i.id),
         ...src.encounters.filter((e) => e.state !== "completed").map((e) => e.id),
         ...src.resus.filter((r) => OPEN_RESUS.has(r.section)).map((r) => r.id),
+        // A visit ended with a note unsigned is still open (§5.11), and so is every E8 task.
+        ...src.encounters
+          .filter((e) => e.state === "completed" && e.unsignedNoteAtMs != null)
+          .map((e) => e.id),
+        ...(src.tasks ?? []).map((t) => t.id),
       ];
       const owners = new Map<string, number>();
       for (const r of rows) for (const id of r.itemIds) owners.set(id, (owners.get(id) ?? 0) + 1);
@@ -192,7 +215,18 @@ describe("the flow projection's invariants hold for random boards", () => {
     for (let seed = 1; seed <= 400; seed++)
       for (const r of computeFlow(world(seed)).rows) lanesSeen.add(r.lane);
     expect([...lanesSeen].sort()).toEqual(
-      ["done", "in_progress", "needs_closing", "resus", "triage", "unassigned", "waiting"].sort(),
+      [
+        "critical_results",
+        "done",
+        "in_progress",
+        "needs_closing",
+        "resus",
+        "results_to_review",
+        "to_cosign",
+        "triage",
+        "unassigned",
+        "waiting",
+      ].sort(),
     );
     expect(MIN * 60).toBe(HOUR);
   });

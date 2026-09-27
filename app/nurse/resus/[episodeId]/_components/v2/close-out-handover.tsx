@@ -1,9 +1,13 @@
 "use client";
 
-import type { StepProps } from "./close-out-model";
+import type { CloseOutDraft, StepProps } from "./close-out-model";
+import type { MenuTest } from "@/components/emr/orders/model";
 import type { SbarDraft } from "@/lib/resus/closeout/handover";
+import { useState } from "react";
 import { CheckIcon } from "lucide-react";
 
+import { menuSections } from "@/components/emr/orders/model";
+import { OUTSTANDING_REASON_MAX, OUTSTANDING_TESTS_MAX } from "@/lib/resus/closeout/handover";
 import { LEVELS_OF_CARE } from "@/lib/resus/reference/levels-of-care";
 import { cn } from "@/lib/utils";
 import { FIELD } from "./after-arrest-shared";
@@ -25,7 +29,12 @@ const SBAR: { key: keyof SbarDraft; label: string; max: number }[] = [
   { key: "recommendation", label: "R — Recommendation", max: 4000 },
 ];
 
-export function HandoverStep({ draft, patch, facts }: StepProps) {
+export function HandoverStep({
+  draft,
+  patch,
+  facts,
+  menu,
+}: StepProps & { menu: MenuTest[] | null }) {
   const carried = facts.outstanding.filter((o) => !draft.dropped.includes(o.key));
   const toggle = (key: string) =>
     patch({
@@ -110,6 +119,10 @@ export function HandoverStep({ draft, patch, facts }: StepProps) {
         </fieldset>
       ) : null}
 
+      {menu ? (
+        <OutstandingTests menu={menu} tests={draft.tests} onChange={(tests) => patch({ tests })} />
+      ) : null}
+
       <Field id="co-escort" label="Escort">
         <input
           id="co-escort"
@@ -121,6 +134,100 @@ export function HandoverStep({ draft, patch, facts }: StepProps) {
         />
       </Field>
     </>
+  );
+}
+
+const SHOWN = 8;
+
+/**
+ * A5 — optional. Tests from the facility menu (the order sheet's favourites and search) with a
+ * short reason each. They reach the receiving clinician's Plan as suggestions, never as orders.
+ */
+export function OutstandingTests({
+  menu,
+  tests,
+  onChange,
+}: {
+  menu: MenuTest[];
+  tests: CloseOutDraft["tests"];
+  onChange: (tests: CloseOutDraft["tests"]) => void;
+}) {
+  const [query, setQuery] = useState("");
+  const byId = new Map(menu.map((t) => [t.id, t]));
+  const chosen = new Set(tests.map((t) => t.testId));
+  const { favourites, rest } = menuSections(menu, query);
+  const offer = (query.trim() ? rest : favourites).filter((t) => !chosen.has(t.id)).slice(0, SHOWN);
+  const full = tests.length >= OUTSTANDING_TESTS_MAX;
+  return (
+    <fieldset className="flex flex-col gap-2">
+      <legend className="text-overline text-muted-foreground mb-1 uppercase">
+        Outstanding tests (optional)
+      </legend>
+      <p className="text-body-s text-muted-foreground">
+        Suggested to the receiving clinician, who accepts or dismisses each. Nothing is ordered
+        here.
+      </p>
+      {tests.length ? (
+        <ul className="divide-border flex flex-col divide-y" aria-label="Outstanding tests chosen">
+          {tests.map((t, i) => {
+            const name = byId.get(t.testId)?.display ?? "Test no longer on the menu";
+            return (
+              <li key={t.testId} className="flex flex-wrap items-center gap-2 py-2">
+                <span className="text-body-s text-foreground min-w-0 flex-1">{name}</span>
+                <input
+                  aria-label={`Reason for ${name} (optional)`}
+                  maxLength={OUTSTANDING_REASON_MAX}
+                  value={t.reason}
+                  placeholder="Reason (optional)"
+                  onChange={(e) =>
+                    onChange(tests.map((x, j) => (j === i ? { ...x, reason: e.target.value } : x)))
+                  }
+                  className={cn(FIELD, "sm:max-w-[18rem]")}
+                />
+                <button
+                  type="button"
+                  aria-label={`Remove ${name}`}
+                  onClick={() => onChange(tests.filter((_, j) => j !== i))}
+                  className="text-caption min-h-11 px-2 text-teal-700 underline-offset-2 hover:underline"
+                >
+                  Remove
+                </button>
+              </li>
+            );
+          })}
+        </ul>
+      ) : null}
+      <input
+        type="search"
+        aria-label="Find a test"
+        value={query}
+        onChange={(e) => setQuery(e.target.value)}
+        placeholder="Find a test"
+        className={FIELD}
+      />
+      {full ? (
+        <p className="text-body-s text-muted-foreground">{`Up to ${OUTSTANDING_TESTS_MAX} tests.`}</p>
+      ) : offer.length ? (
+        <ul
+          className="flex flex-wrap gap-2"
+          aria-label={query.trim() ? "Matching tests" : "Favourites"}
+        >
+          {offer.map((t) => (
+            <li key={t.id}>
+              <button
+                type="button"
+                onClick={() => onChange([...tests, { testId: t.id, reason: "" }])}
+                className="tap text-body-s border-border text-foreground hover:bg-muted focus-visible:shadow-focus inline-flex min-h-11 items-center rounded-md border px-3 outline-none"
+              >
+                {`Add ${t.display}`}
+              </button>
+            </li>
+          ))}
+        </ul>
+      ) : query.trim() ? (
+        <p className="text-body-s text-muted-foreground">No test on the menu matches.</p>
+      ) : null}
+    </fieldset>
   );
 }
 

@@ -159,7 +159,21 @@ export async function deleteHospital(id: string): Promise<void> {
  * (audit row stays — append-only — but the live row is gone).
  */
 export async function cleanup(): Promise<void> {
-  await serviceSql`DELETE FROM public.hospitals WHERE name LIKE 'Test %'`;
+  // One hospital at a time, inside the database (one round trip): a fixture that wrote append-only
+  // clinical rows (0040's documentation, the EMR's insert-only facts) can never be deleted, by
+  // design. Leave that one, and keep going.
+  await serviceSql.unsafe(`
+    DO $$
+    DECLARE r record;
+    BEGIN
+      FOR r IN SELECT id FROM public.hospitals WHERE name LIKE 'Test %' LOOP
+        BEGIN
+          DELETE FROM public.hospitals WHERE id = r.id;
+        EXCEPTION WHEN others THEN
+          IF SQLERRM !~* 'append-only|insert-only|never deleted' THEN RAISE; END IF;
+        END;
+      END LOOP;
+    END $$;`);
   const admin = serviceSupabase();
   const { data } = await admin.auth.admin.listUsers({ perPage: 200 });
   for (const u of data?.users ?? []) {

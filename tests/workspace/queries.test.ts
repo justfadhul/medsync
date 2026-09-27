@@ -1,5 +1,5 @@
 import { getTableName } from "drizzle-orm";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 /**
  * STOP 3's query budget: the workspace reads in a fixed number of round trips
@@ -30,6 +30,12 @@ function fakeValue(key: string, table: string, i: number): unknown {
   if (key === "dateOfBirth") return "1980-01-01";
   if (key === "code") return `MS-2026-${String(i).padStart(5, "0")}`;
   if (key === "breakdown") return { reasoning: ["RR 28"] };
+  if (key === "at") return new Date(NOW - i * 60_000);
+  if (key === "encounterId") return `encounters-${i}`;
+  if (key === "noteType") return "clerking";
+  if (key === "sensitivity") return "standard";
+  if (key === "text") return "Potassium";
+  if (key === "critical" || key === "restricted") return i % 2 === 0;
   if (key === "isEmergency" || key === "lifeThreat" || key === "hasResus") return false;
   return null;
 }
@@ -156,5 +162,55 @@ describe("the workspace query budget", () => {
     for (const p of call.patients) expect(onBoard.has(p.patientUserId)).toBe(true);
     expect(call).toMatchObject({ surface: "doctor_workspace", clinical: true });
     expect(flow.rows.find((r) => r.patientId === "p-0")?.identity.name).toBe("Name p-0");
+  });
+});
+
+describe("the workspace query budget under EMR v1 (E8)", () => {
+  beforeEach(() => {
+    calls.length = 0;
+    vi.stubEnv("ENCOUNTER_ENGINE_LIVE", "1");
+    vi.stubEnv("EMR_V1", "1");
+  });
+  afterEach(() => vi.unstubAllEnvs());
+
+  it("adds exactly two phase-A reads (results · co-signs) and stays flat in the row count", async () => {
+    rowsPerQuery = 1;
+    await loadWorkspace({ viewer, scope: "department", nowMs: NOW });
+    const small = [...calls];
+    expect(small.slice(0, 6).sort()).toEqual(
+      [
+        "clinical_cosign_policies",
+        "clinical_cosign_requests",
+        "diagnostic_reports",
+        "encounters",
+        "patient_intakes",
+        "resus-board",
+      ].sort(),
+    );
+    expect(small.at(-1)).toBe("reveal");
+    calls.length = 0;
+    rowsPerQuery = 40;
+    const { flow, emr } = await loadWorkspace({ viewer, scope: "department", nowMs: NOW });
+    expect(calls).toEqual(small);
+    expect(emr).toBe(true);
+    // Every fake patient is also in a live resus, so the results ride on those rows (one row each).
+    const ids = flow.rows.flatMap((r) => r.itemIds);
+    expect(ids).toContain("diagnostic_reports-0");
+    expect(ids).toContain("clinical_cosign_requests-0");
+  });
+
+  it("a cadre that may not co-sign never reads co-sign requests", async () => {
+    rowsPerQuery = 2;
+    await loadWorkspace({ viewer: { ...viewer, cadreCode: "INTERN" }, scope: "mine", nowMs: NOW });
+    expect(calls).not.toContain("clinical_cosign_requests");
+    expect(calls).toContain("diagnostic_reports");
+  });
+
+  it("flag off: no EMR read at all", async () => {
+    vi.unstubAllEnvs();
+    rowsPerQuery = 2;
+    const { emr } = await loadWorkspace({ viewer, scope: "mine", nowMs: NOW });
+    expect(emr).toBe(false);
+    expect(calls).not.toContain("diagnostic_reports");
   });
 });

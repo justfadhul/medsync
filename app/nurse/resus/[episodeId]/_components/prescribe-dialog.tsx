@@ -127,17 +127,22 @@ export function PrescribeDialog({
   const [typedConfirm, setTypedConfirm] = useState("");
   const [error, setError] = useState<string | null>(null);
 
-  // Persistent (clerked) allergies from the encounter engine — guarded server
-  // side, so [] until the engine is live (behaviour unchanged pre-launch).
-  const [persistentAllergies, setPersistentAllergies] = useState<string[]>([]);
+  // The record's allergies (every hospital under EMR v1) — guarded server side, so empty until
+  // the engine is live. A failed load is SAID, never silently replaced by an empty list; the
+  // server re-runs the allergy check on confirm whatever this dialog shows.
+  const [persistent, setPersistent] = useState<{ allergies: string[]; recorded: boolean }>({
+    allergies: [],
+    recorded: false,
+  });
+  const [allergyLoadFailed, setAllergyLoadFailed] = useState(false);
   useEffect(() => {
     let active = true;
     loadPersistentAllergiesForEpisode(episodeId)
       .then((a) => {
-        if (active) setPersistentAllergies(a);
+        if (active) setPersistent(a);
       })
       .catch(() => {
-        /* non-fatal — fall back to the timeline capture */
+        if (active) setAllergyLoadFailed(true);
       });
     return () => {
       active = false;
@@ -145,15 +150,15 @@ export function PrescribeDialog({
   }, [episodeId]);
 
   const allergies = useMemo(
-    () => mergeAllergyLists(recordedAllergiesFromTimeline(timeline), persistentAllergies),
-    [timeline, persistentAllergies],
+    () => mergeAllergyLists(recordedAllergiesFromTimeline(timeline), persistent.allergies),
+    [timeline, persistent],
   );
   const priors = useMemo(() => priorAdministrationsFromTimeline(timeline), [timeline]);
   const allergyKnown = useMemo(
     () =>
-      persistentAllergies.length > 0 ||
+      persistent.recorded ||
       timeline.some((e) => (e.payload as { allergyCapture?: unknown }).allergyCapture),
-    [timeline, persistentAllergies],
+    [timeline, persistent],
   );
 
   const patient = useMemo(
@@ -564,6 +569,15 @@ export function PrescribeDialog({
           ) : null}
 
           {/* Allergy gate — must be surfaced before confirm */}
+          {allergyLoadFailed ? (
+            <p
+              role="alert"
+              className="bg-status-caution-bg text-status-caution-fg flex items-center gap-1.5 rounded-xl px-3 py-2 text-[12px] font-medium"
+            >
+              <AlertTriangleIcon className="size-3.5 shrink-0" aria-hidden />
+              Allergies could not be loaded — check before giving
+            </p>
+          ) : null}
           {!allergyKnown ? (
             <div className="rounded-xl border border-amber-400/70 bg-amber-50/60 p-3 dark:bg-amber-950/20">
               <p className="text-[12px] font-semibold text-amber-900 dark:text-amber-200">

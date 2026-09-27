@@ -1,0 +1,5071 @@
+{
+  "catalogue": "medsync.clinical-fact-concepts",
+  "version": "1.0.0-draft",
+  "status": "DRAFT. GATE A: CSO sign-off and engineering review pending. Candidate codes must be verified before use.",
+  "pairsWith": [
+    "MS-DATA-CFC-001 Clinical Fact Contract",
+    "MS-NCD-ENG-001 NCD engine framework and diabetes pack structure"
+  ],
+  "verificationLegend": {
+    "verified": "checked at the primary source (loinc.org, ngsp.org, WHO prequalification)",
+    "verified-mirror": "checked against a mirror of the WHO ICD-11 MMS; confirm at icd.who.int during Phase 0",
+    "verified-secondary": "checked in a secondary source; confirm at the primary source during Phase 0",
+    "candidate": "from domain knowledge; must be verified before any export or rule uses it"
+  },
+  "laneKey": {
+    "core": "shared cardiometabolic core",
+    "suspect": "who to test",
+    "confirm": "results against a named criteria set",
+    "classify": "which type",
+    "stratify": "control, complications, risk",
+    "act": "next steps",
+    "acute": "acute routing context"
+  },
+  "trust": {
+    "4": "Laboratory result, final status",
+    "3": "Point-of-care test by staff on a registered device, or clinician examination",
+    "2": "Validated patient device, automatic transfer",
+    "1": "Patient-typed, or imported without verification"
+  },
+  "enums": {
+    "source": [
+      "lab",
+      "poc_staff",
+      "clinician",
+      "patient_reported",
+      "device_synced",
+      "imported"
+    ],
+    "status": [
+      "preliminary",
+      "final",
+      "amended",
+      "corrected",
+      "entered_in_error",
+      "cancelled"
+    ],
+    "specimen": [
+      "venous_plasma",
+      "venous_serum",
+      "venous_whole_blood",
+      "capillary_whole_blood",
+      "arterial_blood",
+      "urine_spot",
+      "urine_first_morning",
+      "urine_24h",
+      "interstitial_fluid",
+      "unknown"
+    ],
+    "calibration": [
+      "plasma_equivalent",
+      "whole_blood",
+      "unknown"
+    ],
+    "fastingState": [
+      "fasting",
+      "non_fasting",
+      "unknown"
+    ],
+    "challenge": [
+      "ogtt_75g",
+      "meal"
+    ],
+    "certification": [
+      "ngsp",
+      "ifcc",
+      "ngsp_and_ifcc",
+      "none",
+      "unknown"
+    ],
+    "container": [
+      "fluoride_oxalate",
+      "serum_plain",
+      "lithium_heparin",
+      "edta",
+      "capillary_direct",
+      "unknown"
+    ],
+    "testPurpose": [
+      "screening",
+      "diagnostic",
+      "monitoring",
+      "acute_assessment",
+      "antenatal_screening"
+    ],
+    "presence": [
+      "present",
+      "absent",
+      "unknown"
+    ],
+    "elicitedBy": [
+      "history",
+      "examination",
+      "patient_self_report"
+    ],
+    "severity": [
+      "mild",
+      "moderate",
+      "severe"
+    ],
+    "laterality": [
+      "left",
+      "right",
+      "bilateral"
+    ],
+    "measurement": [
+      "measured",
+      "reported",
+      "estimated"
+    ],
+    "bpPosition": [
+      "sitting",
+      "standing",
+      "supine"
+    ],
+    "bpDevice": [
+      "validated_automated",
+      "aneroid",
+      "mercury",
+      "unknown"
+    ],
+    "bpSetting": [
+      "clinic",
+      "home",
+      "ambulatory"
+    ],
+    "cuffSize": [
+      "small_adult",
+      "adult",
+      "large_adult",
+      "child"
+    ],
+    "clinicalStatus": [
+      "active",
+      "recurrence",
+      "relapse",
+      "inactive",
+      "remission",
+      "resolved"
+    ],
+    "verificationStatus": [
+      "unconfirmed",
+      "provisional",
+      "differential",
+      "confirmed",
+      "refuted",
+      "entered_in_error"
+    ],
+    "assertedBy": [
+      "clinician",
+      "patient_reported",
+      "referral_document",
+      "engine_proposal_accepted"
+    ],
+    "subjectRelation": [
+      "self",
+      "mother",
+      "father",
+      "sibling",
+      "child",
+      "other_first_degree",
+      "second_degree"
+    ],
+    "medicationStatus": [
+      "active",
+      "completed",
+      "stopped",
+      "on_hold",
+      "intended",
+      "unknown"
+    ],
+    "medicationSource": [
+      "prescribed_here",
+      "dispensed_here",
+      "patient_reported",
+      "external_record"
+    ],
+    "route": [
+      "oral",
+      "iv",
+      "im",
+      "sc",
+      "inhaled",
+      "topical",
+      "other"
+    ],
+    "pregnancyState": [
+      "pregnant",
+      "postpartum",
+      "not_pregnant",
+      "unknown"
+    ],
+    "gestationBasis": [
+      "lmp",
+      "ultrasound",
+      "fundal_height",
+      "unknown"
+    ],
+    "sensitivity": [
+      "standard",
+      "restricted"
+    ],
+    "capabilityStatus": [
+      "available",
+      "intermittent",
+      "unavailable"
+    ],
+    "dobPrecision": [
+      "day",
+      "month",
+      "year",
+      "estimated"
+    ]
+  },
+  "conversions": [
+    {
+      "analyte": "glucose",
+      "frm": "mg/dL",
+      "to": "mmol/L",
+      "op": "divide by 18.0156",
+      "basis": "molar mass 180.156 g/mol",
+      "status": "verified",
+      "source": "https://loinc.org/14743-9"
+    },
+    {
+      "analyte": "HbA1c",
+      "frm": "mmol/mol (IFCC)",
+      "to": "% (NGSP)",
+      "op": "NGSP = 0.09148 x IFCC + 2.152",
+      "basis": "NGSP master equation",
+      "status": "verified",
+      "source": "https://ngsp.org/ifcc.asp"
+    },
+    {
+      "analyte": "HbA1c",
+      "frm": "% (NGSP)",
+      "to": "mmol/mol (IFCC)",
+      "op": "IFCC = (NGSP - 2.152) / 0.09148",
+      "basis": "inverse of the master equation",
+      "status": "verified",
+      "source": "https://ngsp.org/ifcc.asp"
+    },
+    {
+      "analyte": "creatinine",
+      "frm": "mg/dL",
+      "to": "umol/L",
+      "op": "multiply by 88.42",
+      "basis": "molar mass 113.12 g/mol",
+      "status": "standard"
+    },
+    {
+      "analyte": "cholesterol (total, HDL, LDL, non-HDL)",
+      "frm": "mg/dL",
+      "to": "mmol/L",
+      "op": "divide by 38.67",
+      "basis": "molar mass 386.65 g/mol",
+      "status": "standard"
+    },
+    {
+      "analyte": "triglycerides",
+      "frm": "mg/dL",
+      "to": "mmol/L",
+      "op": "divide by 88.57",
+      "basis": "as triolein, 885.7 g/mol",
+      "status": "standard"
+    },
+    {
+      "analyte": "urea",
+      "frm": "mg/dL (urea nitrogen)",
+      "to": "mmol/L (urea)",
+      "op": "multiply by 0.357",
+      "basis": "two nitrogen atoms per urea",
+      "status": "standard"
+    },
+    {
+      "analyte": "urine ACR",
+      "frm": "mg/g",
+      "to": "mg/mmol",
+      "op": "divide by 8.84",
+      "basis": "creatinine 113.12 g/mol",
+      "status": "standard"
+    },
+    {
+      "analyte": "haemoglobin",
+      "frm": "g/L",
+      "to": "g/dL",
+      "op": "divide by 10",
+      "basis": "unit prefix",
+      "status": "standard"
+    },
+    {
+      "analyte": "C-peptide",
+      "frm": "ng/mL",
+      "to": "nmol/L",
+      "op": "multiply by 0.331",
+      "basis": "molar mass 3020.3 g/mol",
+      "status": "standard"
+    },
+    {
+      "analyte": "C-peptide",
+      "frm": "pmol/L",
+      "to": "nmol/L",
+      "op": "divide by 1000",
+      "basis": "unit prefix",
+      "status": "standard"
+    },
+    {
+      "analyte": "weight",
+      "frm": "[lb_av]",
+      "to": "kg",
+      "op": "multiply by 0.45359237",
+      "basis": "definition",
+      "status": "standard"
+    },
+    {
+      "analyte": "height",
+      "frm": "[in_i]",
+      "to": "cm",
+      "op": "multiply by 2.54",
+      "basis": "definition",
+      "status": "standard"
+    },
+    {
+      "analyte": "temperature",
+      "frm": "[degF]",
+      "to": "Cel",
+      "op": "(F - 32) x 5/9",
+      "basis": "definition",
+      "status": "standard"
+    }
+  ],
+  "unitMismatchPrompts": {
+    "status": "proposed for CSO sign-off; prompts confirm and never reject",
+    "rules": [
+      {
+        "concept": "obs.glucose",
+        "enteredUnit": "mmol/L",
+        "promptIf": "value > 60",
+        "ask": "Is this mg/dL?"
+      },
+      {
+        "concept": "obs.hba1c",
+        "enteredUnit": "%",
+        "promptIf": "value > 20",
+        "ask": "Is this IFCC mmol/mol?"
+      },
+      {
+        "concept": "obs.creatinine",
+        "enteredUnit": "umol/L",
+        "promptIf": "value < 15",
+        "ask": "Is this mg/dL?"
+      },
+      {
+        "concept": "obs.haemoglobin",
+        "enteredUnit": "g/dL",
+        "promptIf": "value > 30",
+        "ask": "Is this g/L?"
+      },
+      {
+        "concept": "obs.chol_total",
+        "enteredUnit": "mmol/L",
+        "promptIf": "value > 30",
+        "ask": "Is this mg/dL?"
+      }
+    ]
+  },
+  "concepts": [
+    {
+      "id": "obs.glucose",
+      "display": "Glucose (blood, plasma or serum)",
+      "kind": "observation",
+      "group": "glycaemia",
+      "valueType": "quantity",
+      "canonicalUnit": "mmol/L",
+      "acceptedUnits": [
+        {
+          "unit": "mg/dL",
+          "toCanonical": "divide by 18.0156"
+        }
+      ],
+      "contextRequired": [
+        "specimen",
+        "fastingState"
+      ],
+      "contextConditional": {
+        "calibration": "required when specimen is capillary_whole_blood measured by a meter",
+        "challenge": "required for OGTT time points and timed post-meal tests",
+        "deviceId": "required when pointOfCare is true"
+      },
+      "contextOptional": [
+        "container",
+        "processingDelayMinutes",
+        "testPurpose",
+        "comparator"
+      ],
+      "codes": [
+        {
+          "system": "LOINC",
+          "code": "14749-6",
+          "status": "verified",
+          "verifiedOn": "2026-09-26",
+          "source": "https://gemspec.gematik.de/ig/fhir/hddt/1.0.1/ValueSet-hddt-miv-blood-glucose-measurement.html",
+          "note": "serum or plasma, mmol/L"
+        },
+        {
+          "system": "LOINC",
+          "code": "2345-7",
+          "status": "verified",
+          "verifiedOn": "2026-09-26",
+          "source": "https://gemspec.gematik.de/ig/fhir/hddt/1.0.1/ValueSet-hddt-miv-blood-glucose-measurement.html",
+          "note": "serum or plasma, mg/dL"
+        },
+        {
+          "system": "LOINC",
+          "code": "14743-9",
+          "status": "verified",
+          "verifiedOn": "2026-09-26",
+          "source": "https://loinc.org/14743-9",
+          "note": "capillary blood by glucometer, mmol/L"
+        },
+        {
+          "system": "LOINC",
+          "code": "41653-7",
+          "status": "verified",
+          "verifiedOn": "2026-09-26",
+          "source": "https://gemspec.gematik.de/ig/fhir/hddt/1.0.1/ValueSet-hddt-miv-blood-glucose-measurement.html",
+          "note": "capillary blood by glucometer, mg/dL"
+        },
+        {
+          "system": "LOINC",
+          "code": "15074-8",
+          "status": "verified",
+          "verifiedOn": "2026-09-26",
+          "source": "https://gemspec.gematik.de/ig/fhir/hddt/1.0.1/ValueSet-hddt-miv-blood-glucose-measurement.html",
+          "note": "blood, mmol/L"
+        },
+        {
+          "system": "LOINC",
+          "code": "2339-0",
+          "status": "verified",
+          "verifiedOn": "2026-09-26",
+          "source": "https://gemspec.gematik.de/ig/fhir/hddt/1.0.1/ValueSet-hddt-miv-blood-glucose-measurement.html",
+          "note": "blood, mg/dL"
+        },
+        {
+          "system": "LOINC",
+          "code": "39480-9",
+          "status": "verified",
+          "verifiedOn": "2026-09-26",
+          "source": "https://tx5.health-samurai.io/ui/vs/2.16.840.1.113762.1.4.1078.442",
+          "note": "venous blood, mmol/L"
+        },
+        {
+          "system": "LOINC",
+          "code": "51596-5",
+          "status": "verified",
+          "verifiedOn": "2026-09-26",
+          "source": "https://tx5.health-samurai.io/ui/vs/2.16.840.1.113762.1.4.1078.442",
+          "note": "capillary blood (not meter), mmol/L"
+        },
+        {
+          "system": "LOINC",
+          "code": "14771-0",
+          "status": "candidate",
+          "note": "fasting, serum or plasma, mmol/L"
+        },
+        {
+          "system": "LOINC",
+          "code": "1558-6",
+          "status": "candidate",
+          "note": "fasting, serum or plasma, mg/dL"
+        }
+      ],
+      "lanes": [
+        "suspect",
+        "confirm",
+        "stratify",
+        "acute"
+      ],
+      "sensitivity": "standard",
+      "phase": "v1",
+      "notes": "One concept, many contexts: the export mapper chooses the LOINC code from specimen, method and fasting state. Meter HI/LO is stored as a comparator plus the meter limit. Missing fasting state is stored as unknown and is never read as fasting."
+    },
+    {
+      "id": "obs.hba1c",
+      "display": "HbA1c",
+      "kind": "observation",
+      "group": "glycaemia",
+      "valueType": "quantity",
+      "canonicalUnit": "%",
+      "acceptedUnits": [
+        {
+          "unit": "mmol/mol",
+          "toCanonical": "NGSP % = 0.09148 x IFCC mmol/mol + 2.152 (NGSP master equation)"
+        }
+      ],
+      "contextRequired": [
+        "method",
+        "certification",
+        "pointOfCare"
+      ],
+      "contextOptional": [
+        "deviceId",
+        "labId"
+      ],
+      "codes": [
+        {
+          "system": "LOINC",
+          "code": "4548-4",
+          "status": "verified",
+          "verifiedOn": "2026-09-26",
+          "source": "https://loinc.org/4548-4",
+          "note": "NGSP/DCCT-aligned, %"
+        },
+        {
+          "system": "LOINC",
+          "code": "59261-8",
+          "status": "verified",
+          "verifiedOn": "2026-09-26",
+          "source": "https://loinc.org/4548-4",
+          "note": "IFCC protocol, mmol/mol"
+        }
+      ],
+      "lanes": [
+        "suspect",
+        "confirm",
+        "stratify"
+      ],
+      "sensitivity": "standard",
+      "phase": "v1",
+      "notes": "Usability for diagnosis and monitoring is computed per patient from the validity modifiers (contract 4.2) before any rule reads it."
+    },
+    {
+      "id": "obs.fructosamine",
+      "display": "Fructosamine",
+      "kind": "observation",
+      "group": "glycaemia",
+      "valueType": "quantity",
+      "canonicalUnit": "umol/L",
+      "contextRequired": [],
+      "codes": [
+        {
+          "system": "LOINC",
+          "code": "15069-8",
+          "status": "candidate",
+          "note": "serum or plasma"
+        }
+      ],
+      "lanes": [
+        "stratify"
+      ],
+      "sensitivity": "standard",
+      "phase": "v1",
+      "notes": "Alternative glycaemic marker when HbA1c cannot be used (for example HbSS)."
+    },
+    {
+      "id": "obs.ketones_blood",
+      "display": "Beta-hydroxybutyrate (blood ketones)",
+      "kind": "observation",
+      "group": "glycaemia",
+      "valueType": "quantity",
+      "canonicalUnit": "mmol/L",
+      "contextRequired": [
+        "specimen",
+        "pointOfCare"
+      ],
+      "codes": [],
+      "lanes": [
+        "classify",
+        "acute"
+      ],
+      "sensitivity": "standard",
+      "phase": "v1",
+      "notes": "LOINC mapping pending. Capillary meter or laboratory."
+    },
+    {
+      "id": "obs.ketones_urine",
+      "display": "Ketones (urine dipstick)",
+      "kind": "observation",
+      "group": "glycaemia",
+      "valueType": "ordinal",
+      "answers": [
+        "negative",
+        "trace",
+        "plus1",
+        "plus2",
+        "plus3"
+      ],
+      "contextRequired": [
+        "specimen"
+      ],
+      "codes": [
+        {
+          "system": "LOINC",
+          "code": "2514-8",
+          "status": "candidate",
+          "note": "urine by test strip"
+        }
+      ],
+      "lanes": [
+        "classify",
+        "acute"
+      ],
+      "sensitivity": "standard",
+      "phase": "v1",
+      "notes": "Nitroprusside strips detect acetoacetate and acetone, not beta-hydroxybutyrate."
+    },
+    {
+      "id": "obs.glucose_urine",
+      "display": "Glucose (urine dipstick)",
+      "kind": "observation",
+      "group": "glycaemia",
+      "valueType": "ordinal",
+      "answers": [
+        "negative",
+        "trace",
+        "plus1",
+        "plus2",
+        "plus3",
+        "plus4"
+      ],
+      "contextRequired": [],
+      "codes": [
+        {
+          "system": "LOINC",
+          "code": "25428-4",
+          "status": "candidate",
+          "note": "urine by test strip"
+        }
+      ],
+      "lanes": [
+        "suspect"
+      ],
+      "sensitivity": "standard",
+      "phase": "v1",
+      "notes": "Prompts testing only; never diagnostic."
+    },
+    {
+      "id": "obs.c_peptide",
+      "display": "C-peptide",
+      "kind": "observation",
+      "group": "glycaemia",
+      "valueType": "quantity",
+      "canonicalUnit": "nmol/L",
+      "acceptedUnits": [
+        {
+          "unit": "pmol/L",
+          "toCanonical": "divide by 1000"
+        },
+        {
+          "unit": "ng/mL",
+          "toCanonical": "multiply by 0.331"
+        }
+      ],
+      "contextRequired": [
+        "fastingState"
+      ],
+      "contextOptional": [
+        "pairedGlucoseFactId",
+        "stimulus"
+      ],
+      "codes": [
+        {
+          "system": "LOINC",
+          "code": "1986-9",
+          "status": "candidate",
+          "note": "serum or plasma, mass"
+        }
+      ],
+      "lanes": [
+        "classify"
+      ],
+      "sensitivity": "standard",
+      "phase": "v1"
+    },
+    {
+      "id": "obs.islet_autoantibody",
+      "display": "Islet autoantibody",
+      "kind": "observation",
+      "group": "glycaemia",
+      "valueType": "coded",
+      "answers": [
+        "positive",
+        "negative",
+        "indeterminate"
+      ],
+      "contextRequired": [
+        "antigen",
+        "method"
+      ],
+      "contextOptional": [
+        "titre",
+        "titreUnit"
+      ],
+      "codes": [],
+      "lanes": [
+        "classify"
+      ],
+      "sensitivity": "standard",
+      "phase": "v1",
+      "notes": "antigen: gad65 | ia2 | znt8 | iaa. LOINC mapping pending."
+    },
+    {
+      "id": "derived.cgm_tir",
+      "display": "Time in range (CGM)",
+      "kind": "observation",
+      "group": "glycaemia_cgm",
+      "valueType": "quantity",
+      "canonicalUnit": "%",
+      "contextRequired": [
+        "windowDays",
+        "sensorWearPercent"
+      ],
+      "codes": [],
+      "lanes": [
+        "stratify"
+      ],
+      "sensitivity": "standard",
+      "phase": "v1",
+      "notes": "Written by the monitoring engine from telemetry summaries; raw sensor streams never enter observations. Range limits come from the dossier."
+    },
+    {
+      "id": "derived.cgm_tbr",
+      "display": "Time below range (CGM)",
+      "kind": "observation",
+      "group": "glycaemia_cgm",
+      "valueType": "quantity",
+      "canonicalUnit": "%",
+      "contextRequired": [
+        "windowDays",
+        "sensorWearPercent",
+        "level"
+      ],
+      "codes": [],
+      "lanes": [
+        "stratify"
+      ],
+      "sensitivity": "standard",
+      "phase": "v1",
+      "notes": "Written by the monitoring engine from telemetry summaries; raw sensor streams never enter observations. Range limits come from the dossier."
+    },
+    {
+      "id": "derived.cgm_tar",
+      "display": "Time above range (CGM)",
+      "kind": "observation",
+      "group": "glycaemia_cgm",
+      "valueType": "quantity",
+      "canonicalUnit": "%",
+      "contextRequired": [
+        "windowDays",
+        "sensorWearPercent",
+        "level"
+      ],
+      "codes": [],
+      "lanes": [
+        "stratify"
+      ],
+      "sensitivity": "standard",
+      "phase": "v1",
+      "notes": "Written by the monitoring engine from telemetry summaries; raw sensor streams never enter observations. Range limits come from the dossier."
+    },
+    {
+      "id": "derived.cgm_gmi",
+      "display": "Glucose management indicator (CGM)",
+      "kind": "observation",
+      "group": "glycaemia_cgm",
+      "valueType": "quantity",
+      "canonicalUnit": "%",
+      "contextRequired": [
+        "windowDays",
+        "sensorWearPercent"
+      ],
+      "codes": [],
+      "lanes": [
+        "stratify"
+      ],
+      "sensitivity": "standard",
+      "phase": "v1",
+      "notes": "Written by the monitoring engine from telemetry summaries; raw sensor streams never enter observations. Range limits come from the dossier."
+    },
+    {
+      "id": "derived.cgm_cv",
+      "display": "Glucose coefficient of variation (CGM)",
+      "kind": "observation",
+      "group": "glycaemia_cgm",
+      "valueType": "quantity",
+      "canonicalUnit": "%",
+      "contextRequired": [
+        "windowDays",
+        "sensorWearPercent"
+      ],
+      "codes": [],
+      "lanes": [
+        "stratify"
+      ],
+      "sensitivity": "standard",
+      "phase": "v1",
+      "notes": "Written by the monitoring engine from telemetry summaries; raw sensor streams never enter observations. Range limits come from the dossier."
+    },
+    {
+      "id": "derived.cgm_mean",
+      "display": "Mean sensor glucose (CGM)",
+      "kind": "observation",
+      "group": "glycaemia_cgm",
+      "valueType": "quantity",
+      "canonicalUnit": "mmol/L",
+      "contextRequired": [
+        "windowDays",
+        "sensorWearPercent"
+      ],
+      "codes": [],
+      "lanes": [
+        "stratify"
+      ],
+      "sensitivity": "standard",
+      "phase": "v1",
+      "notes": "Written by the monitoring engine from telemetry summaries; raw sensor streams never enter observations. Range limits come from the dossier."
+    },
+    {
+      "id": "obs.sodium",
+      "display": "Sodium",
+      "kind": "observation",
+      "group": "acid_base",
+      "valueType": "quantity",
+      "canonicalUnit": "mmol/L",
+      "contextRequired": [
+        "specimen"
+      ],
+      "codes": [
+        {
+          "system": "LOINC",
+          "code": "2951-2",
+          "status": "candidate",
+          "note": "serum or plasma"
+        }
+      ],
+      "lanes": [
+        "acute",
+        "classify"
+      ],
+      "sensitivity": "standard",
+      "phase": "v1"
+    },
+    {
+      "id": "obs.potassium",
+      "display": "Potassium",
+      "kind": "observation",
+      "group": "acid_base",
+      "valueType": "quantity",
+      "canonicalUnit": "mmol/L",
+      "contextRequired": [
+        "specimen"
+      ],
+      "codes": [
+        {
+          "system": "LOINC",
+          "code": "2823-3",
+          "status": "candidate",
+          "note": "serum or plasma"
+        }
+      ],
+      "lanes": [
+        "acute",
+        "classify"
+      ],
+      "sensitivity": "standard",
+      "phase": "v1"
+    },
+    {
+      "id": "obs.chloride",
+      "display": "Chloride",
+      "kind": "observation",
+      "group": "acid_base",
+      "valueType": "quantity",
+      "canonicalUnit": "mmol/L",
+      "contextRequired": [
+        "specimen"
+      ],
+      "codes": [
+        {
+          "system": "LOINC",
+          "code": "2075-0",
+          "status": "candidate",
+          "note": "serum or plasma"
+        }
+      ],
+      "lanes": [
+        "acute",
+        "classify"
+      ],
+      "sensitivity": "standard",
+      "phase": "v1"
+    },
+    {
+      "id": "obs.bicarbonate",
+      "display": "Bicarbonate",
+      "kind": "observation",
+      "group": "acid_base",
+      "valueType": "quantity",
+      "canonicalUnit": "mmol/L",
+      "contextRequired": [
+        "specimen"
+      ],
+      "codes": [
+        {
+          "system": "LOINC",
+          "code": "1963-8",
+          "status": "candidate",
+          "note": "serum or plasma"
+        }
+      ],
+      "lanes": [
+        "acute",
+        "classify"
+      ],
+      "sensitivity": "standard",
+      "phase": "v1"
+    },
+    {
+      "id": "obs.ph",
+      "display": "Blood pH",
+      "kind": "observation",
+      "group": "acid_base",
+      "valueType": "quantity",
+      "canonicalUnit": "[pH]",
+      "contextRequired": [
+        "specimen"
+      ],
+      "codes": [
+        {
+          "system": "LOINC",
+          "code": "2744-1",
+          "status": "candidate",
+          "note": "arterial; venous code to map"
+        }
+      ],
+      "lanes": [
+        "acute"
+      ],
+      "sensitivity": "standard",
+      "phase": "v1"
+    },
+    {
+      "id": "obs.urea",
+      "display": "Urea",
+      "kind": "observation",
+      "group": "acid_base",
+      "valueType": "quantity",
+      "canonicalUnit": "mmol/L",
+      "acceptedUnits": [
+        {
+          "unit": "mg/dL (urea nitrogen)",
+          "toCanonical": "multiply by 0.357"
+        }
+      ],
+      "contextRequired": [],
+      "codes": [
+        {
+          "system": "LOINC",
+          "code": "3094-0",
+          "status": "candidate",
+          "note": "urea nitrogen, mass; molar code to map"
+        }
+      ],
+      "lanes": [
+        "acute",
+        "stratify"
+      ],
+      "sensitivity": "standard",
+      "phase": "v1"
+    },
+    {
+      "id": "derived.anion_gap",
+      "display": "Anion gap",
+      "kind": "observation",
+      "group": "acid_base",
+      "valueType": "quantity",
+      "canonicalUnit": "mmol/L",
+      "contextRequired": [
+        "formula"
+      ],
+      "codes": [],
+      "lanes": [
+        "acute"
+      ],
+      "sensitivity": "standard",
+      "phase": "v1",
+      "notes": "Computed at snapshot time from sodium, chloride and bicarbonate of the same specimen."
+    },
+    {
+      "id": "derived.osmolality_effective",
+      "display": "Effective serum osmolality",
+      "kind": "observation",
+      "group": "acid_base",
+      "valueType": "quantity",
+      "canonicalUnit": "mOsm/kg",
+      "contextRequired": [
+        "formula"
+      ],
+      "codes": [],
+      "lanes": [
+        "acute"
+      ],
+      "sensitivity": "standard",
+      "phase": "v1",
+      "notes": "Computed at snapshot time from sodium and glucose of the same specimen; formula version in the dossier."
+    },
+    {
+      "id": "obs.creatinine",
+      "display": "Creatinine",
+      "kind": "observation",
+      "group": "renal",
+      "valueType": "quantity",
+      "canonicalUnit": "umol/L",
+      "acceptedUnits": [
+        {
+          "unit": "mg/dL",
+          "toCanonical": "multiply by 88.42"
+        }
+      ],
+      "contextRequired": [
+        "method",
+        "idmsTraceable"
+      ],
+      "codes": [
+        {
+          "system": "LOINC",
+          "code": "14682-9",
+          "status": "candidate",
+          "note": "serum or plasma, molar"
+        },
+        {
+          "system": "LOINC",
+          "code": "2160-0",
+          "status": "candidate",
+          "note": "serum or plasma, mass"
+        }
+      ],
+      "lanes": [
+        "stratify"
+      ],
+      "sensitivity": "standard",
+      "phase": "v1"
+    },
+    {
+      "id": "derived.egfr",
+      "display": "Estimated GFR",
+      "kind": "observation",
+      "group": "renal",
+      "valueType": "quantity",
+      "canonicalUnit": "mL/min/{1.73_m2}",
+      "contextRequired": [
+        "formula"
+      ],
+      "codes": [
+        {
+          "system": "LOINC",
+          "code": "98979-8",
+          "status": "verified",
+          "verifiedOn": "2026-09-26",
+          "source": "https://loinc.org/98979-8",
+          "note": "creatinine-based, CKD-EPI 2021"
+        },
+        {
+          "system": "LOINC",
+          "code": "98980-6",
+          "status": "verified",
+          "verifiedOn": "2026-09-26",
+          "source": "https://loinc.org/98980-6",
+          "note": "creatinine and cystatin C, CKD-EPI 2021"
+        }
+      ],
+      "lanes": [
+        "stratify"
+      ],
+      "sensitivity": "standard",
+      "phase": "v1",
+      "notes": "Platform-computed with one signed, versioned equation. ARK data (Malawi, South Africa, Uganda) show creatinine equations overestimate measured GFR, most at low function: display the equation and treat values near thresholds conservatively."
+    },
+    {
+      "id": "obs.cystatin_c",
+      "display": "Cystatin C",
+      "kind": "observation",
+      "group": "renal",
+      "valueType": "quantity",
+      "canonicalUnit": "mg/L",
+      "contextRequired": [],
+      "codes": [
+        {
+          "system": "LOINC",
+          "code": "33863-2",
+          "status": "candidate",
+          "note": "serum or plasma"
+        }
+      ],
+      "lanes": [
+        "stratify"
+      ],
+      "sensitivity": "standard",
+      "phase": "v1.1"
+    },
+    {
+      "id": "obs.uacr",
+      "display": "Urine albumin-to-creatinine ratio",
+      "kind": "observation",
+      "group": "renal",
+      "valueType": "quantity",
+      "canonicalUnit": "mg/mmol",
+      "acceptedUnits": [
+        {
+          "unit": "mg/g",
+          "toCanonical": "divide by 8.84"
+        }
+      ],
+      "contextRequired": [
+        "specimen",
+        "method"
+      ],
+      "codes": [
+        {
+          "system": "LOINC",
+          "code": "9318-7",
+          "status": "candidate",
+          "note": "albumin/creatinine mass ratio"
+        },
+        {
+          "system": "LOINC",
+          "code": "14959-1",
+          "status": "candidate",
+          "note": "microalbumin/creatinine mass ratio"
+        }
+      ],
+      "lanes": [
+        "stratify"
+      ],
+      "sensitivity": "standard",
+      "phase": "v1"
+    },
+    {
+      "id": "obs.urine_protein_dipstick",
+      "display": "Protein (urine dipstick)",
+      "kind": "observation",
+      "group": "renal",
+      "valueType": "ordinal",
+      "answers": [
+        "negative",
+        "trace",
+        "plus1",
+        "plus2",
+        "plus3",
+        "plus4"
+      ],
+      "contextRequired": [],
+      "codes": [
+        {
+          "system": "LOINC",
+          "code": "20454-5",
+          "status": "candidate",
+          "note": "urine by test strip"
+        }
+      ],
+      "lanes": [
+        "stratify"
+      ],
+      "sensitivity": "standard",
+      "phase": "v1",
+      "notes": "Fallback screen where ACR is unavailable; never used for albuminuria staging."
+    },
+    {
+      "id": "obs.chol_total",
+      "display": "Total cholesterol",
+      "kind": "observation",
+      "group": "lipids",
+      "valueType": "quantity",
+      "canonicalUnit": "mmol/L",
+      "acceptedUnits": [
+        {
+          "unit": "mg/dL",
+          "toCanonical": "divide by 38.67"
+        }
+      ],
+      "contextRequired": [],
+      "contextOptional": [
+        "fastingState"
+      ],
+      "codes": [
+        {
+          "system": "LOINC",
+          "code": "14647-2",
+          "status": "candidate",
+          "note": "molar"
+        },
+        {
+          "system": "LOINC",
+          "code": "2093-3",
+          "status": "candidate",
+          "note": "mass"
+        }
+      ],
+      "lanes": [
+        "stratify"
+      ],
+      "sensitivity": "standard",
+      "phase": "v1"
+    },
+    {
+      "id": "obs.chol_hdl",
+      "display": "HDL cholesterol",
+      "kind": "observation",
+      "group": "lipids",
+      "valueType": "quantity",
+      "canonicalUnit": "mmol/L",
+      "acceptedUnits": [
+        {
+          "unit": "mg/dL",
+          "toCanonical": "divide by 38.67"
+        }
+      ],
+      "contextRequired": [],
+      "contextOptional": [
+        "fastingState"
+      ],
+      "codes": [
+        {
+          "system": "LOINC",
+          "code": "14646-4",
+          "status": "candidate",
+          "note": "molar"
+        },
+        {
+          "system": "LOINC",
+          "code": "2085-9",
+          "status": "candidate",
+          "note": "mass"
+        }
+      ],
+      "lanes": [
+        "stratify"
+      ],
+      "sensitivity": "standard",
+      "phase": "v1"
+    },
+    {
+      "id": "obs.chol_ldl",
+      "display": "LDL cholesterol",
+      "kind": "observation",
+      "group": "lipids",
+      "valueType": "quantity",
+      "canonicalUnit": "mmol/L",
+      "acceptedUnits": [
+        {
+          "unit": "mg/dL",
+          "toCanonical": "divide by 38.67"
+        }
+      ],
+      "contextRequired": [
+        "derivation"
+      ],
+      "contextOptional": [
+        "fastingState"
+      ],
+      "codes": [
+        {
+          "system": "LOINC",
+          "code": "13457-7",
+          "status": "candidate",
+          "note": "calculated, mass"
+        }
+      ],
+      "lanes": [
+        "stratify"
+      ],
+      "sensitivity": "standard",
+      "phase": "v1",
+      "notes": "derivation: measured | friedewald | martin_hopkins | sampson."
+    },
+    {
+      "id": "obs.triglycerides",
+      "display": "Triglycerides",
+      "kind": "observation",
+      "group": "lipids",
+      "valueType": "quantity",
+      "canonicalUnit": "mmol/L",
+      "acceptedUnits": [
+        {
+          "unit": "mg/dL",
+          "toCanonical": "divide by 88.57"
+        }
+      ],
+      "contextRequired": [],
+      "contextOptional": [
+        "fastingState"
+      ],
+      "codes": [
+        {
+          "system": "LOINC",
+          "code": "14927-8",
+          "status": "candidate",
+          "note": "molar"
+        },
+        {
+          "system": "LOINC",
+          "code": "2571-8",
+          "status": "candidate",
+          "note": "mass"
+        }
+      ],
+      "lanes": [
+        "stratify"
+      ],
+      "sensitivity": "standard",
+      "phase": "v1"
+    },
+    {
+      "id": "derived.chol_non_hdl",
+      "display": "Non-HDL cholesterol",
+      "kind": "observation",
+      "group": "lipids",
+      "valueType": "quantity",
+      "canonicalUnit": "mmol/L",
+      "contextRequired": [
+        "formula"
+      ],
+      "codes": [],
+      "lanes": [
+        "stratify"
+      ],
+      "sensitivity": "standard",
+      "phase": "v1"
+    },
+    {
+      "id": "obs.haemoglobin",
+      "display": "Haemoglobin",
+      "kind": "observation",
+      "group": "haematology",
+      "valueType": "quantity",
+      "canonicalUnit": "g/dL",
+      "acceptedUnits": [
+        {
+          "unit": "g/L",
+          "toCanonical": "divide by 10"
+        }
+      ],
+      "contextRequired": [],
+      "codes": [
+        {
+          "system": "LOINC",
+          "code": "718-7",
+          "status": "candidate",
+          "note": "blood"
+        }
+      ],
+      "lanes": [
+        "confirm"
+      ],
+      "sensitivity": "standard",
+      "phase": "v1"
+    },
+    {
+      "id": "obs.hb_phenotype",
+      "display": "Haemoglobin phenotype",
+      "kind": "observation",
+      "group": "haematology",
+      "valueType": "coded",
+      "answers": [
+        "AA",
+        "AS",
+        "SS",
+        "SC",
+        "AC",
+        "CC",
+        "S_beta_thal",
+        "other",
+        "indeterminate"
+      ],
+      "contextRequired": [
+        "method"
+      ],
+      "codes": [],
+      "lanes": [
+        "confirm"
+      ],
+      "sensitivity": "standard",
+      "phase": "v1",
+      "notes": "method: electrophoresis | hplc | isoelectric_focusing | poc_immunoassay. LOINC mapping pending."
+    },
+    {
+      "id": "obs.sickle_solubility",
+      "display": "Sickle solubility test",
+      "kind": "observation",
+      "group": "haematology",
+      "valueType": "coded",
+      "answers": [
+        "positive",
+        "negative"
+      ],
+      "contextRequired": [],
+      "codes": [],
+      "lanes": [
+        "confirm"
+      ],
+      "sensitivity": "standard",
+      "phase": "v1",
+      "notes": "Cannot separate AS from SS: a positive result makes HbA1c usability uncertain until the phenotype is known."
+    },
+    {
+      "id": "obs.g6pd",
+      "display": "G6PD status",
+      "kind": "observation",
+      "group": "haematology",
+      "valueType": "coded",
+      "answers": [
+        "normal",
+        "intermediate",
+        "deficient"
+      ],
+      "contextRequired": [
+        "method"
+      ],
+      "codes": [],
+      "lanes": [
+        "confirm"
+      ],
+      "sensitivity": "standard",
+      "phase": "v1"
+    },
+    {
+      "id": "obs.malaria_test",
+      "display": "Malaria test",
+      "kind": "observation",
+      "group": "haematology",
+      "valueType": "coded",
+      "answers": [
+        "positive",
+        "negative"
+      ],
+      "contextRequired": [
+        "method"
+      ],
+      "contextOptional": [
+        "species"
+      ],
+      "codes": [],
+      "lanes": [
+        "confirm",
+        "stratify"
+      ],
+      "sensitivity": "standard",
+      "phase": "v1",
+      "notes": "Recent haemolysis affects HbA1c; acute illness is context for stress hyperglycaemia."
+    },
+    {
+      "id": "obs.alt",
+      "display": "ALT",
+      "kind": "observation",
+      "group": "liver",
+      "valueType": "quantity",
+      "canonicalUnit": "U/L",
+      "contextRequired": [],
+      "codes": [
+        {
+          "system": "LOINC",
+          "code": "1742-6",
+          "status": "candidate"
+        }
+      ],
+      "lanes": [
+        "stratify"
+      ],
+      "sensitivity": "standard",
+      "phase": "v1.1"
+    },
+    {
+      "id": "obs.ast",
+      "display": "AST",
+      "kind": "observation",
+      "group": "liver",
+      "valueType": "quantity",
+      "canonicalUnit": "U/L",
+      "contextRequired": [],
+      "codes": [
+        {
+          "system": "LOINC",
+          "code": "1920-8",
+          "status": "candidate"
+        }
+      ],
+      "lanes": [
+        "stratify"
+      ],
+      "sensitivity": "standard",
+      "phase": "v1.1"
+    },
+    {
+      "id": "obs.platelets",
+      "display": "Platelet count",
+      "kind": "observation",
+      "group": "liver",
+      "valueType": "quantity",
+      "canonicalUnit": "10*9/L",
+      "contextRequired": [],
+      "codes": [
+        {
+          "system": "LOINC",
+          "code": "777-3",
+          "status": "candidate"
+        }
+      ],
+      "lanes": [
+        "stratify"
+      ],
+      "sensitivity": "standard",
+      "phase": "v1.1"
+    },
+    {
+      "id": "derived.fib4",
+      "display": "FIB-4 index",
+      "kind": "observation",
+      "group": "liver",
+      "valueType": "quantity",
+      "canonicalUnit": "{index}",
+      "contextRequired": [
+        "formula"
+      ],
+      "codes": [],
+      "lanes": [
+        "stratify"
+      ],
+      "sensitivity": "standard",
+      "phase": "v1.1"
+    },
+    {
+      "id": "obs.weight",
+      "display": "Body weight",
+      "kind": "observation",
+      "group": "anthropometry",
+      "valueType": "quantity",
+      "canonicalUnit": "kg",
+      "acceptedUnits": [
+        {
+          "unit": "[lb_av]",
+          "toCanonical": "multiply by 0.45359237"
+        }
+      ],
+      "contextRequired": [],
+      "contextOptional": [
+        "scaleType"
+      ],
+      "codes": [
+        {
+          "system": "LOINC",
+          "code": "29463-7",
+          "status": "candidate"
+        }
+      ],
+      "lanes": [
+        "core"
+      ],
+      "sensitivity": "standard",
+      "phase": "v1"
+    },
+    {
+      "id": "obs.height",
+      "display": "Height or length",
+      "kind": "observation",
+      "group": "anthropometry",
+      "valueType": "quantity",
+      "canonicalUnit": "cm",
+      "acceptedUnits": [
+        {
+          "unit": "[in_i]",
+          "toCanonical": "multiply by 2.54"
+        }
+      ],
+      "contextRequired": [
+        "measurement"
+      ],
+      "contextOptional": [
+        "posture"
+      ],
+      "codes": [
+        {
+          "system": "LOINC",
+          "code": "8302-2",
+          "status": "candidate"
+        }
+      ],
+      "lanes": [
+        "core"
+      ],
+      "sensitivity": "standard",
+      "phase": "v1",
+      "notes": "measurement: measured | reported | estimated. posture: standing | recumbent_length (children)."
+    },
+    {
+      "id": "derived.bmi",
+      "display": "Body mass index",
+      "kind": "observation",
+      "group": "anthropometry",
+      "valueType": "quantity",
+      "canonicalUnit": "kg/m2",
+      "contextRequired": [
+        "formula"
+      ],
+      "codes": [
+        {
+          "system": "LOINC",
+          "code": "39156-5",
+          "status": "candidate"
+        }
+      ],
+      "lanes": [
+        "core"
+      ],
+      "sensitivity": "standard",
+      "phase": "v1",
+      "notes": "Computed at snapshot time from the nearest valid weight and height. Children use BMI-for-age (v1.1)."
+    },
+    {
+      "id": "obs.waist",
+      "display": "Waist circumference",
+      "kind": "observation",
+      "group": "anthropometry",
+      "valueType": "quantity",
+      "canonicalUnit": "cm",
+      "contextRequired": [
+        "protocol"
+      ],
+      "codes": [
+        {
+          "system": "LOINC",
+          "code": "8280-0",
+          "status": "candidate",
+          "note": "code depends on protocol; confirm"
+        }
+      ],
+      "lanes": [
+        "core"
+      ],
+      "sensitivity": "standard",
+      "phase": "v1",
+      "notes": "protocol: who_steps_midpoint | umbilicus | other."
+    },
+    {
+      "id": "derived.whtr",
+      "display": "Waist-to-height ratio",
+      "kind": "observation",
+      "group": "anthropometry",
+      "valueType": "quantity",
+      "canonicalUnit": "{ratio}",
+      "contextRequired": [
+        "formula"
+      ],
+      "codes": [],
+      "lanes": [
+        "core"
+      ],
+      "sensitivity": "standard",
+      "phase": "v1"
+    },
+    {
+      "id": "obs.muac",
+      "display": "Mid-upper arm circumference",
+      "kind": "observation",
+      "group": "anthropometry",
+      "valueType": "quantity",
+      "canonicalUnit": "cm",
+      "contextRequired": [],
+      "contextOptional": [
+        "arm"
+      ],
+      "codes": [],
+      "lanes": [
+        "classify",
+        "core"
+      ],
+      "sensitivity": "standard",
+      "phase": "v1",
+      "notes": "Undernutrition context (lean insulin-deficient phenotype); LOINC mapping pending."
+    },
+    {
+      "id": "obs.bp_systolic",
+      "display": "Systolic blood pressure",
+      "kind": "observation",
+      "group": "vitals",
+      "valueType": "quantity",
+      "canonicalUnit": "mm[Hg]",
+      "contextRequired": [
+        "position",
+        "arm",
+        "cuffSize",
+        "device",
+        "setting",
+        "readingSetId",
+        "readingIndex"
+      ],
+      "codes": [
+        {
+          "system": "LOINC",
+          "code": "8480-6",
+          "status": "candidate"
+        }
+      ],
+      "lanes": [
+        "core"
+      ],
+      "sensitivity": "standard",
+      "phase": "v1"
+    },
+    {
+      "id": "obs.bp_diastolic",
+      "display": "Diastolic blood pressure",
+      "kind": "observation",
+      "group": "vitals",
+      "valueType": "quantity",
+      "canonicalUnit": "mm[Hg]",
+      "contextRequired": [
+        "position",
+        "arm",
+        "cuffSize",
+        "device",
+        "setting",
+        "readingSetId",
+        "readingIndex"
+      ],
+      "codes": [
+        {
+          "system": "LOINC",
+          "code": "8462-4",
+          "status": "candidate"
+        }
+      ],
+      "lanes": [
+        "core"
+      ],
+      "sensitivity": "standard",
+      "phase": "v1"
+    },
+    {
+      "id": "derived.bp_set_mean",
+      "display": "Blood pressure, reading-set mean",
+      "kind": "observation",
+      "group": "vitals",
+      "valueType": "quantity",
+      "canonicalUnit": "mm[Hg]",
+      "contextRequired": [
+        "formula",
+        "readingSetId"
+      ],
+      "codes": [],
+      "lanes": [
+        "core"
+      ],
+      "sensitivity": "standard",
+      "phase": "v1",
+      "notes": "Which readings of a set are averaged is a signed rule (hypertension pack)."
+    },
+    {
+      "id": "obs.heart_rate",
+      "display": "Heart rate",
+      "kind": "observation",
+      "group": "vitals",
+      "valueType": "quantity",
+      "canonicalUnit": "/min",
+      "contextRequired": [],
+      "codes": [
+        {
+          "system": "LOINC",
+          "code": "8867-4",
+          "status": "candidate"
+        }
+      ],
+      "lanes": [
+        "acute"
+      ],
+      "sensitivity": "standard",
+      "phase": "v1"
+    },
+    {
+      "id": "obs.resp_rate",
+      "display": "Respiratory rate",
+      "kind": "observation",
+      "group": "vitals",
+      "valueType": "quantity",
+      "canonicalUnit": "/min",
+      "contextRequired": [],
+      "codes": [
+        {
+          "system": "LOINC",
+          "code": "9279-1",
+          "status": "candidate"
+        }
+      ],
+      "lanes": [
+        "acute"
+      ],
+      "sensitivity": "standard",
+      "phase": "v1"
+    },
+    {
+      "id": "obs.temperature",
+      "display": "Body temperature",
+      "kind": "observation",
+      "group": "vitals",
+      "valueType": "quantity",
+      "canonicalUnit": "Cel",
+      "acceptedUnits": [
+        {
+          "unit": "[degF]",
+          "toCanonical": "subtract 32 then multiply by 5/9"
+        }
+      ],
+      "contextRequired": [],
+      "contextOptional": [
+        "site"
+      ],
+      "codes": [
+        {
+          "system": "LOINC",
+          "code": "8310-5",
+          "status": "candidate"
+        }
+      ],
+      "lanes": [
+        "acute"
+      ],
+      "sensitivity": "standard",
+      "phase": "v1"
+    },
+    {
+      "id": "obs.gcs",
+      "display": "Glasgow Coma Scale, total",
+      "kind": "observation",
+      "group": "vitals",
+      "valueType": "quantity",
+      "canonicalUnit": "{score}",
+      "contextRequired": [],
+      "codes": [
+        {
+          "system": "LOINC",
+          "code": "9269-2",
+          "status": "candidate"
+        }
+      ],
+      "lanes": [
+        "acute"
+      ],
+      "sensitivity": "standard",
+      "phase": "v1",
+      "notes": "Read-only for the NCD engine; triage and resus own acuity."
+    },
+    {
+      "id": "obs.avpu",
+      "display": "AVPU",
+      "kind": "observation",
+      "group": "vitals",
+      "valueType": "coded",
+      "answers": [
+        "alert",
+        "voice",
+        "pain",
+        "unresponsive"
+      ],
+      "contextRequired": [],
+      "codes": [],
+      "lanes": [
+        "acute"
+      ],
+      "sensitivity": "standard",
+      "phase": "v1",
+      "notes": "Read-only for the NCD engine; triage and resus own acuity."
+    },
+    {
+      "id": "sx.polyuria",
+      "display": "Polyuria (passing large volumes of urine)",
+      "kind": "finding",
+      "group": "symptom",
+      "valueType": "presence",
+      "contextRequired": [
+        "elicitedBy"
+      ],
+      "contextOptional": [
+        "onset",
+        "durationDays",
+        "severity"
+      ],
+      "codes": [],
+      "lanes": [
+        "suspect",
+        "classify"
+      ],
+      "sensitivity": "standard",
+      "phase": "v1",
+      "notes": "Token lives in the shared symptom catalogue owned by the differential engine: map to the existing token or add it there."
+    },
+    {
+      "id": "sx.polydipsia",
+      "display": "Polydipsia (excessive thirst)",
+      "kind": "finding",
+      "group": "symptom",
+      "valueType": "presence",
+      "contextRequired": [
+        "elicitedBy"
+      ],
+      "contextOptional": [
+        "onset",
+        "durationDays",
+        "severity"
+      ],
+      "codes": [],
+      "lanes": [
+        "suspect",
+        "classify"
+      ],
+      "sensitivity": "standard",
+      "phase": "v1",
+      "notes": "Token lives in the shared symptom catalogue owned by the differential engine: map to the existing token or add it there."
+    },
+    {
+      "id": "sx.polyphagia",
+      "display": "Polyphagia (excessive hunger)",
+      "kind": "finding",
+      "group": "symptom",
+      "valueType": "presence",
+      "contextRequired": [
+        "elicitedBy"
+      ],
+      "contextOptional": [
+        "onset",
+        "durationDays",
+        "severity"
+      ],
+      "codes": [],
+      "lanes": [
+        "suspect"
+      ],
+      "sensitivity": "standard",
+      "phase": "v1",
+      "notes": "Token lives in the shared symptom catalogue owned by the differential engine: map to the existing token or add it there."
+    },
+    {
+      "id": "sx.nocturia",
+      "display": "Nocturia",
+      "kind": "finding",
+      "group": "symptom",
+      "valueType": "presence",
+      "contextRequired": [
+        "elicitedBy"
+      ],
+      "contextOptional": [
+        "onset",
+        "durationDays",
+        "severity"
+      ],
+      "codes": [],
+      "lanes": [
+        "suspect"
+      ],
+      "sensitivity": "standard",
+      "phase": "v1",
+      "notes": "Token lives in the shared symptom catalogue owned by the differential engine: map to the existing token or add it there."
+    },
+    {
+      "id": "sx.secondary_enuresis",
+      "display": "Secondary enuresis (child previously dry)",
+      "kind": "finding",
+      "group": "symptom",
+      "valueType": "presence",
+      "contextRequired": [
+        "elicitedBy"
+      ],
+      "contextOptional": [
+        "onset",
+        "durationDays",
+        "severity"
+      ],
+      "codes": [],
+      "lanes": [
+        "suspect",
+        "classify"
+      ],
+      "sensitivity": "standard",
+      "phase": "v1",
+      "notes": "Token lives in the shared symptom catalogue owned by the differential engine: map to the existing token or add it there."
+    },
+    {
+      "id": "sx.weight_loss_unintended",
+      "display": "Unintended weight loss",
+      "kind": "finding",
+      "group": "symptom",
+      "valueType": "presence",
+      "contextRequired": [
+        "elicitedBy"
+      ],
+      "contextOptional": [
+        "onset",
+        "durationDays",
+        "severity"
+      ],
+      "codes": [],
+      "lanes": [
+        "suspect",
+        "classify"
+      ],
+      "sensitivity": "standard",
+      "phase": "v1",
+      "notes": "Token lives in the shared symptom catalogue owned by the differential engine: map to the existing token or add it there."
+    },
+    {
+      "id": "sx.fatigue",
+      "display": "Fatigue",
+      "kind": "finding",
+      "group": "symptom",
+      "valueType": "presence",
+      "contextRequired": [
+        "elicitedBy"
+      ],
+      "contextOptional": [
+        "onset",
+        "durationDays",
+        "severity"
+      ],
+      "codes": [],
+      "lanes": [
+        "suspect"
+      ],
+      "sensitivity": "standard",
+      "phase": "v1",
+      "notes": "Token lives in the shared symptom catalogue owned by the differential engine: map to the existing token or add it there."
+    },
+    {
+      "id": "sx.blurred_vision",
+      "display": "Blurred vision",
+      "kind": "finding",
+      "group": "symptom",
+      "valueType": "presence",
+      "contextRequired": [
+        "elicitedBy"
+      ],
+      "contextOptional": [
+        "onset",
+        "durationDays",
+        "severity"
+      ],
+      "codes": [],
+      "lanes": [
+        "suspect",
+        "stratify"
+      ],
+      "sensitivity": "standard",
+      "phase": "v1",
+      "notes": "Token lives in the shared symptom catalogue owned by the differential engine: map to the existing token or add it there."
+    },
+    {
+      "id": "sx.genital_itch_discharge",
+      "display": "Genital itch or discharge (vulvovaginal candidiasis, balanitis)",
+      "kind": "finding",
+      "group": "symptom",
+      "valueType": "presence",
+      "contextRequired": [
+        "elicitedBy"
+      ],
+      "contextOptional": [
+        "onset",
+        "durationDays",
+        "severity"
+      ],
+      "codes": [],
+      "lanes": [
+        "suspect"
+      ],
+      "sensitivity": "restricted",
+      "phase": "v1",
+      "notes": "Token lives in the shared symptom catalogue owned by the differential engine: map to the existing token or add it there."
+    },
+    {
+      "id": "sx.recurrent_skin_infection",
+      "display": "Recurrent skin infections (boils, abscesses)",
+      "kind": "finding",
+      "group": "symptom",
+      "valueType": "presence",
+      "contextRequired": [
+        "elicitedBy"
+      ],
+      "contextOptional": [
+        "onset",
+        "durationDays",
+        "severity"
+      ],
+      "codes": [],
+      "lanes": [
+        "suspect"
+      ],
+      "sensitivity": "standard",
+      "phase": "v1",
+      "notes": "Token lives in the shared symptom catalogue owned by the differential engine: map to the existing token or add it there."
+    },
+    {
+      "id": "sx.slow_healing_wound",
+      "display": "Slow-healing wound",
+      "kind": "finding",
+      "group": "symptom",
+      "valueType": "presence",
+      "contextRequired": [
+        "elicitedBy"
+      ],
+      "contextOptional": [
+        "onset",
+        "durationDays",
+        "severity"
+      ],
+      "codes": [],
+      "lanes": [
+        "suspect",
+        "stratify"
+      ],
+      "sensitivity": "standard",
+      "phase": "v1",
+      "notes": "Token lives in the shared symptom catalogue owned by the differential engine: map to the existing token or add it there."
+    },
+    {
+      "id": "sx.foot_numbness_burning",
+      "display": "Numbness, tingling or burning in the feet",
+      "kind": "finding",
+      "group": "symptom",
+      "valueType": "presence",
+      "contextRequired": [
+        "elicitedBy"
+      ],
+      "contextOptional": [
+        "onset",
+        "durationDays",
+        "severity"
+      ],
+      "codes": [],
+      "lanes": [
+        "stratify"
+      ],
+      "sensitivity": "standard",
+      "phase": "v1",
+      "notes": "Token lives in the shared symptom catalogue owned by the differential engine: map to the existing token or add it there."
+    },
+    {
+      "id": "sx.erectile_dysfunction",
+      "display": "Erectile dysfunction",
+      "kind": "finding",
+      "group": "symptom",
+      "valueType": "presence",
+      "contextRequired": [
+        "elicitedBy"
+      ],
+      "contextOptional": [
+        "onset",
+        "durationDays",
+        "severity"
+      ],
+      "codes": [],
+      "lanes": [
+        "stratify"
+      ],
+      "sensitivity": "restricted",
+      "phase": "v1",
+      "notes": "Token lives in the shared symptom catalogue owned by the differential engine: map to the existing token or add it there."
+    },
+    {
+      "id": "sx.abdominal_pain",
+      "display": "Abdominal pain",
+      "kind": "finding",
+      "group": "symptom",
+      "valueType": "presence",
+      "contextRequired": [
+        "elicitedBy"
+      ],
+      "contextOptional": [
+        "onset",
+        "durationDays",
+        "severity"
+      ],
+      "codes": [],
+      "lanes": [
+        "acute"
+      ],
+      "sensitivity": "standard",
+      "phase": "v1",
+      "notes": "Token lives in the shared symptom catalogue owned by the differential engine: map to the existing token or add it there."
+    },
+    {
+      "id": "sx.vomiting",
+      "display": "Vomiting",
+      "kind": "finding",
+      "group": "symptom",
+      "valueType": "presence",
+      "contextRequired": [
+        "elicitedBy"
+      ],
+      "contextOptional": [
+        "onset",
+        "durationDays",
+        "severity"
+      ],
+      "codes": [],
+      "lanes": [
+        "acute"
+      ],
+      "sensitivity": "standard",
+      "phase": "v1",
+      "notes": "Token lives in the shared symptom catalogue owned by the differential engine: map to the existing token or add it there."
+    },
+    {
+      "id": "sx.hypoglycaemia_symptoms",
+      "display": "Symptoms of low glucose (sweating, tremor, palpitations, hunger, confusion)",
+      "kind": "finding",
+      "group": "symptom",
+      "valueType": "presence",
+      "contextRequired": [
+        "elicitedBy"
+      ],
+      "contextOptional": [
+        "onset",
+        "durationDays",
+        "severity"
+      ],
+      "codes": [],
+      "lanes": [
+        "stratify",
+        "acute"
+      ],
+      "sensitivity": "standard",
+      "phase": "v1",
+      "notes": "Token lives in the shared symptom catalogue owned by the differential engine: map to the existing token or add it there."
+    },
+    {
+      "id": "sx.claudication",
+      "display": "Calf pain on walking, relieved by rest",
+      "kind": "finding",
+      "group": "symptom",
+      "valueType": "presence",
+      "contextRequired": [
+        "elicitedBy"
+      ],
+      "contextOptional": [
+        "onset",
+        "durationDays",
+        "severity"
+      ],
+      "codes": [],
+      "lanes": [
+        "stratify"
+      ],
+      "sensitivity": "standard",
+      "phase": "v1",
+      "notes": "Token lives in the shared symptom catalogue owned by the differential engine: map to the existing token or add it there."
+    },
+    {
+      "id": "hist.childhood_undernutrition",
+      "display": "Undernutrition in childhood (history)",
+      "kind": "finding",
+      "group": "history",
+      "valueType": "presence",
+      "contextRequired": [
+        "elicitedBy"
+      ],
+      "codes": [],
+      "lanes": [
+        "classify"
+      ],
+      "sensitivity": "standard",
+      "phase": "v1",
+      "notes": "Supports the lean, insulin-deficient phenotype flag. Never used alone."
+    },
+    {
+      "id": "hist.high_glucose_ever",
+      "display": "Ever told of high blood glucose, including in pregnancy",
+      "kind": "finding",
+      "group": "history",
+      "valueType": "presence",
+      "contextRequired": [
+        "elicitedBy"
+      ],
+      "codes": [],
+      "lanes": [
+        "suspect"
+      ],
+      "sensitivity": "standard",
+      "phase": "v1",
+      "notes": "Risk-score item."
+    },
+    {
+      "id": "evt.hypoglycaemia",
+      "display": "Hypoglycaemia episode",
+      "kind": "observation",
+      "group": "event",
+      "valueType": "coded",
+      "answers": [
+        "level1",
+        "level2",
+        "level3"
+      ],
+      "contextRequired": [],
+      "contextOptional": [
+        "glucoseFactId",
+        "requiredAssistance",
+        "nocturnal",
+        "symptomatic"
+      ],
+      "codes": [],
+      "lanes": [
+        "stratify",
+        "act"
+      ],
+      "sensitivity": "standard",
+      "phase": "v1",
+      "notes": "Level definitions are signed references from the dossier (ADA 2026, section 6)."
+    },
+    {
+      "id": "sign.acanthosis_nigricans",
+      "display": "Acanthosis nigricans",
+      "kind": "finding",
+      "group": "sign",
+      "valueType": "presence",
+      "contextRequired": [
+        "elicitedBy"
+      ],
+      "codes": [],
+      "lanes": [
+        "suspect",
+        "classify"
+      ],
+      "sensitivity": "standard",
+      "phase": "v1"
+    },
+    {
+      "id": "sign.kussmaul_breathing",
+      "display": "Kussmaul (deep, laboured) breathing",
+      "kind": "finding",
+      "group": "sign",
+      "valueType": "presence",
+      "contextRequired": [
+        "elicitedBy"
+      ],
+      "codes": [],
+      "lanes": [
+        "acute",
+        "classify"
+      ],
+      "sensitivity": "standard",
+      "phase": "v1"
+    },
+    {
+      "id": "sign.ketotic_breath",
+      "display": "Ketotic (fruity) breath odour",
+      "kind": "finding",
+      "group": "sign",
+      "valueType": "presence",
+      "contextRequired": [
+        "elicitedBy"
+      ],
+      "codes": [],
+      "lanes": [
+        "acute"
+      ],
+      "sensitivity": "standard",
+      "phase": "v1"
+    },
+    {
+      "id": "sign.dehydration",
+      "display": "Dehydration",
+      "kind": "finding",
+      "group": "sign",
+      "valueType": "ordinal",
+      "answers": [
+        "none",
+        "some",
+        "severe"
+      ],
+      "contextRequired": [
+        "elicitedBy"
+      ],
+      "codes": [],
+      "lanes": [
+        "acute"
+      ],
+      "sensitivity": "standard",
+      "phase": "v1"
+    },
+    {
+      "id": "sign.foot_ulcer",
+      "display": "Foot ulcer (active)",
+      "kind": "finding",
+      "group": "sign",
+      "valueType": "presence",
+      "contextRequired": [
+        "elicitedBy",
+        "laterality"
+      ],
+      "codes": [],
+      "lanes": [
+        "stratify"
+      ],
+      "sensitivity": "standard",
+      "phase": "v1"
+    },
+    {
+      "id": "sign.foot_infection",
+      "display": "Signs of foot infection",
+      "kind": "finding",
+      "group": "sign",
+      "valueType": "presence",
+      "contextRequired": [
+        "elicitedBy",
+        "laterality"
+      ],
+      "codes": [],
+      "lanes": [
+        "stratify",
+        "acute"
+      ],
+      "sensitivity": "standard",
+      "phase": "v1"
+    },
+    {
+      "id": "sign.foot_deformity",
+      "display": "Foot deformity",
+      "kind": "finding",
+      "group": "sign",
+      "valueType": "presence",
+      "contextRequired": [
+        "elicitedBy",
+        "laterality"
+      ],
+      "codes": [],
+      "lanes": [
+        "stratify"
+      ],
+      "sensitivity": "standard",
+      "phase": "v1"
+    },
+    {
+      "id": "sign.foot_callus",
+      "display": "Foot callus",
+      "kind": "finding",
+      "group": "sign",
+      "valueType": "presence",
+      "contextRequired": [
+        "elicitedBy",
+        "laterality"
+      ],
+      "codes": [],
+      "lanes": [
+        "stratify"
+      ],
+      "sensitivity": "standard",
+      "phase": "v1"
+    },
+    {
+      "id": "sign.gangrene",
+      "display": "Gangrene",
+      "kind": "finding",
+      "group": "sign",
+      "valueType": "presence",
+      "contextRequired": [
+        "elicitedBy",
+        "laterality"
+      ],
+      "codes": [],
+      "lanes": [
+        "stratify",
+        "acute"
+      ],
+      "sensitivity": "standard",
+      "phase": "v1"
+    },
+    {
+      "id": "exam.pedal_pulses",
+      "display": "Pedal pulses",
+      "kind": "observation",
+      "group": "exam",
+      "valueType": "coded",
+      "answers": [
+        "present",
+        "reduced",
+        "absent"
+      ],
+      "contextRequired": [
+        "laterality"
+      ],
+      "codes": [],
+      "lanes": [
+        "stratify"
+      ],
+      "sensitivity": "standard",
+      "phase": "v1"
+    },
+    {
+      "id": "exam.monofilament",
+      "display": "10 g monofilament test",
+      "kind": "observation",
+      "group": "exam",
+      "valueType": "coded",
+      "answers": [
+        "normal",
+        "abnormal"
+      ],
+      "contextRequired": [
+        "laterality",
+        "sitesTested",
+        "sitesInsensate"
+      ],
+      "codes": [],
+      "lanes": [
+        "stratify"
+      ],
+      "sensitivity": "standard",
+      "phase": "v1"
+    },
+    {
+      "id": "exam.vibration_128hz",
+      "display": "Vibration sense (128 Hz tuning fork)",
+      "kind": "observation",
+      "group": "exam",
+      "valueType": "coded",
+      "answers": [
+        "normal",
+        "reduced",
+        "absent"
+      ],
+      "contextRequired": [
+        "laterality"
+      ],
+      "codes": [],
+      "lanes": [
+        "stratify"
+      ],
+      "sensitivity": "standard",
+      "phase": "v1"
+    },
+    {
+      "id": "exam.ankle_reflex",
+      "display": "Ankle reflex",
+      "kind": "observation",
+      "group": "exam",
+      "valueType": "coded",
+      "answers": [
+        "present",
+        "reduced",
+        "absent"
+      ],
+      "contextRequired": [
+        "laterality"
+      ],
+      "codes": [],
+      "lanes": [
+        "stratify"
+      ],
+      "sensitivity": "standard",
+      "phase": "v1"
+    },
+    {
+      "id": "exam.retinopathy_grade",
+      "display": "Retinopathy grade",
+      "kind": "observation",
+      "group": "exam",
+      "valueType": "coded",
+      "answers": [
+        "none",
+        "mild_npdr",
+        "moderate_npdr",
+        "severe_npdr",
+        "pdr",
+        "ungradable"
+      ],
+      "contextRequired": [
+        "laterality",
+        "method",
+        "gradingScale"
+      ],
+      "codes": [],
+      "lanes": [
+        "stratify"
+      ],
+      "sensitivity": "standard",
+      "phase": "v1",
+      "notes": "Retinal grading method: direct_ophthalmoscopy | indirect_ophthalmoscopy | photo_non_mydriatic | photo_mydriatic | ai_graded_photo."
+    },
+    {
+      "id": "exam.maculopathy",
+      "display": "Maculopathy",
+      "kind": "observation",
+      "group": "exam",
+      "valueType": "coded",
+      "answers": [
+        "absent",
+        "present",
+        "ungradable"
+      ],
+      "contextRequired": [
+        "laterality",
+        "method"
+      ],
+      "codes": [],
+      "lanes": [
+        "stratify"
+      ],
+      "sensitivity": "standard",
+      "phase": "v1"
+    },
+    {
+      "id": "cond.dm_type1",
+      "display": "Type 1 diabetes",
+      "kind": "condition",
+      "group": "condition",
+      "valueType": "condition",
+      "contextRequired": [
+        "clinicalStatus",
+        "verificationStatus",
+        "assertedBy",
+        "subjectRelation"
+      ],
+      "contextOptional": [
+        "onset",
+        "abatement",
+        "stage"
+      ],
+      "codes": [
+        {
+          "system": "ICD-10 (WHO)",
+          "code": "E10",
+          "status": "verified-secondary",
+          "verifiedOn": "2026-09-26",
+          "source": "https://arxiv.org/pdf/2106.11360"
+        },
+        {
+          "system": "ICD-11",
+          "code": "5A10",
+          "status": "verified-mirror",
+          "verifiedOn": "2026-09-26",
+          "source": "https://www.findacode.com/icd-11/block-465177735.html"
+        }
+      ],
+      "lanes": [
+        "suspect",
+        "confirm",
+        "classify",
+        "stratify",
+        "act"
+      ],
+      "sensitivity": "standard",
+      "phase": "v1"
+    },
+    {
+      "id": "cond.dm_type2",
+      "display": "Type 2 diabetes",
+      "kind": "condition",
+      "group": "condition",
+      "valueType": "condition",
+      "contextRequired": [
+        "clinicalStatus",
+        "verificationStatus",
+        "assertedBy",
+        "subjectRelation"
+      ],
+      "contextOptional": [
+        "onset",
+        "abatement",
+        "stage"
+      ],
+      "codes": [
+        {
+          "system": "ICD-10 (WHO)",
+          "code": "E11",
+          "status": "verified-secondary",
+          "verifiedOn": "2026-09-26",
+          "source": "https://arxiv.org/pdf/2106.11360"
+        },
+        {
+          "system": "ICD-11",
+          "code": "5A11",
+          "status": "verified-mirror",
+          "verifiedOn": "2026-09-26",
+          "source": "https://www.findacode.com/icd-11/block-465177735.html"
+        }
+      ],
+      "lanes": [
+        "suspect",
+        "confirm",
+        "classify",
+        "stratify",
+        "act"
+      ],
+      "sensitivity": "standard",
+      "phase": "v1"
+    },
+    {
+      "id": "cond.dm_mrdm",
+      "display": "Malnutrition-related diabetes",
+      "kind": "condition",
+      "group": "condition",
+      "valueType": "condition",
+      "contextRequired": [
+        "clinicalStatus",
+        "verificationStatus",
+        "assertedBy",
+        "subjectRelation"
+      ],
+      "contextOptional": [
+        "onset",
+        "abatement",
+        "stage"
+      ],
+      "codes": [
+        {
+          "system": "ICD-10 (WHO)",
+          "code": "E12",
+          "status": "verified-secondary",
+          "verifiedOn": "2026-09-26",
+          "source": "https://arxiv.org/pdf/2106.11360"
+        },
+        {
+          "system": "ICD-11",
+          "code": "5A12",
+          "status": "verified-mirror",
+          "verifiedOn": "2026-09-26",
+          "source": "https://www.findacode.com/icd-11/block-465177735.html"
+        }
+      ],
+      "lanes": [
+        "suspect",
+        "confirm",
+        "classify",
+        "stratify",
+        "act"
+      ],
+      "sensitivity": "standard",
+      "phase": "v1",
+      "notes": "Clinician-coded only. The engine never proposes it while IDF diagnostic criteria for type 5 diabetes are being developed."
+    },
+    {
+      "id": "cond.dm_other",
+      "display": "Diabetes, other specified type",
+      "kind": "condition",
+      "group": "condition",
+      "valueType": "condition",
+      "contextRequired": [
+        "clinicalStatus",
+        "verificationStatus",
+        "assertedBy",
+        "subjectRelation"
+      ],
+      "contextOptional": [
+        "onset",
+        "abatement",
+        "stage"
+      ],
+      "codes": [
+        {
+          "system": "ICD-10 (WHO)",
+          "code": "E13",
+          "status": "verified-secondary",
+          "verifiedOn": "2026-09-26",
+          "source": "https://arxiv.org/pdf/2106.11360"
+        },
+        {
+          "system": "ICD-11",
+          "code": "5A13",
+          "status": "verified-mirror",
+          "verifiedOn": "2026-09-26",
+          "source": "https://www.findacode.com/icd-11/code-381961554.html"
+        },
+        {
+          "system": "ICD-11",
+          "code": "5A13.2",
+          "status": "verified-mirror",
+          "verifiedOn": "2026-09-26",
+          "source": "https://www.findacode.com/icd-11/code-381961554.html",
+          "note": "due to diseases of the exocrine pancreas"
+        },
+        {
+          "system": "ICD-11",
+          "code": "5A13.3",
+          "status": "verified-mirror",
+          "verifiedOn": "2026-09-26",
+          "source": "https://www.findacode.com/icd-11/code-381961554.html",
+          "note": "due to endocrinopathies"
+        },
+        {
+          "system": "ICD-11",
+          "code": "5A13.4",
+          "status": "verified-mirror",
+          "verifiedOn": "2026-09-26",
+          "source": "https://www.findacode.com/icd-11/code-381961554.html",
+          "note": "due to drug or chemical"
+        }
+      ],
+      "lanes": [
+        "suspect",
+        "confirm",
+        "classify",
+        "stratify",
+        "act"
+      ],
+      "sensitivity": "standard",
+      "phase": "v1"
+    },
+    {
+      "id": "cond.dm_unspecified",
+      "display": "Diabetes, type unspecified",
+      "kind": "condition",
+      "group": "condition",
+      "valueType": "condition",
+      "contextRequired": [
+        "clinicalStatus",
+        "verificationStatus",
+        "assertedBy",
+        "subjectRelation"
+      ],
+      "contextOptional": [
+        "onset",
+        "abatement",
+        "stage"
+      ],
+      "codes": [
+        {
+          "system": "ICD-10 (WHO)",
+          "code": "E14",
+          "status": "verified-secondary",
+          "verifiedOn": "2026-09-26",
+          "source": "https://arxiv.org/pdf/2106.11360"
+        },
+        {
+          "system": "ICD-11",
+          "code": "5A14",
+          "status": "verified-mirror",
+          "verifiedOn": "2026-09-26",
+          "source": "https://www.findacode.com/icd-11/block-465177735.html"
+        }
+      ],
+      "lanes": [
+        "suspect",
+        "confirm",
+        "classify",
+        "stratify",
+        "act"
+      ],
+      "sensitivity": "standard",
+      "phase": "v1",
+      "notes": "Also the landing state for known diabetes transferred in without typing evidence."
+    },
+    {
+      "id": "cond.dm_in_pregnancy",
+      "display": "Diabetes or hyperglycaemia in pregnancy",
+      "kind": "condition",
+      "group": "condition",
+      "valueType": "condition",
+      "contextRequired": [
+        "clinicalStatus",
+        "verificationStatus",
+        "assertedBy",
+        "subjectRelation"
+      ],
+      "contextOptional": [
+        "onset",
+        "abatement",
+        "stage"
+      ],
+      "codes": [
+        {
+          "system": "ICD-10 (WHO)",
+          "code": "O24.2",
+          "status": "verified-secondary",
+          "verifiedOn": "2026-09-26",
+          "source": "https://arxiv.org/pdf/2106.11360"
+        },
+        {
+          "system": "ICD-10 (WHO)",
+          "code": "O24.0-O24.9",
+          "status": "candidate",
+          "note": "confirm each subcode"
+        },
+        {
+          "system": "ICD-11",
+          "code": "JA63.0",
+          "status": "verified-mirror",
+          "verifiedOn": "2026-09-26",
+          "source": "https://www.findacode.com/icd-11/code-169360210.html",
+          "note": "pre-existing type 1"
+        },
+        {
+          "system": "ICD-11",
+          "code": "JA63.1",
+          "status": "verified-mirror",
+          "verifiedOn": "2026-09-26",
+          "source": "https://www.findacode.com/icd-11/code-169360210.html",
+          "note": "pre-existing type 2"
+        },
+        {
+          "system": "ICD-11",
+          "code": "JA63.2",
+          "status": "verified-mirror",
+          "verifiedOn": "2026-09-26",
+          "source": "https://www.findacode.com/icd-11/code-169360210.html",
+          "note": "arising in pregnancy"
+        },
+        {
+          "system": "ICD-11",
+          "code": "JA63.Y",
+          "status": "verified-mirror",
+          "verifiedOn": "2026-09-26",
+          "source": "https://www.findacode.com/icd-11/code-169360210.html",
+          "note": "other specified"
+        }
+      ],
+      "lanes": [
+        "suspect",
+        "confirm",
+        "classify",
+        "act"
+      ],
+      "sensitivity": "standard",
+      "phase": "v1",
+      "notes": "A resolved episode is the durable record of prior hyperglycaemia in pregnancy (a lifelong risk factor)."
+    },
+    {
+      "id": "cond.intermediate_hyperglycaemia",
+      "display": "Intermediate hyperglycaemia",
+      "kind": "condition",
+      "group": "condition",
+      "valueType": "condition",
+      "contextRequired": [
+        "clinicalStatus",
+        "verificationStatus",
+        "assertedBy",
+        "subjectRelation"
+      ],
+      "contextOptional": [
+        "onset",
+        "abatement",
+        "stage"
+      ],
+      "codes": [
+        {
+          "system": "ICD-10 (WHO)",
+          "code": "R73.0",
+          "status": "candidate"
+        },
+        {
+          "system": "ICD-11",
+          "code": "5A40.0",
+          "status": "verified-mirror",
+          "verifiedOn": "2026-09-26",
+          "source": "https://autoicdapi.com/icd11/5A40",
+          "note": "impaired fasting glucose"
+        },
+        {
+          "system": "ICD-11",
+          "code": "5A40.1",
+          "status": "verified-mirror",
+          "verifiedOn": "2026-09-26",
+          "source": "https://autoicdapi.com/icd11/5A40",
+          "note": "impaired glucose tolerance"
+        },
+        {
+          "system": "ICD-11",
+          "code": "5A40.Y",
+          "status": "verified-mirror",
+          "verifiedOn": "2026-09-26",
+          "source": "https://autoicdapi.com/icd11/5A40"
+        },
+        {
+          "system": "ICD-11",
+          "code": "5A40.Z",
+          "status": "verified-mirror",
+          "verifiedOn": "2026-09-26",
+          "source": "https://autoicdapi.com/icd11/5A40"
+        }
+      ],
+      "lanes": [
+        "suspect",
+        "confirm",
+        "act"
+      ],
+      "sensitivity": "standard",
+      "phase": "v1"
+    },
+    {
+      "id": "cond.elevated_glucose_unspecified",
+      "display": "Elevated blood glucose, not yet explained",
+      "kind": "condition",
+      "group": "condition",
+      "valueType": "condition",
+      "contextRequired": [
+        "clinicalStatus",
+        "verificationStatus",
+        "assertedBy",
+        "subjectRelation"
+      ],
+      "contextOptional": [
+        "onset",
+        "abatement",
+        "stage"
+      ],
+      "codes": [
+        {
+          "system": "ICD-10 (WHO)",
+          "code": "R73.9",
+          "status": "candidate"
+        },
+        {
+          "system": "ICD-11",
+          "code": "MA18.0",
+          "status": "verified-mirror",
+          "verifiedOn": "2026-09-26",
+          "source": "https://www.codingahead.com/other-disorders-of-glucose-regulation-or-pancreatic-internal-secretion-definitions-icd-11-codes",
+          "note": "elevated blood glucose level"
+        }
+      ],
+      "lanes": [
+        "suspect"
+      ],
+      "sensitivity": "standard",
+      "phase": "v1"
+    },
+    {
+      "id": "cond.dka",
+      "display": "Diabetic ketoacidosis",
+      "kind": "condition",
+      "group": "condition",
+      "valueType": "condition",
+      "contextRequired": [
+        "clinicalStatus",
+        "verificationStatus",
+        "assertedBy",
+        "subjectRelation"
+      ],
+      "contextOptional": [
+        "onset",
+        "abatement",
+        "stage"
+      ],
+      "codes": [
+        {
+          "system": "ICD-10 (WHO)",
+          "code": "E10.1-E14.1",
+          "status": "candidate",
+          "note": "fourth character .1 by type"
+        },
+        {
+          "system": "ICD-11",
+          "code": "5A22.0",
+          "status": "verified-mirror",
+          "verifiedOn": "2026-09-26",
+          "source": "https://www.findacode.com/icd-11/code-1697306310.html",
+          "note": "post-coordinate with the type, for example 5A22.0/5A11"
+        }
+      ],
+      "lanes": [
+        "classify",
+        "acute"
+      ],
+      "sensitivity": "standard",
+      "phase": "v1"
+    },
+    {
+      "id": "cond.hhs",
+      "display": "Hyperosmolar hyperglycaemic state",
+      "kind": "condition",
+      "group": "condition",
+      "valueType": "condition",
+      "contextRequired": [
+        "clinicalStatus",
+        "verificationStatus",
+        "assertedBy",
+        "subjectRelation"
+      ],
+      "contextOptional": [
+        "onset",
+        "abatement",
+        "stage"
+      ],
+      "codes": [
+        {
+          "system": "ICD-10 (WHO)",
+          "code": "by type",
+          "status": "candidate",
+          "note": "to map"
+        },
+        {
+          "system": "ICD-11",
+          "code": "5A20",
+          "status": "verified-mirror",
+          "verifiedOn": "2026-09-26",
+          "source": "https://www.findacode.com/icd-11/code-1697306310.html",
+          "note": "5A20.0 without coma, 5A20.1 with coma"
+        }
+      ],
+      "lanes": [
+        "classify",
+        "acute"
+      ],
+      "sensitivity": "standard",
+      "phase": "v1"
+    },
+    {
+      "id": "cond.hypoglycaemia_in_dm",
+      "display": "Hypoglycaemia in diabetes",
+      "kind": "condition",
+      "group": "condition",
+      "valueType": "condition",
+      "contextRequired": [
+        "clinicalStatus",
+        "verificationStatus",
+        "assertedBy",
+        "subjectRelation"
+      ],
+      "contextOptional": [
+        "onset",
+        "abatement",
+        "stage"
+      ],
+      "codes": [
+        {
+          "system": "ICD-10 (WHO)",
+          "code": "E16.0",
+          "status": "candidate"
+        },
+        {
+          "system": "ICD-10 (WHO)",
+          "code": "E16.2",
+          "status": "candidate"
+        },
+        {
+          "system": "ICD-11",
+          "code": "5A21",
+          "status": "verified-mirror",
+          "verifiedOn": "2026-09-26",
+          "source": "https://www.findacode.com/icd-11/code-1697306310.html"
+        },
+        {
+          "system": "ICD-11",
+          "code": "5A41",
+          "status": "verified-mirror",
+          "verifiedOn": "2026-09-26",
+          "source": "https://www.codingahead.com/other-disorders-of-glucose-regulation-or-pancreatic-internal-secretion-definitions-icd-11-codes",
+          "note": "hypoglycaemia without associated diabetes"
+        }
+      ],
+      "lanes": [
+        "stratify",
+        "acute"
+      ],
+      "sensitivity": "standard",
+      "phase": "v1"
+    },
+    {
+      "id": "cond.hypertension",
+      "display": "Hypertension",
+      "kind": "condition",
+      "group": "condition",
+      "valueType": "condition",
+      "contextRequired": [
+        "clinicalStatus",
+        "verificationStatus",
+        "assertedBy",
+        "subjectRelation"
+      ],
+      "contextOptional": [
+        "onset",
+        "abatement",
+        "stage"
+      ],
+      "codes": [
+        {
+          "system": "ICD-10 (WHO)",
+          "code": "I10",
+          "status": "candidate"
+        },
+        {
+          "system": "ICD-11",
+          "code": "BA00",
+          "status": "candidate"
+        }
+      ],
+      "lanes": [
+        "suspect",
+        "stratify"
+      ],
+      "sensitivity": "standard",
+      "phase": "v1"
+    },
+    {
+      "id": "cond.ckd",
+      "display": "Chronic kidney disease",
+      "kind": "condition",
+      "group": "condition",
+      "valueType": "condition",
+      "contextRequired": [
+        "clinicalStatus",
+        "verificationStatus",
+        "assertedBy",
+        "subjectRelation"
+      ],
+      "contextOptional": [
+        "onset",
+        "abatement",
+        "stage"
+      ],
+      "codes": [
+        {
+          "system": "ICD-10 (WHO)",
+          "code": "N18",
+          "status": "candidate"
+        },
+        {
+          "system": "ICD-11",
+          "code": "GB61",
+          "status": "candidate"
+        }
+      ],
+      "lanes": [
+        "stratify"
+      ],
+      "sensitivity": "standard",
+      "phase": "v1"
+    },
+    {
+      "id": "cond.ascvd",
+      "display": "Atherosclerotic cardiovascular disease",
+      "kind": "condition",
+      "group": "condition",
+      "valueType": "condition",
+      "contextRequired": [
+        "clinicalStatus",
+        "verificationStatus",
+        "assertedBy",
+        "subjectRelation"
+      ],
+      "contextOptional": [
+        "onset",
+        "abatement",
+        "stage"
+      ],
+      "codes": [
+        {
+          "system": "ICD-10 (WHO)",
+          "code": "I20-I25, I63-I64, I70.2",
+          "status": "candidate",
+          "note": "subtype map"
+        }
+      ],
+      "lanes": [
+        "suspect",
+        "stratify"
+      ],
+      "sensitivity": "standard",
+      "phase": "v1",
+      "notes": "subtype: coronary | cerebrovascular | peripheral. ICD-11 mapping pending."
+    },
+    {
+      "id": "cond.heart_failure",
+      "display": "Heart failure",
+      "kind": "condition",
+      "group": "condition",
+      "valueType": "condition",
+      "contextRequired": [
+        "clinicalStatus",
+        "verificationStatus",
+        "assertedBy",
+        "subjectRelation"
+      ],
+      "contextOptional": [
+        "onset",
+        "abatement",
+        "stage"
+      ],
+      "codes": [
+        {
+          "system": "ICD-10 (WHO)",
+          "code": "I50",
+          "status": "candidate"
+        }
+      ],
+      "lanes": [
+        "stratify"
+      ],
+      "sensitivity": "standard",
+      "phase": "v1"
+    },
+    {
+      "id": "cond.dyslipidaemia",
+      "display": "Dyslipidaemia",
+      "kind": "condition",
+      "group": "condition",
+      "valueType": "condition",
+      "contextRequired": [
+        "clinicalStatus",
+        "verificationStatus",
+        "assertedBy",
+        "subjectRelation"
+      ],
+      "contextOptional": [
+        "onset",
+        "abatement",
+        "stage"
+      ],
+      "codes": [
+        {
+          "system": "ICD-10 (WHO)",
+          "code": "E78",
+          "status": "candidate"
+        }
+      ],
+      "lanes": [
+        "stratify"
+      ],
+      "sensitivity": "standard",
+      "phase": "v1"
+    },
+    {
+      "id": "cond.hiv",
+      "display": "HIV infection",
+      "kind": "condition",
+      "group": "condition",
+      "valueType": "condition",
+      "contextRequired": [
+        "clinicalStatus",
+        "verificationStatus",
+        "assertedBy",
+        "subjectRelation"
+      ],
+      "contextOptional": [
+        "onset",
+        "abatement",
+        "stage"
+      ],
+      "codes": [
+        {
+          "system": "ICD-10 (WHO)",
+          "code": "B20-B24",
+          "status": "candidate"
+        },
+        {
+          "system": "ICD-11",
+          "code": "1C60-1C62",
+          "status": "candidate",
+          "note": "block to confirm"
+        }
+      ],
+      "lanes": [
+        "suspect",
+        "confirm",
+        "classify"
+      ],
+      "sensitivity": "restricted",
+      "phase": "v1",
+      "notes": "HbA1c validity modifier and hyperglycaemia context (with regimen tags)."
+    },
+    {
+      "id": "cond.tuberculosis",
+      "display": "Tuberculosis",
+      "kind": "condition",
+      "group": "condition",
+      "valueType": "condition",
+      "contextRequired": [
+        "clinicalStatus",
+        "verificationStatus",
+        "assertedBy",
+        "subjectRelation"
+      ],
+      "contextOptional": [
+        "onset",
+        "abatement",
+        "stage"
+      ],
+      "codes": [
+        {
+          "system": "ICD-10 (WHO)",
+          "code": "A15-A19",
+          "status": "candidate"
+        },
+        {
+          "system": "ICD-11",
+          "code": "1B10-1B14",
+          "status": "candidate"
+        }
+      ],
+      "lanes": [
+        "suspect",
+        "stratify"
+      ],
+      "sensitivity": "restricted",
+      "phase": "v1",
+      "notes": "Active disease triggers bidirectional screening."
+    },
+    {
+      "id": "cond.chronic_pancreatitis",
+      "display": "Chronic pancreatitis",
+      "kind": "condition",
+      "group": "condition",
+      "valueType": "condition",
+      "contextRequired": [
+        "clinicalStatus",
+        "verificationStatus",
+        "assertedBy",
+        "subjectRelation"
+      ],
+      "contextOptional": [
+        "onset",
+        "abatement",
+        "stage"
+      ],
+      "codes": [
+        {
+          "system": "ICD-10 (WHO)",
+          "code": "K86.1",
+          "status": "candidate"
+        }
+      ],
+      "lanes": [
+        "suspect",
+        "classify"
+      ],
+      "sensitivity": "standard",
+      "phase": "v1"
+    },
+    {
+      "id": "cond.pcos",
+      "display": "Polycystic ovary syndrome",
+      "kind": "condition",
+      "group": "condition",
+      "valueType": "condition",
+      "contextRequired": [
+        "clinicalStatus",
+        "verificationStatus",
+        "assertedBy",
+        "subjectRelation"
+      ],
+      "contextOptional": [
+        "onset",
+        "abatement",
+        "stage"
+      ],
+      "codes": [
+        {
+          "system": "ICD-10 (WHO)",
+          "code": "E28.2",
+          "status": "candidate"
+        },
+        {
+          "system": "ICD-11",
+          "code": "5A80.1",
+          "status": "candidate"
+        }
+      ],
+      "lanes": [
+        "suspect"
+      ],
+      "sensitivity": "restricted",
+      "phase": "v1"
+    },
+    {
+      "id": "cond.sickle_cell_disease",
+      "display": "Sickle cell disease",
+      "kind": "condition",
+      "group": "condition",
+      "valueType": "condition",
+      "contextRequired": [
+        "clinicalStatus",
+        "verificationStatus",
+        "assertedBy",
+        "subjectRelation"
+      ],
+      "contextOptional": [
+        "onset",
+        "abatement",
+        "stage"
+      ],
+      "codes": [
+        {
+          "system": "ICD-10 (WHO)",
+          "code": "D57",
+          "status": "candidate"
+        },
+        {
+          "system": "ICD-11",
+          "code": "3A51",
+          "status": "candidate"
+        }
+      ],
+      "lanes": [
+        "confirm"
+      ],
+      "sensitivity": "standard",
+      "phase": "v1"
+    },
+    {
+      "id": "cond.thalassaemia",
+      "display": "Thalassaemia",
+      "kind": "condition",
+      "group": "condition",
+      "valueType": "condition",
+      "contextRequired": [
+        "clinicalStatus",
+        "verificationStatus",
+        "assertedBy",
+        "subjectRelation"
+      ],
+      "contextOptional": [
+        "onset",
+        "abatement",
+        "stage"
+      ],
+      "codes": [
+        {
+          "system": "ICD-10 (WHO)",
+          "code": "D56",
+          "status": "candidate"
+        },
+        {
+          "system": "ICD-11",
+          "code": "3A50",
+          "status": "candidate"
+        }
+      ],
+      "lanes": [
+        "confirm"
+      ],
+      "sensitivity": "standard",
+      "phase": "v1"
+    },
+    {
+      "id": "cond.g6pd_deficiency",
+      "display": "G6PD deficiency",
+      "kind": "condition",
+      "group": "condition",
+      "valueType": "condition",
+      "contextRequired": [
+        "clinicalStatus",
+        "verificationStatus",
+        "assertedBy",
+        "subjectRelation"
+      ],
+      "contextOptional": [
+        "onset",
+        "abatement",
+        "stage"
+      ],
+      "codes": [
+        {
+          "system": "ICD-10 (WHO)",
+          "code": "D55.0",
+          "status": "candidate"
+        }
+      ],
+      "lanes": [
+        "confirm"
+      ],
+      "sensitivity": "standard",
+      "phase": "v1"
+    },
+    {
+      "id": "cond.iron_deficiency_anaemia",
+      "display": "Iron deficiency anaemia",
+      "kind": "condition",
+      "group": "condition",
+      "valueType": "condition",
+      "contextRequired": [
+        "clinicalStatus",
+        "verificationStatus",
+        "assertedBy",
+        "subjectRelation"
+      ],
+      "contextOptional": [
+        "onset",
+        "abatement",
+        "stage"
+      ],
+      "codes": [
+        {
+          "system": "ICD-10 (WHO)",
+          "code": "D50",
+          "status": "candidate"
+        }
+      ],
+      "lanes": [
+        "confirm"
+      ],
+      "sensitivity": "standard",
+      "phase": "v1"
+    },
+    {
+      "id": "cond.undernutrition_current",
+      "display": "Undernutrition (current)",
+      "kind": "condition",
+      "group": "condition",
+      "valueType": "condition",
+      "contextRequired": [
+        "clinicalStatus",
+        "verificationStatus",
+        "assertedBy",
+        "subjectRelation"
+      ],
+      "contextOptional": [
+        "onset",
+        "abatement",
+        "stage"
+      ],
+      "codes": [
+        {
+          "system": "ICD-10 (WHO)",
+          "code": "E40-E46",
+          "status": "candidate"
+        }
+      ],
+      "lanes": [
+        "classify"
+      ],
+      "sensitivity": "standard",
+      "phase": "v1"
+    },
+    {
+      "id": "cond.masld",
+      "display": "Metabolic dysfunction-associated steatotic liver disease",
+      "kind": "condition",
+      "group": "condition",
+      "valueType": "condition",
+      "contextRequired": [
+        "clinicalStatus",
+        "verificationStatus",
+        "assertedBy",
+        "subjectRelation"
+      ],
+      "contextOptional": [
+        "onset",
+        "abatement",
+        "stage"
+      ],
+      "codes": [
+        {
+          "system": "ICD-10 (WHO)",
+          "code": "K76.0",
+          "status": "candidate"
+        },
+        {
+          "system": "ICD-11",
+          "code": "DB92",
+          "status": "candidate"
+        }
+      ],
+      "lanes": [
+        "stratify"
+      ],
+      "sensitivity": "standard",
+      "phase": "v1.1"
+    },
+    {
+      "id": "cond.dm_retinopathy",
+      "display": "Diabetic retinopathy",
+      "kind": "condition",
+      "group": "condition",
+      "valueType": "condition",
+      "contextRequired": [
+        "clinicalStatus",
+        "verificationStatus",
+        "assertedBy",
+        "subjectRelation"
+      ],
+      "contextOptional": [
+        "onset",
+        "abatement",
+        "stage"
+      ],
+      "codes": [
+        {
+          "system": "ICD-10 (WHO)",
+          "code": "H36.0",
+          "status": "candidate"
+        },
+        {
+          "system": "ICD-11",
+          "code": "9B71.0",
+          "status": "candidate"
+        }
+      ],
+      "lanes": [
+        "stratify"
+      ],
+      "sensitivity": "standard",
+      "phase": "v1"
+    },
+    {
+      "id": "cond.dm_neuropathy",
+      "display": "Diabetic neuropathy",
+      "kind": "condition",
+      "group": "condition",
+      "valueType": "condition",
+      "contextRequired": [
+        "clinicalStatus",
+        "verificationStatus",
+        "assertedBy",
+        "subjectRelation"
+      ],
+      "contextOptional": [
+        "onset",
+        "abatement",
+        "stage"
+      ],
+      "codes": [
+        {
+          "system": "ICD-10 (WHO)",
+          "code": "G63.2",
+          "status": "candidate"
+        }
+      ],
+      "lanes": [
+        "stratify"
+      ],
+      "sensitivity": "standard",
+      "phase": "v1"
+    },
+    {
+      "id": "cond.dm_kidney_disease",
+      "display": "Diabetic kidney disease",
+      "kind": "condition",
+      "group": "condition",
+      "valueType": "condition",
+      "contextRequired": [
+        "clinicalStatus",
+        "verificationStatus",
+        "assertedBy",
+        "subjectRelation"
+      ],
+      "contextOptional": [
+        "onset",
+        "abatement",
+        "stage"
+      ],
+      "codes": [
+        {
+          "system": "ICD-10 (WHO)",
+          "code": "N08.3",
+          "status": "candidate"
+        }
+      ],
+      "lanes": [
+        "stratify"
+      ],
+      "sensitivity": "standard",
+      "phase": "v1"
+    },
+    {
+      "id": "cond.dm_foot_ulcer",
+      "display": "Diabetic foot ulcer",
+      "kind": "condition",
+      "group": "condition",
+      "valueType": "condition",
+      "contextRequired": [
+        "clinicalStatus",
+        "verificationStatus",
+        "assertedBy",
+        "subjectRelation"
+      ],
+      "contextOptional": [
+        "onset",
+        "abatement",
+        "stage"
+      ],
+      "codes": [
+        {
+          "system": "ICD-10 (WHO)",
+          "code": "L97",
+          "status": "candidate",
+          "note": "with E1x.5"
+        }
+      ],
+      "lanes": [
+        "stratify"
+      ],
+      "sensitivity": "standard",
+      "phase": "v1"
+    },
+    {
+      "id": "cond.amputation_history",
+      "display": "Lower-limb amputation (history)",
+      "kind": "condition",
+      "group": "condition",
+      "valueType": "condition",
+      "contextRequired": [
+        "clinicalStatus",
+        "verificationStatus",
+        "assertedBy",
+        "subjectRelation"
+      ],
+      "contextOptional": [
+        "onset",
+        "abatement",
+        "stage"
+      ],
+      "codes": [
+        {
+          "system": "ICD-10 (WHO)",
+          "code": "Z89",
+          "status": "candidate"
+        }
+      ],
+      "lanes": [
+        "stratify"
+      ],
+      "sensitivity": "standard",
+      "phase": "v1"
+    },
+    {
+      "id": "fh.diabetes",
+      "display": "Family history of diabetes",
+      "kind": "condition",
+      "group": "condition",
+      "valueType": "condition",
+      "contextRequired": [
+        "clinicalStatus",
+        "verificationStatus",
+        "assertedBy",
+        "subjectRelation"
+      ],
+      "contextOptional": [
+        "onset",
+        "abatement",
+        "stage"
+      ],
+      "codes": [
+        {
+          "system": "ICD-10 (WHO)",
+          "code": "Z83.3",
+          "status": "candidate"
+        }
+      ],
+      "lanes": [
+        "suspect",
+        "classify"
+      ],
+      "sensitivity": "standard",
+      "phase": "v1",
+      "notes": "subjectRelation is required: first-degree relatives weigh differently from second-degree."
+    },
+    {
+      "id": "fh.premature_cvd",
+      "display": "Family history of premature cardiovascular disease",
+      "kind": "condition",
+      "group": "condition",
+      "valueType": "condition",
+      "contextRequired": [
+        "clinicalStatus",
+        "verificationStatus",
+        "assertedBy",
+        "subjectRelation"
+      ],
+      "contextOptional": [
+        "onset",
+        "abatement",
+        "stage"
+      ],
+      "codes": [
+        {
+          "system": "ICD-10 (WHO)",
+          "code": "Z82.4",
+          "status": "candidate"
+        }
+      ],
+      "lanes": [
+        "stratify"
+      ],
+      "sensitivity": "standard",
+      "phase": "v1"
+    },
+    {
+      "id": "preg.status",
+      "display": "Pregnancy status",
+      "kind": "pregnancy",
+      "group": "pregnancy",
+      "valueType": "coded",
+      "answers": [
+        "pregnant",
+        "postpartum",
+        "not_pregnant",
+        "unknown"
+      ],
+      "contextRequired": [
+        "episodeId"
+      ],
+      "codes": [
+        {
+          "system": "LOINC",
+          "code": "82810-3",
+          "status": "candidate"
+        }
+      ],
+      "lanes": [
+        "suspect",
+        "confirm",
+        "classify"
+      ],
+      "sensitivity": "standard",
+      "phase": "v1"
+    },
+    {
+      "id": "preg.gestational_age",
+      "display": "Gestational age",
+      "kind": "pregnancy",
+      "group": "pregnancy",
+      "valueType": "quantity",
+      "canonicalUnit": "d",
+      "contextRequired": [
+        "episodeId",
+        "basis",
+        "asOf"
+      ],
+      "codes": [
+        {
+          "system": "LOINC",
+          "code": "18185-9",
+          "status": "candidate"
+        }
+      ],
+      "lanes": [
+        "confirm",
+        "classify"
+      ],
+      "sensitivity": "standard",
+      "phase": "v1",
+      "notes": "basis: lmp | ultrasound | fundal_height | unknown. Trimester and postpartum windows are derived, never typed."
+    },
+    {
+      "id": "preg.edd",
+      "display": "Estimated date of delivery",
+      "kind": "pregnancy",
+      "group": "pregnancy",
+      "valueType": "date",
+      "contextRequired": [
+        "episodeId",
+        "basis"
+      ],
+      "codes": [
+        {
+          "system": "LOINC",
+          "code": "11778-8",
+          "status": "candidate"
+        }
+      ],
+      "lanes": [
+        "confirm"
+      ],
+      "sensitivity": "standard",
+      "phase": "v1"
+    },
+    {
+      "id": "preg.outcome",
+      "display": "Pregnancy outcome",
+      "kind": "pregnancy",
+      "group": "pregnancy",
+      "valueType": "coded",
+      "answers": [
+        "live_birth",
+        "stillbirth",
+        "miscarriage",
+        "termination",
+        "ectopic",
+        "unknown"
+      ],
+      "contextRequired": [
+        "episodeId",
+        "date"
+      ],
+      "codes": [],
+      "lanes": [
+        "classify"
+      ],
+      "sensitivity": "standard",
+      "phase": "v1"
+    },
+    {
+      "id": "preg.birth_weight",
+      "display": "Birth weight of baby",
+      "kind": "pregnancy",
+      "group": "pregnancy",
+      "valueType": "quantity",
+      "canonicalUnit": "g",
+      "contextRequired": [
+        "episodeId"
+      ],
+      "codes": [
+        {
+          "system": "LOINC",
+          "code": "8339-4",
+          "status": "candidate"
+        }
+      ],
+      "lanes": [
+        "suspect"
+      ],
+      "sensitivity": "standard",
+      "phase": "v1",
+      "notes": "History of a large baby is a risk factor; the cut-off is a dossier reference."
+    },
+    {
+      "id": "soc.tobacco",
+      "display": "Tobacco use",
+      "kind": "observation",
+      "group": "social",
+      "valueType": "coded",
+      "answers": [
+        "never",
+        "former",
+        "current_daily",
+        "current_non_daily",
+        "smokeless_current",
+        "unknown"
+      ],
+      "contextRequired": [],
+      "codes": [
+        {
+          "system": "LOINC",
+          "code": "72166-2",
+          "status": "candidate"
+        }
+      ],
+      "lanes": [
+        "suspect",
+        "stratify"
+      ],
+      "sensitivity": "standard",
+      "phase": "v1"
+    },
+    {
+      "id": "soc.alcohol",
+      "display": "Alcohol use",
+      "kind": "observation",
+      "group": "social",
+      "valueType": "coded",
+      "answers": [
+        "none",
+        "within_limits",
+        "above_limits",
+        "unknown"
+      ],
+      "contextRequired": [],
+      "contextOptional": [
+        "auditC"
+      ],
+      "codes": [],
+      "lanes": [
+        "stratify"
+      ],
+      "sensitivity": "standard",
+      "phase": "v1"
+    },
+    {
+      "id": "soc.physical_activity",
+      "display": "Physical activity",
+      "kind": "observation",
+      "group": "social",
+      "valueType": "coded",
+      "answers": [
+        "meets_recommended",
+        "below_recommended",
+        "unknown"
+      ],
+      "contextRequired": [],
+      "contextOptional": [
+        "minutesPerWeek"
+      ],
+      "codes": [],
+      "lanes": [
+        "suspect"
+      ],
+      "sensitivity": "standard",
+      "phase": "v1",
+      "notes": "Risk-score item."
+    },
+    {
+      "id": "soc.fruit_veg_daily",
+      "display": "Eats vegetables or fruit every day",
+      "kind": "observation",
+      "group": "social",
+      "valueType": "boolean",
+      "contextRequired": [],
+      "codes": [],
+      "lanes": [
+        "suspect"
+      ],
+      "sensitivity": "standard",
+      "phase": "v1",
+      "notes": "Risk-score item."
+    },
+    {
+      "id": "proc.foot_exam",
+      "display": "Comprehensive foot examination",
+      "kind": "procedure",
+      "group": "care_process",
+      "valueType": "procedure",
+      "contextRequired": [
+        "outcome"
+      ],
+      "contextOptional": [
+        "resultFactIds",
+        "performedBy"
+      ],
+      "codes": [],
+      "lanes": [
+        "stratify",
+        "act"
+      ],
+      "sensitivity": "standard",
+      "phase": "v1"
+    },
+    {
+      "id": "proc.eye_screen",
+      "display": "Retinal screening",
+      "kind": "procedure",
+      "group": "care_process",
+      "valueType": "procedure",
+      "contextRequired": [
+        "outcome"
+      ],
+      "contextOptional": [
+        "resultFactIds",
+        "performedBy"
+      ],
+      "codes": [],
+      "lanes": [
+        "stratify",
+        "act"
+      ],
+      "sensitivity": "standard",
+      "phase": "v1"
+    },
+    {
+      "id": "proc.dsme_session",
+      "display": "Diabetes self-management education session",
+      "kind": "procedure",
+      "group": "care_process",
+      "valueType": "procedure",
+      "contextRequired": [
+        "outcome"
+      ],
+      "contextOptional": [
+        "resultFactIds",
+        "performedBy"
+      ],
+      "codes": [],
+      "lanes": [
+        "act"
+      ],
+      "sensitivity": "standard",
+      "phase": "v1"
+    },
+    {
+      "id": "proc.nutrition_counselling",
+      "display": "Nutrition counselling",
+      "kind": "procedure",
+      "group": "care_process",
+      "valueType": "procedure",
+      "contextRequired": [
+        "outcome"
+      ],
+      "contextOptional": [
+        "resultFactIds",
+        "performedBy"
+      ],
+      "codes": [],
+      "lanes": [
+        "act"
+      ],
+      "sensitivity": "standard",
+      "phase": "v1"
+    },
+    {
+      "id": "proc.blood_transfusion",
+      "display": "Blood transfusion",
+      "kind": "procedure",
+      "group": "care_process",
+      "valueType": "procedure",
+      "contextRequired": [
+        "outcome"
+      ],
+      "contextOptional": [
+        "resultFactIds",
+        "performedBy"
+      ],
+      "codes": [],
+      "lanes": [
+        "confirm"
+      ],
+      "sensitivity": "standard",
+      "phase": "v1"
+    },
+    {
+      "id": "proc.dialysis",
+      "display": "Dialysis",
+      "kind": "procedure",
+      "group": "care_process",
+      "valueType": "procedure",
+      "contextRequired": [
+        "outcome"
+      ],
+      "contextOptional": [
+        "resultFactIds",
+        "performedBy"
+      ],
+      "codes": [],
+      "lanes": [
+        "confirm",
+        "stratify"
+      ],
+      "sensitivity": "standard",
+      "phase": "v1"
+    },
+    {
+      "id": "proc.pancreatectomy",
+      "display": "Pancreatic surgery (history)",
+      "kind": "procedure",
+      "group": "care_process",
+      "valueType": "procedure",
+      "contextRequired": [
+        "outcome"
+      ],
+      "contextOptional": [
+        "resultFactIds",
+        "performedBy"
+      ],
+      "codes": [],
+      "lanes": [
+        "suspect",
+        "classify"
+      ],
+      "sensitivity": "standard",
+      "phase": "v1"
+    },
+    {
+      "id": "proc.ecg",
+      "display": "Electrocardiogram",
+      "kind": "procedure",
+      "group": "care_process",
+      "valueType": "procedure",
+      "contextRequired": [
+        "outcome"
+      ],
+      "contextOptional": [
+        "resultFactIds",
+        "performedBy"
+      ],
+      "codes": [],
+      "lanes": [
+        "stratify"
+      ],
+      "sensitivity": "standard",
+      "phase": "v1.1"
+    },
+    {
+      "id": "demo.date_of_birth",
+      "display": "Date of birth",
+      "kind": "demographic",
+      "group": "demographic",
+      "valueType": "date",
+      "contextRequired": [
+        "precision"
+      ],
+      "codes": [],
+      "lanes": [
+        "core"
+      ],
+      "sensitivity": "standard",
+      "phase": "v1",
+      "notes": "precision: day | month | year | estimated. Age-threshold rules treat imprecise ages conservatively."
+    },
+    {
+      "id": "demo.sex_at_birth",
+      "display": "Sex recorded for physiological calculations",
+      "kind": "demographic",
+      "group": "demographic",
+      "valueType": "coded",
+      "answers": [
+        "female",
+        "male",
+        "intersex",
+        "unknown"
+      ],
+      "contextRequired": [],
+      "codes": [],
+      "lanes": [
+        "core"
+      ],
+      "sensitivity": "standard",
+      "phase": "v1",
+      "notes": "Used by eGFR equations and pregnancy logic; not an identity field."
+    },
+    {
+      "id": "ctx.facility_level",
+      "display": "Facility level",
+      "kind": "context",
+      "group": "context",
+      "valueType": "coded",
+      "contextRequired": [],
+      "codes": [],
+      "lanes": [
+        "act"
+      ],
+      "sensitivity": "standard",
+      "phase": "v1",
+      "notes": "Answers come from the validated hospital-application catalogue (14 options)."
+    },
+    {
+      "id": "ctx.care_setting",
+      "display": "Care setting",
+      "kind": "context",
+      "group": "context",
+      "valueType": "coded",
+      "answers": [
+        "opd",
+        "ipd",
+        "ed",
+        "antenatal",
+        "hiv_clinic",
+        "tb_clinic",
+        "ncd_clinic",
+        "community_outreach",
+        "telehealth",
+        "home"
+      ],
+      "contextRequired": [],
+      "codes": [],
+      "lanes": [
+        "suspect",
+        "act"
+      ],
+      "sensitivity": "standard",
+      "phase": "v1"
+    },
+    {
+      "id": "ctx.facility_capability",
+      "display": "Facility capability",
+      "kind": "context",
+      "group": "context",
+      "valueType": "coded",
+      "contextRequired": [
+        "capabilityStatus",
+        "updatedAt"
+      ],
+      "codes": [],
+      "lanes": [
+        "act"
+      ],
+      "sensitivity": "standard",
+      "phase": "v1",
+      "notes": "Answers: the capability catalogue below; status available | intermittent | unavailable."
+    }
+  ],
+  "drugClassTags": [
+    {
+      "tag": "glucose_lowering_any",
+      "display": "Any glucose-lowering medicine",
+      "atc": [
+        {
+          "system": "ATC",
+          "code": "A10*",
+          "status": "candidate"
+        }
+      ],
+      "lanes": [
+        "suspect",
+        "classify"
+      ],
+      "notes": "Reconciliation: on a glucose-lowering medicine with no diabetes on the problem list.",
+      "sensitivity": "standard"
+    },
+    {
+      "tag": "insulin",
+      "display": "Insulins and analogues",
+      "atc": [
+        {
+          "system": "ATC",
+          "code": "A10A*",
+          "status": "candidate"
+        }
+      ],
+      "lanes": [
+        "classify",
+        "stratify"
+      ],
+      "sensitivity": "standard"
+    },
+    {
+      "tag": "metformin",
+      "display": "Metformin",
+      "atc": [
+        {
+          "system": "ATC",
+          "code": "A10BA02",
+          "status": "candidate"
+        }
+      ],
+      "lanes": [
+        "classify",
+        "stratify"
+      ],
+      "sensitivity": "standard"
+    },
+    {
+      "tag": "sulfonylurea",
+      "display": "Sulfonylureas",
+      "atc": [
+        {
+          "system": "ATC",
+          "code": "A10BB*",
+          "status": "candidate"
+        }
+      ],
+      "lanes": [
+        "stratify"
+      ],
+      "notes": "Hypoglycaemia-risk context.",
+      "sensitivity": "standard"
+    },
+    {
+      "tag": "dpp4_inhibitor",
+      "display": "DPP-4 inhibitors",
+      "atc": [
+        {
+          "system": "ATC",
+          "code": "A10BH*",
+          "status": "candidate"
+        }
+      ],
+      "lanes": [
+        "stratify"
+      ],
+      "sensitivity": "standard"
+    },
+    {
+      "tag": "sglt2_inhibitor",
+      "display": "SGLT2 inhibitors",
+      "atc": [
+        {
+          "system": "ATC",
+          "code": "A10BK*",
+          "status": "candidate"
+        }
+      ],
+      "lanes": [
+        "stratify",
+        "acute"
+      ],
+      "notes": "Ketoacidosis with near-normal glucose: context for acute routing.",
+      "sensitivity": "standard"
+    },
+    {
+      "tag": "glp1_ra",
+      "display": "GLP-1 receptor agonists",
+      "atc": [
+        {
+          "system": "ATC",
+          "code": "A10BJ*",
+          "status": "candidate"
+        }
+      ],
+      "lanes": [
+        "stratify"
+      ],
+      "sensitivity": "standard"
+    },
+    {
+      "tag": "thiazolidinedione",
+      "display": "Thiazolidinediones",
+      "atc": [
+        {
+          "system": "ATC",
+          "code": "A10BG*",
+          "status": "candidate"
+        }
+      ],
+      "lanes": [
+        "stratify"
+      ],
+      "sensitivity": "standard"
+    },
+    {
+      "tag": "dolutegravir",
+      "display": "Dolutegravir-containing regimens",
+      "atc": [
+        {
+          "system": "ATC",
+          "code": "J05AJ03",
+          "status": "verified-secondary",
+          "verifiedOn": "2026-09-26",
+          "source": "https://www.mims.com/Thailand/Company/Info/viatris-gmbh-and-co",
+          "note": "dolutegravir"
+        },
+        {
+          "system": "ATC",
+          "code": "J05AR27",
+          "status": "verified",
+          "verifiedOn": "2026-09-26",
+          "source": "https://extranet.who.int/prequal/sites/default/files/whopar_files/HA755part6v1.pdf",
+          "note": "lamivudine, tenofovir disoproxil and dolutegravir (TLD)"
+        },
+        {
+          "system": "ATC",
+          "code": "other DTG fixed-dose combinations",
+          "status": "candidate",
+          "note": "map each product at build"
+        }
+      ],
+      "lanes": [
+        "suspect",
+        "classify"
+      ],
+      "sensitivity": "restricted",
+      "notes": "Ugandan signal: new-onset hyperglycaemia on DTG."
+    },
+    {
+      "tag": "boosted_protease_inhibitor",
+      "display": "Ritonavir-boosted protease inhibitors",
+      "atc": [
+        {
+          "system": "ATC",
+          "code": "J05AE*",
+          "status": "candidate"
+        },
+        {
+          "system": "ATC",
+          "code": "J05AR10",
+          "status": "candidate",
+          "note": "lopinavir and ritonavir"
+        }
+      ],
+      "lanes": [
+        "suspect"
+      ],
+      "sensitivity": "restricted"
+    },
+    {
+      "tag": "systemic_glucocorticoid",
+      "display": "Systemic glucocorticoids",
+      "atc": [
+        {
+          "system": "ATC",
+          "code": "H02AB*",
+          "status": "candidate"
+        }
+      ],
+      "routeFilter": [
+        "oral",
+        "iv",
+        "im"
+      ],
+      "lanes": [
+        "suspect",
+        "classify"
+      ],
+      "notes": "Topical and inhaled routes excluded unless a signed rule says otherwise.",
+      "sensitivity": "standard"
+    },
+    {
+      "tag": "antipsychotic_metabolic",
+      "display": "Antipsychotics with metabolic risk",
+      "atc": [
+        {
+          "system": "ATC",
+          "code": "N05AH03",
+          "status": "candidate",
+          "note": "olanzapine"
+        },
+        {
+          "system": "ATC",
+          "code": "N05AH02",
+          "status": "candidate",
+          "note": "clozapine"
+        },
+        {
+          "system": "ATC",
+          "code": "N05AH04",
+          "status": "candidate",
+          "note": "quetiapine"
+        },
+        {
+          "system": "ATC",
+          "code": "N05AX08",
+          "status": "candidate",
+          "note": "risperidone"
+        },
+        {
+          "system": "ATC",
+          "code": "N05AA01",
+          "status": "candidate",
+          "note": "chlorpromazine"
+        }
+      ],
+      "lanes": [
+        "suspect"
+      ],
+      "sensitivity": "restricted"
+    },
+    {
+      "tag": "thiazide",
+      "display": "Thiazide and thiazide-like diuretics",
+      "atc": [
+        {
+          "system": "ATC",
+          "code": "C03AA*",
+          "status": "candidate"
+        },
+        {
+          "system": "ATC",
+          "code": "C03BA04",
+          "status": "candidate",
+          "note": "chlortalidone"
+        }
+      ],
+      "lanes": [
+        "suspect"
+      ],
+      "sensitivity": "standard"
+    },
+    {
+      "tag": "calcineurin_inhibitor",
+      "display": "Calcineurin inhibitors",
+      "atc": [
+        {
+          "system": "ATC",
+          "code": "L04AD*",
+          "status": "candidate"
+        }
+      ],
+      "lanes": [
+        "suspect"
+      ],
+      "sensitivity": "standard"
+    },
+    {
+      "tag": "erythropoiesis_stimulating",
+      "display": "Erythropoiesis-stimulating agents",
+      "atc": [
+        {
+          "system": "ATC",
+          "code": "B03XA*",
+          "status": "candidate"
+        }
+      ],
+      "lanes": [
+        "confirm"
+      ],
+      "notes": "HbA1c validity modifier.",
+      "sensitivity": "standard"
+    },
+    {
+      "tag": "dapsone",
+      "display": "Dapsone",
+      "atc": [
+        {
+          "system": "ATC",
+          "code": "J04BA02",
+          "status": "candidate"
+        }
+      ],
+      "lanes": [
+        "confirm"
+      ],
+      "notes": "Haemolysis: HbA1c validity modifier.",
+      "sensitivity": "standard"
+    },
+    {
+      "tag": "ace_inhibitor",
+      "display": "ACE inhibitors",
+      "atc": [
+        {
+          "system": "ATC",
+          "code": "C09A*",
+          "status": "candidate"
+        },
+        {
+          "system": "ATC",
+          "code": "C09B*",
+          "status": "candidate"
+        }
+      ],
+      "lanes": [
+        "stratify"
+      ],
+      "sensitivity": "standard"
+    },
+    {
+      "tag": "arb",
+      "display": "Angiotensin receptor blockers",
+      "atc": [
+        {
+          "system": "ATC",
+          "code": "C09C*",
+          "status": "candidate"
+        },
+        {
+          "system": "ATC",
+          "code": "C09D*",
+          "status": "candidate"
+        }
+      ],
+      "lanes": [
+        "stratify"
+      ],
+      "sensitivity": "standard"
+    },
+    {
+      "tag": "statin",
+      "display": "Statins",
+      "atc": [
+        {
+          "system": "ATC",
+          "code": "C10AA*",
+          "status": "candidate"
+        },
+        {
+          "system": "ATC",
+          "code": "C10B*",
+          "status": "candidate"
+        }
+      ],
+      "lanes": [
+        "stratify"
+      ],
+      "sensitivity": "standard"
+    },
+    {
+      "tag": "aspirin_antiplatelet",
+      "display": "Aspirin (antiplatelet)",
+      "atc": [
+        {
+          "system": "ATC",
+          "code": "B01AC06",
+          "status": "candidate"
+        }
+      ],
+      "lanes": [
+        "stratify"
+      ],
+      "sensitivity": "standard"
+    },
+    {
+      "tag": "antihypertensive_any",
+      "display": "Any blood-pressure-lowering medicine",
+      "atc": [
+        {
+          "system": "ATC",
+          "code": "C02*",
+          "status": "candidate"
+        },
+        {
+          "system": "ATC",
+          "code": "C03*",
+          "status": "candidate"
+        },
+        {
+          "system": "ATC",
+          "code": "C07*",
+          "status": "candidate"
+        },
+        {
+          "system": "ATC",
+          "code": "C08*",
+          "status": "candidate"
+        },
+        {
+          "system": "ATC",
+          "code": "C09*",
+          "status": "candidate"
+        }
+      ],
+      "lanes": [
+        "suspect",
+        "stratify"
+      ],
+      "notes": "Risk-score item.",
+      "sensitivity": "standard"
+    }
+  ],
+  "capabilities": [
+    {
+      "id": "cap.glucometer",
+      "display": "Capillary glucose meter",
+      "statusValues": [
+        "available",
+        "intermittent",
+        "unavailable"
+      ]
+    },
+    {
+      "id": "cap.lab_plasma_glucose",
+      "display": "Laboratory plasma glucose",
+      "statusValues": [
+        "available",
+        "intermittent",
+        "unavailable"
+      ]
+    },
+    {
+      "id": "cap.ogtt",
+      "display": "Oral glucose tolerance test",
+      "statusValues": [
+        "available",
+        "intermittent",
+        "unavailable"
+      ]
+    },
+    {
+      "id": "cap.hba1c_poc",
+      "display": "HbA1c point-of-care analyser",
+      "statusValues": [
+        "available",
+        "intermittent",
+        "unavailable"
+      ]
+    },
+    {
+      "id": "cap.hba1c_lab",
+      "display": "HbA1c laboratory assay",
+      "statusValues": [
+        "available",
+        "intermittent",
+        "unavailable"
+      ]
+    },
+    {
+      "id": "cap.fructosamine",
+      "display": "Fructosamine",
+      "statusValues": [
+        "available",
+        "intermittent",
+        "unavailable"
+      ]
+    },
+    {
+      "id": "cap.blood_ketone_meter",
+      "display": "Blood ketone meter",
+      "statusValues": [
+        "available",
+        "intermittent",
+        "unavailable"
+      ]
+    },
+    {
+      "id": "cap.urine_dipstick",
+      "display": "Urine dipstick",
+      "statusValues": [
+        "available",
+        "intermittent",
+        "unavailable"
+      ]
+    },
+    {
+      "id": "cap.creatinine",
+      "display": "Creatinine",
+      "statusValues": [
+        "available",
+        "intermittent",
+        "unavailable"
+      ]
+    },
+    {
+      "id": "cap.uacr_quantitative",
+      "display": "Urine ACR, quantitative",
+      "statusValues": [
+        "available",
+        "intermittent",
+        "unavailable"
+      ]
+    },
+    {
+      "id": "cap.uacr_semiquantitative",
+      "display": "Urine ACR, semi-quantitative strip",
+      "statusValues": [
+        "available",
+        "intermittent",
+        "unavailable"
+      ]
+    },
+    {
+      "id": "cap.lipid_panel",
+      "display": "Lipid panel",
+      "statusValues": [
+        "available",
+        "intermittent",
+        "unavailable"
+      ]
+    },
+    {
+      "id": "cap.electrolytes",
+      "display": "Electrolytes",
+      "statusValues": [
+        "available",
+        "intermittent",
+        "unavailable"
+      ]
+    },
+    {
+      "id": "cap.blood_gas",
+      "display": "Blood gas",
+      "statusValues": [
+        "available",
+        "intermittent",
+        "unavailable"
+      ]
+    },
+    {
+      "id": "cap.haemoglobin",
+      "display": "Haemoglobin",
+      "statusValues": [
+        "available",
+        "intermittent",
+        "unavailable"
+      ]
+    },
+    {
+      "id": "cap.hb_phenotype",
+      "display": "Haemoglobin phenotype test",
+      "statusValues": [
+        "available",
+        "intermittent",
+        "unavailable"
+      ]
+    },
+    {
+      "id": "cap.g6pd",
+      "display": "G6PD test",
+      "statusValues": [
+        "available",
+        "intermittent",
+        "unavailable"
+      ]
+    },
+    {
+      "id": "cap.monofilament",
+      "display": "10 g monofilament",
+      "statusValues": [
+        "available",
+        "intermittent",
+        "unavailable"
+      ]
+    },
+    {
+      "id": "cap.tuning_fork_128",
+      "display": "128 Hz tuning fork",
+      "statusValues": [
+        "available",
+        "intermittent",
+        "unavailable"
+      ]
+    },
+    {
+      "id": "cap.fundoscopy",
+      "display": "Ophthalmoscopy",
+      "statusValues": [
+        "available",
+        "intermittent",
+        "unavailable"
+      ]
+    },
+    {
+      "id": "cap.retinal_camera",
+      "display": "Retinal camera",
+      "statusValues": [
+        "available",
+        "intermittent",
+        "unavailable"
+      ]
+    },
+    {
+      "id": "cap.ecg",
+      "display": "ECG",
+      "statusValues": [
+        "available",
+        "intermittent",
+        "unavailable"
+      ]
+    },
+    {
+      "id": "cap.insulin_initiation",
+      "display": "Insulin initiation",
+      "statusValues": [
+        "available",
+        "intermittent",
+        "unavailable"
+      ]
+    },
+    {
+      "id": "cap.insulin_cold_chain",
+      "display": "Insulin cold chain",
+      "statusValues": [
+        "available",
+        "intermittent",
+        "unavailable"
+      ]
+    },
+    {
+      "id": "cap.nutrition_service",
+      "display": "Nutrition service",
+      "statusValues": [
+        "available",
+        "intermittent",
+        "unavailable"
+      ]
+    },
+    {
+      "id": "cap.diabetes_educator",
+      "display": "Diabetes self-management education",
+      "statusValues": [
+        "available",
+        "intermittent",
+        "unavailable"
+      ]
+    },
+    {
+      "id": "cap.endocrine_clinic",
+      "display": "Endocrine or diabetes specialist clinic",
+      "statusValues": [
+        "available",
+        "intermittent",
+        "unavailable"
+      ]
+    },
+    {
+      "id": "cap.paediatric_clinic",
+      "display": "Paediatric specialist clinic",
+      "statusValues": [
+        "available",
+        "intermittent",
+        "unavailable"
+      ]
+    },
+    {
+      "id": "cap.hyperglycaemic_emergency_care",
+      "display": "Inpatient care for hyperglycaemic emergencies",
+      "statusValues": [
+        "available",
+        "intermittent",
+        "unavailable"
+      ]
+    }
+  ],
+  "counts": {
+    "concepts": 145,
+    "drugClassTags": 21,
+    "capabilities": 29,
+    "externalCodes": 157,
+    "codesVerifiedPrimary": 13,
+    "codesVerifiedMirrorOrSecondary": 28,
+    "codesCandidate": 116,
+    "restrictedConcepts": 8,
+    "byKind": {
+      "condition": 33,
+      "context": 3,
+      "demographic": 2,
+      "finding": 28,
+      "observation": 66,
+      "pregnancy": 5,
+      "procedure": 8
+    }
+  }
+}

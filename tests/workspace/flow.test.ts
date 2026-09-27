@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { ago, computeFlow } from "@/lib/workspace/flow";
+import { ago, computeFlow, ENCOUNTER_IDLE_MS } from "@/lib/workspace/flow";
 import { laneFromParam, LANES, visibleLanes } from "@/lib/workspace/lanes";
 import {
   DAY,
@@ -17,6 +17,7 @@ import {
   OTHER_DOC,
   resus,
   SURGERY,
+  task,
   triage,
 } from "./fixtures";
 
@@ -888,9 +889,27 @@ describe("FW-11 scope and permissions", () => {
 });
 
 describe("registry and words", () => {
-  it("the registry has seven lanes, hotkeys 1–7, in board order", () => {
-    expect(LANES.map((l) => l.hotkey)).toEqual(["1", "2", "3", "4", "5", "6", "7"]);
+  it("the registry has ten lanes in board order; the first seven keep keys 1–7 (E8)", () => {
     expect(LANES.map((l) => l.id)).toEqual([
+      "resus",
+      "critical_results",
+      "triage",
+      "unassigned",
+      "waiting",
+      "in_progress",
+      "results_to_review",
+      "to_cosign",
+      "needs_closing",
+      "done",
+    ]);
+    expect(LANES.map((l) => l.hotkey)).toEqual(["1", "8", "2", "3", "4", "5", "9", "0", "6", "7"]);
+    expect(new Set(LANES.map((l) => l.hotkey)).size).toBe(LANES.length);
+  });
+
+  it("the record's lanes show only where EMR v1 is on: flag off, the board is unchanged", () => {
+    const EMR_LANES = ["critical_results", "results_to_review", "to_cosign"];
+    const off = visibleLanes({ mayAssign: true }).map((l) => l.id);
+    expect(off).toEqual([
       "resus",
       "triage",
       "unassigned",
@@ -899,6 +918,16 @@ describe("registry and words", () => {
       "needs_closing",
       "done",
     ]);
+    expect(visibleLanes({ mayAssign: true, emr: true }).map((l) => l.id)).toEqual(
+      LANES.map((l) => l.id),
+    );
+    for (const id of EMR_LANES) expect(off).not.toContain(id);
+  });
+
+  it("one idle constant: the EMR settings default is the Workspace's", async () => {
+    const { EMR_SETTINGS_DEFAULTS } = await import("@/lib/emr/settings");
+    expect(EMR_SETTINGS_DEFAULTS.encounterIdleMs).toBe(ENCOUNTER_IDLE_MS);
+    expect(ENCOUNTER_IDLE_MS).toBe(DAY);
   });
 
   it("Unassigned is visible only to those who may assign (D8)", () => {
@@ -918,5 +947,237 @@ describe("registry and words", () => {
     expect(ago(13 * DAY)).toBe("13 d");
     expect(ago(16 * 7 * DAY)).toBe("16 w");
     expect(ago(-5)).toBe("0 min");
+  });
+});
+
+describe("FW-2 E8 record lanes: Critical results, Results to review, To co-sign", () => {
+  it("an unacknowledged critical result → Critical results, primary Review result", () => {
+    const row = one(input({ patients, tasks: [task("rep1", "a", "critical_result")] }));
+    expect(row.lane).toBe("critical_results");
+    expect(row.primary).toEqual({ kind: "view", label: "Review result", encounterId: "enc-a" });
+    expect(row.primaryItemId).toBe("rep1");
+    expect(row.stageDetail).toBe("Potassium · awaiting acknowledgement");
+    expect(row.sinceMs).toBe(NOW - 30 * MIN);
+    expect(row.itemIds).toEqual(["rep1"]);
+  });
+
+  it("critical outranks my open clerking; the encounter stays Also open with Continue", () => {
+    const row = one(
+      input({
+        patients,
+        encounters: [encounter("e1", "a", { state: "in_progress", lastActivityAtMs: NOW - MIN })],
+        tasks: [task("rep1", "a", "critical_result")],
+      }),
+    );
+    expect(row.lane).toBe("critical_results");
+    expect(row.alsoOpen.map((i) => i.id)).toEqual(["e1"]);
+    expect(kinds(row.alsoOpen[0]!.actions)).toContain("continue");
+  });
+
+  it("resus outranks a critical result, which becomes an amber badge", () => {
+    const row = one(
+      input({ patients, resus: [resus("r1", "a")], tasks: [task("rep1", "a", "critical_result")] }),
+    );
+    expect(row.lane).toBe("resus");
+    expect(row.badges).toContainEqual({ text: "1 critical result", tone: "amber" });
+    expect(row.alsoOpen.find((i) => i.id === "rep1")).toMatchObject({
+      kind: "result",
+      tone: "amber",
+    });
+  });
+
+  it("a recorded death keeps the row in Needs closing; the critical result is a badge", () => {
+    const row = one(
+      input({
+        patients,
+        intakes: [intake("i1", "a")],
+        deaths: [
+          { patientId: "a", atMs: NOW - HOUR, source: "resus", sourceId: "r", byName: null },
+        ],
+        tasks: [task("rep1", "a", "critical_result")],
+      }),
+    );
+    expect(row.lane).toBe("needs_closing");
+    expect(texts(row.badges)).toContain("1 critical result");
+  });
+
+  it("results to review sit below every live stage: waiting for me wins, with a badge", () => {
+    const row = one(
+      input({
+        patients,
+        encounters: [encounter("e1", "a")],
+        tasks: [task("rep1", "a", "result_to_review"), task("rep2", "a", "result_to_review")],
+      }),
+    );
+    expect(row.lane).toBe("waiting");
+    expect(row.badges).toContainEqual({ text: "2 results to review", tone: "neutral" });
+    expect(row.alsoOpen.map((i) => i.id).sort()).toEqual(["rep1", "rep2"]);
+  });
+
+  it("results with nothing live → Results to review, oldest first, and above Needs closing", () => {
+    const row = one(
+      input({
+        patients,
+        encounters: [
+          encounter("e1", "a", {
+            state: "in_progress",
+            lastActivityAtMs: NOW - ENCOUNTER_IDLE_MS - MIN,
+          }),
+        ],
+        tasks: [
+          task("rep2", "a", "result_to_review", { atMs: NOW - 5 * MIN }),
+          task("rep1", "a", "result_to_review", { atMs: NOW - HOUR }),
+        ],
+      }),
+    );
+    expect(row.lane).toBe("results_to_review");
+    expect(row.primaryItemId).toBe("rep1");
+    expect(row.primary?.label).toBe("Review results");
+    expect(row.stageDetail).toBe("2 results released");
+    expect(texts(row.badges)).toContain("1 old encounter");
+  });
+
+  it("a restricted result is never named on the board", () => {
+    const row = one(
+      input({ patients, tasks: [task("rep1", "a", "result_to_review", { label: null })] }),
+    );
+    expect(row.stageDetail).toBe("Result released");
+  });
+
+  it("a note to co-sign → To co-sign, primary Co-sign; below Results to review", () => {
+    const alone = one(input({ patients, tasks: [task("c1", "a", "cosign")] }));
+    expect(alone.lane).toBe("to_cosign");
+    expect(alone.primary).toEqual({ kind: "view", label: "Co-sign", encounterId: "enc-a" });
+    expect(alone.stageDetail).toBe("Clerking note awaiting co-signature");
+    const both = one(
+      input({
+        patients,
+        tasks: [task("c1", "a", "cosign"), task("rep1", "a", "result_to_review")],
+      }),
+    );
+    expect(both.lane).toBe("results_to_review");
+    expect(both.badges).toContainEqual({ text: "1 note to co-sign", tone: "neutral" });
+  });
+
+  it("a patient with only a task, done today, is in the task lane, not Done", () => {
+    const row = one(
+      input({
+        patients,
+        encounters: [encounter("e1", "a", { state: "completed", endedAtMs: NOW - HOUR })],
+        tasks: [task("rep1", "a", "result_to_review")],
+      }),
+    );
+    expect(row.lane).toBe("results_to_review");
+  });
+
+  it("the lanes sit in registry order on a mixed board", () => {
+    const { rows } = computeFlow(
+      input({
+        encounters: [encounter("e1", "b", { state: "in_progress", lastActivityAtMs: NOW - MIN })],
+        tasks: [
+          task("c1", "d", "cosign"),
+          task("rep2", "c", "result_to_review"),
+          task("rep1", "a", "critical_result"),
+        ],
+      }),
+    );
+    expect(rows.map((r) => r.lane)).toEqual([
+      "critical_results",
+      "in_progress",
+      "results_to_review",
+      "to_cosign",
+    ]);
+  });
+});
+
+describe("FW-6 Needs closing: unsigned notes (§5.11)", () => {
+  it("a visit ended with an unsigned note needs closing, whatever the day", () => {
+    const row = one(
+      input({
+        patients,
+        encounters: [
+          encounter("e1", "a", {
+            state: "completed",
+            endedAtMs: NOW - 3 * DAY,
+            unsignedNoteAtMs: NOW - 3 * DAY,
+          }),
+        ],
+      }),
+    );
+    expect(row.lane).toBe("needs_closing");
+    expect(row.primary?.kind).toBe("review");
+    expect(row.itemIds).toEqual(["e1"]);
+    expect(row.alsoOpen[0]).toMatchObject({
+      id: "e1",
+      detail: "Visit ended with an unsigned note",
+      tone: "amber",
+    });
+    expect(kinds(row.alsoOpen[0]!.actions)).toEqual(["view"]);
+    expect(texts(row.badges)).toContain("1 unsigned note");
+  });
+
+  it("ended today with an unsigned note: Needs closing, not Done today", () => {
+    const row = one(
+      input({
+        patients,
+        encounters: [
+          encounter("e1", "a", {
+            state: "completed",
+            endedAtMs: NOW - HOUR,
+            unsignedNoteAtMs: NOW - HOUR,
+          }),
+        ],
+      }),
+    );
+    expect(row.lane).toBe("needs_closing");
+  });
+
+  it("a colleague's visit with an unsigned note is not on my board (Mine)", () => {
+    const { rows } = computeFlow(
+      input({
+        encounters: [
+          encounter("e1", "a", {
+            clinicianId: OTHER_DOC,
+            state: "completed",
+            endedAtMs: NOW - DAY,
+            unsignedNoteAtMs: NOW - DAY,
+          }),
+        ],
+      }),
+    );
+    expect(rows).toHaveLength(0);
+  });
+
+  it("a draft idle past the window on live clerking is an amber badge, not a second row", () => {
+    const row = one(
+      input({
+        patients,
+        encounters: [
+          encounter("e1", "a", {
+            state: "in_progress",
+            lastActivityAtMs: NOW - MIN,
+            unsignedNoteAtMs: NOW - ENCOUNTER_IDLE_MS,
+          }),
+        ],
+      }),
+    );
+    expect(row.lane).toBe("in_progress");
+    expect(row.badges).toContainEqual({ text: "1 unsigned note", tone: "amber" });
+  });
+
+  it("a fresh draft on live clerking says nothing", () => {
+    const row = one(
+      input({
+        patients,
+        encounters: [
+          encounter("e1", "a", {
+            state: "in_progress",
+            lastActivityAtMs: NOW - MIN,
+            unsignedNoteAtMs: NOW - MIN,
+          }),
+        ],
+      }),
+    );
+    expect(texts(row.badges)).not.toContain("1 unsigned note");
   });
 });

@@ -218,17 +218,73 @@ export const encounterOrders = pgTable(
       onDelete: "set null",
     }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    // ── EMR orders (migration 0071, GATED) ──
+    // 'legacy' rows keep the /lab status UPDATE; 'events' rows are immutable (trigger) and their
+    // status is derived from encounter_order_events — the status column above stays 'ordered'.
+    lifecycle: text("lifecycle").notNull().default("legacy"),
+    hospitalId: uuid("hospital_id").references(() => hospitals.id, { onDelete: "restrict" }),
+    // FK to test_catalogue enforced in SQL: emr.ts imports this file.
+    testId: uuid("test_id"),
+    priority: text("priority"),
+    reasonConditionIds: uuid("reason_condition_ids")
+      .array()
+      .notNull()
+      .default(sql`'{}'`),
+    reasonTextCiphertext: text("reason_text_ciphertext"),
+    fastingRequired: boolean("fasting_required"),
+    /** The requester is authored_by_user_id. */
+    requesterCadre: text("requester_cadre"),
+    performer: text("performer"),
+    intentSource: text("intent_source"),
+    /** Triage recommendation code or resus event id. */
+    sourceIntentId: text("source_intent_id"),
+    requisitionNo: text("requisition_no"),
+    sensitivity: text("sensitivity").notNull().default("standard"),
+    clientKey: text("client_key"),
+    effectiveAt: timestamp("effective_at", { withTimezone: true }),
   },
   (t) => [
     check(
       "enc_order_kind_check",
-      sql`${t.kind} IN ('bloods','imaging','bedside','special','other')`,
+      sql`${t.kind} IN ('bloods','imaging','bedside','special','other','lab','ecg','procedure','referral')`,
     ),
     check(
       "enc_order_status_check",
       sql`${t.status} IN ('ordered','collected','resulted','cancelled')`,
     ),
+    check("enc_order_lifecycle_check", sql`${t.lifecycle} IN ('legacy','events')`),
+    check(
+      "enc_order_priority_check",
+      sql`${t.priority} IS NULL OR ${t.priority} IN ('routine','urgent','immediate')`,
+    ),
+    check(
+      "enc_order_performer_check",
+      sql`${t.performer} IS NULL OR ${t.performer} IN ('in_house','external','referral')`,
+    ),
+    check(
+      "enc_order_intent_check",
+      sql`${t.intentSource} IS NULL OR ${t.intentSource} IN ('clinician','triage_recommendation','resus_handover')`,
+    ),
+    check("enc_order_sensitivity_check", sql`${t.sensitivity} IN ('standard','restricted')`),
+    check(
+      "enc_order_events_shape",
+      sql`${t.lifecycle} = 'legacy' OR (
+        ${t.hospitalId} IS NOT NULL AND ${t.priority} IS NOT NULL AND ${t.performer} IS NOT NULL AND ${t.intentSource} IS NOT NULL
+        AND ${t.requesterCadre} IS NOT NULL AND ${t.effectiveAt} IS NOT NULL
+        AND ${t.kind} IN ('lab','imaging','ecg','procedure','referral')
+        AND (${t.kind} <> 'lab' OR ${t.testId} IS NOT NULL)
+        AND (cardinality(${t.reasonConditionIds}) > 0 OR ${t.reasonTextCiphertext} IS NOT NULL))`,
+    ),
     index("enc_order_encounter_idx").on(t.encounterId, t.status),
+    uniqueIndex("enc_order_client_key")
+      .on(t.clientKey)
+      .where(sql`${t.clientKey} IS NOT NULL`),
+    index("enc_order_events_patient")
+      .on(t.patientUserId, t.createdAt.desc())
+      .where(sql`${t.lifecycle} = 'events'`),
+    index("enc_order_events_hospital")
+      .on(t.hospitalId, t.createdAt.desc())
+      .where(sql`${t.lifecycle} = 'events'`),
   ],
 );
 

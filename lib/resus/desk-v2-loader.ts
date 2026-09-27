@@ -21,6 +21,8 @@ import {
 } from "@/db/schema/resus";
 import { users } from "@/db/schema/users";
 import { resolveCapabilities } from "@/lib/doctor/capabilities";
+import { emrV1LiveFor } from "@/lib/emr/feature";
+import { loadTestMenu } from "@/lib/emr/read/orders";
 import { stopAuthority } from "@/lib/resus/als/termination";
 import { canAdminCloseResus } from "@/lib/resus/authority";
 import { fetchResusPatient } from "@/lib/resus/board";
@@ -142,7 +144,7 @@ export async function loadDeskV2(args: {
   const ep = await episodeRow(scope.hospitalId, args.episodeId);
   if (!ep) return null;
 
-  const [patient, events, snapshot, caps, settingsRow, bays, units, mayAdminClose] =
+  const [patient, events, snapshot, caps, settingsRow, bays, units, mayAdminClose, testMenu] =
     await Promise.all([
       fetchResusPatient({
         patientUserId: ep.patientUserId,
@@ -174,6 +176,8 @@ export async function loadDeskV2(args: {
         .where(eq(hospitalCareUnits.hospitalId, scope.hospitalId))
         .orderBy(asc(hospitalCareUnits.name)),
       canAdminCloseResus(scope.userId, scope.hospitalId, scope.cadreCode),
+      // A5: the close-out's outstanding tests become EMR suggestions; only asked for under EMR v1.
+      emrV1LiveFor(scope.hospitalId) ? loadTestMenu(db, scope.hospitalId) : null,
     ]);
   const settings = settingsRow[0];
   const bayProfiles: BayProfile[] = bays.map((b) => ({
@@ -233,6 +237,7 @@ export async function loadDeskV2(args: {
     },
     bayProfiles,
     careUnits,
+    testMenu,
     serverTimeIso: new Date().toISOString(),
     basePath: args.basePath,
   };

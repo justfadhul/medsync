@@ -3,9 +3,12 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeftIcon, HeartPulseIcon, PhoneIcon, ShieldAlertIcon } from "lucide-react";
 
+import { EmrChart } from "@/components/emr/chart/emr-chart";
 import { PatientClinicalRecordPanel } from "@/components/encounter/patient-clinical-record-panel";
 import { fetchPatientSummaryAudited } from "@/lib/doctor/patient-access";
 import { requireDoctorScope } from "@/lib/doctor/scope";
+import { emrV1LiveFor } from "@/lib/emr/feature";
+import { loadChart } from "@/lib/emr/read/chart";
 import { toEncounterScope } from "@/lib/encounter/workspace-scope";
 
 export const metadata: Metadata = { title: "Patient · Doctor · MedSync" };
@@ -32,6 +35,16 @@ const SEX_LABEL: Record<string, string> = {
 export default async function DoctorPatientSummaryPage({ params }: PageProps) {
   const { patientId } = await params;
   const scope = await requireDoctorScope();
+
+  // EMR v1 (gate-a E.2): the chart. Flag off, everything below renders exactly as before.
+  if (emrV1LiveFor(scope.hospitalId)) {
+    const chart = await loadChart("doctor", patientId);
+    return chart ? (
+      <EmrChart chart={chart} surface="doctor" />
+    ) : (
+      <NoAccessScreen patientId={patientId} />
+    );
+  }
 
   const summary = await fetchPatientSummaryAudited({
     doctor: {

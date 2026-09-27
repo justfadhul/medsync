@@ -1,0 +1,1545 @@
+{
+  "catalogue": "medsync.emr.note-templates",
+  "version": "1.0.0",
+  "status": "cso_signed",
+  "signedBy": "Fadhul (owner, CSO)",
+  "signedAt": "2026-09-26",
+  "signature": "Signed as recommended in session (D-EMR-15: templates 2.1–2.10 and the minimum-to-sign table 2.11 of MS-EMR-CLIN-001); harmonisations marked [H] in docs/emr/HARMONISATION.md apply.",
+  "source": "docs/emr/emr-clinical-reference.md sections 2.1–2.11",
+  "rules": {
+    "sectionOrder": "Fixed, as numbered. An empty optional section collapses to one line: '<title>  Not asked  Add'.",
+    "triState": "Findings are present, absent or not asked; not asked leaves no fact (CFC C3).",
+    "narrative": "Narrative is encrypted (lib/encryption.ts) and never read by engines.",
+    "commit": "Chart actions commit at once as their own rows; note-born findings commit at signing in the same transaction (D-EMR-01).",
+    "noCopyForward": "Narrative never carries forward; problems, allergies and medicines carry forward with a one-tap confirm.",
+    "signingNeverBlocksCare": "Signing checks only minimumToSign.required; orders and prescriptions work on an unsigned draft (2.11). prompted items are warnings.",
+    "checks": {
+      "section_has_any": "the section holds at least one item of itemKinds",
+      "section_has_content": "the section has narrative text or any structured item",
+      "any_section_has_content": "at least one of sections has narrative text or any structured item",
+      "field_present": "the named field of the section is filled",
+      "item_true": "the item is confirmed true",
+      "allergy_status_recorded": "the allergy record resolves to listed, no known drug allergies or unable to assess",
+      "medicines_reconciled": "every current medication statement has a reconciliation this encounter"
+    }
+  },
+  "references": {
+    "REF-PREG-AGE": {
+      "status": "pending_cso",
+      "whilePending": "The obstetric and gynaecological module is offered collapsed ('Not asked · Add') for every patient whose sex at birth is female. The safety bar shows no pregnancy line and the imaging prompt does not fire until the range is signed."
+    },
+    "REF-IDSR-SCREEN": {
+      "status": "pending_cso",
+      "whilePending": "Exposure tokens are not offered; exposure history is narrative."
+    }
+  },
+  "itemKinds": {
+    "historian": "coded: patient | carer | relative | referral_letter (principle 6)",
+    "language": "coded: language of the consultation",
+    "interpreter": "name (encrypted) and relationship to the patient; optional",
+    "complaint_token": "finding token (symptom_catalog code or finding concept) with a duration; becomes a finding fact at signing",
+    "visit_reason": "coded review reason, reusing appointments.reason (follow_up, new_concern, refill, routine, urgent_review, other)",
+    "finding": "finding token, tri-state present | absent | not asked, elicitedBy, qualifiers onset, duration, severity, laterality, course; not asked leaves no fact (CFC C3)",
+    "exposure_token": "exposure finding from REF-IDSR-SCREEN (pending_cso: the picker shows no list until signed; narrative still works)",
+    "ros_grid": "per-system grid of finding tokens (symptom_catalog ros_screen), every item defaulting to not asked",
+    "problem_list": "condition, category problem_list_item: carry forward with a one-tap still-true confirm, or add; commits at once (D-EMR-01)",
+    "procedure_history": "procedure fact (history), commits at once",
+    "transfusion": "procedure fact proc.blood_transfusion with its effective date (an HbA1c validity modifier)",
+    "medication_reconciliation": "medication statements confirmed continued | stopped (reason) | changed, incl. herbal, traditional and over-the-counter",
+    "allergy_status": "the allergy record and its assertions (no known drug allergies, unable to assess); commits at once",
+    "family_history": "condition with subject_relation (mother, father, sibling, child, other_first_degree, second_degree)",
+    "social_history": "soc.tobacco, soc.alcohol, soc.physical_activity; occupation and living situation are narrative",
+    "vital_signs": "observations shown from the record (projected, never copied); add if missing as new observation facts",
+    "anthropometry": "obs.weight, obs.height, obs.waist, obs.muac",
+    "exam_finding": "finding with elicitedBy examination: present | absent | not examined",
+    "chaperone": "chaperone name and role for an intimate examination",
+    "encounter_diagnosis": "condition, category encounter_diagnosis: working (provisional) | final (confirmed) | differential | refuted, one primary per visit",
+    "diagnosis_deferred": "statement 'diagnosis deferred' with a reason",
+    "order": "order (events lifecycle); commits at once; never blocked by an unsigned note",
+    "prescription": "prescription (Phase 7, EMR_PRESCRIBING); commits at once",
+    "procedure_plan": "planned or done procedure fact",
+    "counselling": "procedure fact for counselling or education (e.g. proc.dsme_session, proc.nutrition_counselling)",
+    "referral": "referral order (kind referral) and the referral note",
+    "follow_up": "none | review date (scheduling intent) | as needed",
+    "plan_statement": "a short plan statement when there is nothing to order",
+    "resus_link": "link to the resus episode's ABCDE summary; read-only, never re-entered",
+    "last_meal": "time of the last meal (glucose context: fasting hours derive from it)",
+    "observation_series": "vital-sign series from observations, with times",
+    "problems_addressed": "conditions addressed, each with its status",
+    "tasks": "outstanding tasks, each with an owner, or 'none'",
+    "team_present": "ward-round tag and the team present",
+    "consent": "verbal | written, given by patient | guardian",
+    "time_out": "two identifiers confirmed, procedure, site and side, allergies checked (WHO patient safety solution 4)",
+    "operator": "operator and assistant (users)",
+    "complications": "none, or described",
+    "identify": "two identifiers and location, filled from the record",
+    "receiver": "receiver name and an optional acknowledgement",
+    "referral_fields": "HMIS 032-aligned fields (see template); field list confirmed against the current form (open confirmation)",
+    "mccd_part1": "causal sequence (a) immediate cause back to the underlying cause, each a condition with an interval; ICD-11 coded",
+    "mccd_part2": "other significant conditions",
+    "manner_of_death": "coded per the current national form (open confirmation)",
+    "certifier": "certifying clinician with cadre and council registration number",
+    "care_given": "nursing care given",
+    "addendum": "addendum text and reason",
+    "pregnancy_module": "the 2.4 obstetric and gynaecological module",
+    "paediatric_module": "the 2.3 paediatric module"
+  },
+  "templates": [
+    {
+      "id": "tpl.clerking.adult_opd",
+      "version": "1.0.0",
+      "noteType": "clerking",
+      "title": "Adult outpatient clerking",
+      "reference": "2.1",
+      "header": [
+        {
+          "kind": "historian"
+        },
+        {
+          "kind": "language"
+        },
+        {
+          "kind": "interpreter",
+          "optional": true
+        }
+      ],
+      "modules": [
+        {
+          "module": "mod.paediatric",
+          "appliesWhen": {
+            "ageYearsLessThan": 16
+          },
+          "placement": "after section 09"
+        }
+      ],
+      "sections": [
+        {
+          "id": "s01",
+          "number": "01",
+          "title": "Presenting complaint",
+          "kind": "structured",
+          "items": [
+            {
+              "kind": "complaint_token"
+            },
+            {
+              "kind": "visit_reason",
+              "notes": "for review visits"
+            }
+          ],
+          "optional": false
+        },
+        {
+          "id": "s02",
+          "number": "02",
+          "title": "History of presenting complaint",
+          "kind": "mixed",
+          "items": [
+            {
+              "kind": "finding",
+              "notes": "present or absent, onset, course"
+            },
+            {
+              "kind": "exposure_token",
+              "ref": "REF-IDSR-SCREEN"
+            }
+          ],
+          "optional": true
+        },
+        {
+          "id": "s03",
+          "number": "03",
+          "title": "Review of systems",
+          "kind": "structured",
+          "items": [
+            {
+              "kind": "ros_grid",
+              "systems": [
+                "general",
+                "cardiovascular",
+                "respiratory",
+                "gastrointestinal",
+                "genitourinary",
+                "neurological",
+                "musculoskeletal",
+                "skin",
+                "ent_and_eyes",
+                "gynaecological"
+              ],
+              "notes": "gynaecological applies when sex at birth is female"
+            }
+          ],
+          "optional": true
+        },
+        {
+          "id": "s04",
+          "number": "04",
+          "title": "Past medical history",
+          "kind": "mixed",
+          "items": [
+            {
+              "kind": "problem_list"
+            }
+          ],
+          "optional": true,
+          "notes": "previous admissions are narrative"
+        },
+        {
+          "id": "s05",
+          "number": "05",
+          "title": "Past surgical history and transfusions",
+          "kind": "mixed",
+          "items": [
+            {
+              "kind": "procedure_history"
+            },
+            {
+              "kind": "transfusion",
+              "concepts": [
+                "proc.blood_transfusion"
+              ]
+            }
+          ],
+          "optional": true
+        },
+        {
+          "id": "s06",
+          "number": "06",
+          "title": "Medicines",
+          "kind": "structured",
+          "items": [
+            {
+              "kind": "medication_reconciliation"
+            }
+          ],
+          "optional": true
+        },
+        {
+          "id": "s07",
+          "number": "07",
+          "title": "Allergies",
+          "kind": "structured",
+          "items": [
+            {
+              "kind": "allergy_status"
+            }
+          ],
+          "optional": true
+        },
+        {
+          "id": "s08",
+          "number": "08",
+          "title": "Family history",
+          "kind": "structured",
+          "items": [
+            {
+              "kind": "family_history"
+            }
+          ],
+          "optional": true,
+          "notes": "for example diabetes, hypertension, sickle cell disease, cancer"
+        },
+        {
+          "id": "s09",
+          "number": "09",
+          "title": "Social history",
+          "kind": "mixed",
+          "items": [
+            {
+              "kind": "social_history",
+              "concepts": [
+                "soc.tobacco",
+                "soc.alcohol",
+                "soc.physical_activity"
+              ]
+            }
+          ],
+          "optional": true,
+          "notes": "occupation and living situation are narrative"
+        },
+        {
+          "id": "s10",
+          "number": "10",
+          "title": "Obstetric and gynaecological history",
+          "kind": "structured",
+          "items": [
+            {
+              "kind": "pregnancy_module",
+              "module": "mod.obgyn"
+            }
+          ],
+          "optional": true,
+          "appliesWhen": {
+            "sexAtBirth": "female",
+            "ageWithinRef": "REF-PREG-AGE"
+          }
+        },
+        {
+          "id": "s11",
+          "number": "11",
+          "title": "Examination",
+          "kind": "mixed",
+          "items": [
+            {
+              "kind": "exam_finding",
+              "group": "general",
+              "concepts": [
+                "sign.pallor",
+                "sign.jaundice",
+                "sign.cyanosis",
+                "sign.clubbing",
+                "sign.lymphadenopathy",
+                "sign.oedema",
+                "sign.dehydration"
+              ],
+              "notes": "each present, absent or not examined; sign.dehydration present = some or severe"
+            },
+            {
+              "kind": "vital_signs",
+              "concepts": [
+                "obs.bp_systolic",
+                "obs.bp_diastolic",
+                "obs.heart_rate",
+                "obs.resp_rate",
+                "obs.temperature",
+                "obs.spo2"
+              ]
+            },
+            {
+              "kind": "anthropometry",
+              "concepts": [
+                "obs.weight",
+                "obs.height",
+                "obs.waist",
+                "obs.muac"
+              ]
+            },
+            {
+              "kind": "exam_finding",
+              "group": "systems",
+              "systems": [
+                "cardiovascular",
+                "respiratory",
+                "abdomen",
+                "neurological",
+                "musculoskeletal",
+                "skin",
+                "ent_and_eyes",
+                "breasts",
+                "genitourinary",
+                "rectal",
+                "vaginal"
+              ],
+              "notes": "narrative per system plus optional finding chips; vaginal applies when sex at birth is female"
+            },
+            {
+              "kind": "chaperone",
+              "requiredWhen": {
+                "systemsExamined": [
+                  "rectal",
+                  "vaginal"
+                ]
+              },
+              "notes": "principle 7: offered for any intimate examination; recorded for rectal and vaginal examination"
+            }
+          ],
+          "optional": true
+        },
+        {
+          "id": "s12",
+          "number": "12",
+          "title": "Summary",
+          "kind": "narrative",
+          "items": [],
+          "optional": true
+        },
+        {
+          "id": "s13",
+          "number": "13",
+          "title": "Impression",
+          "kind": "structured",
+          "items": [
+            {
+              "kind": "encounter_diagnosis"
+            },
+            {
+              "kind": "diagnosis_deferred"
+            }
+          ],
+          "optional": false
+        },
+        {
+          "id": "s14",
+          "number": "14",
+          "title": "Plan",
+          "kind": "mixed",
+          "items": [
+            {
+              "kind": "order"
+            },
+            {
+              "kind": "prescription"
+            },
+            {
+              "kind": "procedure_plan"
+            },
+            {
+              "kind": "counselling"
+            },
+            {
+              "kind": "referral"
+            },
+            {
+              "kind": "follow_up"
+            },
+            {
+              "kind": "plan_statement"
+            }
+          ],
+          "optional": false
+        }
+      ],
+      "minimumToSign": {
+        "required": [
+          {
+            "id": "req.complaint",
+            "check": "section_has_any",
+            "message": "Add the presenting complaint or the visit reason.",
+            "section": "s01",
+            "itemKinds": [
+              "complaint_token",
+              "visit_reason"
+            ]
+          },
+          {
+            "id": "req.impression",
+            "check": "section_has_any",
+            "message": "Add at least one diagnosis, or 'diagnosis deferred' with a reason.",
+            "section": "s13",
+            "itemKinds": [
+              "encounter_diagnosis",
+              "diagnosis_deferred"
+            ]
+          },
+          {
+            "id": "req.plan",
+            "check": "section_has_any",
+            "message": "Add at least one plan item or a plan statement.",
+            "section": "s14",
+            "itemKinds": [
+              "order",
+              "prescription",
+              "procedure_plan",
+              "counselling",
+              "referral",
+              "follow_up",
+              "plan_statement"
+            ]
+          }
+        ],
+        "prompted": [
+          {
+            "id": "warn.allergy_status",
+            "check": "allergy_status_recorded",
+            "message": "Allergy status not recorded."
+          },
+          {
+            "id": "warn.examination",
+            "check": "section_has_any",
+            "message": "No examination recorded.",
+            "section": "s11",
+            "itemKinds": [
+              "exam_finding",
+              "vital_signs",
+              "anthropometry"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "tpl.clerking.emergency",
+      "version": "1.0.0",
+      "noteType": "emergency_clerking",
+      "title": "Emergency clerking",
+      "reference": "2.2",
+      "usedWhen": "the patient came through a high-acuity triage level or resus",
+      "header": [
+        {
+          "kind": "historian"
+        },
+        {
+          "kind": "language"
+        },
+        {
+          "kind": "interpreter",
+          "optional": true
+        }
+      ],
+      "modules": [
+        {
+          "module": "mod.paediatric",
+          "appliesWhen": {
+            "ageYearsLessThan": 16
+          },
+          "placement": "after section 02"
+        }
+      ],
+      "sections": [
+        {
+          "id": "s01",
+          "number": "01",
+          "title": "Primary survey summary",
+          "kind": "mixed",
+          "items": [
+            {
+              "kind": "resus_link"
+            },
+            {
+              "kind": "exam_finding",
+              "group": "abcde"
+            }
+          ],
+          "optional": false,
+          "notes": "ABCDE findings linked to the resus episode when there was one, never re-entered"
+        },
+        {
+          "id": "s02",
+          "number": "02",
+          "title": "AMPLE",
+          "kind": "mixed",
+          "items": [
+            {
+              "kind": "allergy_status"
+            },
+            {
+              "kind": "medication_reconciliation"
+            },
+            {
+              "kind": "problem_list"
+            },
+            {
+              "kind": "last_meal"
+            }
+          ],
+          "optional": true,
+          "notes": "Events are narrative"
+        },
+        {
+          "id": "s03",
+          "number": "03",
+          "title": "Secondary survey",
+          "kind": "mixed",
+          "items": [
+            {
+              "kind": "exam_finding",
+              "group": "general",
+              "concepts": [
+                "sign.pallor",
+                "sign.jaundice",
+                "sign.cyanosis",
+                "sign.clubbing",
+                "sign.lymphadenopathy",
+                "sign.oedema",
+                "sign.dehydration"
+              ]
+            },
+            {
+              "kind": "exam_finding",
+              "group": "systems",
+              "notes": "as template 2.1 section 11"
+            },
+            {
+              "kind": "chaperone",
+              "requiredWhen": {
+                "systemsExamined": [
+                  "rectal",
+                  "vaginal"
+                ]
+              }
+            }
+          ],
+          "optional": true
+        },
+        {
+          "id": "s04",
+          "number": "04",
+          "title": "Reassessment",
+          "kind": "mixed",
+          "items": [
+            {
+              "kind": "observation_series"
+            }
+          ],
+          "optional": true
+        },
+        {
+          "id": "s05",
+          "number": "05",
+          "title": "Impression and plan",
+          "kind": "mixed",
+          "items": [
+            {
+              "kind": "encounter_diagnosis"
+            },
+            {
+              "kind": "diagnosis_deferred"
+            },
+            {
+              "kind": "order"
+            },
+            {
+              "kind": "prescription"
+            },
+            {
+              "kind": "procedure_plan"
+            },
+            {
+              "kind": "referral"
+            },
+            {
+              "kind": "follow_up"
+            },
+            {
+              "kind": "plan_statement"
+            }
+          ],
+          "optional": false,
+          "notes": "as template 2.1 sections 13 and 14"
+        }
+      ],
+      "minimumToSign": {
+        "required": [
+          {
+            "id": "req.primary_survey",
+            "check": "section_has_content",
+            "message": "Add the primary survey summary.",
+            "section": "s01"
+          },
+          {
+            "id": "req.impression",
+            "check": "section_has_any",
+            "message": "Add at least one diagnosis, or 'diagnosis deferred' with a reason.",
+            "section": "s05",
+            "itemKinds": [
+              "encounter_diagnosis",
+              "diagnosis_deferred"
+            ]
+          },
+          {
+            "id": "req.plan",
+            "check": "section_has_any",
+            "message": "Add at least one plan item or a plan statement.",
+            "section": "s05",
+            "itemKinds": [
+              "order",
+              "prescription",
+              "procedure_plan",
+              "referral",
+              "follow_up",
+              "plan_statement"
+            ]
+          }
+        ],
+        "prompted": [
+          {
+            "id": "warn.allergy_status",
+            "check": "allergy_status_recorded",
+            "message": "Allergy status not recorded."
+          }
+        ]
+      }
+    },
+    {
+      "id": "mod.paediatric",
+      "version": "1.0.0",
+      "noteType": null,
+      "kind": "module",
+      "title": "Paediatric module",
+      "reference": "2.3",
+      "appliesWhen": {
+        "ageYearsLessThan": 16
+      },
+      "attachesTo": [
+        "tpl.clerking.adult_opd",
+        "tpl.clerking.emergency"
+      ],
+      "rules": [
+        "Contains no dosing; the platform's under-16 limits apply to every engine.",
+        "The minor and guardian model is an open decision; until signed, restricted content for minors is shown only to treating clinicians (reference [10])."
+      ],
+      "sections": [
+        {
+          "id": "p01",
+          "number": "P1",
+          "title": "Historian and caregiver",
+          "kind": "structured",
+          "items": [
+            {
+              "kind": "historian",
+              "notes": "relationship to the child"
+            }
+          ],
+          "optional": true
+        },
+        {
+          "id": "p02",
+          "number": "P2",
+          "title": "Birth history",
+          "kind": "mixed",
+          "items": [],
+          "optional": true,
+          "notes": "gestation at birth, birth weight, neonatal problems"
+        },
+        {
+          "id": "p03",
+          "number": "P3",
+          "title": "Immunisation",
+          "kind": "mixed",
+          "items": [],
+          "optional": true,
+          "notes": "status against the national schedule (UNEPI) and whether the card was seen; the schedule is a signed reference, the full record is a later version"
+        },
+        {
+          "id": "p04",
+          "number": "P4",
+          "title": "Nutrition",
+          "kind": "mixed",
+          "items": [],
+          "optional": true,
+          "notes": "breastfeeding, complementary feeding, appetite"
+        },
+        {
+          "id": "p05",
+          "number": "P5",
+          "title": "Growth",
+          "kind": "structured",
+          "items": [
+            {
+              "kind": "anthropometry",
+              "concepts": [
+                "obs.weight",
+                "obs.height",
+                "obs.muac",
+                "obs.head_circumference"
+              ]
+            }
+          ],
+          "optional": true,
+          "notes": "z-scores against WHO growth standards are a later version"
+        },
+        {
+          "id": "p06",
+          "number": "P6",
+          "title": "Development",
+          "kind": "structured",
+          "items": [],
+          "optional": true,
+          "notes": "milestones for age: achieved | delayed | not assessed"
+        }
+      ],
+      "minimumToSign": {
+        "required": [],
+        "prompted": []
+      }
+    },
+    {
+      "id": "mod.obgyn",
+      "version": "1.0.0",
+      "noteType": null,
+      "kind": "module",
+      "title": "Obstetric and gynaecological module",
+      "reference": "2.4",
+      "appliesWhen": {
+        "sexAtBirth": "female",
+        "ageWithinRef": "REF-PREG-AGE"
+      },
+      "attachesTo": [
+        "tpl.clerking.adult_opd"
+      ],
+      "sections": [
+        {
+          "id": "o01",
+          "number": "O1",
+          "title": "Pregnancy dates",
+          "kind": "structured",
+          "items": [],
+          "optional": true,
+          "notes": "last normal menstrual period with certainty sure | unsure; gestational age is derived, never typed"
+        },
+        {
+          "id": "o02",
+          "number": "O2",
+          "title": "Pregnancy status",
+          "kind": "structured",
+          "items": [],
+          "optional": true,
+          "notes": "pregnant | not pregnant | not known, with the test if done (obs.pregnancy_test); pregnancy_episodes"
+        },
+        {
+          "id": "o03",
+          "number": "O3",
+          "title": "Obstetric history",
+          "kind": "structured",
+          "items": [],
+          "optional": true,
+          "notes": "gravidity and parity; previous outcomes incl. hyperglycaemia in pregnancy and a baby with a high birth weight, recorded as pregnancy facts"
+        },
+        {
+          "id": "o04",
+          "number": "O4",
+          "title": "Contraception",
+          "kind": "mixed",
+          "items": [],
+          "optional": true
+        },
+        {
+          "id": "o05",
+          "number": "O5",
+          "title": "Last cervical screening",
+          "kind": "mixed",
+          "items": [],
+          "optional": true,
+          "notes": "seam for a later module"
+        }
+      ],
+      "sensitivity": "SR-PREG-MINOR (clinical-fact-concepts.v1.1.json sensitivityRules)",
+      "minimumToSign": {
+        "required": [],
+        "prompted": []
+      }
+    },
+    {
+      "id": "tpl.progress",
+      "version": "1.0.0",
+      "noteType": "progress",
+      "title": "Progress note (SOAP)",
+      "reference": "2.5",
+      "sections": [
+        {
+          "id": "s01",
+          "number": "01",
+          "title": "Subjective",
+          "kind": "mixed",
+          "items": [
+            {
+              "kind": "finding"
+            }
+          ],
+          "optional": true
+        },
+        {
+          "id": "s02",
+          "number": "02",
+          "title": "Objective",
+          "kind": "mixed",
+          "items": [
+            {
+              "kind": "vital_signs"
+            },
+            {
+              "kind": "observation_series"
+            }
+          ],
+          "optional": true,
+          "notes": "vital signs and results pulled in, never re-typed"
+        },
+        {
+          "id": "s03",
+          "number": "03",
+          "title": "Assessment",
+          "kind": "structured",
+          "items": [
+            {
+              "kind": "problems_addressed"
+            }
+          ],
+          "optional": false
+        },
+        {
+          "id": "s04",
+          "number": "04",
+          "title": "Plan",
+          "kind": "mixed",
+          "items": [
+            {
+              "kind": "order"
+            },
+            {
+              "kind": "prescription"
+            },
+            {
+              "kind": "tasks"
+            },
+            {
+              "kind": "plan_statement"
+            }
+          ],
+          "optional": false
+        }
+      ],
+      "minimumToSign": {
+        "required": [
+          {
+            "id": "req.assessment",
+            "check": "section_has_content",
+            "message": "Add the assessment.",
+            "section": "s03"
+          },
+          {
+            "id": "req.plan",
+            "check": "section_has_content",
+            "message": "Add the plan.",
+            "section": "s04"
+          }
+        ],
+        "prompted": []
+      }
+    },
+    {
+      "id": "tpl.ward_round",
+      "version": "1.0.0",
+      "noteType": "ward_round",
+      "title": "Ward-round note",
+      "reference": "2.5",
+      "header": [
+        {
+          "kind": "team_present"
+        }
+      ],
+      "sections": [
+        {
+          "id": "s01",
+          "number": "01",
+          "title": "Subjective",
+          "kind": "mixed",
+          "items": [
+            {
+              "kind": "finding"
+            }
+          ],
+          "optional": true
+        },
+        {
+          "id": "s02",
+          "number": "02",
+          "title": "Objective",
+          "kind": "mixed",
+          "items": [
+            {
+              "kind": "vital_signs"
+            },
+            {
+              "kind": "observation_series"
+            }
+          ],
+          "optional": true,
+          "notes": "vital signs and results pulled in, never re-typed"
+        },
+        {
+          "id": "s03",
+          "number": "03",
+          "title": "Assessment",
+          "kind": "structured",
+          "items": [
+            {
+              "kind": "problems_addressed"
+            }
+          ],
+          "optional": false
+        },
+        {
+          "id": "s04",
+          "number": "04",
+          "title": "Plan",
+          "kind": "mixed",
+          "items": [
+            {
+              "kind": "order"
+            },
+            {
+              "kind": "prescription"
+            },
+            {
+              "kind": "tasks"
+            },
+            {
+              "kind": "plan_statement"
+            }
+          ],
+          "optional": false
+        }
+      ],
+      "minimumToSign": {
+        "required": [
+          {
+            "id": "req.assessment",
+            "check": "section_has_content",
+            "message": "Add the assessment.",
+            "section": "s03"
+          },
+          {
+            "id": "req.plan",
+            "check": "section_has_content",
+            "message": "Add the plan.",
+            "section": "s04"
+          }
+        ],
+        "prompted": []
+      }
+    },
+    {
+      "id": "tpl.procedure",
+      "version": "1.0.0",
+      "noteType": "procedure",
+      "title": "Procedure note",
+      "reference": "2.6",
+      "sections": [
+        {
+          "id": "s01",
+          "number": "01",
+          "title": "Indication",
+          "kind": "mixed",
+          "items": [],
+          "optional": false
+        },
+        {
+          "id": "s02",
+          "number": "02",
+          "title": "Consent",
+          "kind": "structured",
+          "items": [
+            {
+              "kind": "consent"
+            }
+          ],
+          "optional": false
+        },
+        {
+          "id": "s03",
+          "number": "03",
+          "title": "Time-out",
+          "kind": "structured",
+          "items": [
+            {
+              "kind": "time_out"
+            }
+          ],
+          "optional": false
+        },
+        {
+          "id": "s04",
+          "number": "04",
+          "title": "Procedure",
+          "kind": "mixed",
+          "items": [
+            {
+              "kind": "operator"
+            },
+            {
+              "kind": "procedure_plan"
+            },
+            {
+              "kind": "order",
+              "notes": "specimens sent"
+            }
+          ],
+          "optional": false,
+          "notes": "anaesthesia or analgesia, technique and findings are narrative"
+        },
+        {
+          "id": "s05",
+          "number": "05",
+          "title": "Complications",
+          "kind": "structured",
+          "items": [
+            {
+              "kind": "complications"
+            }
+          ],
+          "optional": false
+        },
+        {
+          "id": "s06",
+          "number": "06",
+          "title": "Post-procedure instructions",
+          "kind": "narrative",
+          "items": [],
+          "optional": true
+        }
+      ],
+      "minimumToSign": {
+        "required": [
+          {
+            "id": "req.indication",
+            "check": "section_has_content",
+            "message": "Add the indication.",
+            "section": "s01"
+          },
+          {
+            "id": "req.consent",
+            "check": "section_has_any",
+            "message": "Record consent.",
+            "section": "s02",
+            "itemKinds": [
+              "consent"
+            ]
+          },
+          {
+            "id": "req.time_out",
+            "check": "item_true",
+            "message": "Confirm the time-out.",
+            "section": "s03",
+            "itemKinds": [
+              "time_out"
+            ]
+          },
+          {
+            "id": "req.procedure",
+            "check": "section_has_content",
+            "message": "Describe the procedure.",
+            "section": "s04"
+          },
+          {
+            "id": "req.complications",
+            "check": "section_has_any",
+            "message": "Record complications, or none.",
+            "section": "s05",
+            "itemKinds": [
+              "complications"
+            ]
+          }
+        ],
+        "prompted": []
+      }
+    },
+    {
+      "id": "tpl.handover.isbar",
+      "version": "1.0.0",
+      "noteType": "handover",
+      "title": "Handover note (ISBAR)",
+      "reference": "2.7",
+      "notes": "WHO patient safety solution 3. Resus handovers arrive as this note type (consumeResusHandoff: Identify from the record plus the resus SBAR).",
+      "sections": [
+        {
+          "id": "s01",
+          "number": "I",
+          "title": "Identify",
+          "kind": "structured",
+          "items": [
+            {
+              "kind": "identify"
+            }
+          ],
+          "optional": false
+        },
+        {
+          "id": "s02",
+          "number": "S",
+          "title": "Situation",
+          "kind": "narrative",
+          "items": [],
+          "optional": false
+        },
+        {
+          "id": "s03",
+          "number": "B",
+          "title": "Background",
+          "kind": "narrative",
+          "items": [],
+          "optional": true
+        },
+        {
+          "id": "s04",
+          "number": "A",
+          "title": "Assessment",
+          "kind": "narrative",
+          "items": [],
+          "optional": true
+        },
+        {
+          "id": "s05",
+          "number": "R",
+          "title": "Recommendation",
+          "kind": "structured",
+          "items": [
+            {
+              "kind": "tasks"
+            }
+          ],
+          "optional": false
+        },
+        {
+          "id": "s06",
+          "number": "Rx",
+          "title": "Receiver",
+          "kind": "structured",
+          "items": [
+            {
+              "kind": "receiver"
+            }
+          ],
+          "optional": true
+        }
+      ],
+      "minimumToSign": {
+        "required": [
+          {
+            "id": "req.situation",
+            "check": "section_has_content",
+            "message": "Add the situation.",
+            "section": "s02"
+          },
+          {
+            "id": "req.tasks",
+            "check": "section_has_any",
+            "message": "List the outstanding tasks, or none.",
+            "section": "s05",
+            "itemKinds": [
+              "tasks"
+            ]
+          }
+        ],
+        "prompted": []
+      }
+    },
+    {
+      "id": "tpl.referral",
+      "version": "1.0.0",
+      "noteType": "referral",
+      "title": "Referral note",
+      "reference": "2.8",
+      "alignsWith": "MoH referral note, HMIS form 032 (field list: open confirmation against the current form)",
+      "prints": {
+        "returnFeedbackSection": true
+      },
+      "sections": [
+        {
+          "id": "s01",
+          "number": "01",
+          "title": "Referring facility and patient",
+          "kind": "structured",
+          "items": [
+            {
+              "kind": "identify"
+            }
+          ],
+          "optional": false,
+          "notes": "referring facility, date, patient identifiers (filled from the record)"
+        },
+        {
+          "id": "s02",
+          "number": "02",
+          "title": "Reason, urgency and transport",
+          "kind": "mixed",
+          "items": [
+            {
+              "kind": "referral_fields",
+              "fields": [
+                "reason",
+                "urgency",
+                "transport"
+              ]
+            }
+          ],
+          "optional": false
+        },
+        {
+          "id": "s03",
+          "number": "03",
+          "title": "History summary, examination and investigations",
+          "kind": "mixed",
+          "items": [
+            {
+              "kind": "observation_series"
+            }
+          ],
+          "optional": false,
+          "notes": "investigations with their results pulled from the record"
+        },
+        {
+          "id": "s04",
+          "number": "04",
+          "title": "Treatment given and diagnoses",
+          "kind": "mixed",
+          "items": [
+            {
+              "kind": "encounter_diagnosis"
+            }
+          ],
+          "optional": true
+        },
+        {
+          "id": "s05",
+          "number": "05",
+          "title": "Current medicines",
+          "kind": "structured",
+          "items": [
+            {
+              "kind": "medication_reconciliation"
+            }
+          ],
+          "optional": true,
+          "notes": "the reconciled list"
+        },
+        {
+          "id": "s06",
+          "number": "06",
+          "title": "Receiving facility and department",
+          "kind": "structured",
+          "items": [
+            {
+              "kind": "referral_fields",
+              "fields": [
+                "receiving_facility",
+                "receiving_department"
+              ]
+            }
+          ],
+          "optional": false
+        },
+        {
+          "id": "s07",
+          "number": "07",
+          "title": "Referring clinician",
+          "kind": "structured",
+          "items": [
+            {
+              "kind": "certifier",
+              "notes": "name, cadre and council registration number"
+            }
+          ],
+          "optional": false
+        }
+      ],
+      "minimumToSign": {
+        "required": [
+          {
+            "id": "req.reason",
+            "check": "field_present",
+            "message": "Add the reason for referral.",
+            "section": "s02"
+          },
+          {
+            "id": "req.summary",
+            "check": "section_has_content",
+            "message": "Add the history summary.",
+            "section": "s03"
+          },
+          {
+            "id": "req.receiving",
+            "check": "field_present",
+            "message": "Add the receiving facility.",
+            "section": "s06"
+          },
+          {
+            "id": "req.urgency",
+            "check": "field_present",
+            "message": "Add the urgency.",
+            "section": "s02"
+          }
+        ],
+        "prompted": [
+          {
+            "id": "warn.medicines",
+            "check": "medicines_reconciled",
+            "message": "Medicines not reconciled.",
+            "section": "s05"
+          }
+        ]
+      }
+    },
+    {
+      "id": "tpl.cause_of_death",
+      "version": "1.0.0",
+      "noteType": "cause_of_death",
+      "title": "Cause-of-death record",
+      "reference": "2.9",
+      "structure": "WHO international medical certificate of cause of death; ICD-11 coding",
+      "seam": "Fulfils the resus close-out checklist item CO-ADT-06; the national form and the MPDSR notification pathway are open confirmations",
+      "sections": [
+        {
+          "id": "s01",
+          "number": "I",
+          "title": "Part I: causal sequence",
+          "kind": "structured",
+          "items": [
+            {
+              "kind": "mccd_part1"
+            }
+          ],
+          "optional": false,
+          "notes": "(a) immediate cause back to the underlying cause, each with its interval"
+        },
+        {
+          "id": "s02",
+          "number": "II",
+          "title": "Part II: other significant conditions",
+          "kind": "structured",
+          "items": [
+            {
+              "kind": "mccd_part2"
+            }
+          ],
+          "optional": true
+        },
+        {
+          "id": "s03",
+          "number": "03",
+          "title": "Manner of death and pregnancy status",
+          "kind": "structured",
+          "items": [
+            {
+              "kind": "manner_of_death"
+            }
+          ],
+          "optional": true,
+          "notes": "pregnancy status for women"
+        },
+        {
+          "id": "s04",
+          "number": "04",
+          "title": "Certifier",
+          "kind": "structured",
+          "items": [
+            {
+              "kind": "certifier"
+            }
+          ],
+          "optional": false
+        }
+      ],
+      "minimumToSign": {
+        "required": [
+          {
+            "id": "req.part1a",
+            "check": "field_present",
+            "message": "Add Part I (a), the immediate cause.",
+            "section": "s01"
+          },
+          {
+            "id": "req.underlying",
+            "check": "field_present",
+            "message": "Add the underlying cause.",
+            "section": "s01"
+          },
+          {
+            "id": "req.certifier",
+            "check": "section_has_any",
+            "message": "Add the certifier.",
+            "section": "s04",
+            "itemKinds": [
+              "certifier"
+            ]
+          }
+        ],
+        "prompted": []
+      }
+    },
+    {
+      "id": "tpl.nursing",
+      "version": "1.0.0",
+      "noteType": "nursing",
+      "title": "Nursing note",
+      "reference": "2.10",
+      "notes": "MAR and care plans belong to the inpatient module (out of scope).",
+      "sections": [
+        {
+          "id": "s01",
+          "number": "01",
+          "title": "Narrative",
+          "kind": "narrative",
+          "items": [],
+          "optional": true
+        },
+        {
+          "id": "s02",
+          "number": "02",
+          "title": "Observations",
+          "kind": "structured",
+          "items": [
+            {
+              "kind": "vital_signs"
+            },
+            {
+              "kind": "observation_series"
+            }
+          ],
+          "optional": true
+        },
+        {
+          "id": "s03",
+          "number": "03",
+          "title": "Care given",
+          "kind": "mixed",
+          "items": [
+            {
+              "kind": "care_given"
+            }
+          ],
+          "optional": true
+        }
+      ],
+      "minimumToSign": {
+        "required": [
+          {
+            "id": "req.narrative_or_obs",
+            "check": "any_section_has_content",
+            "message": "Add a narrative or observations.",
+            "sections": [
+              "s01",
+              "s02"
+            ]
+          }
+        ],
+        "prompted": []
+      }
+    },
+    {
+      "id": "tpl.addendum",
+      "version": "1.0.0",
+      "noteType": "addendum",
+      "title": "Addendum",
+      "reference": "2.11",
+      "notes": "A new note linked to its parent (addendum_to), with its own author and time, threaded under the parent.",
+      "sections": [
+        {
+          "id": "s01",
+          "number": "01",
+          "title": "Addendum",
+          "kind": "mixed",
+          "items": [
+            {
+              "kind": "addendum"
+            }
+          ],
+          "optional": false
+        }
+      ],
+      "minimumToSign": {
+        "required": [
+          {
+            "id": "req.text",
+            "check": "field_present",
+            "message": "Add the addendum text.",
+            "section": "s01"
+          },
+          {
+            "id": "req.reason",
+            "check": "field_present",
+            "message": "Add the reason.",
+            "section": "s01"
+          }
+        ],
+        "prompted": []
+      }
+    }
+  ],
+  "counts": {
+    "templates": 10,
+    "modules": 2,
+    "sections": 65,
+    "requiredRules": 27,
+    "promptedRules": 4
+  }
+}

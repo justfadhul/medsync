@@ -161,6 +161,10 @@ function CloseOutFlow({ arrestEnding, onClose }: { arrestEnding: boolean; onClos
               : null,
           escort: draft.escort.trim() || null,
           cprOngoing,
+          // A death hands nothing off, so it proposes nothing.
+          outstandingTests: died
+            ? []
+            : draft.tests.map((t) => ({ testId: t.testId, reason: t.reason.trim() || null })),
         }),
       ),
     closeSheet: onClose,
@@ -222,7 +226,9 @@ function CloseOutFlow({ arrestEnding, onClose }: { arrestEnding: boolean; onClos
             <OutcomeStep {...stepProps} actions={actions} busy={busy} blocked={blocked} />
           ) : null}
           {step === 2 ? <DestinationStep {...stepProps} died={died} /> : null}
-          {step === 3 ? <HandoverStep {...stepProps} /> : null}
+          {step === 3 ? (
+            <HandoverStep {...stepProps} menu={died ? null : d.initial.testMenu} />
+          ) : null}
           {step === 4 ? <SignStep {...stepProps} receivingUnit={receivingUnit} /> : null}
         </div>
       </SheetBody>

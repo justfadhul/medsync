@@ -59,8 +59,9 @@ function SheetOverlay({ className, ...props }: DialogPrimitive.Backdrop.Props) {
 }
 
 interface SheetContentProps extends DialogPrimitive.Popup.Props {
-  /** "center": a centred landscape panel (a max-w-* width; height follows the content). */
-  side?: "right" | "left" | "center";
+  /** "center": a centred landscape panel (a max-w-* width; height follows the content).
+   *  "bottom": a sheet from the bottom edge (the clerking desk's Context on a tablet). */
+  side?: "right" | "left" | "center" | "bottom";
   /** Width class — e.g. "w-[480px]" or "sm:max-w-md w-full"; for "center", a max-w-*. */
   widthClassName?: string;
   showCloseButton?: boolean;
@@ -81,9 +82,11 @@ function SheetContent({
   const sideClasses =
     side === "center"
       ? "top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[calc(100vw-2rem)] max-h-[calc(100dvh-2rem)] rounded-xl border data-open:zoom-in-95 data-closed:zoom-out-95"
-      : side === "right"
-        ? "inset-y-0 right-0 data-open:slide-in-from-right data-closed:slide-out-to-right border-l"
-        : "inset-y-0 left-0 data-open:slide-in-from-left data-closed:slide-out-to-left border-r";
+      : side === "bottom"
+        ? "inset-x-0 bottom-0 max-h-[85dvh] rounded-t-xl border-t data-open:slide-in-from-bottom data-closed:slide-out-to-bottom"
+        : side === "right"
+          ? "inset-y-0 right-0 data-open:slide-in-from-right data-closed:slide-out-to-right border-l"
+          : "inset-y-0 left-0 data-open:slide-in-from-left data-closed:slide-out-to-left border-r";
 
   return (
     <DialogPrimitive.Portal>

@@ -137,3 +137,42 @@ describe("ha-start-encounter — a queue row with no appointment can be started"
     expect(src).toContain('.update({ status: "in_progress" })');
   });
 });
+
+describe("ha-start-encounter — the visit it links is this patient's, today's", () => {
+  const src = stripComments(fn("ha-start-encounter"));
+  const walkIn = src.slice(src.indexOf("async function startFromQueueRow("));
+  const booked = src.slice(
+    src.indexOf("Deno.serve("),
+    src.indexOf("async function startFromQueueRow("),
+  );
+  const helper = between(src, "async function visitBelongs(", "\n}\n");
+  const finder = between(
+    src,
+    "async function findOpenEncounter(",
+    "const { data } = await intakes;",
+  );
+
+  it("accepts a caller's visit_id only for the same patient at the same hospital", () => {
+    expect(helper).toContain('.eq("id", visitId)');
+    expect(helper).toContain('.eq("patient_user_id", patientUserId)');
+    expect(helper).toContain('.eq("hospital_id", hospitalId)');
+  });
+
+  it("both paths refuse a foreign visit before anything is written", () => {
+    const b = booked.indexOf(
+      "visitBelongs(input.visit_id, appt.patient_user_id, appt.hospital_id)",
+    );
+    expect(b).toBeGreaterThan(-1);
+    expect(b).toBeLessThan(booked.indexOf("recordSaAudit({"));
+    const w = walkIn.indexOf("visitBelongs(input.visit_id, qe.patient_user_id, qe.hospital_id)");
+    expect(w).toBeGreaterThan(-1);
+    expect(w).toBeLessThan(walkIn.indexOf("recordSaAudit({"));
+  });
+
+  it("the department dedupe reuses only today's intake, never an earlier day's", () => {
+    const dept = finder.slice(finder.indexOf("else if (o.departmentId)"));
+    expect(dept).toContain('.eq("receiving_department_id", o.departmentId)');
+    expect(dept).toContain("arrived_at.gte.");
+    expect(dept).toContain("checked_in_at.gte.");
+  });
+});

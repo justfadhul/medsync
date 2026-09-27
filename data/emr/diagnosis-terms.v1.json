@@ -1,0 +1,1946 @@
+{
+  "catalogue": "medsync.diagnosis-terms",
+  "reference": "REF-DX-TERMS",
+  "version": "1.0.0-draft",
+  "status": "DRAFT for CSO sign-off (MS-EMR-CLIN-001 [04], REF-DX-TERMS). Starter interface terminology for adult OPD and emergency care.",
+  "classification": {
+    "system": "ICD-11 MMS",
+    "release": "v2026-01 (as labelled on the mirror pages checked)",
+    "licence": "CC BY-ND 3.0 IGO. Codes and titles are carried unmodified and attributed to WHO; local synonyms live on the MedSync term, never in the classification.",
+    "verification": "verified-mirror: code and exact title read on the findacode.com ICD-11 MMS page named in source, 2026-09-26. Where the code is a residual (.Y/.Z) or a child listed on its parent page, source is that parent page. Confirm at icd.who.int before any export."
+  },
+  "rules": [
+    "icd10_who stays null until a WHO ICD-10 licence is recorded (E6, owner action O-3).",
+    "idsr_class and hmis_category_id stay null until REF-IDSR-CLASSES and REF-HMIS-MAP are signed.",
+    "Symptom-level terms (\"..., cause not yet known\") are preferred over a premature disease label (MS-EMR-CLIN-001 [04]).",
+    "sensitivity follows D-CFC-09: HIV, TB, STI/SRH and mental illness are restricted."
+  ],
+  "conditionalSensitivity": {
+    "rule": "restricted when the patient is under 18 (D-CFC-09, pregnancy in minors); applied at write time from the patient age",
+    "termIds": [
+      "dx.hyperemesis",
+      "dx.pre_eclampsia",
+      "dx.pre_eclampsia_severe",
+      "dx.eclampsia"
+    ]
+  },
+  "codingNotes": {
+    "dx.malaria_uncomplicated": "1F4Z does not name the species. If the CSO prefers the falciparum code for mRDT-confirmed malaria, 1F40.Z (Malaria due to Plasmodium falciparum, unspecified) is on the same page.",
+    "dx.malaria_severe": "1F40.Y assumes P. falciparum and excludes cerebral complications (use dx.malaria_cerebral, 1F40.0).",
+    "dx.hiv": "Unstaged code. Staged codes 1C62.0-1C62.3 and TB- or malaria-associated codes (1C60, 1C61) exist; staging is a later refinement.",
+    "dx.sti_urethral_discharge": "Syndromic term mapped to the residual STI code; organism-specific codes (gonococcal 1A70-, chlamydial 1A80-) apply once confirmed.",
+    "dx.sti_genital_ulcer": "Syndromic term mapped to the residual STI code; syphilis, chancroid (1A90) and anogenital herpes (1A94) have their own codes once confirmed.",
+    "dx.vaginal_discharge": "Mapped to the symptom code, because vaginal discharge is often not an STI; restricted because it sits in the STI syndromic pathway.",
+    "dx.dka": "5A22.0 is DKA without coma; DKA with coma is 5A22.3. The type of diabetes is post-coordinated (for example 5A22.0/5A11).",
+    "dx.hhs": "Coma status: 5A20.0 without, 5A20.1 with.",
+    "dx.epilepsy": "Shares 8A6Z with dx.seizure_unexplained; specific epilepsy codes 8A60-8A62 exist.",
+    "dx.psychosis": "6A2Z assumes a primary psychotic disorder; substance-induced (for example 6C40.6) and secondary psychotic syndromes have their own codes.",
+    "dx.snakebite": "The ICD-11 index places snake envenomation under NE61; add the substance extension code when post-coordination is supported.",
+    "dx.rabies_exposure": "Codes the exposure. The wound itself is dx.open_wound (ND56.1).",
+    "dx.sickle_cell_crisis": "chronic is true so the problem-list prompt offers sickle cell disease."
+  },
+  "localSynonymSources": {
+    "puleesa, sukaali": "https://pmc.ncbi.nlm.nih.gov/articles/PMC9706863/",
+    "ensimbu": "https://www.epilepsysparks.com/blog/epilepsy-education-in-uganda",
+    "omusujja gw'ensiri, kabotongo": "https://www.researchgate.net/figure/Perceptions-on-the-impact-of-malaria-in-pregnancy-in-Mukono-District-Uganda_tbl2_7287375"
+  },
+  "terms": [
+    {
+      "id": "dx.fever_unexplained",
+      "display": "Fever, cause not yet known",
+      "synonyms": [
+        "fever",
+        "pyrexia",
+        "hotness of body",
+        "omusujja"
+      ],
+      "chronic": false,
+      "sensitivity": "standard",
+      "icd11": {
+        "code": "MG26",
+        "title": "Fever of other or unknown origin",
+        "status": "verified-mirror",
+        "source": "https://www.findacode.com/icd-11/code-915343154.html",
+        "verifiedOn": "2026-09-26"
+      },
+      "icd10_who": null,
+      "idsr_class": null,
+      "hmis_category_id": null,
+      "status": "draft"
+    },
+    {
+      "id": "dx.headache_unexplained",
+      "display": "Headache, cause not yet known",
+      "synonyms": [
+        "headache",
+        "head pain",
+        "cephalgia"
+      ],
+      "chronic": false,
+      "sensitivity": "standard",
+      "icd11": {
+        "code": "MB4D",
+        "title": "Headache, not elsewhere classified",
+        "status": "verified-mirror",
+        "source": "https://www.findacode.com/icd-11/code-1405405864.html",
+        "verifiedOn": "2026-09-26"
+      },
+      "icd10_who": null,
+      "idsr_class": null,
+      "hmis_category_id": null,
+      "status": "draft"
+    },
+    {
+      "id": "dx.abdominal_pain_unexplained",
+      "display": "Abdominal pain, cause not yet known",
+      "synonyms": [
+        "abdominal pain",
+        "stomach pain",
+        "stomach ache",
+        "tummy pain"
+      ],
+      "chronic": false,
+      "sensitivity": "standard",
+      "icd11": {
+        "code": "MD81.4",
+        "title": "Other and unspecified abdominal pain",
+        "status": "verified-mirror",
+        "source": "https://www.findacode.com/icd-11/code-166022696.html",
+        "verifiedOn": "2026-09-26"
+      },
+      "icd10_who": null,
+      "idsr_class": null,
+      "hmis_category_id": null,
+      "status": "draft"
+    },
+    {
+      "id": "dx.cough_unexplained",
+      "display": "Cough, cause not yet known",
+      "synonyms": [
+        "cough",
+        "chronic cough",
+        "productive cough"
+      ],
+      "chronic": false,
+      "sensitivity": "standard",
+      "icd11": {
+        "code": "MD12",
+        "title": "Cough",
+        "status": "verified-mirror",
+        "source": "https://www.findacode.com/icd-11/code-2027526159.html",
+        "verifiedOn": "2026-09-26"
+      },
+      "icd10_who": null,
+      "idsr_class": null,
+      "hmis_category_id": null,
+      "status": "draft"
+    },
+    {
+      "id": "dx.diarrhoea_unexplained",
+      "display": "Diarrhoea, cause not yet known",
+      "synonyms": [
+        "diarrhoea",
+        "diarrhea",
+        "loose stools",
+        "running stomach"
+      ],
+      "chronic": false,
+      "sensitivity": "standard",
+      "icd11": {
+        "code": "ME05.1",
+        "title": "Diarrhoea",
+        "status": "verified-mirror",
+        "source": "https://www.findacode.com/icd-11/code-116759077.html",
+        "verifiedOn": "2026-09-26"
+      },
+      "icd10_who": null,
+      "idsr_class": null,
+      "hmis_category_id": null,
+      "status": "draft"
+    },
+    {
+      "id": "dx.anaemia_unexplained",
+      "display": "Anaemia, cause not yet known",
+      "synonyms": [
+        "anaemia",
+        "anemia",
+        "low haemoglobin",
+        "low Hb"
+      ],
+      "chronic": false,
+      "sensitivity": "standard",
+      "icd11": {
+        "code": "3A9Z",
+        "title": "Anaemias or other erythrocyte disorders, unspecified",
+        "status": "verified-mirror",
+        "source": "https://www.findacode.com/icd-11/block-224336967.html",
+        "verifiedOn": "2026-09-26"
+      },
+      "icd10_who": null,
+      "idsr_class": null,
+      "hmis_category_id": null,
+      "status": "draft"
+    },
+    {
+      "id": "dx.seizure_unexplained",
+      "display": "Seizure, cause not yet known",
+      "synonyms": [
+        "seizure",
+        "convulsion",
+        "fit",
+        "fits"
+      ],
+      "chronic": false,
+      "sensitivity": "standard",
+      "icd11": {
+        "code": "8A6Z",
+        "title": "Epilepsy or seizures, unspecified",
+        "status": "verified-mirror",
+        "source": "https://www.findacode.com/icd-11/block-1397288146.html",
+        "verifiedOn": "2026-09-26"
+      },
+      "icd10_who": null,
+      "idsr_class": null,
+      "hmis_category_id": null,
+      "status": "draft"
+    },
+    {
+      "id": "dx.meningitis_unexplained",
+      "display": "Meningitis, cause not yet known",
+      "synonyms": [
+        "meningitis",
+        "suspected meningitis"
+      ],
+      "chronic": false,
+      "sensitivity": "standard",
+      "icd11": {
+        "code": "1D01.Z",
+        "title": "Infectious meningitis, unspecified",
+        "status": "verified-mirror",
+        "source": "https://www.findacode.com/icd-11/code-121670633.html",
+        "verifiedOn": "2026-09-26"
+      },
+      "icd10_who": null,
+      "idsr_class": null,
+      "hmis_category_id": null,
+      "status": "draft"
+    },
+    {
+      "id": "dx.liver_disease_unexplained",
+      "display": "Liver disease, cause not yet known",
+      "synonyms": [
+        "liver disease",
+        "hepatitis, cause unknown"
+      ],
+      "chronic": false,
+      "sensitivity": "standard",
+      "icd11": {
+        "code": "DB9Z",
+        "title": "Diseases of liver, unspecified",
+        "status": "verified-mirror",
+        "source": "https://www.findacode.com/icd-11/block-1784240230.html",
+        "verifiedOn": "2026-09-26"
+      },
+      "icd10_who": null,
+      "idsr_class": null,
+      "hmis_category_id": null,
+      "status": "draft"
+    },
+    {
+      "id": "dx.poisoning_unknown",
+      "display": "Poisoning, substance not yet known",
+      "synonyms": [
+        "poisoning",
+        "suspected poisoning"
+      ],
+      "chronic": false,
+      "sensitivity": "standard",
+      "icd11": {
+        "code": "NE6Z",
+        "title": "Harmful effects of unspecified substance",
+        "status": "verified-mirror",
+        "source": "https://www.findacode.com/icd-11/block-1236563202.html",
+        "verifiedOn": "2026-09-26"
+      },
+      "icd10_who": null,
+      "idsr_class": null,
+      "hmis_category_id": null,
+      "status": "draft"
+    },
+    {
+      "id": "dx.malaria_uncomplicated",
+      "display": "Malaria, uncomplicated",
+      "synonyms": [
+        "malaria",
+        "uncomplicated malaria",
+        "simple malaria",
+        "omusujja gw'ensiri",
+        "omusujja"
+      ],
+      "chronic": false,
+      "sensitivity": "standard",
+      "icd11": {
+        "code": "1F4Z",
+        "title": "Malaria, unspecified",
+        "status": "verified-mirror",
+        "source": "https://www.findacode.com/icd-11/block-1439886552.html",
+        "verifiedOn": "2026-09-26"
+      },
+      "icd10_who": null,
+      "idsr_class": null,
+      "hmis_category_id": null,
+      "status": "draft"
+    },
+    {
+      "id": "dx.malaria_unconfirmed",
+      "display": "Malaria, not confirmed by a test",
+      "synonyms": [
+        "clinical malaria",
+        "presumptive malaria",
+        "presumed malaria",
+        "malaria, no test"
+      ],
+      "chronic": false,
+      "sensitivity": "standard",
+      "icd11": {
+        "code": "1F45",
+        "title": "Malaria without parasitological confirmation",
+        "status": "verified-mirror",
+        "source": "https://www.findacode.com/icd-11/code-633896543.html",
+        "verifiedOn": "2026-09-26"
+      },
+      "icd10_who": null,
+      "idsr_class": null,
+      "hmis_category_id": null,
+      "status": "draft"
+    },
+    {
+      "id": "dx.malaria_severe",
+      "display": "Malaria, severe",
+      "synonyms": [
+        "severe malaria",
+        "complicated malaria",
+        "severe falciparum malaria"
+      ],
+      "chronic": false,
+      "sensitivity": "standard",
+      "icd11": {
+        "code": "1F40.Y",
+        "title": "Other severe or complicated Plasmodium falciparum malaria",
+        "status": "verified-mirror",
+        "source": "https://www.findacode.com/icd-11/code-579583286.html",
+        "verifiedOn": "2026-09-26"
+      },
+      "icd10_who": null,
+      "idsr_class": null,
+      "hmis_category_id": null,
+      "status": "draft"
+    },
+    {
+      "id": "dx.malaria_cerebral",
+      "display": "Cerebral malaria",
+      "synonyms": [
+        "cerebral malaria",
+        "malaria with cerebral complications"
+      ],
+      "chronic": false,
+      "sensitivity": "standard",
+      "icd11": {
+        "code": "1F40.0",
+        "title": "Plasmodium falciparum malaria with cerebral complications",
+        "status": "verified-mirror",
+        "source": "https://www.findacode.com/icd-11/code-1143114898.html",
+        "verifiedOn": "2026-09-26"
+      },
+      "icd10_who": null,
+      "idsr_class": null,
+      "hmis_category_id": null,
+      "status": "draft"
+    },
+    {
+      "id": "dx.pneumonia",
+      "display": "Pneumonia",
+      "synonyms": [
+        "pneumonia",
+        "chest infection",
+        "community-acquired pneumonia",
+        "CAP"
+      ],
+      "chronic": false,
+      "sensitivity": "standard",
+      "icd11": {
+        "code": "CA40.Z",
+        "title": "Pneumonia, organism unspecified",
+        "status": "verified-mirror",
+        "source": "https://www.findacode.com/icd-11/code-142052508.html",
+        "verifiedOn": "2026-09-26"
+      },
+      "icd10_who": null,
+      "idsr_class": null,
+      "hmis_category_id": null,
+      "status": "draft"
+    },
+    {
+      "id": "dx.urti",
+      "display": "Upper respiratory tract infection",
+      "synonyms": [
+        "URTI",
+        "common cold",
+        "cold",
+        "flu",
+        "coryza"
+      ],
+      "chronic": false,
+      "sensitivity": "standard",
+      "icd11": {
+        "code": "CA07.0",
+        "title": "Acute upper respiratory infection, site unspecified",
+        "status": "verified-mirror",
+        "source": "https://www.findacode.com/icd-11/code-819139656.html",
+        "verifiedOn": "2026-09-26"
+      },
+      "icd10_who": null,
+      "idsr_class": null,
+      "hmis_category_id": null,
+      "status": "draft"
+    },
+    {
+      "id": "dx.tonsillitis",
+      "display": "Acute tonsillitis",
+      "synonyms": [
+        "tonsillitis",
+        "tonsils",
+        "sore throat",
+        "pharyngitis"
+      ],
+      "chronic": false,
+      "sensitivity": "standard",
+      "icd11": {
+        "code": "CA03.Z",
+        "title": "Acute tonsillitis, unspecified",
+        "status": "verified-mirror",
+        "source": "https://www.findacode.com/icd-11/code-260431605.html",
+        "verifiedOn": "2026-09-26"
+      },
+      "icd10_who": null,
+      "idsr_class": null,
+      "hmis_category_id": null,
+      "status": "draft"
+    },
+    {
+      "id": "dx.otitis_media_acute",
+      "display": "Acute otitis media",
+      "synonyms": [
+        "AOM",
+        "ear infection",
+        "middle ear infection"
+      ],
+      "chronic": false,
+      "sensitivity": "standard",
+      "icd11": {
+        "code": "AB00",
+        "title": "Acute otitis media",
+        "status": "verified-mirror",
+        "source": "https://www.findacode.com/icd-11/code-476505279.html",
+        "verifiedOn": "2026-09-26"
+      },
+      "icd10_who": null,
+      "idsr_class": null,
+      "hmis_category_id": null,
+      "status": "draft"
+    },
+    {
+      "id": "dx.conjunctivitis",
+      "display": "Conjunctivitis",
+      "synonyms": [
+        "conjunctivitis",
+        "red eye",
+        "pink eye"
+      ],
+      "chronic": false,
+      "sensitivity": "standard",
+      "icd11": {
+        "code": "9A60.Z",
+        "title": "Conjunctivitis, unspecified",
+        "status": "verified-mirror",
+        "source": "https://www.findacode.com/icd-11/code-831696556.html",
+        "verifiedOn": "2026-09-26"
+      },
+      "icd10_who": null,
+      "idsr_class": null,
+      "hmis_category_id": null,
+      "status": "draft"
+    },
+    {
+      "id": "dx.uti",
+      "display": "Urinary tract infection",
+      "synonyms": [
+        "UTI",
+        "urine infection",
+        "cystitis",
+        "burning urination"
+      ],
+      "chronic": false,
+      "sensitivity": "standard",
+      "icd11": {
+        "code": "GC08.Z",
+        "title": "Urinary tract infection, site and agent not specified",
+        "status": "verified-mirror",
+        "source": "https://www.findacode.com/icd-11/code-1848472780.html",
+        "verifiedOn": "2026-09-26"
+      },
+      "icd10_who": null,
+      "idsr_class": null,
+      "hmis_category_id": null,
+      "status": "draft"
+    },
+    {
+      "id": "dx.gastroenteritis",
+      "display": "Acute gastroenteritis",
+      "synonyms": [
+        "gastroenteritis",
+        "AGE",
+        "diarrhoea and vomiting",
+        "infective diarrhoea"
+      ],
+      "chronic": false,
+      "sensitivity": "standard",
+      "icd11": {
+        "code": "1A40.Z",
+        "title": "Infectious gastroenteritis or colitis without specification of infectious agent",
+        "status": "verified-mirror",
+        "source": "https://www.findacode.com/icd-11/code-1688127370.html",
+        "verifiedOn": "2026-09-26"
+      },
+      "icd10_who": null,
+      "idsr_class": null,
+      "hmis_category_id": null,
+      "status": "draft"
+    },
+    {
+      "id": "dx.typhoid",
+      "display": "Typhoid fever",
+      "synonyms": [
+        "typhoid",
+        "enteric fever"
+      ],
+      "chronic": false,
+      "sensitivity": "standard",
+      "icd11": {
+        "code": "1A07.Z",
+        "title": "Typhoid fever, unspecified",
+        "status": "verified-mirror",
+        "source": "https://www.findacode.com/icd-11/code-1528414070.html",
+        "verifiedOn": "2026-09-26"
+      },
+      "icd10_who": null,
+      "idsr_class": null,
+      "hmis_category_id": null,
+      "status": "draft"
+    },
+    {
+      "id": "dx.sepsis",
+      "display": "Sepsis",
+      "synonyms": [
+        "sepsis",
+        "septicaemia",
+        "septicemia"
+      ],
+      "chronic": false,
+      "sensitivity": "standard",
+      "icd11": {
+        "code": "1G40",
+        "title": "Sepsis without septic shock",
+        "status": "verified-mirror",
+        "source": "https://www.findacode.com/icd-11/code-622600769.html",
+        "verifiedOn": "2026-09-26"
+      },
+      "icd10_who": null,
+      "idsr_class": null,
+      "hmis_category_id": null,
+      "status": "draft"
+    },
+    {
+      "id": "dx.septic_shock",
+      "display": "Septic shock",
+      "synonyms": [
+        "septic shock"
+      ],
+      "chronic": false,
+      "sensitivity": "standard",
+      "icd11": {
+        "code": "1G41",
+        "title": "Sepsis with septic shock",
+        "status": "verified-mirror",
+        "source": "https://www.findacode.com/icd-11/code-1683090852.html",
+        "verifiedOn": "2026-09-26"
+      },
+      "icd10_who": null,
+      "idsr_class": null,
+      "hmis_category_id": null,
+      "status": "draft"
+    },
+    {
+      "id": "dx.meningitis_bacterial",
+      "display": "Bacterial meningitis",
+      "synonyms": [
+        "bacterial meningitis",
+        "pyogenic meningitis"
+      ],
+      "chronic": false,
+      "sensitivity": "standard",
+      "icd11": {
+        "code": "1D01.0Z",
+        "title": "Bacterial meningitis, unspecified",
+        "status": "verified-mirror",
+        "source": "https://www.findacode.com/icd-11/code-684930313.html",
+        "verifiedOn": "2026-09-26"
+      },
+      "icd10_who": null,
+      "idsr_class": null,
+      "hmis_category_id": null,
+      "status": "draft"
+    },
+    {
+      "id": "dx.cryptococcal_meningitis",
+      "display": "Cryptococcal meningitis",
+      "synonyms": [
+        "cryptococcal meningitis",
+        "CCM",
+        "crypto meningitis"
+      ],
+      "chronic": false,
+      "sensitivity": "restricted",
+      "icd11": {
+        "code": "1F27.10",
+        "title": "Meningitis due to Cryptococcus neoformans",
+        "status": "verified-mirror",
+        "source": "https://www.findacode.com/icd-11/code-738912364.html",
+        "verifiedOn": "2026-09-26"
+      },
+      "icd10_who": null,
+      "idsr_class": null,
+      "hmis_category_id": null,
+      "status": "draft"
+    },
+    {
+      "id": "dx.hiv",
+      "display": "HIV infection",
+      "synonyms": [
+        "HIV",
+        "HIV positive",
+        "HIV/AIDS",
+        "AIDS",
+        "living with HIV",
+        "PLHIV"
+      ],
+      "chronic": true,
+      "sensitivity": "restricted",
+      "icd11": {
+        "code": "1C62.Z",
+        "title": "Human immunodeficiency virus disease without mention of tuberculosis or malaria, clinical stage unspecified",
+        "status": "verified-mirror",
+        "source": "https://www.findacode.com/icd-11/code-1508081745.html",
+        "verifiedOn": "2026-09-26"
+      },
+      "icd10_who": null,
+      "idsr_class": null,
+      "hmis_category_id": null,
+      "status": "draft"
+    },
+    {
+      "id": "dx.tb_pulmonary_confirmed",
+      "display": "Pulmonary tuberculosis, bacteriologically confirmed",
+      "synonyms": [
+        "PTB",
+        "pulmonary TB",
+        "TB",
+        "bacteriologically confirmed TB",
+        "Xpert positive TB",
+        "smear positive TB"
+      ],
+      "chronic": true,
+      "sensitivity": "restricted",
+      "icd11": {
+        "code": "1B10.0",
+        "title": "Respiratory tuberculosis, confirmed",
+        "status": "verified-mirror",
+        "source": "https://www.findacode.com/icd-11/code-983550510.html",
+        "verifiedOn": "2026-09-26"
+      },
+      "icd10_who": null,
+      "idsr_class": null,
+      "hmis_category_id": null,
+      "status": "draft"
+    },
+    {
+      "id": "dx.tb_pulmonary_clinical",
+      "display": "Pulmonary tuberculosis, clinically diagnosed",
+      "synonyms": [
+        "clinically diagnosed TB",
+        "PTB, clinically diagnosed",
+        "TB",
+        "smear negative TB"
+      ],
+      "chronic": true,
+      "sensitivity": "restricted",
+      "icd11": {
+        "code": "1B10.1",
+        "title": "Respiratory tuberculosis, not confirmed",
+        "status": "verified-mirror",
+        "source": "https://www.findacode.com/icd-11/code-1311939281.html",
+        "verifiedOn": "2026-09-26"
+      },
+      "icd10_who": null,
+      "idsr_class": null,
+      "hmis_category_id": null,
+      "status": "draft"
+    },
+    {
+      "id": "dx.sti_urethral_discharge",
+      "display": "Urethral discharge syndrome",
+      "synonyms": [
+        "urethral discharge",
+        "UDS",
+        "urethritis",
+        "STI",
+        "sexually transmitted infection"
+      ],
+      "chronic": false,
+      "sensitivity": "restricted",
+      "icd11": {
+        "code": "1A9Z",
+        "title": "Predominantly sexually transmitted infections, unspecified",
+        "status": "verified-mirror",
+        "source": "https://www.findacode.com/icd-11/block-1904876434.html",
+        "verifiedOn": "2026-09-26"
+      },
+      "icd10_who": null,
+      "idsr_class": null,
+      "hmis_category_id": null,
+      "status": "draft"
+    },
+    {
+      "id": "dx.sti_genital_ulcer",
+      "display": "Genital ulcer syndrome",
+      "synonyms": [
+        "genital ulcer",
+        "GUD",
+        "genital sore",
+        "STI",
+        "sexually transmitted infection"
+      ],
+      "chronic": false,
+      "sensitivity": "restricted",
+      "icd11": {
+        "code": "1A9Z",
+        "title": "Predominantly sexually transmitted infections, unspecified",
+        "status": "verified-mirror",
+        "source": "https://www.findacode.com/icd-11/block-1904876434.html",
+        "verifiedOn": "2026-09-26"
+      },
+      "icd10_who": null,
+      "idsr_class": null,
+      "hmis_category_id": null,
+      "status": "draft"
+    },
+    {
+      "id": "dx.vaginal_discharge",
+      "display": "Abnormal vaginal discharge syndrome",
+      "synonyms": [
+        "vaginal discharge",
+        "VDS",
+        "PV discharge"
+      ],
+      "chronic": false,
+      "sensitivity": "restricted",
+      "icd11": {
+        "code": "MF3A",
+        "title": "Vaginal discharge",
+        "status": "verified-mirror",
+        "source": "https://www.findacode.com/icd-11/block-260602177.html",
+        "verifiedOn": "2026-09-26"
+      },
+      "icd10_who": null,
+      "idsr_class": null,
+      "hmis_category_id": null,
+      "status": "draft"
+    },
+    {
+      "id": "dx.syphilis",
+      "display": "Syphilis",
+      "synonyms": [
+        "syphilis",
+        "kabotongo"
+      ],
+      "chronic": false,
+      "sensitivity": "restricted",
+      "icd11": {
+        "code": "1A6Z",
+        "title": "Syphilis, unspecified",
+        "status": "verified-mirror",
+        "source": "https://www.findacode.com/icd-11/block-455894495.html",
+        "verifiedOn": "2026-09-26"
+      },
+      "icd10_who": null,
+      "idsr_class": null,
+      "hmis_category_id": null,
+      "status": "draft"
+    },
+    {
+      "id": "dx.pid",
+      "display": "Pelvic inflammatory disease",
+      "synonyms": [
+        "PID",
+        "lower abdominal pain syndrome",
+        "salpingitis"
+      ],
+      "chronic": false,
+      "sensitivity": "restricted",
+      "icd11": {
+        "code": "GA05.Z",
+        "title": "Female pelvic inflammatory diseases, unspecified",
+        "status": "verified-mirror",
+        "source": "https://www.findacode.com/icd-11/code-1230041477.html",
+        "verifiedOn": "2026-09-26"
+      },
+      "icd10_who": null,
+      "idsr_class": null,
+      "hmis_category_id": null,
+      "status": "draft"
+    },
+    {
+      "id": "dx.cellulitis",
+      "display": "Cellulitis",
+      "synonyms": [
+        "cellulitis",
+        "spreading skin infection"
+      ],
+      "chronic": false,
+      "sensitivity": "standard",
+      "icd11": {
+        "code": "1B70.Z",
+        "title": "Bacterial cellulitis or lymphangitis due to unspecified bacterium",
+        "status": "verified-mirror",
+        "source": "https://www.findacode.com/icd-11/code-2144774073.html",
+        "verifiedOn": "2026-09-26"
+      },
+      "icd10_who": null,
+      "idsr_class": null,
+      "hmis_category_id": null,
+      "status": "draft"
+    },
+    {
+      "id": "dx.skin_abscess",
+      "display": "Skin abscess",
+      "synonyms": [
+        "abscess",
+        "skin abscess",
+        "pus collection",
+        "cutaneous abscess"
+      ],
+      "chronic": false,
+      "sensitivity": "standard",
+      "icd11": {
+        "code": "1B75.3",
+        "title": "Pyogenic abscess of the skin",
+        "status": "verified-mirror",
+        "source": "https://www.findacode.com/icd-11/code-1324834502.html",
+        "verifiedOn": "2026-09-26"
+      },
+      "icd10_who": null,
+      "idsr_class": null,
+      "hmis_category_id": null,
+      "status": "draft"
+    },
+    {
+      "id": "dx.tinea",
+      "display": "Tinea (fungal skin infection)",
+      "synonyms": [
+        "tinea",
+        "ringworm",
+        "fungal skin infection",
+        "dermatophytosis"
+      ],
+      "chronic": false,
+      "sensitivity": "standard",
+      "icd11": {
+        "code": "1F28.Z",
+        "title": "Dermatophytosis, unspecified",
+        "status": "verified-mirror",
+        "source": "https://www.findacode.com/icd-11/code-1802307036.html",
+        "verifiedOn": "2026-09-26"
+      },
+      "icd10_who": null,
+      "idsr_class": null,
+      "hmis_category_id": null,
+      "status": "draft"
+    },
+    {
+      "id": "dx.scabies",
+      "display": "Scabies",
+      "synonyms": [
+        "scabies"
+      ],
+      "chronic": false,
+      "sensitivity": "standard",
+      "icd11": {
+        "code": "1G04.Z",
+        "title": "Scabies, unspecified",
+        "status": "verified-mirror",
+        "source": "https://www.findacode.com/icd-11/code-876005123.html",
+        "verifiedOn": "2026-09-26"
+      },
+      "icd10_who": null,
+      "idsr_class": null,
+      "hmis_category_id": null,
+      "status": "draft"
+    },
+    {
+      "id": "dx.dental_abscess",
+      "display": "Dental abscess",
+      "synonyms": [
+        "dental abscess",
+        "tooth abscess",
+        "periapical abscess"
+      ],
+      "chronic": false,
+      "sensitivity": "standard",
+      "icd11": {
+        "code": "DA09.6Z",
+        "title": "Periapical abscess, unspecified",
+        "status": "verified-mirror",
+        "source": "https://www.findacode.com/icd-11/code-2050987051.html",
+        "verifiedOn": "2026-09-26"
+      },
+      "icd10_who": null,
+      "idsr_class": null,
+      "hmis_category_id": null,
+      "status": "draft"
+    },
+    {
+      "id": "dx.schistosomiasis",
+      "display": "Schistosomiasis",
+      "synonyms": [
+        "bilharzia",
+        "bilharziasis",
+        "schisto"
+      ],
+      "chronic": false,
+      "sensitivity": "standard",
+      "icd11": {
+        "code": "1F86.Z",
+        "title": "Schistosomiasis due to unspecified or unknown Schistosoma species",
+        "status": "verified-mirror",
+        "source": "https://www.findacode.com/icd-11/code-1194562592.html",
+        "verifiedOn": "2026-09-26"
+      },
+      "icd10_who": null,
+      "idsr_class": null,
+      "hmis_category_id": null,
+      "status": "draft"
+    },
+    {
+      "id": "dx.brucellosis",
+      "display": "Brucellosis",
+      "synonyms": [
+        "brucellosis",
+        "undulant fever",
+        "Malta fever"
+      ],
+      "chronic": false,
+      "sensitivity": "standard",
+      "icd11": {
+        "code": "1B95",
+        "title": "Brucellosis",
+        "status": "verified-mirror",
+        "source": "https://www.findacode.com/icd-11/code-730510331.html",
+        "verifiedOn": "2026-09-26"
+      },
+      "icd10_who": null,
+      "idsr_class": null,
+      "hmis_category_id": null,
+      "status": "draft"
+    },
+    {
+      "id": "dx.rabies_exposure",
+      "display": "Dog bite, possible rabies exposure",
+      "synonyms": [
+        "dog bite",
+        "animal bite",
+        "rabies exposure",
+        "rabies post-exposure prophylaxis"
+      ],
+      "chronic": false,
+      "sensitivity": "standard",
+      "icd11": {
+        "code": "QC90.3",
+        "title": "Contact with or exposure to rabies",
+        "status": "verified-mirror",
+        "source": "https://www.findacode.com/icd-11/code-585858381.html",
+        "verifiedOn": "2026-09-26"
+      },
+      "icd10_who": null,
+      "idsr_class": null,
+      "hmis_category_id": null,
+      "status": "draft"
+    },
+    {
+      "id": "dx.hepatitis_b_chronic",
+      "display": "Chronic hepatitis B",
+      "synonyms": [
+        "hepatitis B",
+        "HBV",
+        "HBsAg positive"
+      ],
+      "chronic": true,
+      "sensitivity": "standard",
+      "icd11": {
+        "code": "1E51.0Z",
+        "title": "Chronic hepatitis B, unspecified",
+        "status": "verified-mirror",
+        "source": "https://www.findacode.com/icd-11/code-352087872.html",
+        "verifiedOn": "2026-09-26"
+      },
+      "icd10_who": null,
+      "idsr_class": null,
+      "hmis_category_id": null,
+      "status": "draft"
+    },
+    {
+      "id": "dx.hypertension",
+      "display": "Hypertension",
+      "synonyms": [
+        "high blood pressure",
+        "HTN",
+        "pressure",
+        "BP",
+        "puleesa"
+      ],
+      "chronic": true,
+      "sensitivity": "standard",
+      "icd11": {
+        "code": "BA00.Z",
+        "title": "Essential hypertension, unspecified",
+        "status": "verified-mirror",
+        "source": "https://www.findacode.com/icd-11/code-761947693.html",
+        "verifiedOn": "2026-09-26"
+      },
+      "icd10_who": null,
+      "idsr_class": null,
+      "hmis_category_id": null,
+      "status": "draft"
+    },
+    {
+      "id": "dx.hypertensive_crisis",
+      "display": "Hypertensive crisis",
+      "synonyms": [
+        "hypertensive emergency",
+        "hypertensive urgency",
+        "very high blood pressure"
+      ],
+      "chronic": false,
+      "sensitivity": "standard",
+      "icd11": {
+        "code": "BA03",
+        "title": "Hypertensive crisis",
+        "status": "verified-mirror",
+        "source": "https://www.findacode.com/icd-11/code-1002963291.html",
+        "verifiedOn": "2026-09-26"
+      },
+      "icd10_who": null,
+      "idsr_class": null,
+      "hmis_category_id": null,
+      "status": "draft"
+    },
+    {
+      "id": "dx.dm_type1",
+      "display": "Type 1 diabetes",
+      "synonyms": [
+        "T1DM",
+        "type 1 diabetes mellitus",
+        "insulin-dependent diabetes",
+        "sukaali"
+      ],
+      "chronic": true,
+      "sensitivity": "standard",
+      "icd11": {
+        "code": "5A10",
+        "title": "Type 1 diabetes mellitus",
+        "status": "verified-mirror",
+        "source": "https://www.findacode.com/icd-11/code-1651053999.html",
+        "verifiedOn": "2026-09-26"
+      },
+      "icd10_who": null,
+      "idsr_class": null,
+      "hmis_category_id": null,
+      "status": "draft"
+    },
+    {
+      "id": "dx.dm_type2",
+      "display": "Type 2 diabetes",
+      "synonyms": [
+        "T2DM",
+        "type 2 diabetes mellitus",
+        "diabetes",
+        "DM",
+        "sugar",
+        "sukaali"
+      ],
+      "chronic": true,
+      "sensitivity": "standard",
+      "icd11": {
+        "code": "5A11",
+        "title": "Type 2 diabetes mellitus",
+        "status": "verified-mirror",
+        "source": "https://www.findacode.com/icd-11/code-119724091.html",
+        "verifiedOn": "2026-09-26"
+      },
+      "icd10_who": null,
+      "idsr_class": null,
+      "hmis_category_id": null,
+      "status": "draft"
+    },
+    {
+      "id": "dx.dm_type_unknown",
+      "display": "Diabetes, type not yet determined",
+      "synonyms": [
+        "diabetes",
+        "DM",
+        "sugar",
+        "sukaali",
+        "new diabetes"
+      ],
+      "chronic": true,
+      "sensitivity": "standard",
+      "icd11": {
+        "code": "5A14",
+        "title": "Diabetes mellitus, type unspecified",
+        "status": "verified-mirror",
+        "source": "https://www.findacode.com/icd-11/code-1697306310.html",
+        "verifiedOn": "2026-09-26"
+      },
+      "icd10_who": null,
+      "idsr_class": null,
+      "hmis_category_id": null,
+      "status": "draft"
+    },
+    {
+      "id": "dx.dka",
+      "display": "Diabetic ketoacidosis",
+      "synonyms": [
+        "DKA",
+        "ketoacidosis"
+      ],
+      "chronic": false,
+      "sensitivity": "standard",
+      "icd11": {
+        "code": "5A22.0",
+        "title": "Diabetic ketoacidosis without coma",
+        "status": "verified-mirror",
+        "source": "https://www.findacode.com/icd-11/code-540530695.html",
+        "verifiedOn": "2026-09-26"
+      },
+      "icd10_who": null,
+      "idsr_class": null,
+      "hmis_category_id": null,
+      "status": "draft"
+    },
+    {
+      "id": "dx.hhs",
+      "display": "Hyperosmolar hyperglycaemic state",
+      "synonyms": [
+        "HHS",
+        "HONK",
+        "hyperosmolar state"
+      ],
+      "chronic": false,
+      "sensitivity": "standard",
+      "icd11": {
+        "code": "5A20.Z",
+        "title": "Diabetic hyperosmolar hyperglycaemic state, unspecified",
+        "status": "verified-mirror",
+        "source": "https://www.findacode.com/icd-11/code-463969617.html",
+        "verifiedOn": "2026-09-26"
+      },
+      "icd10_who": null,
+      "idsr_class": null,
+      "hmis_category_id": null,
+      "status": "draft"
+    },
+    {
+      "id": "dx.hypoglycaemia_dm",
+      "display": "Hypoglycaemia in a person with diabetes",
+      "synonyms": [
+        "hypo",
+        "hypoglycaemia",
+        "hypoglycemia",
+        "low sugar"
+      ],
+      "chronic": false,
+      "sensitivity": "standard",
+      "icd11": {
+        "code": "5A21.Z",
+        "title": "Hypoglycaemia in the context of diabetes, unspecified",
+        "status": "verified-mirror",
+        "source": "https://www.findacode.com/icd-11/code-193526903.html",
+        "verifiedOn": "2026-09-26"
+      },
+      "icd10_who": null,
+      "idsr_class": null,
+      "hmis_category_id": null,
+      "status": "draft"
+    },
+    {
+      "id": "dx.hypoglycaemia_no_dm",
+      "display": "Hypoglycaemia, no known diabetes",
+      "synonyms": [
+        "hypoglycaemia",
+        "hypoglycemia",
+        "low blood sugar"
+      ],
+      "chronic": false,
+      "sensitivity": "standard",
+      "icd11": {
+        "code": "5A41",
+        "title": "Hypoglycaemia without associated diabetes",
+        "status": "verified-mirror",
+        "source": "https://www.findacode.com/icd-11/code-1004695600.html",
+        "verifiedOn": "2026-09-26"
+      },
+      "icd10_who": null,
+      "idsr_class": null,
+      "hmis_category_id": null,
+      "status": "draft"
+    },
+    {
+      "id": "dx.asthma",
+      "display": "Asthma",
+      "synonyms": [
+        "asthma",
+        "bronchial asthma"
+      ],
+      "chronic": true,
+      "sensitivity": "standard",
+      "icd11": {
+        "code": "CA23.32",
+        "title": "Unspecified asthma, uncomplicated",
+        "status": "verified-mirror",
+        "source": "https://www.findacode.com/icd-11/code-2138913203.html",
+        "verifiedOn": "2026-09-26"
+      },
+      "icd10_who": null,
+      "idsr_class": null,
+      "hmis_category_id": null,
+      "status": "draft"
+    },
+    {
+      "id": "dx.asthma_exacerbation",
+      "display": "Acute asthma exacerbation",
+      "synonyms": [
+        "asthma attack",
+        "acute asthma",
+        "acute severe asthma"
+      ],
+      "chronic": false,
+      "sensitivity": "standard",
+      "icd11": {
+        "code": "CA23.30",
+        "title": "Unspecified asthma with exacerbation",
+        "status": "verified-mirror",
+        "source": "https://www.findacode.com/icd-11/code-2138913203.html",
+        "verifiedOn": "2026-09-26"
+      },
+      "icd10_who": null,
+      "idsr_class": null,
+      "hmis_category_id": null,
+      "status": "draft"
+    },
+    {
+      "id": "dx.copd",
+      "display": "Chronic obstructive pulmonary disease",
+      "synonyms": [
+        "COPD"
+      ],
+      "chronic": true,
+      "sensitivity": "standard",
+      "icd11": {
+        "code": "CA22.Z",
+        "title": "Chronic obstructive pulmonary disease, unspecified",
+        "status": "verified-mirror",
+        "source": "https://www.findacode.com/icd-11/code-133207228.html",
+        "verifiedOn": "2026-09-26"
+      },
+      "icd10_who": null,
+      "idsr_class": null,
+      "hmis_category_id": null,
+      "status": "draft"
+    },
+    {
+      "id": "dx.copd_exacerbation",
+      "display": "COPD exacerbation",
+      "synonyms": [
+        "AECOPD",
+        "acute exacerbation of COPD"
+      ],
+      "chronic": false,
+      "sensitivity": "standard",
+      "icd11": {
+        "code": "CA22.0",
+        "title": "Chronic obstructive pulmonary disease with acute exacerbation, unspecified",
+        "status": "verified-mirror",
+        "source": "https://www.findacode.com/icd-11/code-1665365733.html",
+        "verifiedOn": "2026-09-26"
+      },
+      "icd10_who": null,
+      "idsr_class": null,
+      "hmis_category_id": null,
+      "status": "draft"
+    },
+    {
+      "id": "dx.heart_failure",
+      "display": "Heart failure",
+      "synonyms": [
+        "heart failure",
+        "HF",
+        "CCF",
+        "congestive cardiac failure"
+      ],
+      "chronic": true,
+      "sensitivity": "standard",
+      "icd11": {
+        "code": "BD1Z",
+        "title": "Heart failure, unspecified",
+        "status": "verified-mirror",
+        "source": "https://www.findacode.com/icd-11/block-1458683894.html",
+        "verifiedOn": "2026-09-26"
+      },
+      "icd10_who": null,
+      "idsr_class": null,
+      "hmis_category_id": null,
+      "status": "draft"
+    },
+    {
+      "id": "dx.stroke",
+      "display": "Stroke",
+      "synonyms": [
+        "stroke",
+        "CVA",
+        "cerebrovascular accident"
+      ],
+      "chronic": true,
+      "sensitivity": "standard",
+      "icd11": {
+        "code": "8B20",
+        "title": "Stroke not known if ischaemic or haemorrhagic",
+        "status": "verified-mirror",
+        "source": "https://www.findacode.com/icd-11/code-1442995018.html",
+        "verifiedOn": "2026-09-26"
+      },
+      "icd10_who": null,
+      "idsr_class": null,
+      "hmis_category_id": null,
+      "status": "draft"
+    },
+    {
+      "id": "dx.epilepsy",
+      "display": "Epilepsy",
+      "synonyms": [
+        "epilepsy",
+        "seizure disorder",
+        "fits",
+        "ensimbu"
+      ],
+      "chronic": true,
+      "sensitivity": "standard",
+      "icd11": {
+        "code": "8A6Z",
+        "title": "Epilepsy or seizures, unspecified",
+        "status": "verified-mirror",
+        "source": "https://www.findacode.com/icd-11/block-1397288146.html",
+        "verifiedOn": "2026-09-26"
+      },
+      "icd10_who": null,
+      "idsr_class": null,
+      "hmis_category_id": null,
+      "status": "draft"
+    },
+    {
+      "id": "dx.status_epilepticus",
+      "display": "Status epilepticus",
+      "synonyms": [
+        "status epilepticus",
+        "prolonged seizure"
+      ],
+      "chronic": false,
+      "sensitivity": "standard",
+      "icd11": {
+        "code": "8A66.Z",
+        "title": "Status epilepticus, unspecified",
+        "status": "verified-mirror",
+        "source": "https://www.findacode.com/icd-11/code-906174792.html",
+        "verifiedOn": "2026-09-26"
+      },
+      "icd10_who": null,
+      "idsr_class": null,
+      "hmis_category_id": null,
+      "status": "draft"
+    },
+    {
+      "id": "dx.sickle_cell_disease",
+      "display": "Sickle cell disease",
+      "synonyms": [
+        "SCD",
+        "sickle cell anaemia",
+        "sickler",
+        "HbSS"
+      ],
+      "chronic": true,
+      "sensitivity": "standard",
+      "icd11": {
+        "code": "3A51.1",
+        "title": "Sickle cell disease without crisis",
+        "status": "verified-mirror",
+        "source": "https://www.findacode.com/icd-11/code-975559344.html",
+        "verifiedOn": "2026-09-26"
+      },
+      "icd10_who": null,
+      "idsr_class": null,
+      "hmis_category_id": null,
+      "status": "draft"
+    },
+    {
+      "id": "dx.sickle_cell_crisis",
+      "display": "Sickle cell crisis",
+      "synonyms": [
+        "sickle cell crisis",
+        "vaso-occlusive crisis",
+        "VOC",
+        "painful crisis"
+      ],
+      "chronic": true,
+      "sensitivity": "standard",
+      "icd11": {
+        "code": "3A51.2",
+        "title": "Sickle cell disease with crisis",
+        "status": "verified-mirror",
+        "source": "https://www.findacode.com/icd-11/code-975559344.html",
+        "verifiedOn": "2026-09-26"
+      },
+      "icd10_who": null,
+      "idsr_class": null,
+      "hmis_category_id": null,
+      "status": "draft"
+    },
+    {
+      "id": "dx.ckd",
+      "display": "Chronic kidney disease",
+      "synonyms": [
+        "CKD",
+        "chronic renal failure",
+        "CRF"
+      ],
+      "chronic": true,
+      "sensitivity": "standard",
+      "icd11": {
+        "code": "GB61.Z",
+        "title": "Chronic kidney disease, stage unspecified",
+        "status": "verified-mirror",
+        "source": "https://www.findacode.com/icd-11/code-412389819.html",
+        "verifiedOn": "2026-09-26"
+      },
+      "icd10_who": null,
+      "idsr_class": null,
+      "hmis_category_id": null,
+      "status": "draft"
+    },
+    {
+      "id": "dx.aki",
+      "display": "Acute kidney injury",
+      "synonyms": [
+        "AKI",
+        "acute renal failure",
+        "ARF"
+      ],
+      "chronic": false,
+      "sensitivity": "standard",
+      "icd11": {
+        "code": "GB60.Z",
+        "title": "Acute kidney failure, stage unspecified",
+        "status": "verified-mirror",
+        "source": "https://www.findacode.com/icd-11/code-476391827.html",
+        "verifiedOn": "2026-09-26"
+      },
+      "icd10_who": null,
+      "idsr_class": null,
+      "hmis_category_id": null,
+      "status": "draft"
+    },
+    {
+      "id": "dx.liver_cirrhosis",
+      "display": "Liver cirrhosis",
+      "synonyms": [
+        "cirrhosis",
+        "chronic liver disease",
+        "CLD"
+      ],
+      "chronic": true,
+      "sensitivity": "standard",
+      "icd11": {
+        "code": "DB93.1",
+        "title": "Hepatic cirrhosis",
+        "status": "verified-mirror",
+        "source": "https://www.findacode.com/icd-11/code-481852400.html",
+        "verifiedOn": "2026-09-26"
+      },
+      "icd10_who": null,
+      "idsr_class": null,
+      "hmis_category_id": null,
+      "status": "draft"
+    },
+    {
+      "id": "dx.peptic_ulcer",
+      "display": "Peptic ulcer disease",
+      "synonyms": [
+        "PUD",
+        "peptic ulcer",
+        "stomach ulcer",
+        "ulcers"
+      ],
+      "chronic": false,
+      "sensitivity": "standard",
+      "icd11": {
+        "code": "DA61",
+        "title": "Peptic ulcer, site unspecified",
+        "status": "verified-mirror",
+        "source": "https://www.findacode.com/icd-11/code-1145813715.html",
+        "verifiedOn": "2026-09-26"
+      },
+      "icd10_who": null,
+      "idsr_class": null,
+      "hmis_category_id": null,
+      "status": "draft"
+    },
+    {
+      "id": "dx.dyspepsia",
+      "display": "Dyspepsia",
+      "synonyms": [
+        "dyspepsia",
+        "indigestion",
+        "epigastric pain",
+        "ulcers"
+      ],
+      "chronic": false,
+      "sensitivity": "standard",
+      "icd11": {
+        "code": "MD92",
+        "title": "Dyspepsia",
+        "status": "verified-mirror",
+        "source": "https://www.findacode.com/icd-11/code-869622187.html",
+        "verifiedOn": "2026-09-26"
+      },
+      "icd10_who": null,
+      "idsr_class": null,
+      "hmis_category_id": null,
+      "status": "draft"
+    },
+    {
+      "id": "dx.low_back_pain",
+      "display": "Low back pain",
+      "synonyms": [
+        "back pain",
+        "backache",
+        "LBP",
+        "lumbago"
+      ],
+      "chronic": false,
+      "sensitivity": "standard",
+      "icd11": {
+        "code": "ME84.2Z",
+        "title": "Low back pain, unspecified",
+        "status": "verified-mirror",
+        "source": "https://www.findacode.com/icd-11/code-1815305992.html",
+        "verifiedOn": "2026-09-26"
+      },
+      "icd10_who": null,
+      "idsr_class": null,
+      "hmis_category_id": null,
+      "status": "draft"
+    },
+    {
+      "id": "dx.osteoarthritis",
+      "display": "Osteoarthritis",
+      "synonyms": [
+        "OA",
+        "osteoarthritis",
+        "degenerative joint disease",
+        "knee osteoarthritis"
+      ],
+      "chronic": true,
+      "sensitivity": "standard",
+      "icd11": {
+        "code": "FA0Z",
+        "title": "Osteoarthritis, unspecified",
+        "status": "verified-mirror",
+        "source": "https://www.findacode.com/icd-11/block-558562409.html",
+        "verifiedOn": "2026-09-26"
+      },
+      "icd10_who": null,
+      "idsr_class": null,
+      "hmis_category_id": null,
+      "status": "draft"
+    },
+    {
+      "id": "dx.undernutrition",
+      "display": "Undernutrition",
+      "synonyms": [
+        "malnutrition",
+        "undernutrition",
+        "underweight"
+      ],
+      "chronic": false,
+      "sensitivity": "standard",
+      "icd11": {
+        "code": "5B7Z",
+        "title": "Unspecified undernutrition",
+        "status": "verified-mirror",
+        "source": "https://www.findacode.com/icd-11/block-1517885800.html",
+        "verifiedOn": "2026-09-26"
+      },
+      "icd10_who": null,
+      "idsr_class": null,
+      "hmis_category_id": null,
+      "status": "draft"
+    },
+    {
+      "id": "dx.depression",
+      "display": "Depression",
+      "synonyms": [
+        "depression",
+        "depressive disorder",
+        "low mood"
+      ],
+      "chronic": true,
+      "sensitivity": "restricted",
+      "icd11": {
+        "code": "6A7Z",
+        "title": "Depressive disorders, unspecified",
+        "status": "verified-mirror",
+        "source": "https://www.findacode.com/icd-11/block-1563440232.html",
+        "verifiedOn": "2026-09-26"
+      },
+      "icd10_who": null,
+      "idsr_class": null,
+      "hmis_category_id": null,
+      "status": "draft"
+    },
+    {
+      "id": "dx.psychosis",
+      "display": "Psychotic disorder",
+      "synonyms": [
+        "psychosis",
+        "psychotic illness",
+        "acute psychosis"
+      ],
+      "chronic": true,
+      "sensitivity": "restricted",
+      "icd11": {
+        "code": "6A2Z",
+        "title": "Schizophrenia or other primary psychotic disorders, unspecified",
+        "status": "verified-mirror",
+        "source": "https://www.findacode.com/icd-11/block-405565289.html",
+        "verifiedOn": "2026-09-26"
+      },
+      "icd10_who": null,
+      "idsr_class": null,
+      "hmis_category_id": null,
+      "status": "draft"
+    },
+    {
+      "id": "dx.alcohol_dependence",
+      "display": "Alcohol dependence",
+      "synonyms": [
+        "alcohol use disorder",
+        "AUD",
+        "alcoholism",
+        "alcohol addiction"
+      ],
+      "chronic": true,
+      "sensitivity": "restricted",
+      "icd11": {
+        "code": "6C40.2Z",
+        "title": "Alcohol dependence, unspecified",
+        "status": "verified-mirror",
+        "source": "https://www.findacode.com/icd-11/code-1580466198.html",
+        "verifiedOn": "2026-09-26"
+      },
+      "icd10_who": null,
+      "idsr_class": null,
+      "hmis_category_id": null,
+      "status": "draft"
+    },
+    {
+      "id": "dx.alcohol_withdrawal",
+      "display": "Alcohol withdrawal",
+      "synonyms": [
+        "alcohol withdrawal",
+        "alcohol withdrawal syndrome"
+      ],
+      "chronic": false,
+      "sensitivity": "restricted",
+      "icd11": {
+        "code": "6C40.4Z",
+        "title": "Alcohol withdrawal, unspecified",
+        "status": "verified-mirror",
+        "source": "https://www.findacode.com/icd-11/code-998231424.html",
+        "verifiedOn": "2026-09-26"
+      },
+      "icd10_who": null,
+      "idsr_class": null,
+      "hmis_category_id": null,
+      "status": "draft"
+    },
+    {
+      "id": "dx.hyperemesis",
+      "display": "Hyperemesis gravidarum",
+      "synonyms": [
+        "hyperemesis",
+        "excessive vomiting in pregnancy"
+      ],
+      "chronic": false,
+      "sensitivity": "standard",
+      "icd11": {
+        "code": "JA60.Z",
+        "title": "Excessive vomiting in pregnancy, unspecified",
+        "status": "verified-mirror",
+        "source": "https://www.findacode.com/icd-11/code-1745892781.html",
+        "verifiedOn": "2026-09-26"
+      },
+      "icd10_who": null,
+      "idsr_class": null,
+      "hmis_category_id": null,
+      "status": "draft"
+    },
+    {
+      "id": "dx.pre_eclampsia",
+      "display": "Pre-eclampsia",
+      "synonyms": [
+        "pre-eclampsia",
+        "preeclampsia",
+        "PET"
+      ],
+      "chronic": false,
+      "sensitivity": "standard",
+      "icd11": {
+        "code": "JA24.Z",
+        "title": "Pre-eclampsia, unspecified",
+        "status": "verified-mirror",
+        "source": "https://www.findacode.com/icd-11/code-229121159.html",
+        "verifiedOn": "2026-09-26"
+      },
+      "icd10_who": null,
+      "idsr_class": null,
+      "hmis_category_id": null,
+      "status": "draft"
+    },
+    {
+      "id": "dx.pre_eclampsia_severe",
+      "display": "Severe pre-eclampsia",
+      "synonyms": [
+        "severe pre-eclampsia",
+        "severe PET"
+      ],
+      "chronic": false,
+      "sensitivity": "standard",
+      "icd11": {
+        "code": "JA24.1",
+        "title": "Severe pre-eclampsia",
+        "status": "verified-mirror",
+        "source": "https://www.findacode.com/icd-11/code-229121159.html",
+        "verifiedOn": "2026-09-26"
+      },
+      "icd10_who": null,
+      "idsr_class": null,
+      "hmis_category_id": null,
+      "status": "draft"
+    },
+    {
+      "id": "dx.eclampsia",
+      "display": "Eclampsia",
+      "synonyms": [
+        "eclampsia",
+        "eclamptic fits"
+      ],
+      "chronic": false,
+      "sensitivity": "standard",
+      "icd11": {
+        "code": "JA25.3",
+        "title": "Eclampsia, time period unspecified",
+        "status": "verified-mirror",
+        "source": "https://www.findacode.com/icd-11/code-1759760659.html",
+        "verifiedOn": "2026-09-26"
+      },
+      "icd10_who": null,
+      "idsr_class": null,
+      "hmis_category_id": null,
+      "status": "draft"
+    },
+    {
+      "id": "dx.open_wound",
+      "display": "Open wound (laceration)",
+      "synonyms": [
+        "cut",
+        "cut wound",
+        "laceration",
+        "wound"
+      ],
+      "chronic": false,
+      "sensitivity": "standard",
+      "icd11": {
+        "code": "ND56.1",
+        "title": "Open wound of unspecified body region",
+        "status": "verified-mirror",
+        "source": "https://www.findacode.com/icd-11/code-754990790.html",
+        "verifiedOn": "2026-09-26"
+      },
+      "icd10_who": null,
+      "idsr_class": null,
+      "hmis_category_id": null,
+      "status": "draft"
+    },
+    {
+      "id": "dx.fracture",
+      "display": "Fracture",
+      "synonyms": [
+        "fracture",
+        "broken bone"
+      ],
+      "chronic": false,
+      "sensitivity": "standard",
+      "icd11": {
+        "code": "ND56.2",
+        "title": "Fracture of unspecified body region",
+        "status": "verified-mirror",
+        "source": "https://www.findacode.com/icd-11/code-1504538171.html",
+        "verifiedOn": "2026-09-26"
+      },
+      "icd10_who": null,
+      "idsr_class": null,
+      "hmis_category_id": null,
+      "status": "draft"
+    },
+    {
+      "id": "dx.head_injury",
+      "display": "Head injury",
+      "synonyms": [
+        "head injury",
+        "head trauma"
+      ],
+      "chronic": false,
+      "sensitivity": "standard",
+      "icd11": {
+        "code": "NA0Z",
+        "title": "Injuries to the head, unspecified",
+        "status": "verified-mirror",
+        "source": "https://www.findacode.com/icd-11/block-452386362.html",
+        "verifiedOn": "2026-09-26"
+      },
+      "icd10_who": null,
+      "idsr_class": null,
+      "hmis_category_id": null,
+      "status": "draft"
+    },
+    {
+      "id": "dx.burn",
+      "display": "Burn",
+      "synonyms": [
+        "burn",
+        "burns",
+        "scald"
+      ],
+      "chronic": false,
+      "sensitivity": "standard",
+      "icd11": {
+        "code": "NE11",
+        "title": "Burn of unspecified body region",
+        "status": "verified-mirror",
+        "source": "https://www.findacode.com/icd-11/code-987760868.html",
+        "verifiedOn": "2026-09-26"
+      },
+      "icd10_who": null,
+      "idsr_class": null,
+      "hmis_category_id": null,
+      "status": "draft"
+    },
+    {
+      "id": "dx.snakebite",
+      "display": "Snakebite envenoming",
+      "synonyms": [
+        "snakebite",
+        "snake bite",
+        "envenomation",
+        "snake envenomation"
+      ],
+      "chronic": false,
+      "sensitivity": "standard",
+      "icd11": {
+        "code": "NE61",
+        "title": "Harmful effects of or exposure to noxious substances, chiefly nonmedicinal as to source, not elsewhere classified",
+        "status": "verified-mirror",
+        "source": "https://www.findacode.com/icd-11/code-1119330136.html",
+        "verifiedOn": "2026-09-26"
+      },
+      "icd10_who": null,
+      "idsr_class": null,
+      "hmis_category_id": null,
+      "status": "draft"
+    },
+    {
+      "id": "dx.poisoning_nonmedicinal",
+      "display": "Poisoning by a non-medicinal substance",
+      "synonyms": [
+        "organophosphate poisoning",
+        "pesticide poisoning",
+        "insecticide poisoning",
+        "paraffin poisoning",
+        "kerosene poisoning"
+      ],
+      "chronic": false,
+      "sensitivity": "standard",
+      "icd11": {
+        "code": "NE61",
+        "title": "Harmful effects of or exposure to noxious substances, chiefly nonmedicinal as to source, not elsewhere classified",
+        "status": "verified-mirror",
+        "source": "https://www.findacode.com/icd-11/code-1119330136.html",
+        "verifiedOn": "2026-09-26"
+      },
+      "icd10_who": null,
+      "idsr_class": null,
+      "hmis_category_id": null,
+      "status": "draft"
+    },
+    {
+      "id": "dx.poisoning_medicine",
+      "display": "Poisoning or overdose by a medicine",
+      "synonyms": [
+        "overdose",
+        "drug overdose",
+        "tablet overdose",
+        "medicine poisoning"
+      ],
+      "chronic": false,
+      "sensitivity": "standard",
+      "icd11": {
+        "code": "NE60",
+        "title": "Harmful effects of drugs, medicaments or biological substances, not elsewhere classified",
+        "status": "verified-mirror",
+        "source": "https://www.findacode.com/icd-11/code-1868408442.html",
+        "verifiedOn": "2026-09-26"
+      },
+      "icd10_who": null,
+      "idsr_class": null,
+      "hmis_category_id": null,
+      "status": "draft"
+    }
+  ]
+}

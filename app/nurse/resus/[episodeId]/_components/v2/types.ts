@@ -1,4 +1,5 @@
 import type { PrescribeAuthority } from "../prescribe-dialog";
+import type { MenuTest } from "@/components/emr/orders/model";
 import type { ResusPatientView } from "@/lib/resus/board";
 import type { BayProfile, CareLevel, CareUnit, EpisodePhase, OutcomeCode } from "@/lib/resus/model";
 import type { ResponderEntry, RosterEntry } from "@/lib/resus/record";
@@ -101,6 +102,11 @@ export interface DeskInitialData extends DeskSnapshot {
   settings: DeskSettings;
   bayProfiles: BayProfile[];
   careUnits: CareUnit[];
+  /**
+   * The facility test menu for the close-out's "Outstanding tests" (A5). Null when EMR v1 is off
+   * here: nothing would consume them, so the close-out does not ask.
+   */
+  testMenu: MenuTest[] | null;
   /** Server time at render — the client clock offset starts from it. */
   serverTimeIso: string;
   /** "/nurse/resus" or "/doctor/resus". */

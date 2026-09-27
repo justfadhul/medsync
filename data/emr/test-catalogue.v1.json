@@ -1,0 +1,666 @@
+{
+  "catalogue": "medsync.test-catalogue",
+  "version": "1.0.0-draft",
+  "hospital_id": null,
+  "status": "DRAFT. Default starter menu (hospital_id null) for OPD and emergency care at a Ugandan regional or national referral hospital; each facility edits its own copy.",
+  "notes": [
+    "No reference ranges: every result carries the performing laboratory's own range (MS-EMR-CLIN-001 7.3).",
+    "turnaround_target_minutes is an operational target set by each facility; null in this default menu.",
+    "panelComponents use clinical-fact-concepts v1 ids plus the v1.1 extension ids in MS-EMR-CLIN-001 [08]; defaultUnits are the canonical units from those sources (quantity concepts only).",
+    "container uses the CFC v1 container enum and is null where the right container is outside it: sodium citrate (INR/PT, D-dimer; ESR by method), blood culture bottles, and sterile urine or sputum containers. Proposed v1.1 enum extension.",
+    "specimenType uses the CFC v1 specimen enum; \"sputum\" is outside it and needs the same extension.",
+    "Specimen and container are the common defaults; each facility laboratory confirms its own (for example troponin on lithium heparin, CrAg on plasma or CSF).",
+    "capability_id links a test to a v1 facility capability only where one fits exactly; FBC is left null because cap.haemoglobin covers haemoglobin alone."
+  ],
+  "tests": [
+    {
+      "id": "test.malaria_rdt",
+      "display": "Malaria rapid diagnostic test (mRDT)",
+      "kind": "lab",
+      "panelComponents": [
+        "obs.malaria_test"
+      ],
+      "specimenType": "capillary_whole_blood",
+      "container": "capillary_direct",
+      "fasting_required": false,
+      "defaultUnits": {},
+      "capability_id": null,
+      "turnaround_target_minutes": null,
+      "in_house": true,
+      "active": true
+    },
+    {
+      "id": "test.malaria_smear",
+      "display": "Malaria blood smear with parasite density",
+      "kind": "lab",
+      "panelComponents": [
+        "obs.malaria_test",
+        "obs.malaria_parasite_density"
+      ],
+      "specimenType": "capillary_whole_blood",
+      "container": "capillary_direct",
+      "fasting_required": false,
+      "defaultUnits": {
+        "obs.malaria_parasite_density": "/uL"
+      },
+      "capability_id": null,
+      "turnaround_target_minutes": null,
+      "in_house": true,
+      "active": true
+    },
+    {
+      "id": "test.fbc",
+      "display": "Full blood count (FBC/CBC)",
+      "kind": "lab",
+      "panelComponents": [
+        "obs.haemoglobin",
+        "obs.wbc",
+        "obs.neutrophils_abs",
+        "obs.lymphocytes_abs",
+        "obs.platelets",
+        "obs.mcv"
+      ],
+      "specimenType": "venous_whole_blood",
+      "container": "edta",
+      "fasting_required": false,
+      "defaultUnits": {
+        "obs.haemoglobin": "g/dL",
+        "obs.wbc": "10*9/L",
+        "obs.neutrophils_abs": "10*9/L",
+        "obs.lymphocytes_abs": "10*9/L",
+        "obs.platelets": "10*9/L",
+        "obs.mcv": "fL"
+      },
+      "capability_id": null,
+      "turnaround_target_minutes": null,
+      "in_house": true,
+      "active": true
+    },
+    {
+      "id": "test.glucose_random",
+      "display": "Random blood glucose (laboratory)",
+      "kind": "lab",
+      "panelComponents": [
+        "obs.glucose"
+      ],
+      "specimenType": "venous_plasma",
+      "container": "fluoride_oxalate",
+      "fasting_required": false,
+      "defaultUnits": {
+        "obs.glucose": "mmol/L"
+      },
+      "capability_id": "cap.lab_plasma_glucose",
+      "turnaround_target_minutes": null,
+      "in_house": true,
+      "active": true
+    },
+    {
+      "id": "test.glucose_fasting",
+      "display": "Fasting blood glucose (laboratory)",
+      "kind": "lab",
+      "panelComponents": [
+        "obs.glucose"
+      ],
+      "specimenType": "venous_plasma",
+      "container": "fluoride_oxalate",
+      "fasting_required": true,
+      "defaultUnits": {
+        "obs.glucose": "mmol/L"
+      },
+      "capability_id": "cap.lab_plasma_glucose",
+      "turnaround_target_minutes": null,
+      "in_house": true,
+      "active": true
+    },
+    {
+      "id": "test.hba1c",
+      "display": "HbA1c",
+      "kind": "lab",
+      "panelComponents": [
+        "obs.hba1c"
+      ],
+      "specimenType": "venous_whole_blood",
+      "container": "edta",
+      "fasting_required": false,
+      "defaultUnits": {
+        "obs.hba1c": "%"
+      },
+      "capability_id": "cap.hba1c_lab",
+      "turnaround_target_minutes": null,
+      "in_house": true,
+      "active": true
+    },
+    {
+      "id": "test.creatinine",
+      "display": "Creatinine",
+      "kind": "lab",
+      "panelComponents": [
+        "obs.creatinine"
+      ],
+      "specimenType": "venous_serum",
+      "container": "serum_plain",
+      "fasting_required": false,
+      "defaultUnits": {
+        "obs.creatinine": "umol/L"
+      },
+      "capability_id": "cap.creatinine",
+      "turnaround_target_minutes": null,
+      "in_house": true,
+      "active": true
+    },
+    {
+      "id": "test.urea_electrolytes",
+      "display": "Urea, electrolytes and creatinine (U&E)",
+      "kind": "lab",
+      "panelComponents": [
+        "obs.sodium",
+        "obs.potassium",
+        "obs.chloride",
+        "obs.urea",
+        "obs.creatinine"
+      ],
+      "specimenType": "venous_serum",
+      "container": "serum_plain",
+      "fasting_required": false,
+      "defaultUnits": {
+        "obs.sodium": "mmol/L",
+        "obs.potassium": "mmol/L",
+        "obs.chloride": "mmol/L",
+        "obs.urea": "mmol/L",
+        "obs.creatinine": "umol/L"
+      },
+      "capability_id": "cap.electrolytes",
+      "turnaround_target_minutes": null,
+      "in_house": true,
+      "active": true
+    },
+    {
+      "id": "test.lft",
+      "display": "Liver function tests (LFT)",
+      "kind": "lab",
+      "panelComponents": [
+        "obs.alt",
+        "obs.ast",
+        "obs.alp",
+        "obs.bilirubin_total",
+        "obs.bilirubin_direct",
+        "obs.albumin",
+        "obs.total_protein"
+      ],
+      "specimenType": "venous_serum",
+      "container": "serum_plain",
+      "fasting_required": false,
+      "defaultUnits": {
+        "obs.alt": "U/L",
+        "obs.ast": "U/L",
+        "obs.alp": "U/L",
+        "obs.bilirubin_total": "umol/L",
+        "obs.bilirubin_direct": "umol/L",
+        "obs.albumin": "g/L",
+        "obs.total_protein": "g/L"
+      },
+      "capability_id": null,
+      "turnaround_target_minutes": null,
+      "in_house": true,
+      "active": true
+    },
+    {
+      "id": "test.lipid_panel",
+      "display": "Lipid panel",
+      "kind": "lab",
+      "panelComponents": [
+        "obs.chol_total",
+        "obs.chol_hdl",
+        "obs.chol_ldl",
+        "obs.triglycerides"
+      ],
+      "specimenType": "venous_serum",
+      "container": "serum_plain",
+      "fasting_required": false,
+      "defaultUnits": {
+        "obs.chol_total": "mmol/L",
+        "obs.chol_hdl": "mmol/L",
+        "obs.chol_ldl": "mmol/L",
+        "obs.triglycerides": "mmol/L"
+      },
+      "capability_id": "cap.lipid_panel",
+      "turnaround_target_minutes": null,
+      "in_house": true,
+      "active": true
+    },
+    {
+      "id": "test.urinalysis_dipstick",
+      "display": "Urinalysis (dipstick)",
+      "kind": "lab",
+      "panelComponents": [
+        "obs.urine_protein_dipstick",
+        "obs.glucose_urine",
+        "obs.ketones_urine",
+        "obs.urine_blood_dipstick",
+        "obs.urine_leukocytes_dipstick",
+        "obs.urine_nitrite_dipstick",
+        "obs.urine_sg",
+        "obs.urine_ph"
+      ],
+      "specimenType": "urine_spot",
+      "container": null,
+      "fasting_required": false,
+      "defaultUnits": {
+        "obs.urine_sg": "{ratio}",
+        "obs.urine_ph": "[pH]"
+      },
+      "capability_id": "cap.urine_dipstick",
+      "turnaround_target_minutes": null,
+      "in_house": true,
+      "active": true
+    },
+    {
+      "id": "test.uacr",
+      "display": "Urine albumin-to-creatinine ratio (UACR)",
+      "kind": "lab",
+      "panelComponents": [
+        "obs.uacr"
+      ],
+      "specimenType": "urine_spot",
+      "container": null,
+      "fasting_required": false,
+      "defaultUnits": {
+        "obs.uacr": "mg/mmol"
+      },
+      "capability_id": "cap.uacr_quantitative",
+      "turnaround_target_minutes": null,
+      "in_house": true,
+      "active": true
+    },
+    {
+      "id": "test.crp",
+      "display": "C-reactive protein (CRP)",
+      "kind": "lab",
+      "panelComponents": [
+        "obs.crp"
+      ],
+      "specimenType": "venous_serum",
+      "container": "serum_plain",
+      "fasting_required": false,
+      "defaultUnits": {
+        "obs.crp": "mg/L"
+      },
+      "capability_id": null,
+      "turnaround_target_minutes": null,
+      "in_house": true,
+      "active": true
+    },
+    {
+      "id": "test.esr",
+      "display": "Erythrocyte sedimentation rate (ESR)",
+      "kind": "lab",
+      "panelComponents": [
+        "obs.esr"
+      ],
+      "specimenType": "venous_whole_blood",
+      "container": null,
+      "fasting_required": false,
+      "defaultUnits": {
+        "obs.esr": "mm/h"
+      },
+      "capability_id": null,
+      "turnaround_target_minutes": null,
+      "in_house": true,
+      "active": true
+    },
+    {
+      "id": "test.lactate",
+      "display": "Lactate",
+      "kind": "lab",
+      "panelComponents": [
+        "obs.lactate"
+      ],
+      "specimenType": "venous_plasma",
+      "container": "fluoride_oxalate",
+      "fasting_required": false,
+      "defaultUnits": {
+        "obs.lactate": "mmol/L"
+      },
+      "capability_id": null,
+      "turnaround_target_minutes": null,
+      "in_house": true,
+      "active": true
+    },
+    {
+      "id": "test.blood_culture",
+      "display": "Blood culture",
+      "kind": "lab",
+      "panelComponents": [
+        "obs.blood_culture"
+      ],
+      "specimenType": "venous_whole_blood",
+      "container": null,
+      "fasting_required": false,
+      "defaultUnits": {},
+      "capability_id": null,
+      "turnaround_target_minutes": null,
+      "in_house": true,
+      "active": true
+    },
+    {
+      "id": "test.hiv_rapid",
+      "display": "HIV rapid test",
+      "kind": "lab",
+      "panelComponents": [
+        "obs.hiv_test"
+      ],
+      "specimenType": "capillary_whole_blood",
+      "container": "capillary_direct",
+      "fasting_required": false,
+      "defaultUnits": {},
+      "capability_id": null,
+      "turnaround_target_minutes": null,
+      "in_house": true,
+      "active": true
+    },
+    {
+      "id": "test.cd4",
+      "display": "CD4 count",
+      "kind": "lab",
+      "panelComponents": [
+        "obs.cd4"
+      ],
+      "specimenType": "venous_whole_blood",
+      "container": "edta",
+      "fasting_required": false,
+      "defaultUnits": {
+        "obs.cd4": "/uL"
+      },
+      "capability_id": null,
+      "turnaround_target_minutes": null,
+      "in_house": true,
+      "active": true
+    },
+    {
+      "id": "test.hiv_viral_load",
+      "display": "HIV-1 viral load",
+      "kind": "lab",
+      "panelComponents": [
+        "obs.hiv_viral_load"
+      ],
+      "specimenType": "venous_plasma",
+      "container": "edta",
+      "fasting_required": false,
+      "defaultUnits": {
+        "obs.hiv_viral_load": "{copies}/mL"
+      },
+      "capability_id": null,
+      "turnaround_target_minutes": null,
+      "in_house": true,
+      "active": true
+    },
+    {
+      "id": "test.crag",
+      "display": "Cryptococcal antigen (CrAg), blood",
+      "kind": "lab",
+      "panelComponents": [
+        "obs.crag"
+      ],
+      "specimenType": "venous_serum",
+      "container": "serum_plain",
+      "fasting_required": false,
+      "defaultUnits": {},
+      "capability_id": null,
+      "turnaround_target_minutes": null,
+      "in_house": true,
+      "active": true
+    },
+    {
+      "id": "test.syphilis",
+      "display": "Syphilis test",
+      "kind": "lab",
+      "panelComponents": [
+        "obs.syphilis_test"
+      ],
+      "specimenType": "venous_serum",
+      "container": "serum_plain",
+      "fasting_required": false,
+      "defaultUnits": {},
+      "capability_id": null,
+      "turnaround_target_minutes": null,
+      "in_house": true,
+      "active": true
+    },
+    {
+      "id": "test.hbsag",
+      "display": "Hepatitis B surface antigen (HBsAg)",
+      "kind": "lab",
+      "panelComponents": [
+        "obs.hbsag"
+      ],
+      "specimenType": "venous_serum",
+      "container": "serum_plain",
+      "fasting_required": false,
+      "defaultUnits": {},
+      "capability_id": null,
+      "turnaround_target_minutes": null,
+      "in_house": true,
+      "active": true
+    },
+    {
+      "id": "test.hcv_ab",
+      "display": "Hepatitis C antibody",
+      "kind": "lab",
+      "panelComponents": [
+        "obs.hcv_ab"
+      ],
+      "specimenType": "venous_serum",
+      "container": "serum_plain",
+      "fasting_required": false,
+      "defaultUnits": {},
+      "capability_id": null,
+      "turnaround_target_minutes": null,
+      "in_house": true,
+      "active": true
+    },
+    {
+      "id": "test.pregnancy_urine",
+      "display": "Urine pregnancy test (hCG)",
+      "kind": "lab",
+      "panelComponents": [
+        "obs.pregnancy_test"
+      ],
+      "specimenType": "urine_spot",
+      "container": null,
+      "fasting_required": false,
+      "defaultUnits": {},
+      "capability_id": null,
+      "turnaround_target_minutes": null,
+      "in_house": true,
+      "active": true
+    },
+    {
+      "id": "test.tb_xpert",
+      "display": "Xpert MTB/RIF (GeneXpert)",
+      "kind": "lab",
+      "panelComponents": [
+        "obs.tb_xpert"
+      ],
+      "specimenType": "sputum",
+      "container": null,
+      "fasting_required": false,
+      "defaultUnits": {},
+      "capability_id": null,
+      "turnaround_target_minutes": null,
+      "in_house": true,
+      "active": true
+    },
+    {
+      "id": "test.tb_lam",
+      "display": "Urine TB-LAM",
+      "kind": "lab",
+      "panelComponents": [
+        "obs.tb_lam"
+      ],
+      "specimenType": "urine_spot",
+      "container": null,
+      "fasting_required": false,
+      "defaultUnits": {},
+      "capability_id": null,
+      "turnaround_target_minutes": null,
+      "in_house": true,
+      "active": true
+    },
+    {
+      "id": "test.sputum_afb",
+      "display": "Sputum smear microscopy (AFB)",
+      "kind": "lab",
+      "panelComponents": [
+        "obs.sputum_afb"
+      ],
+      "specimenType": "sputum",
+      "container": null,
+      "fasting_required": false,
+      "defaultUnits": {},
+      "capability_id": null,
+      "turnaround_target_minutes": null,
+      "in_house": true,
+      "active": true
+    },
+    {
+      "id": "test.blood_group",
+      "display": "Blood group (ABO and RhD)",
+      "kind": "lab",
+      "panelComponents": [
+        "obs.blood_group"
+      ],
+      "specimenType": "venous_whole_blood",
+      "container": "edta",
+      "fasting_required": false,
+      "defaultUnits": {},
+      "capability_id": null,
+      "turnaround_target_minutes": null,
+      "in_house": true,
+      "active": true
+    },
+    {
+      "id": "test.inr_pt",
+      "display": "Prothrombin time and INR",
+      "kind": "lab",
+      "panelComponents": [
+        "obs.pt",
+        "obs.inr"
+      ],
+      "specimenType": "venous_plasma",
+      "container": null,
+      "fasting_required": false,
+      "defaultUnits": {
+        "obs.pt": "s",
+        "obs.inr": "{ratio}"
+      },
+      "capability_id": null,
+      "turnaround_target_minutes": null,
+      "in_house": true,
+      "active": true
+    },
+    {
+      "id": "test.troponin",
+      "display": "Troponin",
+      "kind": "lab",
+      "panelComponents": [
+        "obs.troponin"
+      ],
+      "specimenType": "venous_serum",
+      "container": "serum_plain",
+      "fasting_required": false,
+      "defaultUnits": {
+        "obs.troponin": "ng/L"
+      },
+      "capability_id": null,
+      "turnaround_target_minutes": null,
+      "in_house": true,
+      "active": true
+    },
+    {
+      "id": "test.d_dimer",
+      "display": "D-dimer",
+      "kind": "lab",
+      "panelComponents": [
+        "obs.d_dimer"
+      ],
+      "specimenType": "venous_plasma",
+      "container": null,
+      "fasting_required": false,
+      "defaultUnits": {
+        "obs.d_dimer": "mg/L"
+      },
+      "capability_id": null,
+      "turnaround_target_minutes": null,
+      "in_house": true,
+      "active": true
+    },
+    {
+      "id": "test.thyroid",
+      "display": "Thyroid function (TSH and free T4)",
+      "kind": "lab",
+      "panelComponents": [
+        "obs.tsh",
+        "obs.ft4"
+      ],
+      "specimenType": "venous_serum",
+      "container": "serum_plain",
+      "fasting_required": false,
+      "defaultUnits": {
+        "obs.tsh": "mIU/L",
+        "obs.ft4": "pmol/L"
+      },
+      "capability_id": null,
+      "turnaround_target_minutes": null,
+      "in_house": true,
+      "active": true
+    },
+    {
+      "id": "test.ecg",
+      "display": "12-lead ECG",
+      "kind": "ecg",
+      "panelComponents": [
+        "rpt.ecg"
+      ],
+      "specimenType": null,
+      "container": null,
+      "fasting_required": false,
+      "defaultUnits": {},
+      "capability_id": "cap.ecg",
+      "turnaround_target_minutes": null,
+      "in_house": true,
+      "active": true
+    },
+    {
+      "id": "test.chest_xray",
+      "display": "Chest X-ray",
+      "kind": "imaging",
+      "panelComponents": [
+        "rpt.imaging"
+      ],
+      "specimenType": null,
+      "container": null,
+      "fasting_required": false,
+      "defaultUnits": {},
+      "capability_id": null,
+      "turnaround_target_minutes": null,
+      "in_house": true,
+      "active": true
+    },
+    {
+      "id": "test.ultrasound_abdomen",
+      "display": "Abdominal ultrasound",
+      "kind": "imaging",
+      "panelComponents": [
+        "rpt.imaging"
+      ],
+      "specimenType": null,
+      "container": null,
+      "fasting_required": false,
+      "defaultUnits": {},
+      "capability_id": null,
+      "turnaround_target_minutes": null,
+      "in_house": true,
+      "active": true
+    }
+  ]
+}

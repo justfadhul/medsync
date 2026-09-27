@@ -1,0 +1,1681 @@
+{
+  "catalogue": "medsync.clinical-fact-concepts",
+  "version": "1.1.0",
+  "extends": "clinical-fact-concepts.v1.json (1.0.0-draft); v1 concepts are not repeated here",
+  "status": "cso_signed",
+  "signedBy": "Fadhul (owner, CSO)",
+  "signedAt": "2026-09-26",
+  "signature": "Signed as recommended in session (MS-EMR-CLIN-001 [08]: concept list, value types, units, context, sensitivity); harmonisations marked [H] in docs/emr/HARMONISATION.md apply. Codes are NOT signed: every LOINC code is a candidate until verified at loinc.org, and no candidate is ever exported.",
+  "pairsWith": [
+    "MS-DATA-CFC-001 Clinical Fact Contract, with docs/emr/cfc-v1.1-addendum.md",
+    "MS-EMR-CLIN-001 EMR clinical documentation reference [08]",
+    "data/emr/note-templates.v1.json"
+  ],
+  "verificationLegend": {
+    "verified": "checked at the primary source (loinc.org, ngsp.org, WHO prequalification)",
+    "verified-mirror": "checked against a mirror of the WHO ICD-11 MMS; confirm at icd.who.int during Phase 0",
+    "verified-secondary": "checked in a secondary source; confirm at the primary source during Phase 0",
+    "candidate": "from domain knowledge; must be verified before any export or rule uses it"
+  },
+  "trust": {
+    "4": "Laboratory result, final status",
+    "3": "Point-of-care test by staff on a registered device, or clinician examination",
+    "2": "Validated patient device, automatic transfer",
+    "1": "Patient-typed, or imported without verification"
+  },
+  "enumsAdded": {
+    "specimen": [
+      "sputum"
+    ],
+    "container": [
+      "sodium_citrate",
+      "blood_culture_bottle",
+      "sterile_container"
+    ],
+    "crpMethod": [
+      "quantitative",
+      "semi_quantitative"
+    ],
+    "troponinAnalyte": [
+      "I",
+      "T"
+    ],
+    "dDimerUnitBasis": [
+      "FEU",
+      "DDU"
+    ],
+    "syphilisMethod": [
+      "rapid",
+      "rpr",
+      "tpha"
+    ],
+    "xpertAssay": [
+      "xpert",
+      "ultra"
+    ],
+    "oxygenSupport": [
+      "room_air",
+      "supplemental_oxygen"
+    ],
+    "painScale": [
+      "nrs_0_10",
+      "wong_baker",
+      "flacc"
+    ],
+    "valueType": [
+      "as_typed"
+    ]
+  },
+  "conversions": [
+    {
+      "analyte": "bilirubin (total, direct)",
+      "frm": "mg/dL",
+      "to": "umol/L",
+      "op": "multiply by 17.1",
+      "basis": "molar mass 584.66 g/mol",
+      "status": "standard"
+    },
+    {
+      "analyte": "calcium",
+      "frm": "mg/dL",
+      "to": "mmol/L",
+      "op": "divide by 4.008",
+      "basis": "molar mass 40.08 g/mol",
+      "status": "standard"
+    },
+    {
+      "analyte": "magnesium",
+      "frm": "mg/dL",
+      "to": "mmol/L",
+      "op": "divide by 2.431",
+      "basis": "molar mass 24.305 g/mol",
+      "status": "standard"
+    },
+    {
+      "analyte": "phosphate (as phosphorus)",
+      "frm": "mg/dL",
+      "to": "mmol/L",
+      "op": "divide by 3.097",
+      "basis": "phosphorus 30.97 g/mol",
+      "status": "standard"
+    },
+    {
+      "analyte": "uric acid",
+      "frm": "mg/dL",
+      "to": "umol/L",
+      "op": "multiply by 59.48",
+      "basis": "molar mass 168.11 g/mol",
+      "status": "standard"
+    },
+    {
+      "analyte": "lactate",
+      "frm": "mg/dL",
+      "to": "mmol/L",
+      "op": "divide by 9.008",
+      "basis": "molar mass 90.08 g/mol",
+      "status": "standard"
+    },
+    {
+      "analyte": "albumin",
+      "frm": "g/dL",
+      "to": "g/L",
+      "op": "multiply by 10",
+      "basis": "unit prefix",
+      "status": "standard"
+    },
+    {
+      "analyte": "total protein",
+      "frm": "g/dL",
+      "to": "g/L",
+      "op": "multiply by 10",
+      "basis": "unit prefix",
+      "status": "standard"
+    }
+  ],
+  "unitMismatchPrompts": {
+    "status": "none added",
+    "rules": [],
+    "note": "Triggers are clinical numbers; only the five D-CFC-14 rules in v1 are signed. A v1.1 concept gets a prompt when its trigger is signed."
+  },
+  "sensitivityRules": [
+    {
+      "id": "SR-PREG-MINOR",
+      "appliesTo": [
+        "kind:pregnancy",
+        "obs.pregnancy_test"
+      ],
+      "restrictedWhen": "patient age at the fact's effective time is under 18",
+      "imprecisePrecision": "if the date-of-birth uncertainty spans 18, restrict (D-CFC-12)",
+      "basis": "D-CFC-09, signed as recommended 2026-09-26 (restrict pregnancy for minors)",
+      "writtenAt": "insert time, into the row's sensitivity column (rows are immutable)"
+    }
+  ],
+  "findingTokenRule": "A finding token is a clinician symptom_catalog code (0042/0045) or a clinical_concepts id of kind finding. symptomCode maps a concept to its catalogue code, so the token has one identity (unique). broaderRosScreens lists review-of-systems screens that cover more than the concept; they are not the same token.",
+  "v1FindingSymptomCodes": {
+    "sx.polyuria": null,
+    "sx.polydipsia": null,
+    "sx.polyphagia": null,
+    "sx.nocturia": "nocturia",
+    "sx.secondary_enuresis": null,
+    "sx.weight_loss_unintended": "weight_loss",
+    "sx.fatigue": "fatigue",
+    "sx.blurred_vision": null,
+    "sx.genital_itch_discharge": null,
+    "sx.recurrent_skin_infection": null,
+    "sx.slow_healing_wound": null,
+    "sx.foot_numbness_burning": null,
+    "sx.erectile_dysfunction": null,
+    "sx.abdominal_pain": "abdominal_pain",
+    "sx.vomiting": "vomiting",
+    "sx.hypoglycaemia_symptoms": null,
+    "sx.claudication": "intermittent_claudication",
+    "hist.childhood_undernutrition": null,
+    "hist.high_glucose_ever": null,
+    "sign.acanthosis_nigricans": null,
+    "sign.kussmaul_breathing": null,
+    "sign.ketotic_breath": null,
+    "sign.dehydration": null,
+    "sign.foot_ulcer": null,
+    "sign.foot_infection": null,
+    "sign.foot_deformity": null,
+    "sign.foot_callus": null,
+    "sign.gangrene": null
+  },
+  "broaderRosScreens": {
+    "sx.polyuria": "polyuria_polydipsia",
+    "sx.polydipsia": "polyuria_polydipsia",
+    "sx.polyphagia": "appetite_change",
+    "sx.weight_loss_unintended": "weight_change",
+    "sx.fatigue": "fatigue_malaise",
+    "sx.blurred_vision": "visual_disturbance",
+    "sx.genital_itch_discharge": "urethral_vaginal_discharge",
+    "sx.recurrent_skin_infection": "recurrent_infections",
+    "sx.foot_numbness_burning": "numbness_paraesthesia",
+    "sx.vomiting": "nausea_vomiting",
+    "sign.pallor": "pallor_anaemia_symptoms",
+    "sign.lymphadenopathy": "lymphadenopathy_lumps",
+    "sign.oedema": "ankle_leg_swelling"
+  },
+  "openConfirmations": [
+    "obs.urine_blood_dipstick and obs.urine_leukocytes_dipstick answer sets reuse the v1 dipstick scale; confirm against the strips in use.",
+    "Answer ids for obs.blood_group and obs.tb_xpert are spellings of the reference text; confirm the Xpert result wording against the laboratory report.",
+    "sign.dehydration (v1, ordinal none/some/severe) serves template 2.1 [11]: present = some or severe, absent = none, not examined = no fact.",
+    "Chills in the standard visit (2.12) is the fever property rigors in symptom_property (0042), recorded as a qualifier of the fever finding, not a new token."
+  ],
+  "concepts": [
+    {
+      "id": "obs.wbc",
+      "display": "White cell count",
+      "kind": "observation",
+      "group": "haematology",
+      "valueType": "quantity",
+      "canonicalUnit": "10*9/L",
+      "contextRequired": [
+        "specimen"
+      ],
+      "codes": [
+        {
+          "system": "LOINC",
+          "code": "6690-2",
+          "status": "candidate",
+          "note": "blood, automated count"
+        }
+      ],
+      "lanes": [],
+      "sensitivity": "standard",
+      "phase": "v1.1"
+    },
+    {
+      "id": "obs.neutrophils_abs",
+      "display": "Neutrophils, absolute",
+      "kind": "observation",
+      "group": "haematology",
+      "valueType": "quantity",
+      "canonicalUnit": "10*9/L",
+      "contextRequired": [
+        "specimen"
+      ],
+      "codes": [
+        {
+          "system": "LOINC",
+          "code": "751-8",
+          "status": "candidate",
+          "note": "blood, automated count"
+        }
+      ],
+      "lanes": [],
+      "sensitivity": "standard",
+      "phase": "v1.1"
+    },
+    {
+      "id": "obs.lymphocytes_abs",
+      "display": "Lymphocytes, absolute",
+      "kind": "observation",
+      "group": "haematology",
+      "valueType": "quantity",
+      "canonicalUnit": "10*9/L",
+      "contextRequired": [
+        "specimen"
+      ],
+      "codes": [
+        {
+          "system": "LOINC",
+          "code": "731-0",
+          "status": "candidate",
+          "note": "blood, automated count"
+        }
+      ],
+      "lanes": [],
+      "sensitivity": "standard",
+      "phase": "v1.1"
+    },
+    {
+      "id": "obs.eosinophils_abs",
+      "display": "Eosinophils, absolute",
+      "kind": "observation",
+      "group": "haematology",
+      "valueType": "quantity",
+      "canonicalUnit": "10*9/L",
+      "contextRequired": [
+        "specimen"
+      ],
+      "codes": [
+        {
+          "system": "LOINC",
+          "code": "711-2",
+          "status": "candidate",
+          "note": "blood, automated count"
+        }
+      ],
+      "lanes": [],
+      "sensitivity": "standard",
+      "phase": "v1.1"
+    },
+    {
+      "id": "obs.mcv",
+      "display": "Mean cell volume",
+      "kind": "observation",
+      "group": "haematology",
+      "valueType": "quantity",
+      "canonicalUnit": "fL",
+      "contextRequired": [
+        "specimen"
+      ],
+      "codes": [
+        {
+          "system": "LOINC",
+          "code": "787-2",
+          "status": "candidate",
+          "note": "RBC, automated count"
+        }
+      ],
+      "lanes": [],
+      "sensitivity": "standard",
+      "phase": "v1.1"
+    },
+    {
+      "id": "obs.esr",
+      "display": "Erythrocyte sedimentation rate",
+      "kind": "observation",
+      "group": "haematology",
+      "valueType": "quantity",
+      "canonicalUnit": "mm/h",
+      "contextRequired": [
+        "method"
+      ],
+      "codes": [
+        {
+          "system": "LOINC",
+          "code": "30341-2",
+          "status": "candidate"
+        }
+      ],
+      "lanes": [],
+      "sensitivity": "standard",
+      "phase": "v1.1"
+    },
+    {
+      "id": "obs.blood_group",
+      "display": "ABO and RhD group",
+      "kind": "observation",
+      "group": "haematology",
+      "valueType": "coded",
+      "answers": [
+        "a_pos",
+        "a_neg",
+        "b_pos",
+        "b_neg",
+        "ab_pos",
+        "ab_neg",
+        "o_pos",
+        "o_neg"
+      ],
+      "contextRequired": [
+        "method"
+      ],
+      "codes": [
+        {
+          "system": "LOINC",
+          "code": "882-1",
+          "status": "candidate",
+          "note": "ABO and Rh group"
+        }
+      ],
+      "lanes": [],
+      "sensitivity": "standard",
+      "phase": "v1.1"
+    },
+    {
+      "id": "obs.malaria_parasite_density",
+      "display": "Malaria parasite density",
+      "kind": "observation",
+      "group": "haematology",
+      "valueType": "quantity",
+      "canonicalUnit": "/uL",
+      "contextRequired": [
+        "method"
+      ],
+      "codes": [],
+      "lanes": [],
+      "sensitivity": "standard",
+      "phase": "v1.1",
+      "notes": "Pairs with obs.malaria_test (v1). Species stays a qualifier."
+    },
+    {
+      "id": "obs.alp",
+      "display": "Alkaline phosphatase",
+      "kind": "observation",
+      "group": "liver",
+      "valueType": "quantity",
+      "canonicalUnit": "U/L",
+      "contextRequired": [
+        "specimen"
+      ],
+      "codes": [
+        {
+          "system": "LOINC",
+          "code": "6768-6",
+          "status": "candidate",
+          "note": "serum or plasma"
+        }
+      ],
+      "lanes": [],
+      "sensitivity": "standard",
+      "phase": "v1.1"
+    },
+    {
+      "id": "obs.bilirubin_total",
+      "display": "Bilirubin, total",
+      "kind": "observation",
+      "group": "liver",
+      "valueType": "quantity",
+      "canonicalUnit": "umol/L",
+      "acceptedUnits": [
+        {
+          "unit": "mg/dL",
+          "toCanonical": "multiply by 17.1"
+        }
+      ],
+      "contextRequired": [
+        "specimen"
+      ],
+      "codes": [
+        {
+          "system": "LOINC",
+          "code": "14631-6",
+          "status": "candidate",
+          "note": "serum or plasma, molar"
+        },
+        {
+          "system": "LOINC",
+          "code": "1975-2",
+          "status": "candidate",
+          "note": "serum or plasma, mass"
+        }
+      ],
+      "lanes": [],
+      "sensitivity": "standard",
+      "phase": "v1.1"
+    },
+    {
+      "id": "obs.bilirubin_direct",
+      "display": "Bilirubin, direct",
+      "kind": "observation",
+      "group": "liver",
+      "valueType": "quantity",
+      "canonicalUnit": "umol/L",
+      "acceptedUnits": [
+        {
+          "unit": "mg/dL",
+          "toCanonical": "multiply by 17.1"
+        }
+      ],
+      "contextRequired": [
+        "specimen"
+      ],
+      "codes": [
+        {
+          "system": "LOINC",
+          "code": "14629-0",
+          "status": "candidate",
+          "note": "serum or plasma, molar"
+        },
+        {
+          "system": "LOINC",
+          "code": "1968-7",
+          "status": "candidate",
+          "note": "serum or plasma, mass"
+        }
+      ],
+      "lanes": [],
+      "sensitivity": "standard",
+      "phase": "v1.1"
+    },
+    {
+      "id": "obs.albumin",
+      "display": "Albumin",
+      "kind": "observation",
+      "group": "liver",
+      "valueType": "quantity",
+      "canonicalUnit": "g/L",
+      "acceptedUnits": [
+        {
+          "unit": "g/dL",
+          "toCanonical": "multiply by 10"
+        }
+      ],
+      "contextRequired": [
+        "specimen"
+      ],
+      "codes": [
+        {
+          "system": "LOINC",
+          "code": "1751-7",
+          "status": "candidate",
+          "note": "serum or plasma"
+        }
+      ],
+      "lanes": [],
+      "sensitivity": "standard",
+      "phase": "v1.1"
+    },
+    {
+      "id": "obs.total_protein",
+      "display": "Total protein",
+      "kind": "observation",
+      "group": "liver",
+      "valueType": "quantity",
+      "canonicalUnit": "g/L",
+      "acceptedUnits": [
+        {
+          "unit": "g/dL",
+          "toCanonical": "multiply by 10"
+        }
+      ],
+      "contextRequired": [
+        "specimen"
+      ],
+      "codes": [
+        {
+          "system": "LOINC",
+          "code": "2885-2",
+          "status": "candidate",
+          "note": "serum or plasma"
+        }
+      ],
+      "lanes": [],
+      "sensitivity": "standard",
+      "phase": "v1.1"
+    },
+    {
+      "id": "obs.crp",
+      "display": "C-reactive protein",
+      "kind": "observation",
+      "group": "chemistry",
+      "valueType": "quantity",
+      "canonicalUnit": "mg/L",
+      "contextRequired": [
+        "method"
+      ],
+      "codes": [
+        {
+          "system": "LOINC",
+          "code": "1988-5",
+          "status": "candidate",
+          "note": "serum or plasma"
+        }
+      ],
+      "lanes": [],
+      "sensitivity": "standard",
+      "phase": "v1.1",
+      "notes": "method is quantitative or semi_quantitative (enumsAdded.crpMethod)."
+    },
+    {
+      "id": "obs.calcium",
+      "display": "Calcium, total",
+      "kind": "observation",
+      "group": "chemistry",
+      "valueType": "quantity",
+      "canonicalUnit": "mmol/L",
+      "acceptedUnits": [
+        {
+          "unit": "mg/dL",
+          "toCanonical": "divide by 4.008"
+        }
+      ],
+      "contextRequired": [
+        "specimen"
+      ],
+      "codes": [
+        {
+          "system": "LOINC",
+          "code": "2000-8",
+          "status": "candidate",
+          "note": "serum or plasma, molar"
+        },
+        {
+          "system": "LOINC",
+          "code": "17861-6",
+          "status": "candidate",
+          "note": "serum or plasma, mass"
+        }
+      ],
+      "lanes": [],
+      "sensitivity": "standard",
+      "phase": "v1.1"
+    },
+    {
+      "id": "obs.magnesium",
+      "display": "Magnesium",
+      "kind": "observation",
+      "group": "chemistry",
+      "valueType": "quantity",
+      "canonicalUnit": "mmol/L",
+      "acceptedUnits": [
+        {
+          "unit": "mg/dL",
+          "toCanonical": "divide by 2.431"
+        }
+      ],
+      "contextRequired": [
+        "specimen"
+      ],
+      "codes": [
+        {
+          "system": "LOINC",
+          "code": "2601-3",
+          "status": "candidate",
+          "note": "serum or plasma, molar"
+        },
+        {
+          "system": "LOINC",
+          "code": "19123-9",
+          "status": "candidate",
+          "note": "serum or plasma, mass"
+        }
+      ],
+      "lanes": [],
+      "sensitivity": "standard",
+      "phase": "v1.1"
+    },
+    {
+      "id": "obs.phosphate",
+      "display": "Phosphate",
+      "kind": "observation",
+      "group": "chemistry",
+      "valueType": "quantity",
+      "canonicalUnit": "mmol/L",
+      "acceptedUnits": [
+        {
+          "unit": "mg/dL",
+          "toCanonical": "divide by 3.097"
+        }
+      ],
+      "contextRequired": [
+        "specimen"
+      ],
+      "codes": [
+        {
+          "system": "LOINC",
+          "code": "14879-1",
+          "status": "candidate",
+          "note": "serum or plasma, molar"
+        },
+        {
+          "system": "LOINC",
+          "code": "2777-1",
+          "status": "candidate",
+          "note": "serum or plasma, mass"
+        }
+      ],
+      "lanes": [],
+      "sensitivity": "standard",
+      "phase": "v1.1",
+      "notes": "mg/dL is phosphate reported as phosphorus."
+    },
+    {
+      "id": "obs.uric_acid",
+      "display": "Uric acid",
+      "kind": "observation",
+      "group": "chemistry",
+      "valueType": "quantity",
+      "canonicalUnit": "umol/L",
+      "acceptedUnits": [
+        {
+          "unit": "mg/dL",
+          "toCanonical": "multiply by 59.48"
+        }
+      ],
+      "contextRequired": [
+        "specimen"
+      ],
+      "codes": [
+        {
+          "system": "LOINC",
+          "code": "14933-6",
+          "status": "candidate",
+          "note": "serum or plasma, molar"
+        },
+        {
+          "system": "LOINC",
+          "code": "3084-1",
+          "status": "candidate",
+          "note": "serum or plasma, mass"
+        }
+      ],
+      "lanes": [],
+      "sensitivity": "standard",
+      "phase": "v1.1"
+    },
+    {
+      "id": "obs.amylase",
+      "display": "Amylase",
+      "kind": "observation",
+      "group": "chemistry",
+      "valueType": "quantity",
+      "canonicalUnit": "U/L",
+      "contextRequired": [
+        "specimen"
+      ],
+      "codes": [
+        {
+          "system": "LOINC",
+          "code": "1798-8",
+          "status": "candidate",
+          "note": "serum or plasma"
+        }
+      ],
+      "lanes": [],
+      "sensitivity": "standard",
+      "phase": "v1.1"
+    },
+    {
+      "id": "obs.lipase",
+      "display": "Lipase",
+      "kind": "observation",
+      "group": "chemistry",
+      "valueType": "quantity",
+      "canonicalUnit": "U/L",
+      "contextRequired": [
+        "specimen"
+      ],
+      "codes": [
+        {
+          "system": "LOINC",
+          "code": "3040-3",
+          "status": "candidate",
+          "note": "serum or plasma"
+        }
+      ],
+      "lanes": [],
+      "sensitivity": "standard",
+      "phase": "v1.1"
+    },
+    {
+      "id": "obs.lactate",
+      "display": "Lactate",
+      "kind": "observation",
+      "group": "chemistry",
+      "valueType": "quantity",
+      "canonicalUnit": "mmol/L",
+      "acceptedUnits": [
+        {
+          "unit": "mg/dL",
+          "toCanonical": "divide by 9.008"
+        }
+      ],
+      "contextRequired": [
+        "specimen"
+      ],
+      "codes": [
+        {
+          "system": "LOINC",
+          "code": "2524-7",
+          "status": "candidate",
+          "note": "serum or plasma"
+        },
+        {
+          "system": "LOINC",
+          "code": "32693-4",
+          "status": "candidate",
+          "note": "blood"
+        }
+      ],
+      "lanes": [],
+      "sensitivity": "standard",
+      "phase": "v1.1"
+    },
+    {
+      "id": "obs.troponin",
+      "display": "Troponin",
+      "kind": "observation",
+      "group": "cardiac",
+      "valueType": "quantity",
+      "canonicalUnit": "ng/L",
+      "contextRequired": [
+        "analyte",
+        "assay",
+        "highSensitivity"
+      ],
+      "codes": [
+        {
+          "system": "LOINC",
+          "code": "10839-9",
+          "status": "candidate",
+          "note": "troponin I, serum or plasma"
+        },
+        {
+          "system": "LOINC",
+          "code": "6598-7",
+          "status": "candidate",
+          "note": "troponin T, serum or plasma"
+        },
+        {
+          "system": "LOINC",
+          "code": "89579-7",
+          "status": "candidate",
+          "note": "troponin I, high-sensitivity"
+        },
+        {
+          "system": "LOINC",
+          "code": "67151-1",
+          "status": "candidate",
+          "note": "troponin T, high-sensitivity"
+        }
+      ],
+      "lanes": [],
+      "sensitivity": "standard",
+      "phase": "v1.1",
+      "notes": "Assay-specific limits come from the laboratory, per result. The export mapper picks the code from analyte and highSensitivity."
+    },
+    {
+      "id": "obs.d_dimer",
+      "display": "D-dimer",
+      "kind": "observation",
+      "group": "coagulation",
+      "valueType": "quantity",
+      "canonicalUnit": "mg/L",
+      "contextRequired": [
+        "unitBasis",
+        "assay"
+      ],
+      "codes": [
+        {
+          "system": "LOINC",
+          "code": "48065-7",
+          "status": "candidate",
+          "note": "FEU"
+        },
+        {
+          "system": "LOINC",
+          "code": "48066-5",
+          "status": "candidate",
+          "note": "DDU"
+        }
+      ],
+      "lanes": [],
+      "sensitivity": "standard",
+      "phase": "v1.1",
+      "notes": "unitBasis FEU or DDU is required: the two are not interchangeable."
+    },
+    {
+      "id": "obs.inr",
+      "display": "INR",
+      "kind": "observation",
+      "group": "coagulation",
+      "valueType": "quantity",
+      "canonicalUnit": "{ratio}",
+      "contextRequired": [
+        "method"
+      ],
+      "codes": [
+        {
+          "system": "LOINC",
+          "code": "6301-6",
+          "status": "candidate"
+        }
+      ],
+      "lanes": [],
+      "sensitivity": "standard",
+      "phase": "v1.1"
+    },
+    {
+      "id": "obs.pt",
+      "display": "Prothrombin time",
+      "kind": "observation",
+      "group": "coagulation",
+      "valueType": "quantity",
+      "canonicalUnit": "s",
+      "contextRequired": [
+        "method"
+      ],
+      "codes": [
+        {
+          "system": "LOINC",
+          "code": "5902-2",
+          "status": "candidate"
+        }
+      ],
+      "lanes": [],
+      "sensitivity": "standard",
+      "phase": "v1.1"
+    },
+    {
+      "id": "obs.aptt",
+      "display": "Activated partial thromboplastin time",
+      "kind": "observation",
+      "group": "coagulation",
+      "valueType": "quantity",
+      "canonicalUnit": "s",
+      "contextRequired": [
+        "method"
+      ],
+      "codes": [
+        {
+          "system": "LOINC",
+          "code": "14979-9",
+          "status": "candidate"
+        }
+      ],
+      "lanes": [],
+      "sensitivity": "standard",
+      "phase": "v1.1"
+    },
+    {
+      "id": "obs.tsh",
+      "display": "Thyroid-stimulating hormone",
+      "kind": "observation",
+      "group": "endocrine",
+      "valueType": "quantity",
+      "canonicalUnit": "mIU/L",
+      "contextRequired": [
+        "specimen"
+      ],
+      "codes": [
+        {
+          "system": "LOINC",
+          "code": "3016-3",
+          "status": "candidate",
+          "note": "serum or plasma"
+        }
+      ],
+      "lanes": [],
+      "sensitivity": "standard",
+      "phase": "v1.1"
+    },
+    {
+      "id": "obs.ft4",
+      "display": "Free thyroxine",
+      "kind": "observation",
+      "group": "endocrine",
+      "valueType": "quantity",
+      "canonicalUnit": "pmol/L",
+      "contextRequired": [
+        "specimen"
+      ],
+      "codes": [
+        {
+          "system": "LOINC",
+          "code": "14920-3",
+          "status": "candidate",
+          "note": "serum or plasma, molar"
+        }
+      ],
+      "lanes": [],
+      "sensitivity": "standard",
+      "phase": "v1.1"
+    },
+    {
+      "id": "obs.hiv_test",
+      "display": "HIV test",
+      "kind": "observation",
+      "group": "infection",
+      "valueType": "coded",
+      "answers": [
+        "reactive",
+        "non_reactive",
+        "indeterminate"
+      ],
+      "contextRequired": [
+        "algorithmStep",
+        "kit"
+      ],
+      "codes": [],
+      "lanes": [],
+      "sensitivity": "restricted",
+      "phase": "v1.1",
+      "notes": "Restricted class (D-CFC-09): never on SMS, push, patient-facing text, exports or default prints. Code depends on the testing algorithm step; mapped at export."
+    },
+    {
+      "id": "obs.hiv_viral_load",
+      "display": "HIV-1 viral load",
+      "kind": "observation",
+      "group": "infection",
+      "valueType": "quantity",
+      "canonicalUnit": "{copies}/mL",
+      "contextRequired": [
+        "assay"
+      ],
+      "contextOptional": [
+        "comparator"
+      ],
+      "codes": [
+        {
+          "system": "LOINC",
+          "code": "20447-9",
+          "status": "candidate",
+          "note": "serum or plasma, NAA"
+        }
+      ],
+      "lanes": [],
+      "sensitivity": "restricted",
+      "phase": "v1.1",
+      "notes": "Restricted class (D-CFC-09): never on SMS, push, patient-facing text, exports or default prints. Below the assay limit is a comparator plus the limit, never zero."
+    },
+    {
+      "id": "obs.cd4",
+      "display": "CD4 count",
+      "kind": "observation",
+      "group": "infection",
+      "valueType": "quantity",
+      "canonicalUnit": "/uL",
+      "contextRequired": [
+        "method"
+      ],
+      "codes": [
+        {
+          "system": "LOINC",
+          "code": "24467-3",
+          "status": "candidate",
+          "note": "blood"
+        }
+      ],
+      "lanes": [],
+      "sensitivity": "restricted",
+      "phase": "v1.1",
+      "notes": "Restricted class (D-CFC-09): never on SMS, push, patient-facing text, exports or default prints."
+    },
+    {
+      "id": "obs.crag",
+      "display": "Cryptococcal antigen",
+      "kind": "observation",
+      "group": "infection",
+      "valueType": "coded",
+      "answers": [
+        "positive",
+        "negative"
+      ],
+      "contextRequired": [
+        "specimen",
+        "method"
+      ],
+      "codes": [],
+      "lanes": [],
+      "sensitivity": "restricted",
+      "phase": "v1.1",
+      "notes": "Restricted class (D-CFC-09): never on SMS, push, patient-facing text, exports or default prints."
+    },
+    {
+      "id": "obs.syphilis_test",
+      "display": "Syphilis test",
+      "kind": "observation",
+      "group": "infection",
+      "valueType": "coded",
+      "answers": [
+        "reactive",
+        "non_reactive"
+      ],
+      "contextRequired": [
+        "method"
+      ],
+      "codes": [
+        {
+          "system": "LOINC",
+          "code": "20507-0",
+          "status": "candidate",
+          "note": "RPR only"
+        }
+      ],
+      "lanes": [],
+      "sensitivity": "restricted",
+      "phase": "v1.1",
+      "notes": "Restricted class (D-CFC-09): never on SMS, push, patient-facing text, exports or default prints. method is rapid, rpr or tpha (enumsAdded.syphilisMethod); the code applies to RPR only."
+    },
+    {
+      "id": "obs.hbsag",
+      "display": "Hepatitis B surface antigen",
+      "kind": "observation",
+      "group": "infection",
+      "valueType": "coded",
+      "answers": [
+        "positive",
+        "negative"
+      ],
+      "contextRequired": [
+        "method"
+      ],
+      "codes": [
+        {
+          "system": "LOINC",
+          "code": "5196-1",
+          "status": "candidate",
+          "note": "serum"
+        }
+      ],
+      "lanes": [],
+      "sensitivity": "standard",
+      "phase": "v1.1"
+    },
+    {
+      "id": "obs.hcv_ab",
+      "display": "Hepatitis C antibody",
+      "kind": "observation",
+      "group": "infection",
+      "valueType": "coded",
+      "answers": [
+        "positive",
+        "negative"
+      ],
+      "contextRequired": [
+        "method"
+      ],
+      "codes": [
+        {
+          "system": "LOINC",
+          "code": "16128-1",
+          "status": "candidate",
+          "note": "serum"
+        }
+      ],
+      "lanes": [],
+      "sensitivity": "standard",
+      "phase": "v1.1"
+    },
+    {
+      "id": "obs.tb_xpert",
+      "display": "Xpert MTB/RIF",
+      "kind": "observation",
+      "group": "infection",
+      "valueType": "coded",
+      "answers": [
+        "mtb_detected_rif_detected",
+        "mtb_detected_rif_not_detected",
+        "mtb_detected_rif_indeterminate",
+        "mtb_not_detected",
+        "invalid_or_error"
+      ],
+      "contextRequired": [
+        "specimen",
+        "assay"
+      ],
+      "codes": [],
+      "lanes": [],
+      "sensitivity": "restricted",
+      "phase": "v1.1",
+      "notes": "Restricted class (D-CFC-09): never on SMS, push, patient-facing text, exports or default prints. assay is xpert or ultra (enumsAdded.xpertAssay)."
+    },
+    {
+      "id": "obs.tb_lam",
+      "display": "Urine TB-LAM",
+      "kind": "observation",
+      "group": "infection",
+      "valueType": "coded",
+      "answers": [
+        "positive",
+        "negative"
+      ],
+      "contextRequired": [
+        "method"
+      ],
+      "codes": [],
+      "lanes": [],
+      "sensitivity": "restricted",
+      "phase": "v1.1",
+      "notes": "Restricted class (D-CFC-09): never on SMS, push, patient-facing text, exports or default prints."
+    },
+    {
+      "id": "obs.sputum_afb",
+      "display": "Sputum smear microscopy",
+      "kind": "observation",
+      "group": "infection",
+      "valueType": "ordinal",
+      "answers": [
+        "negative",
+        "scanty",
+        "plus1",
+        "plus2",
+        "plus3"
+      ],
+      "contextRequired": [
+        "method"
+      ],
+      "codes": [
+        {
+          "system": "LOINC",
+          "code": "11545-1",
+          "status": "candidate",
+          "note": "acid-fast stain"
+        }
+      ],
+      "lanes": [],
+      "sensitivity": "restricted",
+      "phase": "v1.1",
+      "notes": "Restricted class (D-CFC-09): never on SMS, push, patient-facing text, exports or default prints."
+    },
+    {
+      "id": "obs.blood_culture",
+      "display": "Blood culture",
+      "kind": "observation",
+      "group": "microbiology",
+      "valueType": "coded",
+      "answers": [
+        "no_growth",
+        "growth",
+        "suspected_contaminant"
+      ],
+      "contextRequired": [],
+      "contextConditional": {
+        "organism": "required when the value is growth or suspected_contaminant: text as typed, encrypted; coded in a later version"
+      },
+      "codes": [
+        {
+          "system": "LOINC",
+          "code": "600-7",
+          "status": "candidate",
+          "note": "bacteria identified, blood culture"
+        }
+      ],
+      "lanes": [],
+      "sensitivity": "standard",
+      "phase": "v1.1",
+      "notes": "Susceptibility is a later version."
+    },
+    {
+      "id": "obs.pregnancy_test",
+      "display": "Pregnancy test (hCG)",
+      "kind": "observation",
+      "group": "pregnancy",
+      "valueType": "coded",
+      "answers": [
+        "positive",
+        "negative"
+      ],
+      "contextRequired": [
+        "specimen"
+      ],
+      "codes": [
+        {
+          "system": "LOINC",
+          "code": "2106-3",
+          "status": "candidate",
+          "note": "urine"
+        },
+        {
+          "system": "LOINC",
+          "code": "2118-8",
+          "status": "candidate",
+          "note": "serum or plasma"
+        }
+      ],
+      "lanes": [],
+      "sensitivity": "standard",
+      "phase": "v1.1",
+      "notes": "specimen is urine_spot or venous_serum. Restricted when the patient is under 18 at the effective time (sensitivityRules)."
+    },
+    {
+      "id": "obs.urine_blood_dipstick",
+      "display": "Blood (urine dipstick)",
+      "kind": "observation",
+      "group": "urinalysis",
+      "valueType": "ordinal",
+      "answers": [
+        "negative",
+        "trace",
+        "plus1",
+        "plus2",
+        "plus3"
+      ],
+      "contextRequired": [],
+      "codes": [
+        {
+          "system": "LOINC",
+          "code": "5794-3",
+          "status": "candidate",
+          "note": "urine, test strip"
+        }
+      ],
+      "lanes": [],
+      "sensitivity": "standard",
+      "phase": "v1.1",
+      "notes": "Answer set reuses the v1 dipstick scale; confirm against the strips in use (openConfirmations)."
+    },
+    {
+      "id": "obs.urine_leukocytes_dipstick",
+      "display": "Leucocytes (urine dipstick)",
+      "kind": "observation",
+      "group": "urinalysis",
+      "valueType": "ordinal",
+      "answers": [
+        "negative",
+        "trace",
+        "plus1",
+        "plus2",
+        "plus3"
+      ],
+      "contextRequired": [],
+      "codes": [
+        {
+          "system": "LOINC",
+          "code": "5799-2",
+          "status": "candidate",
+          "note": "urine, test strip"
+        }
+      ],
+      "lanes": [],
+      "sensitivity": "standard",
+      "phase": "v1.1",
+      "notes": "Answer set reuses the v1 dipstick scale; confirm against the strips in use (openConfirmations)."
+    },
+    {
+      "id": "obs.urine_nitrite_dipstick",
+      "display": "Nitrite (urine dipstick)",
+      "kind": "observation",
+      "group": "urinalysis",
+      "valueType": "coded",
+      "answers": [
+        "positive",
+        "negative"
+      ],
+      "contextRequired": [],
+      "codes": [
+        {
+          "system": "LOINC",
+          "code": "5802-4",
+          "status": "candidate",
+          "note": "urine, test strip"
+        }
+      ],
+      "lanes": [],
+      "sensitivity": "standard",
+      "phase": "v1.1"
+    },
+    {
+      "id": "obs.urine_sg",
+      "display": "Urine specific gravity",
+      "kind": "observation",
+      "group": "urinalysis",
+      "valueType": "quantity",
+      "canonicalUnit": "{ratio}",
+      "contextRequired": [],
+      "codes": [
+        {
+          "system": "LOINC",
+          "code": "5811-5",
+          "status": "candidate",
+          "note": "urine, test strip"
+        }
+      ],
+      "lanes": [],
+      "sensitivity": "standard",
+      "phase": "v1.1"
+    },
+    {
+      "id": "obs.urine_ph",
+      "display": "Urine pH",
+      "kind": "observation",
+      "group": "urinalysis",
+      "valueType": "quantity",
+      "canonicalUnit": "[pH]",
+      "contextRequired": [],
+      "codes": [
+        {
+          "system": "LOINC",
+          "code": "5803-2",
+          "status": "candidate",
+          "note": "urine, test strip"
+        }
+      ],
+      "lanes": [],
+      "sensitivity": "standard",
+      "phase": "v1.1"
+    },
+    {
+      "id": "obs.spo2",
+      "display": "Oxygen saturation",
+      "kind": "observation",
+      "group": "vitals",
+      "valueType": "quantity",
+      "canonicalUnit": "%",
+      "contextRequired": [
+        "oxygenSupport"
+      ],
+      "contextConditional": {
+        "oxygenDevice": "required when oxygenSupport is supplemental_oxygen",
+        "oxygenFlowLpm": "required when oxygenSupport is supplemental_oxygen"
+      },
+      "codes": [
+        {
+          "system": "LOINC",
+          "code": "59408-5",
+          "status": "candidate",
+          "note": "pulse oximetry"
+        }
+      ],
+      "lanes": [],
+      "sensitivity": "standard",
+      "phase": "v1.1",
+      "notes": "Shared with triage and resus: legacy spo2 rows and the triage snapshot project into this concept."
+    },
+    {
+      "id": "obs.pain_score",
+      "display": "Pain score",
+      "kind": "observation",
+      "group": "vitals",
+      "valueType": "quantity",
+      "canonicalUnit": "{score}",
+      "contextRequired": [
+        "scale"
+      ],
+      "codes": [
+        {
+          "system": "LOINC",
+          "code": "72514-3",
+          "status": "candidate",
+          "note": "0-10 numeric rating"
+        }
+      ],
+      "lanes": [],
+      "sensitivity": "standard",
+      "phase": "v1.1",
+      "notes": "scale reuses the clinical_observations pain_scale values (enumsAdded.painScale). The code applies to nrs_0_10 only."
+    },
+    {
+      "id": "obs.capillary_refill",
+      "display": "Capillary refill time",
+      "kind": "observation",
+      "group": "vitals",
+      "valueType": "quantity",
+      "canonicalUnit": "s",
+      "contextRequired": [
+        "site"
+      ],
+      "codes": [],
+      "lanes": [],
+      "sensitivity": "standard",
+      "phase": "v1.1"
+    },
+    {
+      "id": "obs.head_circumference",
+      "display": "Head circumference",
+      "kind": "observation",
+      "group": "anthropometry",
+      "valueType": "quantity",
+      "canonicalUnit": "cm",
+      "contextRequired": [
+        "measurement"
+      ],
+      "codes": [
+        {
+          "system": "LOINC",
+          "code": "9843-4",
+          "status": "candidate",
+          "note": "occipital-frontal"
+        }
+      ],
+      "lanes": [],
+      "sensitivity": "standard",
+      "phase": "v1.1",
+      "notes": "Children. Z-scores against WHO growth standards are a later version."
+    },
+    {
+      "id": "rpt.imaging",
+      "display": "Imaging report",
+      "kind": "observation",
+      "group": "report",
+      "valueType": "coded",
+      "answers": [
+        "normal",
+        "abnormal",
+        "indeterminate"
+      ],
+      "contextRequired": [
+        "modality",
+        "bodySite"
+      ],
+      "codes": [
+        {
+          "system": "LOINC",
+          "code": "18748-4",
+          "status": "candidate",
+          "note": "diagnostic imaging study"
+        }
+      ],
+      "lanes": [],
+      "sensitivity": "standard",
+      "phase": "v1.1",
+      "notes": "The coded conclusion is the fact; the report text is encrypted in diagnostic_reports and never rule-readable. No images are stored."
+    },
+    {
+      "id": "rpt.ecg",
+      "display": "ECG report",
+      "kind": "observation",
+      "group": "report",
+      "valueType": "coded",
+      "answers": [
+        "normal",
+        "abnormal",
+        "indeterminate"
+      ],
+      "contextRequired": [
+        "device"
+      ],
+      "codes": [
+        {
+          "system": "LOINC",
+          "code": "11524-6",
+          "status": "candidate",
+          "note": "EKG study"
+        }
+      ],
+      "lanes": [],
+      "sensitivity": "standard",
+      "phase": "v1.1",
+      "notes": "Coded conclusion plus encrypted text. Structured rhythm is a later version."
+    },
+    {
+      "id": "obs.uncatalogued",
+      "display": "Uncatalogued result",
+      "kind": "observation",
+      "group": "other",
+      "valueType": "as_typed",
+      "contextRequired": [
+        "testNameAsTyped"
+      ],
+      "codes": [],
+      "lanes": [],
+      "sensitivity": "standard",
+      "phase": "v1.1",
+      "notes": "Name, value and unit as typed, stored encrypted and displayed. Never in a manifest, never exported, never interpretable (CFC C2)."
+    },
+    {
+      "id": "sign.pallor",
+      "display": "Pallor",
+      "kind": "finding",
+      "group": "sign",
+      "valueType": "presence",
+      "contextRequired": [
+        "elicitedBy"
+      ],
+      "codes": [],
+      "lanes": [],
+      "sensitivity": "standard",
+      "phase": "v1.1",
+      "symptomCode": null,
+      "notes": "General examination, template 2.1 [11]."
+    },
+    {
+      "id": "sign.jaundice",
+      "display": "Jaundice",
+      "kind": "finding",
+      "group": "sign",
+      "valueType": "presence",
+      "contextRequired": [
+        "elicitedBy"
+      ],
+      "codes": [],
+      "lanes": [],
+      "sensitivity": "standard",
+      "phase": "v1.1",
+      "symptomCode": "jaundice",
+      "notes": "Template 2.1 [11]. Same token as the symptom: elicitedBy separates the history from the examination."
+    },
+    {
+      "id": "sign.cyanosis",
+      "display": "Cyanosis",
+      "kind": "finding",
+      "group": "sign",
+      "valueType": "presence",
+      "contextRequired": [
+        "elicitedBy"
+      ],
+      "contextOptional": [
+        "site"
+      ],
+      "codes": [],
+      "lanes": [],
+      "sensitivity": "standard",
+      "phase": "v1.1",
+      "symptomCode": null,
+      "notes": "Template 2.1 [11]. site is central or peripheral when recorded."
+    },
+    {
+      "id": "sign.clubbing",
+      "display": "Finger clubbing",
+      "kind": "finding",
+      "group": "sign",
+      "valueType": "presence",
+      "contextRequired": [
+        "elicitedBy"
+      ],
+      "codes": [],
+      "lanes": [],
+      "sensitivity": "standard",
+      "phase": "v1.1",
+      "symptomCode": null,
+      "notes": "Template 2.1 [11]."
+    },
+    {
+      "id": "sign.lymphadenopathy",
+      "display": "Lymphadenopathy",
+      "kind": "finding",
+      "group": "sign",
+      "valueType": "presence",
+      "contextRequired": [
+        "elicitedBy"
+      ],
+      "contextOptional": [
+        "site",
+        "laterality"
+      ],
+      "codes": [],
+      "lanes": [],
+      "sensitivity": "standard",
+      "phase": "v1.1",
+      "symptomCode": null,
+      "notes": "Template 2.1 [11]. The ROS screen lymphadenopathy_lumps is broader (patient-noticed lumps) and is not the same token."
+    },
+    {
+      "id": "sign.oedema",
+      "display": "Oedema",
+      "kind": "finding",
+      "group": "sign",
+      "valueType": "presence",
+      "contextRequired": [
+        "elicitedBy"
+      ],
+      "contextOptional": [
+        "site",
+        "laterality"
+      ],
+      "codes": [],
+      "lanes": [],
+      "sensitivity": "standard",
+      "phase": "v1.1",
+      "symptomCode": "oedema",
+      "notes": "Template 2.1 [11]. Same token as the symptom oedema (display 'Leg swelling'); elicitedBy separates them."
+    },
+    {
+      "id": "sign.neck_stiffness",
+      "display": "Neck stiffness",
+      "kind": "finding",
+      "group": "sign",
+      "valueType": "presence",
+      "contextRequired": [
+        "elicitedBy"
+      ],
+      "codes": [],
+      "lanes": [],
+      "sensitivity": "standard",
+      "phase": "v1.1",
+      "symptomCode": null,
+      "notes": "Standard visit 2.12. In the clinician catalogue it is only an associated-feature option of headache and fever, not a symptom code."
+    }
+  ],
+  "counts": {
+    "concepts": 59,
+    "byKind": {
+      "finding": 7,
+      "observation": 52
+    },
+    "byGroup": {
+      "anthropometry": 1,
+      "cardiac": 1,
+      "chemistry": 8,
+      "coagulation": 4,
+      "endocrine": 2,
+      "haematology": 8,
+      "infection": 10,
+      "liver": 5,
+      "microbiology": 1,
+      "other": 1,
+      "pregnancy": 1,
+      "report": 2,
+      "sign": 7,
+      "urinalysis": 5,
+      "vitals": 3
+    },
+    "fromReference8": 52,
+    "findingsAddedForTemplates": 7,
+    "findingsWithSymptomCode": 2,
+    "v1FindingsWithSymptomCode": 6,
+    "v1FindingsMapped": 28,
+    "restrictedConcepts": 8,
+    "conditionallyRestricted": 1,
+    "externalCodes": 57,
+    "codesCandidate": 57,
+    "codesVerified": 0,
+    "conceptsWithoutCode": 14,
+    "conversions": 8,
+    "catalogueTotalWithV1": 204
+  }
+}

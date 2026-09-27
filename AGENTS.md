@@ -13,11 +13,9 @@ A role-based digital-hospital platform for Ugandan hospitals (IM-first, Mulago b
 ## Tech stack
 
 - **Next.js 16** App Router (React Server Components, Server Actions). Request interception is **`proxy.ts`** at the repo root (Next 16's replacement for `middleware.ts`) — auth gating, public-prefix + AAL2 (MFA) enforcement.
-- **TypeScript** (strict). Path alias `@/*` → repo root.
 - **Supabase** Postgres + Auth (SSR via `@supabase/ssr`), **Row-Level Security** on every table, plus Deno **Edge Functions** for privileged mutations.
 - **Drizzle ORM** (`db/schema/*`, `drizzle.config.ts`) — schema is the source of truth; SQL migrations live in `supabase/migrations/`.
 - **Tailwind v4** + shadcn/ui (`@base-ui/react` primitives, `components/ui/`). Design system: `DESIGN-medsync.md`.
-- **Vitest** for tests. **Husky** + lint-staged pre-commit (typecheck + eslint --fix + prettier). Conventional Commits (commitlint).
 
 ## Directory layout
 
@@ -34,19 +32,20 @@ A role-based digital-hospital platform for Ugandan hospitals (IM-first, Mulago b
 
 ### `lib/` — domain logic (server-only where it touches the DB)
 
-`auth` · `clerkship` (symptom engine, catalogs, governance) · `encounter` (EMR engine, clerkship mapper, records) · `resus` (ABCDE) · `prescribing` · `triage` · `intake` · `scheduling` · `doctor` / `nurse` / `clinician` / `reception` / `hospital-admin` / `patient` (per-area scope + queries) · `supabase` (clients) · `logger`. Scope helpers (`requireDoctorScope`, `requireNurseScope`, `requireClinicianScope`) gate every workspace.
+Scope helpers (`requireDoctorScope`, `requireNurseScope`, `requireClinicianScope`) gate every workspace.
+
+The EMR (ADRs 0130–0139, `docs/emr/`): `emr` (the record — pure engines `encounter`/`notes`/`allergy`/`orders`/`results`/`chart`/`fhir`, `db.ts` with `asClinicalReader`/`asClinicalWriter`, `write/` transactions, `read/`, `actions/`, `sync/`, `reference/` = `pending_cso` `RefEntry` files with no numbers) · `facts` (Clinical Fact Contract: types, generated catalogue, `loadFactSnapshot`, `project/` legacy projections) · `units` (canonical units and conversions). Flags in `lib/emr/feature.ts`: `EMR_V1` (`1` or hospital ids; needs `ENCOUNTER_ENGINE_LIVE`) and `EMR_PRESCRIBING` (Phase 7, only where `EMR_V1` is on); off, every page is unchanged.
 
 ### `components/`
 
 - `ui/` — shadcn primitives. `landing/` — the public landing `/` and `/about` (v4 "Slim", ADR 0099): `primitives.tsx` (section shell, header, kicker, CTAs), one file or folder per section (`hero/`, `trust/`, `founders/` are folders), `mocks/` (illustrative product mocks, roles and readings only), `site-nav`/`site-footer`; `_`-prefixed files survive only for `/styleguide` and the 404. `forms/` — shared multi-step form primitives. `medsync/`, `intake/`, etc.
+- `emr/` — the chart, clerking desk, orders and results UI: pure `*View` components over precomputed payloads (fixture-renderable); red only in `status-word.tsx`.
 
 ### `content/` — landing copy as data
 
 `landing.ts`, `hero.ts`, `founders.ts`, `trust-claims.ts`: every visible string on `/` and `/about`. Components hold none. Strings marked CSO / `HERO_LOCKED` need the Clinical Safety Officer's sign-off to change; `tests/landing/*` enforce the brief's invariants (no dosing, no names in mocks, 8 sections, ≤ 1,300 words, …).
 
 ### `db/schema/` — Drizzle tables (⚠️ do not hand-edit migrations; see below)
-
-Auth/users/roles, hospitals + departments/wards, staff affiliations & invitations, scheduling, encounter, resus, triage, prescribing, patient intakes/profiles/self-tracking, clinical codes, `symptom-catalog`, audit logs, super-admin (break-glass/notifications/approvals). Barrel: `index.ts`.
 
 ### `supabase/`
 
@@ -55,23 +54,11 @@ Auth/users/roles, hospitals + departments/wards, staff affiliations & invitation
 
 ### `tests/` — Vitest
 
-`rls/` (row-level-security policies) · `encounter` · `clerkship` · `resus` · `prescribing` · `triage` · `scheduling` · `auth` · `audit` · `encryption` · `lifecycle` · `hospital-admin` · `logger` · `_stubs`.
+`emr-db/` is the **PGlite lane** (EMR migrations, RLS probes, write paths, scenarios A1–A9): runs only with `EMR_PGLITE=1` (`npm run test:emr-db`) and a local symlink `node_modules/@electric-sql` → `~/Desktop/emr-harness/pg/node_modules/@electric-sql` (never a dependency; ADR 0133), else skips.
 
 ### `docs/adr/` — Architecture Decision Records (numbered, immutable; see below).
 
-## npm scripts
-
-| Script                                  | Purpose                                                            |
-| --------------------------------------- | ------------------------------------------------------------------ |
-| `dev` / `build` / `start`               | Next dev / production build / serve                                |
-| `lint` / `lint:fix`                     | ESLint                                                             |
-| `typecheck`                             | `tsc --noEmit` for the app **and** the Edge Functions              |
-| `typecheck:app` / `typecheck:functions` | each half individually                                             |
-| `format` / `format:check`               | Prettier write / check                                             |
-| `test` / `test:watch`                   | Vitest run / watch                                                 |
-| `db:generate`                           | Drizzle: generate SQL from schema changes                          |
-| `db:migrate`                            | Apply pending migrations (`scripts/migrate.ts`) — **owner action** |
-| `db:push` / `db:studio` / `db:check`    | Drizzle push / studio / drift check                                |
+## Checks
 
 After any change run `npm run typecheck && npm run lint && npm run test`, and `npm run build` before shipping. (Note: deleting routes leaves stale `.next/types` — `rm -rf .next` before `typecheck` if you see validator errors for removed pages.)
 

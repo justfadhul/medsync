@@ -2,7 +2,7 @@
 
 import type { CosignActionKind } from "@/lib/doctor/capabilities";
 import { revalidatePath } from "next/cache";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { z } from "zod";
 
 import { db } from "@/db";
@@ -212,16 +212,64 @@ export async function reviewCosignRequestAction(
   }
 
   try {
-    await db
-      .update(clinicalCosignRequests)
-      .set({
-        state: parsed.data.decision,
-        reviewedByUserId: scope.userId,
-        reviewedAt: new Date(),
-        reviewNote: parsed.data.note ?? null,
+    // Only this hospital's queue, and only a request still waiting: a second review of the same
+    // request, or one from another hospital, changes nothing.
+    const [req] = await db
+      .select({
+        id: clinicalCosignRequests.id,
+        patientUserId: clinicalCosignRequests.patientUserId,
+        actionKind: clinicalCosignRequests.actionKind,
+        payload: clinicalCosignRequests.actionPayload,
+        state: clinicalCosignRequests.state,
       })
-      .where(eq(clinicalCosignRequests.id, parsed.data.cosign_request_id));
+      .from(clinicalCosignRequests)
+      .where(
+        and(
+          eq(clinicalCosignRequests.id, parsed.data.cosign_request_id),
+          eq(clinicalCosignRequests.hospitalId, scope.hospitalId),
+        ),
+      )
+      .limit(1);
+    if (!req) return { error: "That request is not in this hospital's co-sign queue." };
+    if (req.state !== "pending_review") return { error: "That request has already been reviewed." };
+
+    const decision = {
+      state: parsed.data.decision,
+      reviewedByUserId: scope.userId,
+      reviewedAt: new Date(),
+      reviewNote: parsed.data.note ?? null,
+    };
+    const stillPending = and(
+      eq(clinicalCosignRequests.id, req.id),
+      eq(clinicalCosignRequests.state, "pending_review"),
+    );
+
+    // An EMR prescription the senior returns is not valid: cancel it and stop its medication
+    // statement in the same transaction as the decision, or the chart keeps listing the drug.
+    const prescriptionId = (req.payload as { prescriptionId?: unknown } | null)?.prescriptionId;
+    if (
+      parsed.data.decision === "returned" &&
+      typeof prescriptionId === "string" &&
+      req.actionKind.startsWith("prescription_")
+    ) {
+      const { requireEmrActor } = await import("@/lib/emr/actor");
+      const { withPatientWrite } = await import("@/lib/emr/write/context");
+      const { withdrawReturnedPrescription } = await import("@/lib/emr/write/prescriptions");
+      const actor = await requireEmrActor("doctor");
+      await withPatientWrite(actor, req.patientUserId, async (ctx) => {
+        await ctx.tx.update(clinicalCosignRequests).set(decision).where(stillPending);
+        await withdrawReturnedPrescription(ctx, {
+          patientUserId: req.patientUserId,
+          prescriptionId,
+          cosignRequestId: req.id,
+        });
+      });
+    } else {
+      await db.update(clinicalCosignRequests).set(decision).where(stillPending);
+    }
   } catch (err) {
+    const { EmrWriteError } = await import("@/lib/emr/write/context");
+    if (err instanceof EmrWriteError) return { error: err.message };
     logger.error("doctor.cosign_review.failed", { reason: String(err) });
     return { error: "Couldn't save that decision — try again." };
   }

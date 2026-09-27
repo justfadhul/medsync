@@ -406,26 +406,68 @@ export const encounters = pgTable(
     triageRecordId: uuid("triage_record_id"),
     /** Clinical setting (kickoff §1.1): opd / inpatient / emergency / follow_up / tele. */
     encounterType: text("encounter_type").notNull().default("opd"),
+    // ── EMR record spine (migration 0071, GATED) ──
+    // The visit (patient_intakes). FK enforced in SQL: patient-intakes.ts imports this file.
+    visitId: uuid("visit_id"),
+    templateId: text("template_id"),
+    /** Stamped by note autosave and every fact write, so active clerking never looks idle. */
+    lastActivityAt: timestamp("last_activity_at", { withTimezone: true }),
+    /** completed_at is the existing ended_at. */
+    completedBy: uuid("completed_by").references(() => authUsers.id, { onDelete: "set null" }),
+    dispositionDetail: jsonb("disposition_detail"),
+    followUp: jsonb("follow_up"),
+    attendanceType: text("attendance_type").notNull().default("unknown"),
+    referralIn: jsonb("referral_in"),
+    /** null on a completed row = legacy completed (flagged, never altered). */
+    closureKind: text("closure_kind"),
+    closureReason: text("closure_reason"),
+    closureNoteCiphertext: text("closure_note_ciphertext"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [
     check(
       "encounters_state_check",
-      sql`${t.state} IN ('planned','in_progress','completed','cancelled')`,
+      sql`${t.state} IN ('planned','in_progress','completed','cancelled','entered_in_error')`,
     ),
     check(
       "encounters_type_check",
-      sql`${t.encounterType} IN ('opd','inpatient','emergency','follow_up','tele')`,
+      sql`${t.encounterType} IN ('opd','inpatient','emergency','follow_up','tele','antenatal','procedure','virtual','community')`,
     ),
+    // Died is stored as the existing 'deceased' (ADR 0115 reads it).
     check(
       "encounters_disposition_check",
-      sql`${t.disposition} IS NULL OR ${t.disposition} IN ('admit','discharge','refer','observe','transfer','deceased')`,
+      sql`${t.disposition} IS NULL OR ${t.disposition} IN ('admit','discharge','refer','observe','transfer','deceased','home','admitted','referred_out','transferred','left_before_completion','left_against_advice')`,
+    ),
+    check(
+      "encounters_attendance_type_check",
+      sql`${t.attendanceType} IN ('new','re_attendance','unknown')`,
+    ),
+    check(
+      "encounters_closure_kind_check",
+      sql`${t.closureKind} IS NULL OR ${t.closureKind} IN ('clinical','administrative')`,
+    ),
+    check(
+      "encounters_closure_reason_check",
+      sql`${t.closureReason} IS NULL OR ${t.closureReason} IN ('left_before_seen','duplicate_encounter','documented_elsewhere','opened_in_error','other')`,
+    ),
+    check(
+      "encounters_closure_shape",
+      sql`(${t.closureKind} IS DISTINCT FROM 'clinical' OR ${t.disposition} IS NOT NULL)
+        AND (${t.closureKind} IS DISTINCT FROM 'administrative' OR ${t.closureReason} IS NOT NULL)
+        AND (${t.state} <> 'entered_in_error' OR ${t.closureReason} IS NOT NULL)
+        AND (${t.closureReason} IS DISTINCT FROM 'other' OR ${t.closureNoteCiphertext} IS NOT NULL)`,
     ),
     check("encounters_time_order", sql`${t.endedAt} IS NULL OR ${t.endedAt} >= ${t.startedAt}`),
     index("encounters_patient_idx").on(t.patientUserId, t.startedAt),
     index("encounters_clinician_idx").on(t.clinicianUserId, t.startedAt),
     index("encounters_hospital_idx").on(t.hospitalId, t.startedAt),
+    index("encounters_visit_idx")
+      .on(t.visitId)
+      .where(sql`${t.visitId} IS NOT NULL`),
+    index("encounters_open_activity_idx")
+      .on(t.hospitalId, t.lastActivityAt)
+      .where(sql`${t.state} IN ('planned','in_progress')`),
   ],
 );
 

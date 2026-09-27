@@ -5,6 +5,7 @@ import type {
   FlowInput,
   FlowIntake,
   FlowResus,
+  FlowTask,
   FlowTriage,
 } from "@/lib/workspace/flow";
 
@@ -114,6 +115,24 @@ export function resus(
     idleLabel: null,
     outcome: null,
     worst: null,
+    ...over,
+  };
+}
+
+/** An EMR lane source (E8): a released result or a co-sign request the viewer answers for. */
+export function task(
+  id: string,
+  patientId: string,
+  kind: FlowTask["kind"],
+  over: Partial<FlowTask> = {},
+): FlowTask {
+  return {
+    id,
+    patientId,
+    kind,
+    encounterId: `enc-${patientId}`,
+    atMs: NOW - 30 * MIN,
+    label: kind === "cosign" ? "Clerking note" : "Potassium",
     ...over,
   };
 }

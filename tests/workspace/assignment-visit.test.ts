@@ -14,7 +14,13 @@ const fake = scriptedDb();
 const findOpenEncounterToday = vi.fn();
 const linkEncounterToVisit = vi.fn();
 vi.mock("@/db", () => ({ db: fake.db }));
-vi.mock("@/lib/encounter/handoff", () => ({ findOpenEncounterToday, linkEncounterToVisit }));
+// EMR_V1 off: no visit id is linked (lib/encounter/handoff.ts visitIdFor/visitSet).
+vi.mock("@/lib/encounter/handoff", () => ({
+  findOpenEncounterToday,
+  linkEncounterToVisit,
+  visitIdFor: () => null,
+  visitSet: () => ({}),
+}));
 
 const { assignDoctorFromIntake } = await import("@/lib/encounter/assignment");
 

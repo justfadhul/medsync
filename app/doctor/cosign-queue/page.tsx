@@ -3,11 +3,30 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { ArrowRightIcon } from "lucide-react";
 
+import { routeWord } from "@/components/emr/prescribing/views";
 import { ACTION_LABEL } from "@/lib/doctor/capabilities";
 import { listPendingCosignRequests } from "@/lib/doctor/cosign";
 import { requireDoctorScope } from "@/lib/doctor/scope";
+import { asClinicalWriter } from "@/lib/emr/db";
+import { prescriptionsForCosign } from "@/lib/emr/write/prescriptions";
 import { DoctorEmptyState } from "../_components/empty-state";
+import { CosignNoteForm } from "./_components/cosign-note-form";
 import { ReviewForm } from "./_components/review-form";
+
+/** EMR note co-signatures (sign_note) carry a PHI-free payload: the note's id, type and visit. */
+const noteRequest = (r: { actionKind: string; actionPayload: Record<string, unknown> }) =>
+  r.actionKind === "sign_note" &&
+  typeof r.actionPayload.noteId === "string" &&
+  typeof r.actionPayload.encounterId === "string"
+    ? {
+        noteId: r.actionPayload.noteId,
+        encounterId: r.actionPayload.encounterId,
+        noteType:
+          typeof r.actionPayload.noteType === "string"
+            ? `${r.actionPayload.noteType.charAt(0).toUpperCase()}${r.actionPayload.noteType.slice(1).replace(/_/g, " ")} note`
+            : "Note",
+      }
+    : null;
 
 export const metadata: Metadata = { title: "Review queue · Doctor · MedSync" };
 export const dynamic = "force-dynamic";
@@ -21,6 +40,29 @@ export default async function DoctorCosignQueuePage() {
   }
 
   const queue = await listPendingCosignRequests({ hospitalId: scope.hospitalId });
+  // EMR prescription requests carry only { prescriptionId, encounterId }: resolve what to review.
+  const rxIds = queue.flatMap((r) =>
+    r.actionKind.startsWith("prescription_") && typeof r.actionPayload.prescriptionId === "string"
+      ? [r.actionPayload.prescriptionId]
+      : [],
+  );
+  const rx = rxIds.length
+    ? await asClinicalWriter({ userId: scope.userId, hospitalId: scope.hospitalId }, (tx) =>
+        prescriptionsForCosign(tx, scope.hospitalId, rxIds),
+      )
+    : new Map();
+  const shown = (payload: Record<string, unknown>): Record<string, unknown> => {
+    const p = typeof payload.prescriptionId === "string" ? rx.get(payload.prescriptionId) : null;
+    return p
+      ? {
+          drug_name: p.drugName,
+          dose: p.dose,
+          route: routeWord(p.route),
+          frequency: p.frequency,
+          duration: p.duration,
+        }
+      : payload;
+  };
 
   return (
     <div className="stagger-children mx-auto flex w-full max-w-5xl flex-col gap-6 px-6 py-8 lg:py-10">
@@ -51,7 +93,9 @@ export default async function DoctorCosignQueuePage() {
               <div className="flex items-start justify-between gap-3">
                 <div className="flex flex-col gap-1">
                   <span className="text-foreground text-[14px] font-medium">
-                    {ACTION_LABEL[r.actionKind as keyof typeof ACTION_LABEL] ?? r.actionKind}
+                    {r.actionKind === "sign_note"
+                      ? `Co-sign: ${noteRequest(r)?.noteType ?? "Note"}`
+                      : (ACTION_LABEL[r.actionKind as keyof typeof ACTION_LABEL] ?? r.actionKind)}
                   </span>
                   <span className="text-muted-foreground text-[11.5px]">
                     Proposed by <span className="text-foreground">{r.requestedByName ?? "—"}</span>{" "}
@@ -75,7 +119,7 @@ export default async function DoctorCosignQueuePage() {
 
               {/* Action payload — readable JSON snapshot */}
               <dl className="border-border/60 bg-muted/20 grid grid-cols-2 gap-x-4 gap-y-1.5 rounded-md border px-3 py-2 text-[12px] sm:grid-cols-3">
-                {payloadFields(r.actionPayload).map(([k, v]) => (
+                {payloadFields(shown(r.actionPayload)).map(([k, v]) => (
                   <div key={k} className="flex flex-col">
                     <dt className="text-muted-foreground/80 font-mono text-[9.5px] tracking-[0.12em] uppercase">
                       {k}
@@ -85,7 +129,17 @@ export default async function DoctorCosignQueuePage() {
                 ))}
               </dl>
 
-              <ReviewForm cosignRequestId={r.id} />
+              {r.actionKind === "sign_note" ? (
+                noteRequest(r) ? (
+                  <CosignNoteForm
+                    patientUserId={r.patientUserId}
+                    noteId={noteRequest(r)!.noteId}
+                    encounterId={noteRequest(r)!.encounterId}
+                  />
+                ) : null
+              ) : (
+                <ReviewForm cosignRequestId={r.id} />
+              )}
             </li>
           ))}
         </ul>
@@ -99,8 +153,11 @@ function payloadFields(payload: Record<string, unknown>): Array<[string, string]
     ["Drug", payload.drug_name],
     ["Dose", payload.dose],
     ["Route", payload.route],
+    ["Frequency", payload.frequency],
     ["Duration", payload.duration],
     ["Reason", payload.reason],
+    // sign_note: the note's type in words (its content is read on the visit, never copied here).
+    ["Note", typeof payload.noteType === "string" ? payload.noteType.replace(/_/g, " ") : null],
   ];
   return interesting
     .filter(([, v]) => typeof v === "string" && v.length > 0)

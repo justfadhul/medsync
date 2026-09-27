@@ -1,9 +1,11 @@
 import { FlaskConicalIcon } from "lucide-react";
 
+import { emrV1LiveFor } from "@/lib/emr/feature";
 import { labResultsLive } from "@/lib/encounter/feature";
 import { requireLabTechScope } from "@/lib/lab-tech/scope";
 import { loadLabWorklist, summariseWorklist, worklistAgeLabel } from "@/lib/lab-tech/worklist";
 import { cn } from "@/lib/utils";
+import { EmrLabWorklist } from "./_components/emr-worklist";
 import { ResultRowActions } from "./_components/result-row-actions";
 
 export const dynamic = "force-dynamic";
@@ -16,6 +18,8 @@ export const dynamic = "force-dynamic";
  */
 export default async function LabWorklistPage() {
   const scope = await requireLabTechScope();
+  // EMR v1: the record's worklist. Flag off, everything below renders exactly as before.
+  if (emrV1LiveFor(scope.hospitalId)) return <EmrLabWorklist scope={scope} />;
   const items = await loadLabWorklist(scope.hospitalId);
   const summary = summariseWorklist(items);
   const live = labResultsLive();

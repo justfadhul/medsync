@@ -58,6 +58,37 @@ export interface SbarDraft {
   recommendation: string;
 }
 
+/**
+ * Outstanding tests on the close-out's handover event (PROMPT §5.12, A5): test-menu ids and an
+ * optional short reason, stored beside the SBAR text as it is. The EMR handoff proposes each one to
+ * the receiving clinician; nothing is ordered until they accept.
+ */
+export interface OutstandingTest {
+  testId: string;
+  reason: string | null;
+}
+export const OUTSTANDING_TESTS_MAX = 20;
+export const OUTSTANDING_REASON_MAX = 200;
+
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/** The tests a stored handover payload carries: none on older events; malformed or repeated
+ *  entries are dropped, the first of a repeated test kept. */
+export function outstandingTestsOf(payload: unknown): OutstandingTest[] {
+  const raw = (payload as { outstandingTests?: unknown } | null)?.outstandingTests;
+  if (!Array.isArray(raw)) return [];
+  const seen = new Set<string>();
+  const out: OutstandingTest[] = [];
+  for (const t of raw.slice(0, OUTSTANDING_TESTS_MAX) as { testId?: unknown; reason?: unknown }[]) {
+    if (typeof t?.testId !== "string" || !UUID.test(t.testId) || seen.has(t.testId)) continue;
+    seen.add(t.testId);
+    const reason =
+      typeof t.reason === "string" ? t.reason.trim().slice(0, OUTSTANDING_REASON_MAX) : "";
+    out.push({ testId: t.testId, reason: reason || null });
+  }
+  return out;
+}
+
 const NR = "not recorded";
 
 const PHASE_LABEL: Record<EpisodePhase, string> = {

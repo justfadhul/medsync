@@ -1,6 +1,7 @@
 "use server";
 
 import type { ActionResult } from "./common";
+import type { ResusScope } from "@/lib/resus/scope";
 import type { HeaderPatch, V2EventInput } from "@/lib/resus/v2-record";
 import { and, eq, sql } from "drizzle-orm";
 import { z } from "zod";
@@ -8,11 +9,15 @@ import { z } from "zod";
 import { db } from "@/db";
 import { resusArrestRecords, resusEpisodes } from "@/db/schema/resus";
 import { saAuditLog } from "@/db/schema/sa-audit-log";
+import { emrV1LiveFor } from "@/lib/emr/feature";
+import { EmrWriteError, withPatientWrite } from "@/lib/emr/write/context";
+import { consumeResusHandoff } from "@/lib/emr/write/handoff";
 import { encounterEngineLive } from "@/lib/encounter/feature";
 import { openEncounterFromTriage } from "@/lib/encounter/handoff";
 import { logger } from "@/lib/logger";
 import { arrestSlice, currentArrestSeq } from "@/lib/resus/als/timing";
 import { canAdminCloseResus } from "@/lib/resus/authority";
+import { OUTSTANDING_REASON_MAX, OUTSTANDING_TESTS_MAX } from "@/lib/resus/closeout/handover";
 import { mismatchRequired } from "@/lib/resus/closeout/level-of-care";
 import { allowedActions } from "@/lib/resus/closeout/lifecycle";
 import { CARE_LEVELS, DESTINATIONS, LEVEL_MISMATCH_CODES, OUTCOME_CODES } from "@/lib/resus/model";
@@ -64,6 +69,18 @@ const DispositionSchema = z.object({
   bed: z.enum(["requested", "accepted", "not_available"]).nullable().default(null),
   bedAcceptedBy: z.string().trim().max(60).nullable().default(null),
 });
+
+/** A5: optional; a client that does not send them closes as before. Test ids and a short reason,
+ *  stored beside the SBAR as it is (the EMR handoff proposes each; nothing is ordered here). */
+const OutstandingTestsSchema = z
+  .array(
+    z.object({
+      testId: z.string().uuid(),
+      reason: z.string().trim().max(OUTSTANDING_REASON_MAX).nullable(),
+    }),
+  )
+  .max(OUTSTANDING_TESTS_MAX)
+  .default([]);
 
 type Disposition = z.infer<typeof DispositionSchema>;
 type DispositionInput = z.input<typeof DispositionSchema>;
@@ -135,6 +152,7 @@ export async function closeResusV2(input: {
   receiving: { unit: string; cadre: string } | null;
   escort: string | null;
   cprOngoing?: boolean;
+  outstandingTests?: z.input<typeof OutstandingTestsSchema>;
 }): Promise<ActionResult<{ encounterId?: string | null }>> {
   const parsed = WriteBase.extend({
     outcomeCode: z.enum(OUTCOME_CODES),
@@ -143,6 +161,7 @@ export async function closeResusV2(input: {
     receiving: z.object({ unit: z.string().max(120), cadre: z.string().max(60) }).nullable(),
     escort: z.string().max(200).nullable(),
     cprOngoing: z.boolean().optional(),
+    outstandingTests: OutstandingTestsSchema,
   }).safeParse(input);
   if (!parsed.success) return fail("Invalid close-out.");
   const d = parsed.data;
@@ -178,6 +197,14 @@ export async function closeResusV2(input: {
         receiving: d.receiving,
         escort: d.escort,
         cprOngoing: d.cprOngoing ?? false,
+        // Additive: older handover events have none. Repeats collapse to the first.
+        ...(d.outstandingTests.length && !died
+          ? {
+              outstandingTests: d.outstandingTests
+                .filter((t, i, all) => all.findIndex((x) => x.testId === t.testId) === i)
+                .map((t) => ({ testId: t.testId, reason: t.reason || null })),
+            }
+          : {}),
         label: `Handover${d.receiving ? ` to ${d.receiving.unit} (${d.receiving.cadre})` : ""}${d.cprOngoing ? " — CPR ongoing" : ""}`,
       },
     },
@@ -196,10 +223,13 @@ export async function closeResusV2(input: {
     },
   ];
 
-  // Encounter seam (Q2): link or open the encounter when the engine is live.
+  // Encounter seam (Q2): link or open the encounter when the engine is live. Under EMR v1 nothing
+  // is opened before the commit (an encounter opened for a close-out that then fails was an
+  // orphan): the handoff below creates or links it AFTER the resus has committed (R4).
   let encounterId: string | null = null;
   let pendingHandoff = !died;
-  if (!died && encounterEngineLive() && p.header.triageRecordId) {
+  const emrHandoff = !died && emrV1LiveFor(p.scope.hospitalId);
+  if (!died && !emrHandoff && encounterEngineLive() && p.header.triageRecordId) {
     try {
       const enc = await openEncounterFromTriage(p.header.triageRecordId, {
         userId: p.scope.userId,
@@ -246,9 +276,46 @@ export async function closeResusV2(input: {
     },
   });
   if (r.ok && !r.events[0]?.duplicate) await writeArrestRecords(d.episodeId, p.scope.userId, nowMs);
+  if (r.ok && emrHandoff && p.header.patientUserId)
+    encounterId = await handoffToEncounter(p.scope, d.episodeId, p.header.patientUserId);
   return r.ok
     ? { ...(done(r) as { ok: true; serverTime: string; eventIds: string[] }), encounterId }
     : r;
+}
+
+/**
+ * R4 (HARMONISATION §5.6): after the close-out committed, one EMR transaction creates or links the
+ * encounter, writes the ISBAR handover note and clears `pending_encounter_handoff`. The resus is
+ * closed whatever happens here: on a failure the flag stays set, so the handoff can be consumed
+ * later (consumeResusHandoff is idempotent on the episode).
+ */
+async function handoffToEncounter(
+  scope: ResusScope,
+  episodeId: string,
+  patientUserId: string,
+): Promise<string | null> {
+  try {
+    const actor = {
+      userId: scope.userId,
+      fullName: scope.fullName,
+      hospitalId: scope.hospitalId,
+      departmentId: scope.departmentId,
+      affiliationId: scope.affiliationId,
+      cadreCode: scope.cadreCode,
+      isClinical: true,
+      surface: "nurse" as const,
+    };
+    const r = await withPatientWrite(actor, patientUserId, (ctx) =>
+      consumeResusHandoff(ctx, { patientUserId, episodeId }),
+    );
+    return r.encounterId;
+  } catch (e) {
+    logger.warn("resus.v2.close.emr_handoff_failed", {
+      episodeId,
+      reason: e instanceof EmrWriteError ? e.code : String(e),
+    });
+    return null;
+  }
 }
 
 /** One immutable Utstein snapshot per arrest, written once at close (CO-UTS-*). */

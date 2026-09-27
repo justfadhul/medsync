@@ -8,6 +8,7 @@ import { clinicalDocumentation } from "@/db/schema/encounter";
 import { patientIntakes } from "@/db/schema/patient-intakes";
 import { encounters } from "@/db/schema/scheduling";
 import { triageRecords } from "@/db/schema/triage";
+import { emrV1LiveFor } from "@/lib/emr/feature";
 import { seedClerkshipFromTriage } from "@/lib/encounter/clerkship";
 import { recordClerkshipVersion } from "@/lib/encounter/record";
 import { logger } from "@/lib/logger";
@@ -75,14 +76,29 @@ export async function linkEncounterToVisit(
   encounterId: string,
   triageRecordId: string,
   appointmentId: string | null,
+  visitId?: string | null,
 ): Promise<void> {
   await db
     .update(encounters)
     .set({
       triageRecordId: sql`coalesce(${encounters.triageRecordId}, ${triageRecordId}::uuid)`,
       appointmentId: sql`coalesce(${encounters.appointmentId}, ${appointmentId}::uuid)`,
+      ...visitSet(visitId),
     })
     .where(eq(encounters.id, encounterId));
+}
+
+/**
+ * The visit (intake) an encounter belongs to, under EMR v1 (HARMONISATION §5.1): null when the flag
+ * is off for the hospital, so no write names `visit_id` before 0071 is applied.
+ */
+export function visitIdFor(hospitalId: string, intakeId: string | null): string | null {
+  return emrV1LiveFor(hospitalId) ? intakeId : null;
+}
+
+/** Link `visit_id` without overwriting one the encounter already has. */
+export function visitSet(visitId: string | null | undefined) {
+  return visitId ? { visitId: sql`coalesce(${encounters.visitId}, ${visitId}::uuid)` } : {};
 }
 
 export async function openEncounterFromTriage(
@@ -113,6 +129,7 @@ export async function openEncounterFromTriage(
     };
   }
   const patientUserId = tr.patientUserId;
+  const visitId = visitIdFor(tr.hospitalId, tr.intakeId);
 
   try {
     // The intake holds what the triage does not: the complaint for the seed,
@@ -142,6 +159,7 @@ export async function openEncounterFromTriage(
       .where(eq(encounters.triageRecordId, triageRecordId))
       .limit(1);
     if (existing && existing.state !== "planned") {
+      if (visitId) await linkEncounterToVisit(existing.id, triageRecordId, null, visitId);
       return { ok: true, encounterId: existing.id, created: false };
     }
 
@@ -149,7 +167,7 @@ export async function openEncounterFromTriage(
     let created: boolean;
     const open = await findOpenEncounterToday(patientUserId, tr.hospitalId);
     if (open) {
-      await linkEncounterToVisit(open.id, triageRecordId, appointmentId);
+      await linkEncounterToVisit(open.id, triageRecordId, appointmentId, visitId);
       encounterId = open.id;
       created = false;
     } else if (existing) {
@@ -163,6 +181,7 @@ export async function openEncounterFromTriage(
           clinicianUserId: scope.userId,
           startedAt: new Date(),
           appointmentId: sql`coalesce(${encounters.appointmentId}, ${appointmentId}::uuid)`,
+          ...visitSet(visitId),
         })
         .where(eq(encounters.id, existing.id));
       encounterId = existing.id;
@@ -178,12 +197,17 @@ export async function openEncounterFromTriage(
           encounterType: "emergency",
           triageRecordId,
           appointmentId,
+          ...(visitId ? { visitId } : {}),
           state: "in_progress",
         })
         .returning({ id: encounters.id });
       encounterId = enc!.id;
       created = true;
     }
+
+    // EMR v1: no v1 clinical_documentation draft. The clerking desk pre-fills from the triage record
+    // through carry-forward (vitals projected, never copied).
+    if (emrV1LiveFor(tr.hospitalId)) return { ok: true, encounterId, created };
 
     // Seed the clerkship ONLY if there's no documentation yet (don't double-seed
     // when starting a previously-assigned encounter).

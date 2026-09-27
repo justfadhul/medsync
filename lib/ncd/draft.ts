@@ -7,6 +7,7 @@ import { and, eq } from "drizzle-orm";
 import { db } from "@/db";
 import { clerkshipDrafts } from "@/db/schema/clerkship-drafts";
 import { clerkshipDraftsLive } from "@/lib/encounter/feature";
+import { decrypt, encrypt } from "@/lib/encryption";
 import { logger } from "@/lib/logger";
 
 /**
@@ -28,6 +29,11 @@ import { logger } from "@/lib/logger";
  * the flag and a failed write is LOGGED AND SWALLOWED — losing an autosave must
  * never take the form down, because the values are still in the clinician's
  * browser and the surface says plainly when the last save did not land.
+ *
+ * ── Encrypted at rest (E4, HARMONISATION §2) ─────────────────────────────────
+ * A draft is clinical narrative, so it is written as `{ "enc": "<ciphertext>" }`
+ * (lib/encryption.ts). Older drafts are plaintext JSON; both shapes are read, and
+ * re-encrypting the old ones is owner action O-5.
  */
 
 /** What is stored. Versioned so a later shape can be recognised, not guessed. */
@@ -36,6 +42,17 @@ interface DraftPayload {
   catalogId: string;
   catalogVersion: string;
   values: CaptureMap;
+}
+
+/** `{ enc }` (current) or the plaintext payload (drafts written before E4). */
+function unwrap(stored: unknown): unknown {
+  if (
+    typeof stored === "object" &&
+    stored !== null &&
+    typeof (stored as { enc?: unknown }).enc === "string"
+  )
+    return JSON.parse(decrypt((stored as { enc: string }).enc)) as unknown;
+  return stored;
 }
 
 const isPayload = (v: unknown): v is DraftPayload =>
@@ -68,13 +85,14 @@ export async function loadNcdDraft(
       )
       .limit(1);
 
-    if (!row || !isPayload(row.payload)) return undefined;
-    if (row.payload.catalogId !== catalog.id) return undefined;
+    const payload = row ? unwrap(row.payload) : undefined;
+    if (!isPayload(payload)) return undefined;
+    if (payload.catalogId !== catalog.id) return undefined;
 
     const known = new Set(catalog.features.map((f) => f.code));
     const out: CaptureMap = {};
     let dropped = 0;
-    for (const [code, value] of Object.entries(row.payload.values)) {
+    for (const [code, value] of Object.entries(payload.values)) {
       if (known.has(code)) out[code] = value;
       else dropped++;
     }
@@ -102,13 +120,14 @@ export async function saveNcdDraft(
   values: CaptureMap,
 ): Promise<boolean> {
   if (!clerkshipDraftsLive()) return false;
-  const payload: DraftPayload = {
+  const draft: DraftPayload = {
     kind: "ncd_capture",
     catalogId: catalog.id,
     catalogVersion: catalog.version,
     values,
   };
   try {
+    const payload = { enc: encrypt(JSON.stringify(draft)) };
     await db
       .insert(clerkshipDrafts)
       .values({ encounterId, authorId, payload })

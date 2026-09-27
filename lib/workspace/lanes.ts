@@ -2,24 +2,30 @@
  * The workspace lane registry (prompt §5.7) — pure data, client-safe.
  *
  * The page reads only this list: its order is the board's order, `visibleFor`
- * decides who sees a lane, `hotkey` is the 1–7 jump. A future engine (Alerts,
- * To co-sign, Tasks) plugs in here without touching the page, which is how the
+ * decides who sees a lane, `hotkey` is the jump key (the EMR lanes take 8, 9
+ * and 0, so the first seven keep the keys people know). A future engine (Alerts,
+ * Tasks) plugs in here without touching the page, which is how the
  * sidebar stays at three items as MedSync grows. Cadre-agnostic on purpose, so
  * the nurse workspace can bring its own list later (D10).
  */
 
 export type LaneId =
   | "resus"
+  | "critical_results"
   | "triage"
   | "unassigned"
   | "waiting"
   | "in_progress"
+  | "results_to_review"
+  | "to_cosign"
   | "needs_closing"
   | "done";
 
 export interface LaneViewer {
   /** `clinical_cosign_policies.triage_patient = allowed` — who may assign today (D8). */
   mayAssign: boolean;
+  /** EMR v1 is on at the viewer's hospital: the record's lanes (E8) exist only then. */
+  emr?: boolean;
 }
 
 export interface LaneDef {
@@ -39,6 +45,7 @@ export interface LaneDef {
 }
 
 const always = () => true;
+const emrOn = (v: LaneViewer) => v.emr === true;
 
 export const LANES: readonly LaneDef[] = [
   {
@@ -49,6 +56,16 @@ export const LANES: readonly LaneDef[] = [
     hotkey: "1",
     empty: "No resuscitation running.",
     visibleFor: always,
+  },
+  {
+    // E8: after Resus, before To triage — an unacknowledged critical result I ordered or cover.
+    id: "critical_results",
+    label: "Critical results",
+    short: "Critical",
+    scope: "mine",
+    hotkey: "8",
+    empty: "No critical result is waiting for you.",
+    visibleFor: emrOn,
   },
   {
     id: "triage",
@@ -85,6 +102,26 @@ export const LANES: readonly LaneDef[] = [
     hotkey: "5",
     empty: "No open clerking.",
     visibleFor: always,
+  },
+  {
+    // E8: after In progress — released results on orders I placed or cover, not yet acknowledged.
+    id: "results_to_review",
+    label: "Results to review",
+    short: "Results",
+    scope: "mine",
+    hotkey: "9",
+    empty: "No results waiting for review.",
+    visibleFor: emrOn,
+  },
+  {
+    // E8: after Results to review — notes awaiting my co-signature.
+    id: "to_cosign",
+    label: "To co-sign",
+    short: "To co-sign",
+    scope: "mine",
+    hotkey: "0",
+    empty: "No notes waiting for your co-signature.",
+    visibleFor: emrOn,
   },
   {
     id: "needs_closing",

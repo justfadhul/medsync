@@ -44,6 +44,7 @@ export function initialDraft(prior: ReturnType<typeof latestDisposition>): Close
     sbarEdits: {},
     devices: null,
     dropped: [],
+    tests: [],
     escort: "",
     receivingUnit: null,
     receivingCadre: "",

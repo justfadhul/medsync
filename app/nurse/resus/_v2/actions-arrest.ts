@@ -511,10 +511,15 @@ export async function recordArrestDrugV2(input: {
   else if (hold) reasons.push(hold);
   if (parsed.data.drug === "adrenaline" && flags.localAnaestheticToxicity)
     reasons.push("Local anaesthetic toxicity: adrenaline ≤ 1 µg/kg — enter the weight-based dose.");
-  const allergies = mergeAllergyLists(
-    recordedAllergiesFromTimeline(p.events),
-    await loadPersistentAllergiesForEpisode(parsed.data.episodeId),
-  );
+  // The record's allergies (lib/emr/read/allergies.ts under EMR v1). A failed read never logs a
+  // one-tap drug: the dialog opens and says so.
+  let recordAllergies: string[] = [];
+  try {
+    recordAllergies = (await loadPersistentAllergiesForEpisode(parsed.data.episodeId)).allergies;
+  } catch {
+    reasons.push("Allergies could not be loaded — check before giving.");
+  }
+  const allergies = mergeAllergyLists(recordedAllergiesFromTimeline(p.events), recordAllergies);
   const checks = runSafetyChecks({
     drug,
     patient: {

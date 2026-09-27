@@ -1,5 +1,6 @@
 import "server-only";
 
+import type { EmrDb } from "@/lib/emr/db";
 import type { SQL } from "drizzle-orm";
 import { and, desc, eq, gte, inArray, isNull, lt, ne, or, sql } from "drizzle-orm";
 
@@ -10,6 +11,8 @@ import { entryTypes, patientIntakes, priorityHintRank } from "@/db/schema/patien
 import { patientProfiles } from "@/db/schema/patient-profiles";
 import { triageRecords } from "@/db/schema/triage";
 import { computeAgeYears } from "@/lib/age";
+import { emrV1Live } from "@/lib/emr/feature";
+import { loadCfcVitals } from "@/lib/emr/read/vitals";
 import { decrypt } from "@/lib/encryption";
 import { presenceAt, presenceOf } from "@/lib/intake/queries";
 import { logger } from "@/lib/logger";
@@ -298,13 +301,32 @@ export async function fetchRecentVitals(args: {
     .orderBy(desc(clinicalObservations.recordedAt))
     .limit(args.limit ?? 200);
 
-  return rows.map((r) => ({
+  const legacy: RecentVital[] = rows.map((r) => ({
     kind: r.kind,
     value1: r.value1 === null ? null : Number(r.value1),
     value2: r.value2 === null ? null : Number(r.value2),
     unit: r.unit,
     recordedAtIso: r.recordedAt.toISOString(),
   }));
+  if (!emrV1Live()) return legacy;
+
+  // EMR v1: CFC vital-sign rows join the trend (STOP 2), newest first, same limit.
+  const cfc = await loadCfcVitals(db as unknown as EmrDb, args.patientUserId, {
+    since,
+    limit: args.limit ?? 200,
+  });
+  return [
+    ...legacy,
+    ...cfc.map((v) => ({
+      kind: v.kind,
+      value1: v.value1,
+      value2: v.value2,
+      unit: v.unit,
+      recordedAtIso: v.recordedAt.toISOString(),
+    })),
+  ]
+    .sort((a, b) => b.recordedAtIso.localeCompare(a.recordedAtIso))
+    .slice(0, args.limit ?? 200);
 }
 
 /* ─── Aggregate triage metrics (admin snippet, §4) ──────────────── */

@@ -1,5 +1,6 @@
 import "server-only";
 
+import type { EmrDb } from "@/lib/emr/db";
 import type { AgeBand, NcdCatalog } from "@/lib/ncd/catalog/schema";
 import type { CaptureMap } from "@/lib/ncd/engine/evaluate";
 import { and, desc, eq } from "drizzle-orm";
@@ -8,6 +9,8 @@ import { db } from "@/db";
 import { clinicalObservations } from "@/db/schema/nurse-workspace";
 import { patientProfiles } from "@/db/schema/patient-profiles";
 import { triageRecords } from "@/db/schema/triage";
+import { emrV1Live } from "@/lib/emr/feature";
+import { loadCfcVitals } from "@/lib/emr/read/vitals";
 import { encounterEngineLive } from "@/lib/encounter/feature";
 import { logger } from "@/lib/logger";
 import { ageBandFromDob } from "@/lib/ncd/age";
@@ -146,6 +149,19 @@ export async function loadLatestVitals(
       )
       .orderBy(desc(clinicalObservations.recordedAt))
       .limit(120);
+    // EMR v1: CFC vital-sign rows join the same series (STOP 2), in the legacy shape.
+    if (emrV1Live()) {
+      for (const v of await loadCfcVitals(db as unknown as EmrDb, patientUserId, { limit: 120 })) {
+        obs.push({
+          kind: v.kind,
+          v1: v.value1 === null ? null : String(v.value1),
+          v2: v.value2 === null ? null : String(v.value2),
+          unit: v.unit,
+          recordedAt: v.recordedAt,
+          triageRecordId: null,
+        });
+      }
+    }
 
     for (const row of obs) {
       const map = KINDS[row.kind];

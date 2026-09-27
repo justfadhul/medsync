@@ -23,6 +23,10 @@ export { ago, COLOUR_WORD } from "./words";
 
 export type Acuity = 1 | 2 | 3 | 4 | 5;
 
+/** D3: an open encounter (or a note draft) with no activity for 24 h needs closing. GATE A default;
+ *  the one constant — lib/emr/settings.ts reads it, so the Workspace and the EMR never disagree. */
+export const ENCOUNTER_IDLE_MS = 24 * 60 * 60_000;
+
 /* ─── input ─────────────────────────────────────────────────────────── */
 
 export interface FlowIdentity {
@@ -80,8 +84,26 @@ export interface FlowEncounter {
   createdAtMs: number;
   startedAtMs: number;
   endedAtMs: number | null;
-  /** greatest(updated_at, latest documentation version). */
+  /** greatest(updated_at, latest documentation version, last_activity_at). */
   lastActivityAtMs: number;
+  /** EMR: the last save of an unsigned note draft on this encounter; null/absent = none. */
+  unsignedNoteAtMs?: number | null;
+}
+
+/**
+ * An EMR worklist item (E8). The loader has already decided it is the viewer's: a released
+ * result on an order they placed or cover, or a note co-sign they may answer.
+ */
+export interface FlowTask {
+  id: string;
+  patientId: string;
+  kind: "critical_result" | "result_to_review" | "cosign";
+  /** Where it is answered: the order's or the note's encounter. */
+  encounterId: string;
+  /** Released, or co-signature requested. */
+  atMs: number;
+  /** "Potassium", "Clerking note"; null for a restricted result, which a board never names. */
+  label: string | null;
 }
 
 /** The resus v2 board's own section for the episode (lib/resus/board-v2.ts). */
@@ -153,6 +175,8 @@ export interface FlowInput {
   encounters: FlowEncounter[];
   resus: FlowResus[];
   deaths: FlowDeath[];
+  /** EMR lane sources (E8); absent while EMR v1 is off. */
+  tasks?: FlowTask[];
 }
 
 /* ─── output ────────────────────────────────────────────────────────── */
@@ -191,12 +215,12 @@ export interface FlowBadge {
   tone: Tone;
 }
 
-export type ItemKind = "intake" | "assignment" | "encounter" | "resus";
+export type ItemKind = "intake" | "assignment" | "encounter" | "resus" | "result" | "cosign";
 
 export interface OpenItem {
   id: string;
   kind: ItemKind;
-  /** "Intake", "Assignment · L4", "Encounter", "Resus". */
+  /** "Intake", "Assignment · L4", "Encounter", "Resus", "Result", "Co-sign". */
   label: string;
   detail: string;
   /** When the item began: arrival, assignment, opening. */
@@ -291,6 +315,7 @@ interface Bucket {
   intakes: FlowIntake[];
   encounters: FlowEncounter[];
   resus: FlowResus[];
+  tasks: FlowTask[];
 }
 
 interface Ctx {
@@ -346,7 +371,8 @@ function buckets(input: FlowInput): Bucket[] {
   const map = new Map<string, Bucket>();
   const get = (key: string, patientId: string | null) => {
     let b = map.get(key);
-    if (!b) map.set(key, (b = { key, patientId, intakes: [], encounters: [], resus: [] }));
+    if (!b)
+      map.set(key, (b = { key, patientId, intakes: [], encounters: [], resus: [], tasks: [] }));
     return b;
   };
   for (const i of input.intakes)
@@ -354,6 +380,7 @@ function buckets(input: FlowInput): Bucket[] {
   for (const e of input.encounters) get(`p:${e.patientId}`, e.patientId).encounters.push(e);
   for (const r of input.resus)
     get(r.patientId ? `p:${r.patientId}` : `r:${r.id}`, r.patientId).resus.push(r);
+  for (const t of input.tasks ?? []) get(`p:${t.patientId}`, t.patientId).tasks.push(t);
   return [...map.values()].sort((a, b) => a.key.localeCompare(b.key));
 }
 
@@ -432,6 +459,18 @@ function buildRow(b: Bucket, ctx: Ctx): { row: PatientFlowRow; flags: IntegrityF
     );
   const idleResus = b.resus.filter((r) => r.section === "needs_closing");
 
+  // E8 lane sources, oldest first. The loader scoped them to the viewer (FW-11 holds by construction).
+  const tasksOf = (kind: FlowTask["kind"]) =>
+    b.tasks
+      .filter((t) => t.kind === kind)
+      .sort((x, y) => x.atMs - y.atMs || x.id.localeCompare(y.id));
+  const critical = tasksOf("critical_result");
+  const toReview = tasksOf("result_to_review");
+  const toCosign = tasksOf("cosign");
+  const hasDraft = (e: FlowEncounter) => e.unsignedNoteAtMs != null;
+  const draftIdle = (e: FlowEncounter) =>
+    hasDraft(e) && nowMs - e.unsignedNoteAtMs! >= settings.encounterIdleMs;
+
   // FW-4: the newest assignment wins; the rest are superseded.
   const plannedByAge = [...planned].sort((x, y) => y.createdAtMs - x.createdAtMs);
   const superseded = new Set(plannedByAge.slice(1).map((e) => e.id));
@@ -447,6 +486,10 @@ function buildRow(b: Bucket, ctx: Ctx): { row: PatientFlowRow; flags: IntegrityF
     .filter(({ s }) => s !== "assigned")
     .filter(({ s }) => s === "awaiting" || viewer.mayAssign);
   const visibleEncounters = open.filter(inScope);
+  // §5.11: a completed encounter that still has an unsigned note is an item to close.
+  const unsignedDone = b.encounters.filter(
+    (e) => e.state === "completed" && inScope(e) && hasDraft(e),
+  );
   const covered = b.intakes
     .filter((i) => {
       const e = coveredBy.get(i.id);
@@ -458,14 +501,20 @@ function buildRow(b: Bucket, ctx: Ctx): { row: PatientFlowRow; flags: IntegrityF
     ...visibleEncounters.map((e) => e.id),
     ...liveResus.map((r) => r.id),
     ...idleResus.map((r) => r.id),
+    ...unsignedDone.map((e) => e.id),
+    ...b.tasks.map((t) => t.id),
     ...covered,
   ];
   const openCount =
-    intakeItems.length + visibleEncounters.length + liveResus.length + idleResus.length;
+    intakeItems.length +
+    visibleEncounters.length +
+    liveResus.length +
+    idleResus.length +
+    unsignedDone.length;
   const doneToday = b.encounters
     .filter((e) => e.state === "completed" && inScope(e) && (e.endedAtMs ?? 0) >= input.dayStartMs)
     .sort((x, y) => (y.endedAtMs ?? 0) - (x.endedAtMs ?? 0));
-  if (openCount === 0 && doneToday.length === 0) return null;
+  if (openCount === 0 && doneToday.length === 0 && b.tasks.length === 0) return null;
 
   for (const e of visibleEncounters)
     if (e.state === "in_progress" && idle(e)) flag("idle_encounter", [e.id]);
@@ -534,6 +583,7 @@ function buildRow(b: Bucket, ctx: Ctx): { row: PatientFlowRow; flags: IntegrityF
       ...visibleEncounters.map((e) => e.createdAtMs),
       ...idleResus.map((r) => r.startedAtMs),
       ...liveResus.map((r) => r.startedAtMs),
+      ...unsignedDone.map((e) => e.endedAtMs ?? e.startedAtMs),
       nowMs,
     );
   const visitReason = () => b.intakes.map((i) => i.complaint).find((c): c is string => !!c) ?? null;
@@ -579,6 +629,19 @@ function buildRow(b: Bucket, ctx: Ctx): { row: PatientFlowRow; flags: IntegrityF
     acuityTriage = b.intakes.map((i) => latestTriage(i)).find(Boolean) ?? null;
     reason = r.trigger;
     resusRow = r;
+  } else if (critical.length > 0) {
+    // E8: an unacknowledged critical result outranks everything but resus and a death.
+    const t = critical[0]!;
+    lane = "critical_results";
+    primaryId = t.id;
+    primary = { kind: "view", label: "Review result", encounterId: t.encounterId };
+    stageDetail =
+      critical.length > 1
+        ? `${plural(critical.length, "critical result")} · awaiting acknowledgement`
+        : `${t.label ?? "Result"} · awaiting acknowledgement`;
+    sinceMs = t.atMs;
+    acuityTriage = b.intakes.map((i) => latestTriage(i)).find(Boolean) ?? null;
+    reason = visitReason();
   } else if (myRunning.length > 0) {
     const e = myRunning[0]!;
     lane = "in_progress";
@@ -649,6 +712,30 @@ function buildRow(b: Bucket, ctx: Ctx): { row: PatientFlowRow; flags: IntegrityF
       primary = take;
       overflow = [assign, retriage];
     }
+  } else if (toReview.length > 0 || toCosign.length > 0) {
+    // E8: Results to review, then To co-sign — below every live stage, above closing.
+    const results = toReview.length > 0;
+    const t = (results ? toReview : toCosign)[0]!;
+    const n = results ? toReview.length : toCosign.length;
+    lane = results ? "results_to_review" : "to_cosign";
+    primaryId = t.id;
+    primary = results
+      ? {
+          kind: "view",
+          label: n > 1 ? "Review results" : "Review result",
+          encounterId: t.encounterId,
+        }
+      : { kind: "view", label: "Co-sign", encounterId: t.encounterId };
+    stageDetail = results
+      ? n > 1
+        ? `${plural(n, "result")} released`
+        : `${t.label ?? "Result"} released`
+      : n > 1
+        ? `${plural(n, "note")} awaiting co-signature`
+        : `${t.label ?? "Note"} awaiting co-signature`;
+    sinceMs = t.atMs;
+    acuityTriage = b.intakes.map((i) => latestTriage(i)).find(Boolean) ?? null;
+    reason = visitReason();
   } else if (openCount > 0) {
     // Only superseded, idle, stale or contradictory items are left.
     lane = "needs_closing";
@@ -741,11 +828,13 @@ function buildRow(b: Bucket, ctx: Ctx): { row: PatientFlowRow; flags: IntegrityF
         label: "Encounter",
         detail: quiet
           ? `No activity ${ago(nowMs - e.lastActivityAtMs)}`
-          : mine(e)
-            ? "Clerking"
-            : `Clerking · ${e.clinicianName ?? "another doctor"}`,
+          : draftIdle(e)
+            ? `Unsigned draft, no change ${ago(nowMs - e.unsignedNoteAtMs!)}`
+            : mine(e)
+              ? "Clerking"
+              : `Clerking · ${e.clinicianName ?? "another doctor"}`,
         sinceMs: e.createdAtMs,
-        tone: quiet || deceased ? "amber" : "neutral",
+        tone: quiet || deceased || draftIdle(e) ? "amber" : "neutral",
         actions: mine(e)
           ? [
               { kind: "continue", label: "Continue", encounterId: e.id },
@@ -768,6 +857,41 @@ function buildRow(b: Bucket, ctx: Ctx): { row: PatientFlowRow; flags: IntegrityF
       actions: [
         { kind: "open_desk", label: "Open desk", episodeId: r.id },
         ...(quiet ? [{ kind: "close_resus" as const, label: "Close…", episodeId: r.id }] : []),
+      ],
+    });
+  }
+  for (const e of unsignedDone) {
+    alsoOpen.push({
+      id: e.id,
+      kind: "encounter",
+      label: "Encounter",
+      detail: "Visit ended with an unsigned note",
+      sinceMs: e.endedAtMs ?? e.startedAtMs,
+      tone: "amber",
+      actions: mine(e) ? [{ kind: "view", label: "Open", encounterId: e.id }] : [],
+    });
+  }
+  for (const t of b.tasks) {
+    if (t.id === primaryId) continue;
+    const result = t.kind !== "cosign";
+    alsoOpen.push({
+      id: t.id,
+      kind: result ? "result" : "cosign",
+      label: result ? "Result" : "Co-sign",
+      detail:
+        t.kind === "critical_result"
+          ? `${t.label ?? "Result"} · critical, awaiting acknowledgement`
+          : result
+            ? `${t.label ?? "Result"} · to review`
+            : `${t.label ?? "Note"} · awaiting co-signature`,
+      sinceMs: t.atMs,
+      tone: t.kind === "critical_result" ? "amber" : "neutral",
+      actions: [
+        {
+          kind: "view",
+          label: result ? "Review result" : "Co-sign",
+          encounterId: t.encounterId,
+        },
       ],
     });
   }
@@ -796,6 +920,17 @@ function buildRow(b: Bucket, ctx: Ctx): { row: PatientFlowRow; flags: IntegrityF
   if (intakeItems.some(({ s }) => s === "after_visit")) {
     badges.push({ text: "Intake still open", tone: "amber" });
   }
+  // One patient, one row (§5.11): a lane source the row outranks is said here instead.
+  if (critical.length > 0 && lane !== "critical_results")
+    badges.push({ text: plural(critical.length, "critical result"), tone: "amber" });
+  if (toReview.length > 0 && lane !== "results_to_review")
+    badges.push({ text: `${plural(toReview.length, "result")} to review`, tone: "neutral" });
+  if (toCosign.length > 0 && lane !== "to_cosign")
+    badges.push({ text: `${plural(toCosign.length, "note")} to co-sign`, tone: "neutral" });
+  const drafts =
+    unsignedDone.length +
+    visibleEncounters.filter((e) => e.state !== "completed" && draftIdle(e)).length;
+  if (drafts > 0) badges.push({ text: plural(drafts, "unsigned note"), tone: "amber" });
 
   /* FW-10: a wait turns amber only past a CSO-signed target for that acuity. */
   let waitTone: Tone = "neutral";
