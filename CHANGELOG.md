@@ -13,8 +13,8 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); version
   pack's verdict; a Diabetes profile card appears beside the note once diabetes is known or suspected; the Plan lists
   due checks and targets (read only).
 - The desk now loads potassium, creatinine, lipids, urine protein and pregnancy dates; eGFR by CKD-EPI 2021.
-- Questions the clerking does not ask go to a short "More diabetes questions" pop-up. 42 mapping rulings await the
-  CSO (`docs/ncd/diabetes/desk/mapping-rulings.md`). No migration.
+- Questions the clerking does not ask go to a short "More diabetes questions" pop-up. 46 mapping rulings signed by the CSO
+  (`docs/ncd/diabetes/desk/mapping-rulings.md`). Twelve clerking questions added (live on deploy). No migration.
 
 ### Changed — NCDSync: a superadmin can hold registry roles assigned explicitly — 2026-10-06
 
