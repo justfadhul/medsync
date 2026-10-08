@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ChevronDownIcon, ChevronLeftIcon, ChevronRightIcon } from "lucide-react";
+import { ChevronLeftIcon, ChevronRightIcon } from "lucide-react";
 
 import { formatTime } from "@/lib/patient/booking-format";
 import { cn } from "@/lib/utils";
@@ -65,7 +65,7 @@ export function DateTimeFields({
             onChange={(e) =>
               goTo(Math.floor(cells.findIndex((k) => k.startsWith(e.target.value)) / 7))
             }
-            className="text-body-m text-foreground hover:bg-muted focus-visible:ring-ring h-9 cursor-pointer appearance-none rounded-lg bg-transparent pr-8 pl-2 font-medium outline-none focus-visible:ring-2"
+            className="text-body-m text-foreground hover:bg-muted focus-visible:ring-ring h-9 cursor-pointer rounded-lg bg-transparent pl-2 font-medium outline-none focus-visible:ring-2"
           >
             {months.map((m) => (
               <option key={m} value={m}>
@@ -73,10 +73,6 @@ export function DateTimeFields({
               </option>
             ))}
           </select>
-          <ChevronDownIcon
-            aria-hidden
-            className="text-muted-foreground pointer-events-none absolute top-1/2 right-2 size-4 -translate-y-1/2"
-          />
         </label>
         <div className="flex gap-1">
           <button

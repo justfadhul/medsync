@@ -1295,3 +1295,29 @@
     font-variant-numeric: tabular-nums;
   }
 }
+
+/* ─── Single-line selects ───────────────────────────────────────────────
+   Safari draws its own <select>: stepper arrows, an inset grey gradient and
+   its own height, whatever the classes say. Every single-line select drops
+   the native appearance and takes the Chroma chevron (ink-500, 14px, 10px
+   from the end) instead, so it reads like an Input in every browser.
+   Deliberately unlayered: it must beat a call site's `px-*`, which would
+   otherwise slide the text under the chevron. Multi-selects and list boxes
+   (`multiple`, `size`) keep the native rendering. */
+select:not([multiple]):not([size]) {
+  -webkit-appearance: none;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%236c717b' stroke-width='1.75' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  background-size: 14px 14px;
+  padding-inline-end: 32px;
+  text-overflow: ellipsis;
+}
+.dark select:not([multiple]):not([size]) {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%238a9099' stroke-width='1.75' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+}
+/* ADR 0098 Law 3: a forced-light surface keeps the light chevron in dark mode. */
+.dark .medsync-forced-light select:not([multiple]):not([size]) {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%236c717b' stroke-width='1.75' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+}
