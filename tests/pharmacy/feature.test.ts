@@ -23,8 +23,9 @@ describe("PHARMACY_WORKSPACE", () => {
     expect(pharmacyWorkspaceLiveFor("h3")).toBe(false);
   });
 
-  it("CS-5: the shipped wording is draft, so production refuses it; other environments allow it", () => {
-    expect(PHARMACY_SIGNED_COPY.some((c) => c.status === "draft")).toBe(true);
+  it("CS-5: production refuses it while any wording is draft; other environments allow it", () => {
+    // The shipped wording is signed (2026-10-11); the gate is proven on a draft copy.
+    vi.spyOn(PHARMACY_NOTICE, "status", "get").mockReturnValue("draft");
     vi.stubEnv("PHARMACY_WORKSPACE", "1");
     vi.stubEnv("VERCEL_ENV", "production");
     const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
@@ -35,7 +36,8 @@ describe("PHARMACY_WORKSPACE", () => {
   });
 
   it("CS-5: production allows it only when every string is signed", () => {
-    for (const c of PHARMACY_SIGNED_COPY) vi.spyOn(c, "status", "get").mockReturnValue("signed");
+    for (const c of PHARMACY_SIGNED_COPY)
+      expect(c).toMatchObject({ status: "signed", signedBy: "Fadhul (CSO)" });
     vi.stubEnv("PHARMACY_WORKSPACE", "1");
     vi.stubEnv("VERCEL_ENV", "production");
     expect(pharmacyWorkspaceLiveFor("h1")).toBe(true);

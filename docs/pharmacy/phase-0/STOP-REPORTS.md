@@ -916,3 +916,10 @@ Playwright is not used (D-PH0-22). Each scenario is proven by a test in the repo
 - `vitest`: 435 files, **8,907 passed**, 0 failed.
 - PGlite lane: 33 files, **542 passed**, two consecutive runs.
 - `next build` passes (the harness's production build of this tree).
+
+### After STOP 5 — signatures (11 Oct 2026)
+
+- **The five safety strings are signed** by the CSO "as written", in the sign-off portal (https://claude.ai/artifact/PrEYQNLnd2Ng7zaq58Rtj6). Each signed text was checked against `content/pharmacy.ts`, field by field, and matches exactly.
+- **`content/pharmacy.ts`** is now status `signed` (Fadhul (CSO), 2026-10-11). CS-5 no longer holds production off.
+- **The technicians' registering body** is confirmed by the CSO in the same portal as the Pharmacy Board of Uganda. No source was cited; that is recorded in the permission map's notes.
+- **`tests/pharmacy/feature.test.ts`** now proves the gate on a draft copy and checks that the shipped strings are signed, as the lab's flag test does.

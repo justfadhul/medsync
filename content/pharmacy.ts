@@ -7,11 +7,16 @@ import type { SignedCopy } from "@/content/signed-copy";
  * any is `draft` (CS-5). To sign, the CSO sets status "signed" with signedBy and signedOn.
  */
 
-const DRAFT: SignedCopy = { status: "draft", signedBy: null, signedOn: null };
+/**
+ * Signed by the CSO on 11 Oct 2026 through the sign-off portal
+ * (https://claude.ai/artifact/PrEYQNLnd2Ng7zaq58Rtj6), each string exactly as written here. Any change
+ * to a string below returns it to `draft` until it is signed again.
+ */
+const SIGNED: SignedCopy = { status: "signed", signedBy: "Fadhul (CSO)", signedOn: "2026-10-11" };
 
 /** "What the pharmacy is not doing" (§5.6, D-PH0-07). {signed} and {total} come from data (CS-3). */
 export const PHARMACY_NOTICE = {
-  ...DRAFT,
+  ...SIGNED,
   lead: "MedSync does not record dispensing yet.",
   bodyCounts:
     "Dispense from the signed prescription as you do today. MedSync does not check drug interactions at this hospital, and {signed} of the {total} medicines on its list have a signed dose reference. Check each prescription yourself.",
@@ -20,21 +25,21 @@ export const PHARMACY_NOTICE = {
 };
 
 export const COSIGN_CAUTION = {
-  ...DRAFT,
+  ...SIGNED,
   text: "Not yet co-signed. A senior has not signed this prescription.",
 };
 
 /** D-PH0-19: a medicine stopped at a home discharge. */
-export const NOT_CONTINUED_CAUTION = { ...DRAFT, text: "Not continued at home" };
+export const NOT_CONTINUED_CAUTION = { ...SIGNED, text: "Not continued at home" };
 
 export const OVERRIDE_CAUTION = {
-  ...DRAFT,
+  ...SIGNED,
   lead: "{check} stop, overridden by the prescriber.",
   body: 'Reasons given: "{reasons}".',
 };
 
 export const EMERGENCY_NOTICE = {
-  ...DRAFT,
+  ...SIGNED,
   text: "Cart restocking is not recorded in MedSync yet. Use this list beside the cart's own checklist when you restock.",
 };
 

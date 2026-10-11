@@ -29,8 +29,8 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); version
   prescription written, in three lanes; a read-only prescription view with a read log
   ([ADR 0231](docs/adr/0231-what-pharmacy-staff-may-read.md)); emergency doses by cart from the resus timeline
   ([ADR 0235](docs/adr/0235-emergency-doses-from-the-resus-timeline.md)); "MedSync does not record dispensing yet" on
-  every prescription screen ([ADR 0234](docs/adr/0234-the-check-state-seam-and-the-pharmacy-notice.md)). Production
-  stays off until the CSO signs the wording.
+  every prescription screen ([ADR 0234](docs/adr/0234-the-check-state-seam-and-the-pharmacy-notice.md)). The CSO
+  signed the wording on 2026-10-11.
 - Dispensing points in the hub's Pharmacy department pick each pharmacy user's opening lane; the hub's pharmacy count
   and 24-hour value are worked out from them (migration 0121; [ADR 0236](docs/adr/0236-dispensing-points.md)).
 - The lab's access, flag, navigation, notice and shell are shared workspace modules now, unchanged for the lab

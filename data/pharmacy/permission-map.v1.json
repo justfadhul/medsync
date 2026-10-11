@@ -8,7 +8,7 @@
   "notes": [
     "Cadre codes are the Pharmacy Board cadres seeded in 0009. A cadre not listed here holds no pharmacy permission.",
     "Only pharmacy.view is granted in Phase 0. review, dispense, stock, controlled and manage are reserved names, granted by the phase that uses them.",
-    "The pharmacy technician's registering body is still to be confirmed from a primary source (Appendix C); view-only access carries no supply authority."
+    "The pharmacy technician's registering body (the Pharmacy Board of Uganda) was confirmed by the CSO on 2026-10-11 through the sign-off portal; no source was cited with it. View-only access carries no supply authority."
   ],
   "permissions": [
     "pharmacy.view",
