@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import Link from "next/link";
 
+import { SignOutButton } from "@/components/medsync/sign-out-button";
 import { MobileTabBar } from "@/components/responsive/mobile-tab-bar";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { dataProcessingConsent, resolvePatientScope } from "@/lib/patient/scope";
@@ -89,12 +90,7 @@ export default async function PatientLayout({ children }: { children: ReactNode 
           >
             Switch account
           </Link>
-          <Link
-            href="/sign-out"
-            className="text-muted-foreground hover:text-foreground decoration-border text-body-s inline-flex min-h-11 items-center underline-offset-4 transition-colors hover:underline"
-          >
-            Sign out
-          </Link>
+          <SignOutButton className="text-muted-foreground hover:text-foreground decoration-border text-body-s inline-flex min-h-11 items-center underline-offset-4 transition-colors hover:underline" />
         </div>
       </header>
 

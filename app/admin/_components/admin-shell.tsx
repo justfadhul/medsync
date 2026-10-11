@@ -6,6 +6,7 @@ import { ShieldAlertIcon, ShieldCheckIcon } from "lucide-react";
 
 import { Avatar } from "@/components/medsync/avatar";
 import { SIDEBAR_CLASS, SidebarSearch, SidebarWorkspace } from "@/components/medsync/sidebar-nav";
+import { SignOutButton } from "@/components/medsync/sign-out-button";
 import { AdminSidebarItem } from "./admin-sidebar-active";
 import { CommandPaletteRoot } from "./command-palette";
 import { MobileSidebar } from "./mobile-sidebar";
@@ -185,12 +186,7 @@ export function AdminShell({
             >
               Switch account
             </Link>
-            <Link
-              href="/sign-out"
-              className="text-muted-foreground hover:text-foreground text-[12px] transition-colors"
-            >
-              Sign out
-            </Link>
+            <SignOutButton className="text-muted-foreground hover:text-foreground text-[12px] transition-colors" />
           </div>
         </header>
 

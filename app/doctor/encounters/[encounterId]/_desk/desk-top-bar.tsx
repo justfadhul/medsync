@@ -1,8 +1,10 @@
 "use client";
 
 import Link from "next/link";
+import { useRef } from "react";
 import { ArrowLeftIcon, ChevronLeftIcon, LogOutIcon, UsersIcon } from "lucide-react";
 
+import { SignOutButton } from "@/components/medsync/sign-out-button";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -39,6 +41,8 @@ export function DeskTopBar({
 }) {
   // Every phone-only class goes through here, so `phone={false}` renders the old bar exactly.
   const m = (cls: string) => (phone ? cls : "");
+  // The phone menu's Sign out submits this: a menu item can't hold the form itself.
+  const signOutForm = useRef<HTMLFormElement>(null);
   const initials = cadreWord
     .split(/\s+/)
     .filter(Boolean)
@@ -90,15 +94,12 @@ export function DeskTopBar({
         >
           Switch account
         </Link>
-        <Link
-          href="/sign-out"
+        <SignOutButton
           className={cn(
             "text-body-s hover:text-foreground underline-offset-4 hover:underline",
             m("max-sm:hidden"),
           )}
-        >
-          Sign out
-        </Link>
+        />
         {/* The global Emergency affordance, in the bar: it stands the floating pill down so the
             pill never covers the desk's fixed action bar on a phone or tablet. */}
         <EmergencyInlineLink
@@ -106,6 +107,7 @@ export function DeskTopBar({
         />
         {phone ? (
           <DropdownMenu>
+            <form ref={signOutForm} action="/sign-out" method="POST" hidden />
             <DropdownMenuTrigger
               aria-label={`Account: ${cadreWord}`}
               className={cn(
@@ -130,7 +132,10 @@ export function DeskTopBar({
                 <UsersIcon aria-hidden />
                 Switch account
               </DropdownMenuItem>
-              <DropdownMenuItem render={<Link href="/sign-out" />} className="min-h-11">
+              <DropdownMenuItem
+                onClick={() => signOutForm.current?.requestSubmit()}
+                className="min-h-11"
+              >
                 <LogOutIcon aria-hidden />
                 Sign out
               </DropdownMenuItem>

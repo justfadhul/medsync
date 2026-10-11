@@ -4,6 +4,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { LogOutIcon, UsersIcon } from "lucide-react";
 
+import { SignOutButton } from "@/components/medsync/sign-out-button";
 import { buttonVariants } from "@/components/ui/button";
 import { Pill } from "@/components/ui/pill";
 import { requirePatientScope } from "@/lib/patient/scope";
@@ -148,8 +149,7 @@ export default async function PatientMenuPage() {
         <UsersIcon aria-hidden className="size-4" />
         Switch account
       </Link>
-      <Link
-        href="/sign-out"
+      <SignOutButton
         className={cn(
           buttonVariants({ variant: "secondary", size: "lg" }),
           "w-full @3xl/page:w-fit",
@@ -157,7 +157,7 @@ export default async function PatientMenuPage() {
       >
         <LogOutIcon aria-hidden className="size-4" />
         Sign out
-      </Link>
+      </SignOutButton>
     </div>
   );
 }

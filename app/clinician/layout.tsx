@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
+import { SignOutButton } from "@/components/medsync/sign-out-button";
 import { ArrestAlarm } from "@/components/resus/arrest-alarm";
 import { requireClinicianScope } from "@/lib/clinician/scope";
 import { isDoctorUser } from "@/lib/doctor/scope";
@@ -69,12 +70,7 @@ export default async function ClinicianLayout({ children }: { children: ReactNod
           >
             Switch account
           </Link>
-          <Link
-            href="/sign-out"
-            className="text-muted-foreground hover:text-foreground text-body-s underline-offset-4 transition-colors hover:underline"
-          >
-            Sign out
-          </Link>
+          <SignOutButton className="text-muted-foreground hover:text-foreground text-body-s underline-offset-4 transition-colors hover:underline" />
         </div>
       </header>
 

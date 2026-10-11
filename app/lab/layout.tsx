@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import Link from "next/link";
 
+import { SignOutButton } from "@/components/medsync/sign-out-button";
 import { emrV1LiveFor } from "@/lib/emr/feature";
 import { requireLabTechScope } from "@/lib/lab-tech/scope";
 import { loadLabWorklist as loadLegacyWorklist } from "@/lib/lab-tech/worklist";
@@ -99,12 +100,7 @@ function LegacyLabLayout({
           >
             Switch account
           </Link>
-          <Link
-            href="/sign-out"
-            className="text-muted-foreground hover:text-foreground text-[12px] underline-offset-4 transition-colors hover:underline"
-          >
-            Sign out
-          </Link>
+          <SignOutButton className="text-muted-foreground hover:text-foreground text-[12px] underline-offset-4 transition-colors hover:underline" />
         </div>
       </header>
 

@@ -7,6 +7,7 @@ import { Suspense } from "react";
 import { eq } from "drizzle-orm";
 import { AlertTriangleIcon, ArrowLeftIcon } from "lucide-react";
 
+import { SignOutButton } from "@/components/medsync/sign-out-button";
 import { db } from "@/db";
 import { encounters } from "@/db/schema/scheduling";
 import { fetchPatientSummaryAudited } from "@/lib/doctor/patient-access";
@@ -355,12 +356,7 @@ function WorkspaceTopBar({
         >
           Switch account
         </Link>
-        <Link
-          href="/sign-out"
-          className="text-muted-foreground hover:text-foreground text-[12px] transition-colors"
-        >
-          Sign out
-        </Link>
+        <SignOutButton className="text-muted-foreground hover:text-foreground text-[12px] transition-colors" />
       </div>
     </header>
   );

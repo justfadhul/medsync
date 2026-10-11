@@ -5,6 +5,11 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); version
 
 ## [Unreleased]
 
+### Fixed — "Sign out" in the workspace headers did nothing — 2026-10-11
+
+- Every header's "Sign out" was a link (a GET), and `/sign-out` takes POST only, so it answered 405. It is now a form
+  POST (`components/medsync/sign-out-button.tsx`); a test keeps any link to `/sign-out` from coming back.
+
 ### Added — Several accounts signed in to one browser — 2026-10-11
 
 - Signing in to another account no longer signs the first one out. Each account keeps its own session cookie; the

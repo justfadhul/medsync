@@ -5,6 +5,7 @@ import { ShieldCheckIcon } from "lucide-react";
 
 import { Avatar } from "@/components/medsync/avatar";
 import { SIDEBAR_CLASS, SidebarSearch, SidebarWorkspace } from "@/components/medsync/sidebar-nav";
+import { SignOutButton } from "@/components/medsync/sign-out-button";
 import { Tag } from "@/components/medsync/tag";
 import { RECEPTION_FEATURE_AREAS, receptionFeaturePath } from "../_lib/features";
 import { ReceptionCommandBar, ReceptionSidebarItem } from "./reception-sidebar-item";
@@ -123,12 +124,7 @@ export function ReceptionShell({
             >
               Switch account
             </Link>
-            <Link
-              href="/sign-out"
-              className="text-muted-foreground hover:text-foreground text-body-s ease-expo-out underline-offset-4 transition-colors duration-150 hover:underline"
-            >
-              Sign out
-            </Link>
+            <SignOutButton className="text-muted-foreground hover:text-foreground text-body-s ease-expo-out underline-offset-4 transition-colors duration-150 hover:underline" />
           </div>
         </header>
 

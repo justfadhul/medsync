@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, it, vi } from "vitest";
 
@@ -38,6 +38,16 @@ describe("sign-out scope", () => {
     expect(setActiveAccount).toHaveBeenCalledWith(2);
     expect(new URL(res.headers.get("location")!).pathname).toBe("/accounts");
     accounts.list = [];
+  });
+
+  it("web: nothing links to /sign-out — a GET answers 405, so it is always a form POST", () => {
+    const linked = ["app", "components"].flatMap((dir) =>
+      readdirSync(resolve(process.cwd(), dir), { recursive: true, encoding: "utf8" })
+        .filter((f) => f.endsWith(".tsx"))
+        .map((f) => `${dir}/${f}`)
+        .filter((f) => /href="\/sign-out"|<Link href="\/sign-out"/.test(readFileSync(f, "utf8"))),
+    );
+    expect(linked).toEqual([]);
   });
 
   it("phone: the app signs this phone out, not the patient's web session", () => {

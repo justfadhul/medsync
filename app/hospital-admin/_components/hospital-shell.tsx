@@ -5,6 +5,7 @@ import { ShieldAlertIcon, ShieldCheckIcon } from "lucide-react";
 
 import { Avatar } from "@/components/medsync/avatar";
 import { SIDEBAR_CLASS, SidebarSearch, SidebarWorkspace } from "@/components/medsync/sidebar-nav";
+import { SignOutButton } from "@/components/medsync/sign-out-button";
 import { FEATURE_AREAS, featurePath } from "../_lib/features";
 import { HospitalCommandPalette } from "./hospital-command-palette";
 import { HospitalSidebarItem } from "./hospital-sidebar-item";
@@ -191,12 +192,7 @@ export function HospitalShell({
               >
                 Switch account
               </Link>
-              <Link
-                href="/sign-out"
-                className="text-muted-foreground hover:text-foreground text-[12px] transition-colors"
-              >
-                Sign out
-              </Link>
+              <SignOutButton className="text-muted-foreground hover:text-foreground text-[12px] transition-colors" />
             </div>
           </header>
 

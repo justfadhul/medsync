@@ -8,6 +8,7 @@ import {
   SidebarGroupLabel,
   SidebarWorkspace,
 } from "@/components/medsync/sidebar-nav";
+import { SignOutButton } from "@/components/medsync/sign-out-button";
 
 /**
  * A staff workspace shell (Lab Phase 0 §5.2, Pharmacy Phase 0 §5.2; ADR 0229): the shared 248 px
@@ -89,12 +90,7 @@ export function WorkspaceShell({
             >
               Switch account
             </Link>
-            <Link
-              href="/sign-out"
-              className="text-muted-foreground hover:text-foreground decoration-border shrink-0 text-[12px] underline-offset-4 transition-colors hover:underline"
-            >
-              Sign out
-            </Link>
+            <SignOutButton className="text-muted-foreground hover:text-foreground decoration-border shrink-0 text-[12px] underline-offset-4 transition-colors hover:underline" />
           </div>
         </header>
         {phoneNav}

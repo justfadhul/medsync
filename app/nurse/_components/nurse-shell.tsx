@@ -5,6 +5,7 @@ import { ShieldCheckIcon } from "lucide-react";
 
 import { Avatar } from "@/components/medsync/avatar";
 import { SIDEBAR_CLASS, SidebarSearch, SidebarWorkspace } from "@/components/medsync/sidebar-nav";
+import { SignOutButton } from "@/components/medsync/sign-out-button";
 import { Tag } from "@/components/medsync/tag";
 import { NURSE_FEATURE_AREAS, nurseFeaturePath } from "../_lib/features";
 import { NurseCommandBar, NurseSidebarItem } from "./nurse-sidebar-item";
@@ -154,12 +155,7 @@ export function NurseShell({
             >
               Switch account
             </Link>
-            <Link
-              href="/sign-out"
-              className="text-muted-foreground hover:text-foreground text-[12px] underline-offset-4 transition-colors hover:underline"
-            >
-              Sign out
-            </Link>
+            <SignOutButton className="text-muted-foreground hover:text-foreground text-[12px] underline-offset-4 transition-colors hover:underline" />
           </div>
         </header>
 
