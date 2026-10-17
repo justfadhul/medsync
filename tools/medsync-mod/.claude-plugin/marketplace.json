@@ -1,0 +1,5 @@
+{
+  "name": "medsync-local",
+  "owner": { "name": "Usama Fadhul" },
+  "plugins": [{ "name": "medsync", "source": "./" }]
+}

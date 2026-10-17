@@ -47,6 +47,22 @@ When `MEDSYNC_LAUNCH=1`, the console opens at session start. Claude Code places 
 
 If `claude` is not on PATH, the launcher uses the copy the Claude desktop app keeps. If that copy says your sign-in expired, run `/login` once inside it.
 
+### Inside Claude Code without the launcher
+
+Install the mod once for this repo. Every Claude Code session opened in this folder then loads it: the desktop app's Code tab, `claude` in a terminal, and IDE sessions.
+
+```bash
+claude plugin marketplace add "$PWD/tools/medsync-mod" --scope local
+```
+
+```bash
+claude plugin install medsync@medsync-local --scope local
+```
+
+Run both from the repo root. They write to `.claude/settings.local.json`, which is not checked in, so the mod is enabled in this checkout only. The plugin is read from `tools/medsync-mod` itself: after you edit the mod, run `/reload-plugins` (or start a new session), with no reinstall. Without the launcher the console does not open by itself; type `/dash`. In the desktop app, the console opens as a pane beside the conversation.
+
+When both are present, `launch-medsync`'s `--plugin-dir` copy overrides the installed one. Config set in the menu for the installed copy (`medsync@medsync-local`) is separate from the launcher's (`medsync@inline`).
+
 ### Two lines
 
 Open a second terminal in this repo and run:
@@ -113,7 +129,11 @@ The line checks, routing, review and locks keep working there. A hold can't be a
 claude --safe-mode
 ```
 
-Or run plain `claude` without the launcher.
+That turns it off for one run. If you installed it, plain `claude` still loads it; to stop that:
+
+```bash
+claude plugin disable medsync@medsync-local --scope local
+```
 
 ## Developing it
 
