@@ -19,7 +19,6 @@ export type Host = {
   contexts: (readonly string[] | undefined)[];
   toasts: string[];
   commands: string[];
-  reply: { text: string };
   classify: { label: string };
 };
 
@@ -35,9 +34,6 @@ export function host(
     contexts: [],
     toasts: [],
     commands: [],
-    reply: {
-      text: '{"score":90,"checklist":{},"issues":[],"questions":[],"improved":"","route":{"size":"medium","risk":"medium","depth":"low","scope":"narrow","reason":"ordinary change","confidence":0.7}}',
-    },
     classify: { label: "medium" },
   };
   const abs = (p: string) => (p.startsWith("/") ? p : `${ROOT}/${p}`);
@@ -126,18 +122,6 @@ export function host(
     "prompt.submit",
     ($, e) => (h.submitted.push(e.text), h.contexts.push(e.context), { text: e.text }),
   );
-  on("model.complete", () => ({
-    value: {
-      isAnswered: true,
-      text: h.reply.text,
-      usage: {
-        input_tokens: 1,
-        output_tokens: 1,
-        cache_creation_input_tokens: 0,
-        cache_read_input_tokens: 0,
-      },
-    },
-  }));
   on("model.classify", () => ({ value: h.classify.label }));
   on("audio.play", () => ({ value: undefined }));
   on("ui.toast", ($, e) => (h.toasts.push(String(e.text)), { value: undefined }));
@@ -220,7 +204,7 @@ export async function press($: Engine, h: Host, option: string) {
   throw new Error(`no hold offering "${option}" appeared`);
 }
 
-/** Presses a band button by key (the held review's). */
+/** Presses a band button by key (the held prompt's). */
 export async function pressKey($: Engine, key: string) {
   await drawBand($);
   await $.ui.press({ plugin: "medsync", key, requestId: "band", surface: "terminal" });

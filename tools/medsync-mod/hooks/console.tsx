@@ -5,7 +5,7 @@ export type Actions = {
   decide: (id: string, option: string) => Promise<void>;
   view: (patch: Partial<View>) => Promise<unknown>;
   toggle: (key: string) => Promise<void>;
-  send: (kind: "main" | "improved" | "mine" | "edit") => Promise<void>;
+  send: (kind: "main" | "synthetic" | "edit") => Promise<void>;
   removeNote: (id: string) => Promise<void>;
   pause: () => Promise<void>;
   tests: () => Promise<void>;
@@ -205,8 +205,7 @@ export function renderPane(
   );
 
   // column 1: transmit
-  const review = l.review;
-  const isHeld = !!review?.isHeld;
+  const held = l.held;
   const transmit = (
     <Box flexDirection="column" flexGrow={1} minWidth={30}>
       {head("TRANSMIT  you → Claude")}
@@ -246,35 +245,31 @@ export function renderPane(
                 : "Pin to every turn…"
           }
           value={v.compose}
-          submitLabel={isHeld ? "Send improved" : "Send"}
+          submitLabel={v.mode === "prompt" ? "Send" : v.mode === "note" ? "Queue note" : "Pin"}
           onInput={(text) => void a.input(text)}
-          onSubmit={() => void a.send(isHeld ? "improved" : "main")}
+          onSubmit={() => void a.send("main")}
         />
       ) : null}
       <Text>
-        <Text dimColor>review</Text> {l.pipeline.review} <Text dimColor>› route</Text>{" "}
-        {l.pipeline.route} <Text dimColor>› transmit</Text> {l.pipeline.transmit}
+        <Text dimColor>route</Text> {l.pipeline.route} <Text dimColor>› transmit</Text>{" "}
+        {l.pipeline.transmit}
       </Text>
-      {l.hints.map((h, i) => (
-        <Text key={`hint${i}`} color="warning">
-          · {h}
-        </Text>
-      ))}
+      {held ? (
+        <Box flexDirection="column">
+          <Text color="warning">Held: {held.phi.join(", ")}. Synthetic version:</Text>
+          <Text color="suggestion">{held.synthetic}</Text>
+        </Box>
+      ) : null}
       <Box flexDirection="row" columnGap={1}>
-        {isHeld ? (
+        {held ? (
           <Box flexDirection="row" columnGap={1}>
             <Button
-              key="send:improved"
+              key="send:synthetic"
               variant="primary"
-              label="Send improved"
-              onPress={() => void a.send("improved")}
+              label="Send synthetic"
+              onPress={() => void a.send("synthetic")}
             />
-            {review!.phi.length ? (
-              <Text dimColor>[ Send mine: patient data ]</Text>
-            ) : (
-              <Button key="send:mine" label="Send mine" onPress={() => void a.send("mine")} />
-            )}
-            <Button key="send:edit" label="Edit improved" onPress={() => void a.send("edit")} />
+            <Button key="send:edit" label="Edit synthetic" onPress={() => void a.send("edit")} />
           </Box>
         ) : (
           <Button
@@ -285,38 +280,6 @@ export function renderPane(
           />
         )}
       </Box>
-      {fold(
-        "review",
-        "Review",
-        review ? `${review.score}/100${review.isHeld ? " held" : ""}` : "nothing held",
-        () => (
-          <Box flexDirection="column" paddingLeft={2}>
-            {review ? (
-              <Box flexDirection="column">
-                {review.checklist.map((c) => (
-                  <Text key={`ck:${c.label}`}>
-                    {c.ok ? "✓" : "✗"} {c.label}
-                  </Text>
-                ))}
-                {review.issues.map((x, i) => (
-                  <Text key={`is${i}`} color="warning">
-                    ! {x}
-                  </Text>
-                ))}
-                {review.questions.map((x, i) => (
-                  <Text key={`q${i}`} dimColor>
-                    ? {x}
-                  </Text>
-                ))}
-                <Text>Improved (additions in [+ ]):</Text>
-                <Text color="suggestion">{review.improved}</Text>
-              </Box>
-            ) : (
-              <Text dimColor>Prompts at or over {l.threshold} pass unchanged.</Text>
-            )}
-          </Box>
-        ),
-      )}
       {fold(
         "routing",
         "Routing",
@@ -649,7 +612,7 @@ export function renderPane(
   );
 }
 
-// ── the band above the prompt: summary, holds, held review ────────────
+// ── the band above the prompt: summary, holds, a held prompt ────────────
 
 export function renderBand(
   $: EngineInterface,
@@ -661,8 +624,8 @@ export function renderBand(
   const { Box, Text, Button } = $.ui.resolve(e);
   const { board: b, local: l } = d;
   const needs = b.needs.filter((n) => n.line === d.line && n.options.length);
-  const review = l.review?.isHeld ? l.review : null;
-  if (isPaneShown && !needs.length && !review) return null;
+  const held = l.held;
+  if (isPaneShown && !needs.length && !held) return null;
   const rows: RenderElement[] = [];
   if (!isPaneShown)
     rows.push(
@@ -670,7 +633,7 @@ export function renderBand(
         key="sum"
         dimColor
         wrap="truncate"
-      >{`MedSync · ${summaryLine(l, b)}${l.hints.length ? ` · ${l.hints[0]}` : ""}`}</Text>,
+      >{`MedSync · ${summaryLine(l, b)}`}</Text>,
     );
   for (const [i, n] of needs.slice(0, 2).entries())
     rows.push(
@@ -689,24 +652,17 @@ export function renderBand(
         ))}
       </Box>,
     );
-  if (review)
+  if (held)
     rows.push(
-      <Box key="rv" flexDirection="row" columnGap={1} flexWrap="wrap">
-        <Text color="warning">
-          {review.phi.length
-            ? `Held: ${review.phi.join(", ")}`
-            : `Review ${review.score}/100: ${review.issues[0] ?? "needs detail"}`}
-        </Text>
+      <Box key="held" flexDirection="row" columnGap={1} flexWrap="wrap">
+        <Text color="warning">Held: {held.phi.join(", ")}</Text>
         <Button
-          key="rv:improved"
+          key="held:synthetic"
           variant="primary"
-          label="Send improved"
-          onPress={() => void a.send("improved")}
+          label="Send synthetic"
+          onPress={() => void a.send("synthetic")}
         />
-        {review.phi.length ? null : (
-          <Button key="rv:mine" label="Send mine" onPress={() => void a.send("mine")} />
-        )}
-        <Button key="rv:edit" label="Edit improved" onPress={() => void a.send("edit")} />
+        <Button key="held:edit" label="Edit synthetic" onPress={() => void a.send("edit")} />
       </Box>,
     );
   return <Box flexDirection="column">{rows.slice(0, Math.max(1, e.props.maxRows))}</Box>;

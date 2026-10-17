@@ -197,27 +197,7 @@ export const changedKeys = (before: string, after: string): string[] => {
   return Object.keys(b).filter((k) => JSON.stringify(a[k]) !== JSON.stringify(b[k]));
 };
 
-// ── Prompt review and routing rules ──────────────────────────────────────
-
-export const ruleHints = (text: string): string[] => {
-  const hints: string[] = [];
-  if (text.trim().length < 12) return hints;
-  if (
-    !/[\w-]+\/[\w./-]+|\.\w{2,4}\b|\b(screen|page|component|route|table|migration|test)s?\b/i.test(
-      text,
-    )
-  )
-    hints.push("Name the file, screen or area");
-  if (!/\b(done when|so that|until|should|must|expect|passes|green|acceptance)\b/i.test(text))
-    hints.push("Say what done looks like");
-  if (
-    /\b(fix|bug|broken|crash|fails?|error)\b/i.test(text) &&
-    !/\b(shows?|returns?|throws?|instead|expected|actual|when i|steps?)\b/i.test(text)
-  )
-    hints.push("Describe the symptom: what happens vs what you expect");
-  if (findPhi(text).length) hints.push("Patient data detected: use synthetic data");
-  return hints;
-};
+// ── Routing rules ──────────────────────────────────────
 
 export const words = (text: string): string[] => [
   ...new Set(

@@ -97,16 +97,7 @@ export type Route = {
   text: string;
 };
 
-export type Review = {
-  original: string;
-  score: number;
-  checklist: { label: string; ok: boolean }[];
-  issues: string[];
-  questions: string[];
-  improved: string;
-  phi: string[];
-  isHeld: boolean;
-};
+export type Held = { original: string; synthetic: string; phi: string[] };
 
 export type Local = {
   line: string;
@@ -126,11 +117,8 @@ export type Local = {
   routeLock: { model: string; effort: string } | null;
   overrides: { words: string[]; model: string; effort: string }[];
   downRouted: number;
-  review: Review | null;
-  reviewOn: boolean;
-  threshold: number;
-  hints: string[];
-  pipeline: { review: string; route: string; transmit: string };
+  held: Held | null;
+  pipeline: { route: string; transmit: string };
   usage: { context: number | null; plan: number | null };
   checkpoints: { name: string; turn: number; sha: string }[];
 };

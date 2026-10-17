@@ -1,4 +1,4 @@
-import type { Agent, Board, Local, Need, Review, Route, View } from "../types";
+import type { Agent, Board, Held, Local, Need, Route, View } from "../types";
 import type { Actions } from "./console";
 import type { EngineInterface, PluginOptions, Register } from "claude-code";
 import { atom, read, update } from "claude-code";
@@ -34,11 +34,8 @@ export const localRef = atom(
     routeLock: null,
     overrides: [],
     downRouted: 0,
-    review: null,
-    reviewOn: true,
-    threshold: 70,
-    hints: [],
-    pipeline: { review: "—", route: "—", transmit: "—" },
+    held: null,
+    pipeline: { route: "—", transmit: "—" },
     usage: { context: null, plan: null },
     checkpoints: [],
   } satisfies Local as Local,
@@ -59,8 +56,6 @@ const makeCfg = (options: PluginOptions) => {
   const opt = (k: string, d: string) => String(options[k] ?? d);
   return {
     testCommand: opt("testCommand", "npm run test"),
-    threshold: Number(options.reviewThreshold ?? 70),
-    reviewOn: options.reviewEnabled !== false,
     routeOn: options.routingEnabled !== false,
     strong: opt("strongModel", "opus"),
     mid: opt("midModel", "sonnet"),
@@ -104,13 +99,11 @@ const ctx = {
   user: "unknown",
 };
 const decisions = new Map<string, string>();
-const bypass = new Set<string>();
 const agentRoutes = new Map<string, { model: string; effort: string }>();
 const changedThisTurn = new Set<string>();
 const permIds = new Set<string>();
 let pendingRoute: Route | null = null;
 let turnRoute: Route | null = null;
-let editTimer: { cancel: () => void } | undefined;
 
 // ── shared and local writes ──────────────────────────────────────────
 
@@ -325,77 +318,21 @@ const tellLine = async ($: $, to: string, text: string) => {
     : `Not delivered to ${target.label}: ${sent.reason}`;
 };
 
-// ── review and routing ───────────────────────────────────────────────
+// ── routing ──────────────────────────────────────────────────────────
 
-type Verdict = {
-  score: number;
-  checklist: Record<string, boolean | null>;
-  issues: string[];
-  questions: string[];
-  improved: string;
-  route?: {
-    size?: string;
-    risk?: string;
-    depth?: string;
-    scope?: string;
-    reason?: string;
-    confidence?: number;
-  };
+type Tier = "strong" | "mid" | "fast";
+const TIER_OF: Record<string, Tier> = { clinical: "strong", large: "strong", medium: "mid", small: "fast" };
+
+/** One cheap label from the fastest model; undefined when it names none or fails. */
+const classifyTier = async ($: $, text: string): Promise<{ tier: Tier; label: string } | undefined> => {
+  const label = await $.model
+    .classify(text.slice(0, 4000), ["small", "medium", "large", "clinical"], { model: cfg.fast })
+    .catch(() => undefined);
+  const tier = label ? TIER_OF[label] : undefined;
+  return tier && label ? { tier, label } : undefined;
 };
 
-const assess = async ($: $, text: string): Promise<Verdict | null> => {
-  const l = await read($, localRef);
-  const b = await read($, boardRef);
-  const facts = [
-    `branch: ${l.branch || "unknown"}`,
-    `files changed this session: ${Object.keys(l.files).slice(0, 12).join(", ") || "none"}`,
-    `open tasks: ${
-      b.tasks
-        .filter((t) => t.status !== "completed")
-        .map((t) => t.subject)
-        .slice(0, 8)
-        .join("; ") || "none"
-    }`,
-    `last failing test: ${l.tests.lastFailing || "none"}`,
-    "MedSync defaults: low-end Android phones, poor networks, synthetic data only, CSO sign-off for patient-facing copy",
-  ].join("\n");
-  const reply = await $.model.complete({
-    model: cfg.fast,
-    maxTokens: 1200,
-    timeoutMs: 20_000,
-    system: [
-      {
-        cache: true,
-        text:
-          "You review a developer prompt to Claude Code for MedSync (Next.js 16, Supabase, Drizzle, Expo mobile). Reply with ONLY JSON: " +
-          '{"score":0-100,"checklist":{"goal":bool,"area":bool,"done":bool,"symptom":bool|null,"constraints":bool,"noPhi":bool},' +
-          '"issues":[string],"questions":[string],"improved":string,' +
-          '"route":{"size":"small|medium|large","risk":"low|medium|high","depth":"low|medium|high","scope":"narrow|medium|wide","reason":string,"confidence":0-1}}. ' +
-          "symptom is null unless the prompt reports a bug. Score clarity: goal, files/area, definition of done, symptom for bugs, constraints, no patient data. " +
-          'In "improved" keep every word of the original and wrap each addition in [+ ... ]. Fill gaps only from FACTS; never invent file names; ' +
-          'where a fact is missing, put a question in "questions" instead.',
-      },
-    ],
-    prompt: `FACTS\n${facts}\n\nPROMPT\n${text}`,
-  });
-  if (!reply.isAnswered) return null;
-  try {
-    return JSON.parse(
-      reply.text.slice(reply.text.indexOf("{"), reply.text.lastIndexOf("}") + 1),
-    ) as Verdict;
-  } catch {
-    return null;
-  }
-};
-
-const tierFromSignals = (r: NonNullable<Verdict["route"]>): "strong" | "mid" | "fast" => {
-  const v = (s?: string) =>
-    s === "high" || s === "large" || s === "wide" ? 2 : s === "medium" ? 1 : 0;
-  const score = v(r.risk) * 2 + v(r.depth) * 2 + v(r.size) + v(r.scope);
-  return score >= 7 ? "strong" : score >= 3 ? "mid" : "fast";
-};
-
-const decide = async ($: $, text: string, verdict: Verdict | null): Promise<Route> => {
+const decide = async ($: $, text: string): Promise<Route> => {
   const l = await read($, localRef);
   const fast = g.fastRoute(text, cfg.clinical);
   const base = { text: text.slice(0, 80), signals: [] as string[] };
@@ -436,19 +373,17 @@ const decide = async ($: $, text: string, verdict: Verdict | null): Promise<Rout
       source: "rule",
       confidence: 0.9,
     };
-  const r = verdict?.route;
-  if (r) {
-    const tier = tierFromSignals(r);
+  const c = l.routeOn ? await classifyTier($, text) : undefined;
+  if (c)
     return {
-      text: base.text,
-      model: tierModel()[tier],
-      effort: effortOf[tier],
-      reason: r.reason ?? `${tier} task`,
+      ...base,
+      model: tierModel()[c.tier],
+      effort: effortOf[c.tier],
+      reason: `Classified as ${c.label}`,
       source: "model",
-      confidence: r.confidence ?? 0.6,
-      signals: [`size ${r.size}`, `risk ${r.risk}`, `depth ${r.depth}`, `scope ${r.scope}`],
+      confidence: 0.6,
+      signals: [c.label],
     };
-  }
   return {
     ...base,
     model: cfg.mid,
@@ -483,14 +418,8 @@ const actions = ($: $): Actions => ({
     const v = await read($, viewRef);
     const l = await read($, localRef);
     const target = v.sendOn && v.sendOn !== ctx.line ? v.sendOn : ctx.line;
-    const text =
-      kind === "improved"
-        ? clean(l.review?.improved ?? "")
-        : kind === "mine"
-          ? (l.review?.original ?? "")
-          : v.compose.trim();
-    if (kind === "edit")
-      return void $.prompt.fill({ text: clean(l.review?.improved ?? ""), mode: "replace" });
+    if (kind === "edit") return void $.prompt.fill({ text: l.held?.synthetic ?? "", mode: "replace" });
+    const text = kind === "synthetic" ? (l.held?.synthetic ?? "") : v.compose.trim();
     if (!text) return;
     if (v.mode !== "prompt" && kind === "main") {
       await shared(
@@ -508,12 +437,11 @@ const actions = ($: $): Actions => ({
       await update($, viewRef, (x) => ({ ...x, compose: "" }));
       return;
     }
-    if (target !== ctx.line) {
+    if (target !== ctx.line && kind === "main") {
       const out = await tellLine($, target, text);
       await local($, (x) => ({ ...x, lastAction: out }));
     } else {
-      if (kind !== "main") bypass.add(text);
-      await local($, (x) => ({ ...x, review: null }));
+      await local($, (x) => ({ ...x, held: null }));
       await $.prompt.submit({ text, asUser: true });
     }
     await update($, viewRef, (x) => ({ ...x, compose: "" }));
@@ -608,11 +536,9 @@ const actions = ($: $): Actions => ({
   },
   input: async (text) => {
     await update($, viewRef, (v) => ({ ...v, compose: text }));
-    await local($, (x) => ({ ...x, hints: g.ruleHints(text) }));
   },
 });
 
-const clean = (improved: string) => improved.replace(/\[\+\s*([\s\S]*?)\s*\]/g, "$1");
 
 const runTests = async ($: $) => {
   await local($, (l) => ({
@@ -738,9 +664,7 @@ export const register: Register = (on, options) => {
       branch,
       surface: ctx.surface,
       startedAt: l.startedAt || now,
-      reviewOn: l.startedAt ? l.reviewOn : cfg.reviewOn,
       routeOn: l.startedAt ? l.routeOn : cfg.routeOn,
-      threshold: l.startedAt ? l.threshold : cfg.threshold,
     }));
 
     for (const c of [
@@ -909,17 +833,7 @@ export const register: Register = (on, options) => {
     return result;
   });
 
-  // ── prompts: review › route › transmit ───────────────────────────────
-
-  on("prompt.edit", async ($, e, next) => {
-    editTimer?.cancel();
-    const text = e.text;
-    editTimer = $.clock.after(
-      800,
-      () => void local($, (l) => ({ ...l, hints: g.ruleHints(text) })),
-    );
-    return next(e);
-  });
+  // ── prompts: patient-data check › route › transmit ───────────────────
 
   on("prompt.submit", async ($, e, next) => {
     const text = e.text.trim();
@@ -928,69 +842,19 @@ export const register: Register = (on, options) => {
       return next(e);
     if (!ours && e.origin.kind !== "composer") return next(e);
     const l = await read($, localRef);
-    const skipReview = bypass.delete(text) || !l.reviewOn;
     const phi = g.findPhi(text);
     if (phi.length) {
-      const review: Review = {
-        original: text,
-        score: 0,
-        checklist: [{ label: "No patient data", ok: false }],
-        issues: phi.map((p) => `${p.why}: ${p.line}`),
-        questions: [],
-        improved: g.synthesize(text),
-        phi: phi.map((p) => p.why),
-        isHeld: true,
-      };
-      await local($, (x) => ({
-        ...x,
-        review,
-        pipeline: { review: "PHI held", route: "—", transmit: "held" },
-      }));
-      await counted($, "phi", "guard", `Prompt held: ${review.phi.join(", ")}`);
+      const held: Held = { original: text, synthetic: g.synthesize(text), phi: phi.map((p) => p.why) };
+      await local($, (x) => ({ ...x, held, pipeline: { route: "—", transmit: "held: patient data" } }));
+      await counted($, "phi", "guard", `Prompt held: ${held.phi.join(", ")}`);
       $.ui.toast("MedSync held your prompt: real-looking patient data");
       return {
         drop: ctx.isInteractive
-          ? "MedSync held this prompt: it holds real-looking patient data. Send the synthetic version from the MedSync console."
-          : `MedSync held this prompt: real-looking patient data. Synthetic version:\n${review.improved}`,
+          ? "MedSync held this prompt: it holds real-looking patient data. Send the synthetic version from the band above the prompt or the MedSync console."
+          : `MedSync held this prompt: real-looking patient data. Synthetic version:\n${held.synthetic}`,
       };
     }
-    const fast = g.fastRoute(text, cfg.clinical);
-    const needsModel = !skipReview || (l.routeOn && !fast && !l.routeLock);
-    const verdict = needsModel ? await assess($, text) : null;
-    if (!skipReview && verdict && verdict.score < l.threshold) {
-      const c = verdict.checklist;
-      const review: Review = {
-        original: text,
-        score: verdict.score,
-        checklist: [
-          { label: "Goal", ok: !!c.goal },
-          { label: "Files / area", ok: !!c.area },
-          { label: "Definition of done", ok: !!c.done },
-          ...(c.symptom === null || c.symptom === undefined
-            ? []
-            : [{ label: "Symptom", ok: !!c.symptom }]),
-          { label: "Constraints", ok: !!c.constraints },
-          { label: "No patient data", ok: true },
-        ],
-        issues: verdict.issues ?? [],
-        questions: verdict.questions ?? [],
-        improved: verdict.improved || text,
-        phi: [],
-        isHeld: true,
-      };
-      await local($, (x) => ({
-        ...x,
-        review,
-        pipeline: { review: `held ${verdict.score}`, route: "—", transmit: "held" },
-      }));
-      await stream($, "review", `Prompt held at ${verdict.score}/100`);
-      return {
-        drop: ctx.isInteractive
-          ? `MedSync review: ${verdict.score}/100, under ${l.threshold}. The improved prompt is in the MedSync console (Send improved / Send mine / Edit improved).`
-          : `MedSync review: ${verdict.score}/100, under ${l.threshold}. Re-run with the improved prompt (or /review off):\n${clean(review.improved)}`,
-      };
-    }
-    const route = await decide($, text, verdict);
+    const route = await decide($, text);
     const routed = l.routeOn ? route : null;
     pendingRoute = routed;
     const sessionModel = await $.session.model().catch(() => "");
@@ -1000,9 +864,8 @@ export const register: Register = (on, options) => {
       route,
       routes: [route, ...x.routes].slice(0, 12),
       downRouted: x.downRouted + (cheaper ? 1 : 0),
-      review: null,
+      held: null,
       pipeline: {
-        review: skipReview ? "skipped" : `pass ${verdict?.score ?? "—"}`,
         route: l.routeOn ? chip(route) : "off",
         transmit: "sent",
       },
@@ -1404,23 +1267,7 @@ export const register: Register = (on, options) => {
     let model = e.model;
     let effort = "medium";
     if (l.routeOn) {
-      const fast = g.fastRoute(e.prompt, cfg.clinical);
-      const label = fast
-        ? null
-        : await $.model
-            .classify(e.prompt.slice(0, 4000), ["small", "medium", "large", "clinical"], {
-              model: cfg.fast,
-            })
-            .catch(() => undefined);
-      const tier =
-        fast?.tier ??
-        (label === "clinical" || label === "large"
-          ? "strong"
-          : label === "small"
-            ? "fast"
-            : label === "medium"
-              ? "mid"
-              : null);
+      const tier = g.fastRoute(e.prompt, cfg.clinical)?.tier ?? (await classifyTier($, e.prompt))?.tier;
       if (tier) {
         model = tierModel()[tier];
         effort = effortOf[tier];
@@ -1582,21 +1429,6 @@ export const register: Register = (on, options) => {
         : `No routing decision yet. Routing ${l.routeOn ? "on" : "off"}.`,
     };
   });
-
-  // /review is a built-in (pull-request review): answer only our forms, pass the rest on.
-  on("command.run", { command: "review" }, async ($, e, next) => {
-    const [verb, n] = e.args.trim().split(/\s+/);
-    if (verb === "off" || verb === "on") {
-      await local($, (l) => ({ ...l, reviewOn: verb === "on" }));
-      return { text: `Prompt review ${verb}.` };
-    }
-    if (verb === "threshold" && Number.isFinite(Number(n))) {
-      const t = Math.max(0, Math.min(100, Number(n)));
-      await local($, (l) => ({ ...l, threshold: t }));
-      return { text: `Prompt review threshold: ${t}.` };
-    }
-    return next(e);
-  }).catch(($, e, next) => next(e));
 
   on("command.run", { command: "line" }, async ($, e) => {
     const [verb, ...rest] = e.args.trim().split(/\s+/);

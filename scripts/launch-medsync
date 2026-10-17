@@ -7,8 +7,9 @@ usage() {
   cat <<'EOF'
 Usage: launch-medsync [--line "<label>"] [--worktree] [claude options...]
 
-Starts Claude Code at the MedSync repo root with tools/medsync-mod loaded
-(claude --plugin-dir) and the comms console opened.
+Starts Claude Code in the MedSync checkout you are in (else the main
+checkout) with tools/medsync-mod loaded (claude --plugin-dir) and the comms
+console opened.
 
   --line "<label>"  name this session's line (shown as its label; A/B letters
                     are handed out in the order lines start)
@@ -22,16 +23,20 @@ Turn the mod off for one run:  claude --safe-mode
 EOF
 }
 
-# The repo: where this script really lives (through the ~/.local/bin link),
-# or the checkout you are standing in when it carries the mod (a worktree).
+# Where the mod lives: the checkout this script really lives in (through the
+# ~/.local/bin link). Where sessions start: the checkout of the same repo you
+# are standing in, else that repo's main checkout.
 self="${BASH_SOURCE[0]}"
 while [ -L "$self" ]; do
   dir="$(cd "$(dirname "$self")" && pwd)"
   self="$(readlink "$self")"
   case "$self" in /*) ;; *) self="$dir/$self" ;; esac
 done
-root="$(cd "$(dirname "$self")/.." && pwd)"
-if here="$(git rev-parse --show-toplevel 2>/dev/null)" && [ -d "$here/tools/medsync-mod" ]; then
+modroot="$(cd "$(dirname "$self")/.." && pwd)"
+common="$(git -C "$modroot" rev-parse --path-format=absolute --git-common-dir)"
+root="$(dirname "$common")"
+if here="$(git rev-parse --show-toplevel 2>/dev/null)" &&
+  [ "$(git -C "$here" rev-parse --path-format=absolute --git-common-dir)" = "$common" ]; then
   root="$here"
 fi
 
@@ -61,17 +66,18 @@ if [ -z "$claude_bin" ]; then
   exit 1
 fi
 
+# the mod of the checkout you start in, else the one beside this script
 mod="$root/tools/medsync-mod"
+[ -f "$mod/.claude-plugin/plugin.json" ] || mod="$modroot/tools/medsync-mod"
 [ -f "$mod/.claude-plugin/plugin.json" ] || { echo "launch-medsync: no mod at $mod" >&2; exit 1; }
 
 workdir="$root"
 if [ "$worktree" = 1 ]; then
   slug="$(printf '%s' "${line:-line-$(date +%s)}" | tr '[:upper:]' '[:lower:]' | tr -cs 'a-z0-9' '-' | sed 's/^-//; s/-$//')"
-  workdir="$root-$slug"
+  workdir="$(dirname "$common")-$slug"
   if [ ! -d "$workdir" ]; then
     git -C "$root" worktree add "$workdir" -b "line/$slug"
   fi
-  # a worktree made before the mod was committed has no copy of it: use the main one
   [ -f "$workdir/tools/medsync-mod/.claude-plugin/plugin.json" ] && mod="$workdir/tools/medsync-mod"
 fi
 

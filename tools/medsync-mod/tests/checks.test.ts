@@ -216,7 +216,6 @@ test(
       ],
     });
     await startSession($);
-    await cmd($, "review", "off");
     await cmd($, "route", "off");
     await $.prompt.submit({
       text: "Refactor lib/wards/editor.ts so undo works",
@@ -242,7 +241,6 @@ test(
   async ($, on) => {
     const h = host(on);
     await startSession($);
-    await cmd($, "review", "off");
     const submit = (text: string) =>
       $.prompt.submit({ text, origin: { kind: "composer" }, wait: false } as never);
     await submit("Update the paracetamol mg/kg dosing table in lib/prescribing");
@@ -263,7 +261,7 @@ test(
 );
 
 test(
-  "review: patient data in a prompt is dropped and Send mine is withheld",
+  "patient data in a prompt: dropped, and Send synthetic sends the synthetic version",
   { options: OPTIONS },
   async ($, on) => {
     const h = host(on);
@@ -278,49 +276,20 @@ test(
     const labels = (await ui.findAll({ type: "Button" })).map(
       (b) => b.text || String(b.props.label),
     );
-    expect(labels).toContain("Send improved");
-    expect(labels).not.toContain("Send mine");
+    expect(labels).toEqual(["Send synthetic", "Edit synthetic"]);
+    await ui.unmount();
+    await pressKey($, "held:synthetic");
+    expect(h.submitted.at(-1)).toBe("Add a test patient with phone +256 700 000 001 to the seed");
   },
 );
 
-test(
-  "review: a vague prompt is held; Send improved transmits the improved text",
-  { options: OPTIONS },
-  async ($, on) => {
-    const h = host(on);
-    h.reply.text = JSON.stringify({
-      score: 40,
-      checklist: {
-        goal: true,
-        area: false,
-        done: false,
-        symptom: false,
-        constraints: false,
-        noPhi: true,
-      },
-      issues: ["No file named"],
-      questions: ["Which screen?"],
-      improved:
-        "fix the booking bug [+ in app/patient/book ] [+ — done when the date picker saves ]",
-      route: {
-        size: "small",
-        risk: "low",
-        depth: "low",
-        scope: "narrow",
-        reason: "small fix",
-        confidence: 0.6,
-      },
-    });
-    await startSession($);
-    const r = await $.prompt.submit({
-      text: "fix the booking bug",
-      origin: { kind: "composer" },
-      wait: false,
-    } as never);
-    expect(r.drop).toContain("40/100");
-    await pressKey($, "rv:improved");
-    expect(h.submitted.at(-1)).toBe(
-      "fix the booking bug in app/patient/book — done when the date picker saves",
-    );
-  },
-);
+test("an ordinary prompt passes unchanged, with no model review", { options: OPTIONS }, async ($, on) => {
+  const h = host(on);
+  on("model.complete", () => {
+    throw new Error("no completion is made for a prompt");
+  });
+  await startSession($);
+  const r = await $.prompt.submit({ text: "fix it", origin: { kind: "composer" }, wait: false } as never);
+  expect(r.drop).toBeUndefined();
+  expect(h.submitted).toEqual(["fix it"]);
+});

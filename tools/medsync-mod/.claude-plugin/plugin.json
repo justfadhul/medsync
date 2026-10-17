@@ -1,8 +1,10 @@
 {
   "name": "medsync",
   "version": "0.1.0",
-  "description": "MedSync line checks (emergency signposting, CSO queue, translations, patient data, destructive commands, bandwidth), a comms console, model routing, prompt review and two-line coordination",
-  "author": { "name": "Usama Fadhul" },
+  "description": "MedSync line checks (emergency signposting, CSO queue, translations, patient data, destructive commands, bandwidth), a comms console, model routing and two-line coordination",
+  "author": {
+    "name": "Usama Fadhul"
+  },
   "types": "./types/index.d.ts",
   "userConfig": {
     "testCommand": {
@@ -10,18 +12,6 @@
       "title": "Test command",
       "description": "What the Tests button runs",
       "default": "npm run test"
-    },
-    "reviewEnabled": {
-      "type": "boolean",
-      "title": "Prompt review",
-      "description": "Review prompts before they are sent (/review on|off)",
-      "default": true
-    },
-    "reviewThreshold": {
-      "type": "number",
-      "title": "Review threshold",
-      "description": "Clarity score (0-100) a prompt needs to pass unchanged",
-      "default": 70
     },
     "routingEnabled": {
       "type": "boolean",
@@ -34,21 +24,32 @@
       "title": "Strongest model",
       "description": "Clinical safety work and large tasks",
       "default": "opus",
-      "options": ["fable", "opus", "sonnet"]
+      "options": [
+        "fable",
+        "opus",
+        "sonnet"
+      ]
     },
     "midModel": {
       "type": "string",
       "title": "Middle model",
       "description": "Ordinary changes",
       "default": "sonnet",
-      "options": ["opus", "sonnet", "haiku"]
+      "options": [
+        "opus",
+        "sonnet",
+        "haiku"
+      ]
     },
     "fastModel": {
       "type": "string",
       "title": "Fastest model",
-      "description": "Small and read-only tasks, and the reviewer itself",
+      "description": "Small and read-only tasks, and the router's classifier",
       "default": "haiku",
-      "options": ["sonnet", "haiku"]
+      "options": [
+        "sonnet",
+        "haiku"
+      ]
     },
     "emergencyPaths": {
       "type": "string",
