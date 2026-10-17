@@ -49,6 +49,9 @@ const eslintConfig = defineConfig([
     "mobile/**",
     // Self-contained Vite subproject with its own toolchain.
     "bionic-islet-bench/**",
+    // The Claude Code mod runs in Claude Code's own engine (h-factory JSX,
+    // the 'claude-code' types); `claude plugin validate` and its tests check it.
+    "tools/medsync-mod/**",
     // Static assets served verbatim, including the sensor bench's built
     // bundle. Never source, never linted.
     "public/**",

@@ -1,0 +1,81 @@
+#!/usr/bin/env bash
+# launch-medsync: start Claude Code in this repo with the MedSync mod loaded.
+# Works from bash or zsh on macOS and Linux (GitHub Codespaces included).
+set -euo pipefail
+
+usage() {
+  cat <<'EOF'
+Usage: launch-medsync [--line "<label>"] [--worktree] [claude options...]
+
+Starts Claude Code at the MedSync repo root with tools/medsync-mod loaded
+(claude --plugin-dir) and the comms console opened.
+
+  --line "<label>"  name this session's line (shown as its label; A/B letters
+                    are handed out in the order lines start)
+  --worktree        start this line in its own git worktree beside the repo
+                    (../<repo>-<label>, branch line/<label>)
+  -h, --help        this help
+
+Anything else is passed to claude, e.g.  launch-medsync --line B --model opus
+Two lines: open a second terminal and run  launch-medsync --line "B"
+Turn the mod off for one run:  claude --safe-mode
+EOF
+}
+
+# The repo: where this script really lives (through the ~/.local/bin link),
+# or the checkout you are standing in when it carries the mod (a worktree).
+self="${BASH_SOURCE[0]}"
+while [ -L "$self" ]; do
+  dir="$(cd "$(dirname "$self")" && pwd)"
+  self="$(readlink "$self")"
+  case "$self" in /*) ;; *) self="$dir/$self" ;; esac
+done
+root="$(cd "$(dirname "$self")/.." && pwd)"
+if here="$(git rev-parse --show-toplevel 2>/dev/null)" && [ -d "$here/tools/medsync-mod" ]; then
+  root="$here"
+fi
+
+line=""
+worktree=0
+pass=()
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --line) line="${2:?--line needs a label}"; shift 2 ;;
+    --line=*) line="${1#*=}"; shift ;;
+    --worktree) worktree=1; shift ;;
+    -h | --help) usage; exit 0 ;;
+    *) pass+=("$1"); shift ;;
+  esac
+done
+
+# claude: on PATH, else the copy the Claude desktop app keeps (macOS), else
+# the local install.
+claude_bin="$(command -v claude || true)"
+if [ -z "$claude_bin" ]; then
+  for candidate in "$HOME/Library/Application Support/Claude/claude-code/"*/*/claude.app/Contents/MacOS/claude "$HOME/.claude/local/claude"; do
+    [ -x "$candidate" ] && claude_bin="$candidate"
+  done
+fi
+if [ -z "$claude_bin" ]; then
+  echo "launch-medsync: claude not found. Install Claude Code: npm install -g @anthropic-ai/claude-code" >&2
+  exit 1
+fi
+
+mod="$root/tools/medsync-mod"
+[ -f "$mod/.claude-plugin/plugin.json" ] || { echo "launch-medsync: no mod at $mod" >&2; exit 1; }
+
+workdir="$root"
+if [ "$worktree" = 1 ]; then
+  slug="$(printf '%s' "${line:-line-$(date +%s)}" | tr '[:upper:]' '[:lower:]' | tr -cs 'a-z0-9' '-' | sed 's/^-//; s/-$//')"
+  workdir="$root-$slug"
+  if [ ! -d "$workdir" ]; then
+    git -C "$root" worktree add "$workdir" -b "line/$slug"
+  fi
+  # a worktree made before the mod was committed has no copy of it: use the main one
+  [ -f "$workdir/tools/medsync-mod/.claude-plugin/plugin.json" ] && mod="$workdir/tools/medsync-mod"
+fi
+
+cd "$workdir"
+export MEDSYNC_LAUNCH=1
+if [ -n "$line" ]; then export MEDSYNC_LINE="$line"; fi
+exec "$claude_bin" --plugin-dir "$mod" ${pass[@]+"${pass[@]}"}

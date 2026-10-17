@@ -1,0 +1,120 @@
+{
+  "name": "medsync",
+  "version": "0.1.0",
+  "description": "MedSync line checks (emergency signposting, CSO queue, translations, patient data, destructive commands, bandwidth), a comms console, model routing, prompt review and two-line coordination",
+  "author": { "name": "Usama Fadhul" },
+  "types": "./types/index.d.ts",
+  "userConfig": {
+    "testCommand": {
+      "type": "string",
+      "title": "Test command",
+      "description": "What the Tests button runs",
+      "default": "npm run test"
+    },
+    "reviewEnabled": {
+      "type": "boolean",
+      "title": "Prompt review",
+      "description": "Review prompts before they are sent (/review on|off)",
+      "default": true
+    },
+    "reviewThreshold": {
+      "type": "number",
+      "title": "Review threshold",
+      "description": "Clarity score (0-100) a prompt needs to pass unchanged",
+      "default": 70
+    },
+    "routingEnabled": {
+      "type": "boolean",
+      "title": "Model routing",
+      "description": "Pick the model and effort per turn (/route on|off)",
+      "default": true
+    },
+    "strongModel": {
+      "type": "string",
+      "title": "Strongest model",
+      "description": "Clinical safety work and large tasks",
+      "default": "opus",
+      "options": ["fable", "opus", "sonnet"]
+    },
+    "midModel": {
+      "type": "string",
+      "title": "Middle model",
+      "description": "Ordinary changes",
+      "default": "sonnet",
+      "options": ["opus", "sonnet", "haiku"]
+    },
+    "fastModel": {
+      "type": "string",
+      "title": "Fastest model",
+      "description": "Small and read-only tasks, and the reviewer itself",
+      "default": "haiku",
+      "options": ["sonnet", "haiku"]
+    },
+    "emergencyPaths": {
+      "type": "string",
+      "title": "Emergency screen paths",
+      "description": "Comma-separated repo-relative prefixes of the emergency signposting screens (not the pre-alert form, which asks questions by design)",
+      "default": "app/emergency/page.tsx,app/emergency/_components/emergency-sheet.tsx,app/emergency/_components/call-link.tsx,mobile/src/app/emergency.tsx,mobile/src/components/emergency/emergency-sheet.tsx,mobile/src/components/emergency/calm-screen.tsx"
+    },
+    "patientCopyPaths": {
+      "type": "string",
+      "title": "Patient-facing copy paths",
+      "description": "Comma-separated prefixes whose edits go to the CSO queue",
+      "default": "app/patient/,app/emergency/,components/emergency/,components/landing/,content/,mobile/src/app/,mobile/src/components/"
+    },
+    "i18nDir": {
+      "type": "string",
+      "title": "i18n catalogue folder",
+      "description": "Folder of <lang>.json catalogues",
+      "default": "supabase/functions/_shared/symptom-catalog/i18n"
+    },
+    "sourceLanguage": {
+      "type": "string",
+      "title": "Source language",
+      "description": "The catalogue other languages translate from",
+      "default": "en"
+    },
+    "languages": {
+      "type": "string",
+      "title": "Extra languages",
+      "description": "Comma-separated language codes to track besides the catalogue files found (e.g. lg,sw)",
+      "default": ""
+    },
+    "clinicalPattern": {
+      "type": "string",
+      "title": "Clinical-safety pattern",
+      "description": "Regex (case-insensitive): prompts that match go to the strongest model at high effort and to the CSO queue",
+      "default": "emergency|triage|dos(e|ing)|mg/kg|prescri|formulary|clinical reasoning|differential|\\bCSO\\b|signpost|resus|red flag"
+    },
+    "sharedPaths": {
+      "type": "string",
+      "title": "Shared paths",
+      "description": "Comma-separated prefixes; a turn that changes them tells the other line to re-read them",
+      "default": "db/schema/,supabase/migrations/,types/,lib/facts/,supabase/functions/_shared/,package.json,tsconfig.json,next.config.ts,drizzle.config.ts"
+    },
+    "heartbeatSeconds": {
+      "type": "number",
+      "title": "Heartbeat (s)",
+      "description": "How often a line says it is alive",
+      "default": 20
+    },
+    "offlineSeconds": {
+      "type": "number",
+      "title": "Offline after (s)",
+      "description": "A silent line is marked offline and its locks released",
+      "default": 120
+    },
+    "holdMinutes": {
+      "type": "number",
+      "title": "Hold timeout (min)",
+      "description": "How long a held call waits for you before it is denied",
+      "default": 10
+    },
+    "soundOnBlocking": {
+      "type": "boolean",
+      "title": "Sound on blocking items",
+      "description": "Play a chime when something needs you",
+      "default": true
+    }
+  }
+}
