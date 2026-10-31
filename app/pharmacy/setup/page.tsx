@@ -11,6 +11,7 @@ import { pharmacyCatalogueLiveFor } from "@/lib/pharmacy/feature";
 import { SETUP_HREF, SETUP_TABS } from "@/lib/pharmacy/ia";
 import { supplyFlagOn } from "@/lib/pharmacy/stores/supply-action";
 import { pharmacyV2 } from "../_lib/v2";
+import { AddFromCatalogue } from "./_components/add-from-catalogue";
 import { PacksView } from "./_components/packs-view";
 import { PlacesTab } from "./_components/places-tab";
 import { PricesView } from "./_components/prices-view";
@@ -115,9 +116,10 @@ async function LiveTab({ hospitalId }: { hospitalId: string }) {
 async function MedicinesTab({ hospitalId }: { hospitalId: string }) {
   const M = S.medicines;
   const meds = await loadMedicines(hospitalId);
+  const catalogue = pharmacyCatalogueLiveFor(hospitalId);
   return (
     <div className="flex flex-col gap-4">
-      <Panel note={M.lead}>
+      <Panel note={M.lead} action={catalogue ? <AddFromCatalogue /> : null}>
         {meds.length === 0 ? (
           <EmptyState compact title={M.none} next={M.noneNext} />
         ) : (
@@ -148,7 +150,7 @@ async function MedicinesTab({ hospitalId }: { hospitalId: string }) {
           </ul>
         )}
       </Panel>
-      {pharmacyCatalogueLiveFor(hospitalId) ? <PricesView v2={await pharmacyV2()} /> : null}
+      {catalogue ? <PricesView v2={await pharmacyV2()} /> : null}
     </div>
   );
 }

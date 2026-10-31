@@ -542,7 +542,9 @@ export const RC = {
       notSet: "Not set",
       level: (place: string, n: number) => `${place} ${n}`,
       none: "No medicines stocked yet.",
-      noneNext: "Add medicines from the catalogue under Stock › Medicines.",
+      noneNext: "Add them from MedSync's catalogue.",
+      add: "Add from the catalogue",
+      already: "Already one of your medicines.",
     },
     rules: {
       lock: "Rules are read-only here. Changing one is a signed change, made by the in-charge and recorded.",

@@ -7,6 +7,8 @@ import { RC } from "@/content/pharmacy-rework-records";
 import { logger } from "@/lib/logger";
 import { requirePharmacyActor } from "@/lib/pharmacy/actor";
 import * as cold from "@/lib/pharmacy/cold/setup";
+import * as receiving from "@/lib/pharmacy/stores/receiving-store";
+import { storeAct } from "@/lib/pharmacy/stores/store-action";
 import * as roster from "@/lib/pharmacy/team/roster";
 import { runPharmacyWrite } from "@/lib/pharmacy/write";
 
@@ -84,4 +86,17 @@ export async function setEpiVaccineAction(raw: unknown) {
       cold.setEpiVaccine,
     ),
   );
+}
+
+/** Set-up › Medicines: picks from MedSync's catalogue become the hospital's products. */
+export async function addFromCatalogueAction(raw: unknown) {
+  const r = await storeAct(
+    "addFromCatalogue",
+    receiving.CataloguePicksInput,
+    raw,
+    "pharmacy.store",
+    receiving.addFromCatalogue,
+  );
+  if (r.ok) revalidatePath("/pharmacy/setup");
+  return r;
 }

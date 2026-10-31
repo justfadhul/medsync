@@ -40,10 +40,13 @@ describe("multi mode is opt-in", () => {
       return statSync(p).isDirectory() ? files(p) : /\.tsx$/.test(n) ? [p] : [];
     });
 
-  it("only the delivery's scan passes onPickMany to the picker", () => {
+  it("only the delivery's scan and Set-up › Medicines pass onPickMany to the picker", () => {
     const users = files("app").filter((f) => /<CataloguePicker\b/.test(readFileSync(f, "utf8")));
     expect(users.length).toBeGreaterThan(1);
     const multi = users.filter((f) => /onPickMany=/.test(readFileSync(f, "utf8")));
-    expect(multi).toEqual(["app/pharmacy/store/deliveries/_components/delivery-scan.tsx"]);
+    expect(multi).toEqual([
+      "app/pharmacy/setup/_components/add-from-catalogue.tsx",
+      "app/pharmacy/store/deliveries/_components/delivery-scan.tsx",
+    ]);
   });
 });
