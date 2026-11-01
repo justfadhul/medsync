@@ -135,7 +135,7 @@ export function TideNav({
               <Text
                 style={{
                   fontFamily: tFont.bold,
-                  fontSize: 10,
+                  fontSize: 11,
                   color: on ? t.onAccent : t.onPrimary,
                 }}
               >

@@ -3,6 +3,7 @@ import type {
   AccessibilityRole,
   AccessibilityState,
   Insets,
+  LayoutChangeEvent,
   StyleProp,
   ViewStyle,
 } from "react-native";
@@ -19,7 +20,8 @@ import { transition } from "@/motion/presets";
  * haptic stays, because it is feedback, not motion.
  *
  * The scale lives on an inner view so the hit area never shrinks under the
- * thumb.
+ * thumb. A control drawn smaller than 44 × 44 pt still takes a 44 pt touch
+ * (Apple HIG, Buttons and Accessibility): the hit region grows around it.
  */
 export function Press({
   onPress,
@@ -48,6 +50,7 @@ export function Press({
 }) {
   const reduced = useReducedMotion();
   const [held, setHeld] = useState(false);
+  const [size, setSize] = useState<{ w: number; h: number } | null>(null);
   // How the control sits in its parent (flex, width, margins) belongs on the
   // pressable; how it looks belongs on the view that scales.
   const { outer, inner } = splitStyle(style);
@@ -57,7 +60,11 @@ export function Press({
       testID={testID}
       onPress={onPress}
       disabled={disabled}
-      hitSlop={hitSlop}
+      hitSlop={minHitSlop(size, hitSlop)}
+      onLayout={(e: LayoutChangeEvent) => {
+        const { width: w, height: h } = e.nativeEvent.layout;
+        if (w !== size?.w || h !== size?.h) setSize({ w, h });
+      }}
       accessibilityRole={accessibilityRole}
       accessibilityLabel={accessibilityLabel}
       accessibilityHint={accessibilityHint}
@@ -79,6 +86,27 @@ export function Press({
       </Animated.View>
     </Pressable>
   );
+}
+
+/** Apple's minimum touch target, in points. */
+export const MIN_HIT = 44;
+
+/** The caller's hit slop, grown on each side as needed so the touch is at least 44 × 44. */
+export function minHitSlop(
+  size: { w: number; h: number } | null,
+  slop?: number | Insets,
+): Insets | undefined {
+  const base: Insets =
+    typeof slop === "number" ? { top: slop, bottom: slop, left: slop, right: slop } : (slop ?? {});
+  if (!size) return slop === undefined ? undefined : base;
+  const v = Math.max(0, (MIN_HIT - size.h) / 2);
+  const h = Math.max(0, (MIN_HIT - size.w) / 2);
+  return {
+    top: Math.max(base.top ?? 0, v),
+    bottom: Math.max(base.bottom ?? 0, v),
+    left: Math.max(base.left ?? 0, h),
+    right: Math.max(base.right ?? 0, h),
+  };
 }
 
 const OUTER_KEYS = new Set([

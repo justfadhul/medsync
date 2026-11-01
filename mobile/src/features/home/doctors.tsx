@@ -131,7 +131,8 @@ function DoctorTile({ d }: { d: DoctorCard }) {
       }`}
       style={{
         width: BADGE_W,
-        height: BADGE_H,
+        // A floor, not a fixed height: at large text sizes the band grows (Apple HIG, Dynamic Type).
+        minHeight: BADGE_H,
         borderRadius: tRadius.cardLg,
         overflow: "hidden",
         backgroundColor: t.band,

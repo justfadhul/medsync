@@ -161,7 +161,7 @@ function ChatThread() {
                   justifyContent: "center",
                 }}
               >
-                <Text style={{ fontFamily: tFont.bold, fontSize: 9, color: t.ink }}>
+                <Text style={{ fontFamily: tFont.bold, fontSize: 11, color: t.ink }}>
                   {r.initials}
                 </Text>
               </View>

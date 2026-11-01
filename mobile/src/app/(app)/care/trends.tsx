@@ -165,6 +165,8 @@ export default function TrendsScreen() {
               days={week.map((d, i) => (i === 6 ? "Today" : d.name.slice(0, 3)))}
               judged={judged}
               label={`${label} over the last seven days`}
+              spoken={week.map((d, i) => (i === 6 ? "Today" : `${d.name} ${d.date}`))}
+              unit={m.unit}
             />
             <View
               style={{
@@ -174,9 +176,9 @@ export default function TrendsScreen() {
                 paddingHorizontal: 4,
               }}
             >
-              <Legend color={t.ink} label={m.l1} line />
-              {m.l2 ? <Legend color={t.cascade[2]} label={m.l2} line /> : null}
-              {band ? <Legend color={t.caution.text} label="Outside target" /> : null}
+              <Legend color={t.ink} label={m.l1} mark="dot" />
+              {m.l2 ? <Legend color={t.cascade[2]} label={m.l2} mark="diamond" /> : null}
+              {band ? <Legend color={t.caution.text} label="Outside target" mark="ring" /> : null}
             </View>
           </Card>
 
@@ -276,15 +278,26 @@ export default function TrendsScreen() {
 }
 
 /** A legend key: a short line for a series, a dot for the "above target" points. Always with its word. */
-function Legend({ color, label, line = false }: { color: string; label: string; line?: boolean }) {
+/** A legend entry with the same mark the chart draws, so shape and words carry it, not colour. */
+function Legend({
+  color,
+  label,
+  mark,
+}: {
+  color: string;
+  label: string;
+  mark: "dot" | "diamond" | "ring";
+}) {
   const t = useTide();
   return (
     <View style={{ flexDirection: "row", alignItems: "center", gap: tSpace[1.5] }}>
       <View
         style={
-          line
-            ? { width: 14, height: 3, borderRadius: 2, backgroundColor: color }
-            : { width: 8, height: 8, borderRadius: 4, backgroundColor: color }
+          mark === "diamond"
+            ? { width: 8, height: 8, backgroundColor: color, transform: [{ rotate: "45deg" }] }
+            : mark === "ring"
+              ? { width: 10, height: 10, borderRadius: 5, borderWidth: 2.5, borderColor: color }
+              : { width: 9, height: 9, borderRadius: 5, backgroundColor: color }
         }
       />
       <Text style={[tType.bodyS, { fontSize: 12, color: t.ink2 }]}>{label}</Text>
@@ -329,7 +342,7 @@ function SugarDiary({ cells: values, days }: { cells: (number | null)[][]; days:
               key={s.head}
               style={[
                 tType.micro,
-                { flex: 1, fontSize: 10, lineHeight: 12, color: t.ink2, textAlign: "center" },
+                { flex: 1, fontSize: 11, lineHeight: 14, color: t.ink2, textAlign: "center" },
               ]}
             >
               {s.head}

@@ -275,7 +275,7 @@ export default function VisitsScreen() {
                       color: isToday
                         ? t.onBand
                         : key < today
-                          ? t.ink4
+                          ? t.ink3
                           : isOpen
                             ? t.accentText
                             : t.ink,
@@ -461,9 +461,9 @@ function NextPill({
     >
       <View
         style={{
-          width: 36,
-          height: 36,
-          borderRadius: 18,
+          width: 44,
+          height: 44,
+          borderRadius: 22,
           backgroundColor: t.band,
           alignItems: "center",
           justifyContent: "center",
@@ -477,8 +477,8 @@ function NextPill({
             <Text
               style={{
                 fontFamily: tFont.semibold,
-                fontSize: 8,
-                lineHeight: 10,
+                fontSize: 11,
+                lineHeight: 13,
                 letterSpacing: 0.3,
                 textTransform: "uppercase",
                 color: t.onBandAccent,

@@ -258,8 +258,8 @@ export default function ReadingScreen() {
               />
             </View>
             <View style={{ flexDirection: "row", gap: 70 }}>
-              <Text style={[tType.overline, { fontSize: 11, color: t.ink4 }]}>Top</Text>
-              <Text style={[tType.overline, { fontSize: 11, color: t.ink4 }]}>Bottom</Text>
+              <Text style={[tType.overline, { fontSize: 11, color: t.ink3 }]}>Top</Text>
+              <Text style={[tType.overline, { fontSize: 11, color: t.ink3 }]}>Bottom</Text>
             </View>
           </>
         ) : (

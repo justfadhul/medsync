@@ -5,6 +5,7 @@ import Animated, {
   Easing,
   useAnimatedProps,
   useAnimatedStyle,
+  useReducedMotion,
   useSharedValue,
   withRepeat,
   withSequence,
@@ -79,6 +80,7 @@ export function EcgLoader({
    */
   cycles?: number;
 }) {
+  const reduced = useReducedMotion();
   const offset = useSharedValue(TRACE_LENGTH);
   const fade = useSharedValue(0);
 
@@ -90,6 +92,11 @@ export function EcgLoader({
   }, [visible, fade]);
 
   useEffect(() => {
+    if (reduced) {
+      // Reduce Motion (Apple HIG): no repeating sweep; the whole trace shows, still.
+      offset.value = 0;
+      return;
+    }
     if (!visible) {
       // Stop the loop rather than let it spin behind an invisible view —
       // a phone that keeps animating offscreen is spending battery on nothing.
@@ -113,7 +120,7 @@ export function EcgLoader({
       false,
     );
     return () => cancelAnimation(offset);
-  }, [visible, offset, cycles]);
+  }, [visible, offset, cycles, reduced]);
 
   const traceProps = useAnimatedProps(() => ({ strokeDashoffset: offset.value }));
   const wrapStyle = useAnimatedStyle(() => ({ opacity: fade.value }));
@@ -157,7 +164,7 @@ const styles = StyleSheet.create({
   wrap: { alignItems: "center", gap: space[3] },
   label: {
     fontFamily: font.body,
-    fontSize: 10,
+    fontSize: 11,
     letterSpacing: 1.8,
     textTransform: "uppercase",
     // Colour comes from the `color` prop so the label and the trace can never

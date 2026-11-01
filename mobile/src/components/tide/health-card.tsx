@@ -72,7 +72,7 @@ export function HealthCard({ data }: { data: HealthCardData }) {
     <Text
       style={[
         tType.micro,
-        { fontSize: 9, letterSpacing: 1.1, textTransform: "uppercase", color: t.onBand2 },
+        { fontSize: 11, letterSpacing: 1.1, textTransform: "uppercase", color: t.onBand2 },
       ]}
     >
       {s}
@@ -141,7 +141,7 @@ export function HealthCard({ data }: { data: HealthCardData }) {
             >
               {data.facility ?? "No home facility yet"}
             </Text>
-            <Text style={[tType.micro, { fontSize: 10, color: t.onBand2 }]}>Home facility</Text>
+            <Text style={[tType.micro, { fontSize: 11, color: t.onBand2 }]}>Home facility</Text>
           </View>
         </View>
         <View style={{ flexDirection: "row", alignItems: "center", gap: tSpace[3] }}>
@@ -253,7 +253,7 @@ export function HealthCard({ data }: { data: HealthCardData }) {
               {
                 flex: 1,
                 fontFamily: tFont.bold,
-                fontSize: 10,
+                fontSize: 11,
                 letterSpacing: 1.2,
                 textTransform: "uppercase",
                 color: t.accentText,
@@ -274,7 +274,7 @@ export function HealthCard({ data }: { data: HealthCardData }) {
             backgroundColor: t.surface2,
           }}
         >
-          <Text style={[tType.micro, { fontSize: 9, letterSpacing: 1.1, color: t.ink3 }]}>
+          <Text style={[tType.micro, { fontSize: 11, letterSpacing: 1.1, color: t.ink3 }]}>
             MEDSYNC NUMBER
           </Text>
           <Text
@@ -301,7 +301,7 @@ export function HealthCard({ data }: { data: HealthCardData }) {
         >
           {data.ifFound}
         </Text>
-        <Text numberOfLines={1} style={[tType.micro, { fontSize: 9, color: t.ink3 }]}>
+        <Text numberOfLines={1} style={[tType.micro, { fontSize: 11, color: t.ink3 }]}>
           Written by the card holder · not confirmed by a clinician
         </Text>
       </View>

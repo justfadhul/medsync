@@ -119,7 +119,7 @@ export default function MedicinesScreen() {
               }}
             >
               {taken}
-              <Text style={{ fontSize: 18, color: t.ink4 }}>/{total}</Text>
+              <Text style={{ fontSize: 18, color: t.ink3 }}>/{total}</Text>
             </Text>
             <Text style={[tType.micro, { fontFamily: tFont.semibold, color: t.ink2 }]}>
               taken today
@@ -405,9 +405,9 @@ export default function MedicinesScreen() {
 
 const stopColours = (t: Tide, status: DoseStatus) =>
   ({
-    taken: { bg: t.accentPressed, fg: t.surface, sub: t.accentText },
+    taken: { bg: t.accentPressed, fg: t.onAccent, sub: t.accentText },
     due: { bg: t.surface, fg: t.ink, sub: t.ink },
-    later: { bg: t.surface2, fg: t.ink4, sub: t.ink4 },
+    later: { bg: t.surface2, fg: t.ink3, sub: t.ink3 },
     missed: { bg: t.surface2, fg: t.ink2, sub: t.ink2 },
     noEntry: { bg: t.surface2, fg: t.ink3, sub: t.ink3 },
   })[status];

@@ -15,8 +15,10 @@ const Y1 = 146;
 /**
  * The week chart on Health trends (board TTrends): the target band, grid,
  * one or two lines and a point for each day with a reading. A point outside
- * the target turns amber (red only for a danger reading); the legend under
- * the chart says so in words (law L4).
+ * the target turns amber (red only for a danger reading) and is drawn as a
+ * hollow ring, so the shape says it too; the second line (the bottom number)
+ * uses diamonds, never colour alone (Apple HIG, Charts). VoiceOver hears the
+ * real values with their days, not a picture.
  */
 export function WeekChart({
   a,
@@ -28,6 +30,8 @@ export function WeekChart({
   days,
   judged,
   label,
+  spoken,
+  unit,
 }: {
   a: (number | null)[];
   b?: (number | null)[];
@@ -38,6 +42,9 @@ export function WeekChart({
   days: string[];
   judged: (Judgement | null)[];
   label: string;
+  /** Each day's full name for VoiceOver ("Monday 24"), in the same order as `a`. */
+  spoken?: string[];
+  unit?: string;
 }) {
   const t = useTide();
   const y = (v: number) => Y0 + (1 - (v - lo) / (hi - lo)) * (Y1 - Y0);
@@ -55,7 +62,11 @@ export function WeekChart({
   const lastI = a.length - 1;
   const lastLogged = a.reduce<number>((n, v, i) => (v === null ? n : i), -1);
   return (
-    <View accessible accessibilityRole="image" accessibilityLabel={label}>
+    <View
+      accessible
+      accessibilityRole="image"
+      accessibilityLabel={chartWords(label, a, b, spoken ?? days, unit, band)}
+    >
       <Svg width="100%" height={H} viewBox={`0 0 ${W} ${H}`}>
         {band ? (
           <>
@@ -73,7 +84,7 @@ export function WeekChart({
               y={bandTop + 12}
               textAnchor="end"
               fontFamily={tFont.semibold}
-              fontSize={10}
+              fontSize={11}
               fill={t.accentText}
             >
               Your target
@@ -88,7 +99,7 @@ export function WeekChart({
               y={y(g) + 3}
               textAnchor="end"
               fontFamily={tFont.regular}
-              fontSize={10}
+              fontSize={11}
               fill={t.ink3}
             >
               {String(g)}
@@ -120,22 +131,20 @@ export function WeekChart({
               cx={x(i)}
               cy={y(v)}
               r={i === lastLogged ? 6 : 4.5}
-              fill={flag(judged[i]) ?? (i === lastLogged ? t.accent : t.ink)}
-              stroke={t.surface}
-              strokeWidth={2}
+              fill={flag(judged[i]) ? t.surface : i === lastLogged ? t.accent : t.ink}
+              stroke={flag(judged[i]) ?? t.surface}
+              strokeWidth={flag(judged[i]) ? 2.5 : 2}
             />
           ),
         )}
         {b?.map((v, i) =>
           v === null ? null : (
-            <Circle
+            <Path
               key={`b${i}`}
-              cx={x(i)}
-              cy={y(v)}
-              r={3.5}
-              fill={flag(judged[i]) ?? t.cascade[2]}
-              stroke={t.surface}
-              strokeWidth={2}
+              d={diamond(x(i), y(v), 5)}
+              fill={flag(judged[i]) ? t.surface : t.cascade[2]}
+              stroke={flag(judged[i]) ?? t.surface}
+              strokeWidth={flag(judged[i]) ? 2.5 : 1.5}
             />
           ),
         )}
@@ -155,4 +164,31 @@ export function WeekChart({
       </Svg>
     </View>
   );
+}
+
+/** A diamond mark centred on (cx, cy), r from centre to tip. */
+export function diamond(cx: number, cy: number, r: number): string {
+  return `M${cx} ${cy - r} L${cx + r} ${cy} L${cx} ${cy + r} L${cx - r} ${cy} Z`;
+}
+
+/**
+ * What VoiceOver reads for a week chart (Apple HIG, Charts: real values,
+ * days in words, the axis bounds, no colour): "Blood pressure over the last
+ * seven days, in mmHg. Your target 90 to 135. Monday 24: 128 over 82. …".
+ * Days with no reading are left out.
+ */
+export function chartWords(
+  label: string,
+  a: (number | null)[],
+  b: (number | null)[] | undefined,
+  days: string[],
+  unit?: string,
+  band?: { lo: number; hi: number } | null,
+): string {
+  const head = unit ? `${label}, in ${unit}.` : `${label}.`;
+  const target = band ? ` Your target ${band.lo} to ${band.hi}.` : "";
+  const each = a.flatMap((v, i) =>
+    v === null ? [] : [`${days[i]}: ${b?.[i] != null ? `${v} over ${b[i]}` : v}`],
+  );
+  return `${head}${target} ${each.length ? `${each.join(". ")}.` : "No readings yet."}`;
 }

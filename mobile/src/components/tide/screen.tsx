@@ -143,7 +143,7 @@ export function BellButton({ count = 0, raised = false }: { count?: number; rais
             boxShadow: `0px 0px 0px 2px ${ground}`,
           }}
         >
-          <Text style={[tType.micro, { fontSize: 10, color: t.onPrimary }]}>{count}</Text>
+          <Text style={[tType.micro, { fontSize: 11, color: t.onPrimary }]}>{count}</Text>
         </View>
       ) : null}
     </Press>

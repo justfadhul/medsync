@@ -9,6 +9,7 @@ import { Icon, Press, SectionHead } from "@/components/tide";
 import { lastDays } from "@/data/health-log";
 import { useReadings } from "@/data/readings";
 import { chartRange, insight, judge, METRICS, targetBand, weekSeries } from "@/data/trends";
+import { diamond } from "@/features/care/week-chart";
 import { readingValueText } from "@/lib/readings";
 import { useNow } from "@/lib/use-now";
 import { useTide } from "@/theme/theme";
@@ -210,6 +211,18 @@ export function HealthCard() {
                   strokeLinecap="round"
                   strokeLinejoin="round"
                 />
+                {series.b?.map((v, i) =>
+                  v === null ? null : (
+                    <Path
+                      key={`b${i}`}
+                      d={diamond(x(i), y(v), 4.5)}
+                      fill={t.band}
+                      stroke={t.onBandAccent}
+                      strokeOpacity={0.7}
+                      strokeWidth={2}
+                    />
+                  ),
+                )}
                 {series.a.map((v, i) =>
                   v === null ? null : (
                     <Circle
@@ -224,6 +237,35 @@ export function HealthCard() {
                   ),
                 )}
               </Svg>
+              {series.b ? (
+                <View
+                  style={{ flexDirection: "row", gap: tSpace[3.5], paddingBottom: tSpace[1.5] }}
+                >
+                  <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+                    <View
+                      style={{
+                        width: 9,
+                        height: 9,
+                        borderRadius: 5,
+                        backgroundColor: t.onBandAccent,
+                      }}
+                    />
+                    <Text style={[tType.caption, { color: t.onBand2 }]}>{m.l1}</Text>
+                  </View>
+                  <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+                    <View
+                      style={{
+                        width: 8,
+                        height: 8,
+                        borderWidth: 2,
+                        borderColor: t.onBandAccent,
+                        transform: [{ rotate: "45deg" }],
+                      }}
+                    />
+                    <Text style={[tType.caption, { color: t.onBand2 }]}>{m.l2}</Text>
+                  </View>
+                </View>
+              ) : null}
               <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
                 {days.map((d, i) => (
                   <Text

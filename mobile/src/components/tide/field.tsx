@@ -30,7 +30,7 @@ export function FieldLabel({ children, optional }: { children: string; optional?
     <Text style={[tType.caption, { fontSize: 13, color: t.ink2 }]}>
       {children}
       {optional ? (
-        <Text style={{ fontFamily: tFont.medium, color: t.ink4 }}> (optional)</Text>
+        <Text style={{ fontFamily: tFont.medium, color: t.ink3 }}> (optional)</Text>
       ) : null}
     </Text>
   );

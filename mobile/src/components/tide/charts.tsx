@@ -233,7 +233,7 @@ export function BarLabels({ labels }: { labels: string[] }) {
       {labels.map((l, i) => (
         <Text
           key={i}
-          style={[tType.micro, { fontSize: 10, color: i === labels.length - 1 ? t.ink : t.ink3 }]}
+          style={[tType.micro, { fontSize: 11, color: i === labels.length - 1 ? t.ink : t.ink3 }]}
         >
           {l}
         </Text>

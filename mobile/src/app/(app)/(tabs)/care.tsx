@@ -119,7 +119,7 @@ export default function CareTab() {
                       borderColor: t.onBand,
                     }}
                   />
-                  <Text style={{ fontFamily: tFont.semibold, fontSize: 10, color: t.onBand2 }}>
+                  <Text style={{ fontFamily: tFont.semibold, fontSize: 11, color: t.onBand2 }}>
                     {days[i].letter}
                   </Text>
                 </View>
