@@ -2,6 +2,8 @@
 
 For a Claude Code session picking this repo up without the previous session's local memory (a cloud session at claude.ai/code, or a new machine). Read `AGENTS.md` first, then this. Updated 2026-10-03.
 
+**Pharmacy (Phases 0 and 1, the national-list catalogue):** see [`docs/pharmacy/HANDOFF.md`](pharmacy/HANDOFF.md) (17 Oct 2026). It supersedes anything below about pharmacy.
+
 ## Who decides
 
 - **Fadhul is the owner and the Clinical Safety Officer (CSO).** Clinical content (catalogues, scales, flag rules, reference values, doses, CFC concepts) is data and needs the owner's signature before it goes live. Ask for signatures with AskUserQuestion, one decision per question, with a recommended option first. Record what was signed in the gate record and, for catalogues, in the sign-off file that pins the catalogue's SHA-256.
