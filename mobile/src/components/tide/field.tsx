@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import type { KeyboardTypeOptions, TextInputProps } from "react-native";
+import type { KeyboardTypeOptions, TextInputInstance, TextInputProps } from "react-native";
 import { useRef } from "react";
 import { formatUgPhone, isUgMobile } from "@patient-core/getting-in-signup";
 import { Pressable, Text, TextInput, View } from "react-native";
@@ -223,7 +223,7 @@ export function OtpBoxes({
   length?: number;
 }) {
   const t = useTide();
-  const ref = useRef<TextInput>(null);
+  const ref = useRef<TextInputInstance>(null);
   return (
     <Pressable
       onPress={() => ref.current?.focus()}

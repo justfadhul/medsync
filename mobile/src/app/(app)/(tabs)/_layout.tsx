@@ -36,7 +36,7 @@ export default function TabsLayout() {
     <Tabs
       // No cross-fade between tabs: a scene caught mid-fade could stay transparent (white).
       screenOptions={{ headerShown: false, animation: "none" }}
-      tabBar={({ state, navigation }) => {
+      tabBar={({ state, navigateToTab }) => {
         const current = PLACE_FOR[state.routes[state.index]?.name ?? "index"] ?? "home";
         return (
           <View
@@ -47,7 +47,10 @@ export default function TabsLayout() {
               width={width - 32}
               current={current}
               careCount={dueNow.length}
-              onNavigate={(place) => navigation.navigate(ROUTE_FOR[place])}
+              onNavigate={(place) => {
+                const route = state.routes.find((r) => r.name === ROUTE_FOR[place]);
+                if (route) navigateToTab(route.key);
+              }}
               onPlus={() => router.push("/add")}
             />
           </View>

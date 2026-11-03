@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import type { ScrollView } from "react-native";
+import type { ScrollViewInstance } from "react-native";
 import { useEffect, useRef, useState } from "react";
 import { Keyboard, KeyboardAvoidingView, Platform, TextInput } from "react-native";
 
@@ -21,7 +21,7 @@ const ABOVE_KEYBOARD = 32;
  * so a frame can drop the home-indicator padding it no longer needs.
  */
 export function useKeyboardAware() {
-  const scrollRef = useRef<ScrollView>(null);
+  const scrollRef = useRef<ScrollViewInstance>(null);
   const [shown, setShown] = useState(false);
 
   useEffect(() => {

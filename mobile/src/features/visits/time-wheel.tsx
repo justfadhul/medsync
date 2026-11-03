@@ -1,4 +1,4 @@
-import type { NativeScrollEvent, NativeSyntheticEvent } from "react-native";
+import type { NativeScrollEvent, NativeSyntheticEvent, ScrollViewInstance } from "react-native";
 import { useRef } from "react";
 import { LinearGradient } from "expo-linear-gradient";
 import { ScrollView, Text, View } from "react-native";
@@ -33,7 +33,7 @@ export function TimeWheel({
   label: string;
 }) {
   const t = useTide();
-  const ref = useRef<ScrollView>(null);
+  const ref = useRef<ScrollViewInstance>(null);
   const clamp = (k: number) => Math.max(0, Math.min(times.length - 1, k));
   const onScroll = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
     const k = clamp(Math.round(e.nativeEvent.contentOffset.y / ROW));

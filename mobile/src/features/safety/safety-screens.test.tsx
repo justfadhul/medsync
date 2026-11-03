@@ -93,7 +93,7 @@ describe("SOS countdown", () => {
     jest.useFakeTimers();
     events.length = 0;
     setAnalyticsSink((e) => events.push(e));
-    openURL = jest.spyOn(Linking, "openURL").mockResolvedValue(true);
+    openURL = jest.spyOn(Linking, "openURL").mockResolvedValue(undefined);
   });
   afterEach(() => {
     openURL.mockRestore();

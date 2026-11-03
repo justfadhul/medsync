@@ -1,4 +1,5 @@
 import type { IconName } from "@/components/tide";
+import type { ScrollViewInstance } from "react-native";
 import { Fragment, useRef, useState } from "react";
 import { useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
@@ -56,7 +57,7 @@ function ChatThread() {
   const reduced = useReducedMotion();
   const messages = useChat();
   const [draft, setDraft] = useState("");
-  const thread = useRef<ScrollView>(null);
+  const thread = useRef<ScrollViewInstance>(null);
   const { toast, show } = useToast(150 + insets.bottom);
 
   const send = (text: string) => {

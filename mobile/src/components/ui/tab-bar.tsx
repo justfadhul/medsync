@@ -70,7 +70,7 @@ export function useTabBarClearance(): number {
 export function useTabBarFrame(): ViewStyle {
   const insets = useSafeAreaInsets();
   const styles = useStyles(makeStyles);
-  return StyleSheet.flatten([styles.bar, { bottom: insets.bottom + TAB_BAR_GAP }]);
+  return StyleSheet.flatten([styles.bar, { bottom: insets.bottom + TAB_BAR_GAP }]) ?? {};
 }
 
 /* ─── one tab ────────────────────────────────────────────────────── */
