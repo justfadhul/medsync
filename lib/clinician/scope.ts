@@ -1,7 +1,7 @@
 import "server-only";
 
 import { redirect } from "next/navigation";
-import { and, desc, eq } from "drizzle-orm";
+import { desc, eq } from "drizzle-orm";
 
 import { db } from "@/db";
 import { staffAffiliations } from "@/db/schema/clinician-profiles";
@@ -9,6 +9,7 @@ import { hospitalDepartments } from "@/db/schema/hospital-departments";
 import { hospitals } from "@/db/schema/hospitals";
 import { users } from "@/db/schema/users";
 import { getAuthState } from "@/lib/auth";
+import { staffReachable } from "@/lib/auth/reachable";
 import { logger } from "@/lib/logger";
 
 /**
@@ -47,9 +48,6 @@ export interface ClinicianScope {
   affiliationState: string;
 }
 
-const REACHABLE_AFFILIATION_STATES = new Set<string>(["active", "approved"]);
-const REACHABLE_HOSPITAL_STATES = new Set<string>(["provisioning", "active"]);
-
 export async function requireClinicianScope(): Promise<ClinicianScope> {
   const state = await getAuthState();
 
@@ -66,13 +64,15 @@ export async function requireClinicianScope(): Promise<ClinicianScope> {
       hospitalSlug: hospitals.slug,
       hospitalLevel: hospitals.level,
       hospitalState: hospitals.state,
+      userState: users.state,
       departmentId: hospitalDepartments.id,
       departmentName: hospitalDepartments.name,
     })
     .from(staffAffiliations)
     .innerJoin(hospitals, eq(hospitals.id, staffAffiliations.hospitalId))
     .innerJoin(hospitalDepartments, eq(hospitalDepartments.id, staffAffiliations.departmentId))
-    .where(and(eq(staffAffiliations.userId, state.user.id)))
+    .innerJoin(users, eq(users.id, staffAffiliations.userId))
+    .where(eq(staffAffiliations.userId, state.user.id))
     .orderBy(desc(staffAffiliations.createdAt));
 
   if (rows.length === 0) {
@@ -80,11 +80,7 @@ export async function requireClinicianScope(): Promise<ClinicianScope> {
     redirect("/");
   }
 
-  const reachable = rows.find(
-    (r) =>
-      REACHABLE_AFFILIATION_STATES.has(r.affiliationState) &&
-      REACHABLE_HOSPITAL_STATES.has(r.hospitalState),
-  );
+  const reachable = rows.find(staffReachable);
   if (!reachable) {
     logger.warn("clinician.scope.no_reachable_affiliation", {
       user_id: state.user.id,

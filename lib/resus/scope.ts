@@ -1,7 +1,7 @@
 import "server-only";
 
 import { redirect } from "next/navigation";
-import { and, desc, eq, inArray } from "drizzle-orm";
+import { and, desc, eq } from "drizzle-orm";
 
 import { db } from "@/db";
 import { staffAffiliations } from "@/db/schema/clinician-profiles";
@@ -10,6 +10,7 @@ import { hospitals } from "@/db/schema/hospitals";
 import { cadres, roles } from "@/db/schema/reference-data";
 import { users } from "@/db/schema/users";
 import { getAuthState } from "@/lib/auth";
+import { reachableAffiliation } from "@/lib/auth/reachable";
 import { logger } from "@/lib/logger";
 
 /**
@@ -77,7 +78,7 @@ export async function requireResusScope(redirectTo = "/nurse"): Promise<ResusSco
       and(
         eq(staffAffiliations.userId, state.user!.id),
         eq(cadres.isClinical, true),
-        inArray(staffAffiliations.state, ["active", "approved"]),
+        reachableAffiliation(),
       ),
     )
     .orderBy(desc(staffAffiliations.approvedAt), desc(staffAffiliations.createdAt))

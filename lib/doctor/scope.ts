@@ -11,6 +11,7 @@ import { hospitals } from "@/db/schema/hospitals";
 import { cadres, roles } from "@/db/schema/reference-data";
 import { users } from "@/db/schema/users";
 import { getAuthState } from "@/lib/auth";
+import { reachableAffiliation } from "@/lib/auth/reachable";
 import { logger } from "@/lib/logger";
 
 /**
@@ -171,7 +172,7 @@ async function findDoctorAffiliation(userId: string) {
     .where(
       and(
         eq(staffAffiliations.userId, userId),
-        inArray(staffAffiliations.state, ["active", "approved"]),
+        reachableAffiliation(),
         inArray(cadres.code, DOCTOR_CADRE_CODES as unknown as string[]),
       ),
     )

@@ -13,6 +13,7 @@ import { cadres, roles } from "@/db/schema/reference-data";
 import { departmentHeads } from "@/db/schema/services-hub";
 import { users } from "@/db/schema/users";
 import { getAuthState } from "@/lib/auth";
+import { reachableAffiliation } from "@/lib/auth/reachable";
 import { can, labAccess } from "@/lib/lab/access";
 import { labWorkspaceLiveFor } from "@/lib/lab/feature";
 import { logger } from "@/lib/logger";
@@ -153,7 +154,7 @@ async function findLabTechAffiliation(userId: string) {
     .where(
       and(
         eq(staffAffiliations.userId, userId),
-        inArray(staffAffiliations.state, ["active", "approved"]),
+        reachableAffiliation(),
         inArray(cadres.code, LAB_TECH_CADRE_CODES as unknown as string[]),
       ),
     )

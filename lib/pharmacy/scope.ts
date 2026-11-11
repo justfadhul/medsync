@@ -12,6 +12,7 @@ import { hospitals } from "@/db/schema/hospitals";
 import { cadres } from "@/db/schema/reference-data";
 import { users } from "@/db/schema/users";
 import { getAuthState } from "@/lib/auth";
+import { reachableAffiliation } from "@/lib/auth/reachable";
 import { logger } from "@/lib/logger";
 import { can, PHARMACY_MAP_CADRES, pharmacyAccess } from "@/lib/pharmacy/access";
 import { pharmacyWorkspaceLiveFor, tier } from "@/lib/pharmacy/feature";
@@ -99,7 +100,7 @@ async function findPharmacyAffiliation(userId: string) {
     .where(
       and(
         eq(staffAffiliations.userId, userId),
-        inArray(staffAffiliations.state, ["active", "approved"]),
+        reachableAffiliation(),
         inArray(cadres.code, [...PHARMACY_MAP_CADRES]),
       ),
     )

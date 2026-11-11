@@ -12,6 +12,7 @@ import { hospitals } from "@/db/schema/hospitals";
 import { ncdStaffRole } from "@/db/schema/ncd-registry";
 import { users } from "@/db/schema/users";
 import { getAuthState } from "@/lib/auth";
+import { REACHABLE_AFFILIATION_STATES, staffMayReach } from "@/lib/auth/reachable";
 import { resolveContext } from "./context";
 
 /**
@@ -51,7 +52,7 @@ export const requireNcdScope = cache(async (): Promise<NcdScope> => {
       .where(
         and(
           eq(staffAffiliations.userId, userId),
-          inArray(staffAffiliations.state, ["active", "approved"]),
+          inArray(staffAffiliations.state, [...REACHABLE_AFFILIATION_STATES]),
         ),
       )
       .orderBy(desc(staffAffiliations.approvedAt))
@@ -69,6 +70,7 @@ export const requireNcdScope = cache(async (): Promise<NcdScope> => {
   ]);
   const facilityId = aff?.hospitalId ?? admin?.hospitalId ?? assigned?.hospitalId;
   if (!facilityId || !ncdRegistryLiveFor(facilityId)) notFound();
+  if (!(await staffMayReach(userId, facilityId))) notFound();
 
   const [ctx, [h], [u]] = await Promise.all([
     resolveContext({ userId, facilityId, principal: "user" }),

@@ -1,13 +1,15 @@
 import "server-only";
 
 import { redirect } from "next/navigation";
-import { and, desc, eq } from "drizzle-orm";
+import { and, desc, eq, notInArray } from "drizzle-orm";
 
 import { db } from "@/db";
 import { hospitalAdminRoster } from "@/db/schema/hospital-admin-roster";
 import { hospitals } from "@/db/schema/hospitals";
 import { userRoles } from "@/db/schema/user-roles";
+import { users } from "@/db/schema/users";
 import { getAuthState } from "@/lib/auth";
+import { BLOCKED_USER_STATES, REACHABLE_HOSPITAL_STATES } from "@/lib/auth/reachable";
 import { logger } from "@/lib/logger";
 
 /**
@@ -73,7 +75,6 @@ export interface HospitalAdminScope {
  *     page. (Tracked separately; out of shell scope.)
  *   - suspended / offboarded: terminal-ish, no admin surface.
  */
-const REACHABLE_STATES = new Set<string>(["provisioning", "active"]);
 
 /**
  * Resolve the scope or redirect.
@@ -113,7 +114,14 @@ export async function requireHospitalAdminScope(): Promise<HospitalAdminScope> {
         eq(hospitalAdminRoster.userId, userRoles.userId),
       ),
     )
-    .where(and(eq(userRoles.userId, state.user.id), eq(userRoles.role, "hospital_admin")))
+    .innerJoin(users, eq(users.id, userRoles.userId))
+    .where(
+      and(
+        eq(userRoles.userId, state.user.id),
+        eq(userRoles.role, "hospital_admin"),
+        notInArray(users.state, [...BLOCKED_USER_STATES]),
+      ),
+    )
     .orderBy(desc(hospitalAdminRoster.designatedAt));
 
   if (rows.length === 0) {
@@ -126,7 +134,9 @@ export async function requireHospitalAdminScope(): Promise<HospitalAdminScope> {
   // Pick the first reachable hospital (most-recently-designated
   // primary, then most-recent backup, then anything else). If none
   // are reachable, bounce.
-  const reachable = rows.find((r) => REACHABLE_STATES.has(r.hospitalState));
+  const reachable = rows.find((r) =>
+    (REACHABLE_HOSPITAL_STATES as readonly string[]).includes(r.hospitalState),
+  );
   if (!reachable) {
     logger.warn("hospital-admin.scope.no_reachable_hospital", {
       user_id: state.user.id,

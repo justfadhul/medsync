@@ -9,6 +9,7 @@ import { hospitals } from "@/db/schema/hospitals";
 import { cadres, roles } from "@/db/schema/reference-data";
 import { users } from "@/db/schema/users";
 import { getAuthState } from "@/lib/auth";
+import { reachableAffiliation } from "@/lib/auth/reachable";
 import { logger } from "@/lib/logger";
 
 /**
@@ -72,7 +73,13 @@ export async function requireReceptionScope(): Promise<ReceptionScope> {
     .innerJoin(cadres, eq(cadres.id, staffAffiliations.cadreId))
     .innerJoin(roles, eq(roles.id, staffAffiliations.roleId))
     .innerJoin(users, eq(users.id, staffAffiliations.userId))
-    .where(and(eq(staffAffiliations.userId, state.user.id), eq(cadres.code, RECEPTION_CADRE_CODE)))
+    .where(
+      and(
+        eq(staffAffiliations.userId, state.user.id),
+        eq(cadres.code, RECEPTION_CADRE_CODE),
+        reachableAffiliation(),
+      ),
+    )
     .orderBy(desc(staffAffiliations.approvedAt), desc(staffAffiliations.createdAt))
     .limit(1);
 

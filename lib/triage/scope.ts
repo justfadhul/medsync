@@ -12,6 +12,7 @@ import { hospitals } from "@/db/schema/hospitals";
 import { cadres, roles } from "@/db/schema/reference-data";
 import { users } from "@/db/schema/users";
 import { getAuthState } from "@/lib/auth";
+import { reachableAffiliation } from "@/lib/auth/reachable";
 import { logger } from "@/lib/logger";
 import { resolveTriageAuthority } from "@/lib/triage/authority";
 
@@ -67,7 +68,7 @@ export async function requireTriageScope(): Promise<TriageScope> {
       and(
         eq(staffAffiliations.userId, state.user!.id),
         eq(cadres.isClinical, true),
-        inArray(staffAffiliations.state, ["active", "approved"]),
+        reachableAffiliation(),
       ),
     )
     .orderBy(desc(staffAffiliations.approvedAt), desc(staffAffiliations.createdAt))

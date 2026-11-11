@@ -11,6 +11,7 @@ import { wardInChargeAssignments } from "@/db/schema/nurse-workspace";
 import { cadreGrades, cadres, roles } from "@/db/schema/reference-data";
 import { users } from "@/db/schema/users";
 import { getAuthState } from "@/lib/auth";
+import { reachableAffiliation } from "@/lib/auth/reachable";
 import { logger } from "@/lib/logger";
 
 /**
@@ -100,7 +101,7 @@ export async function requireNurseScope(): Promise<NurseScope> {
     .where(
       and(
         eq(staffAffiliations.userId, state.user.id),
-        inArray(staffAffiliations.state, ["active", "approved"]),
+        reachableAffiliation(),
         inArray(cadres.code, NURSE_CADRE_CODES as unknown as string[]),
       ),
     )

@@ -5,6 +5,7 @@ import { sql } from "drizzle-orm";
 
 import { db } from "@/db";
 import { getAuthState } from "@/lib/auth";
+import { staffMayReach } from "@/lib/auth/reachable";
 import { rowsOf } from "@/lib/exchange/store";
 import { ipcLabFeedLiveFor } from "@/lib/lab/feature";
 
@@ -40,6 +41,7 @@ export async function ipcScope(path = "/ipc") {
   );
   const hospitalId = rows[0]?.hospital;
   if (!hospitalId || !ipcLabFeedLiveFor(hospitalId)) notFound();
+  if (!(await staffMayReach(userId, hospitalId))) notFound();
   const mine = rows.filter((r) => r.hospital === hospitalId);
   const [h] = rowsOf<{ name: string }>(
     await db.execute(sql`SELECT name FROM hospitals WHERE id = ${hospitalId}`),

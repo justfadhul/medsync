@@ -7,6 +7,7 @@ import { and, eq, gte, isNull, lte, or } from "drizzle-orm";
 import { db } from "@/db";
 import { hmisDesignations, hospitals, userRoles } from "@/db/schema";
 import { getAuthState } from "@/lib/auth";
+import { staffMayReach } from "@/lib/auth/reachable";
 import { DEFAULT_TIME_ZONE } from "@/supabase/functions/_shared/slots";
 import { labHmisLiveFor } from "./feature";
 
@@ -45,6 +46,7 @@ export async function hmisDeskScope(): Promise<{
   ]);
   const hospitalId = designations[0]?.hospitalId ?? admins.find((a) => a.hospitalId)?.hospitalId;
   if (!hospitalId || !labHmisLiveFor(hospitalId)) notFound();
+  if (!(await staffMayReach(userId, hospitalId))) notFound();
   const [h] = await db
     .select({ name: hospitals.name })
     .from(hospitals)
