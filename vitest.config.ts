@@ -32,6 +32,9 @@ const testEnv = Object.fromEntries(
 ) as Record<string, string>;
 
 export default defineConfig({
+  // Tests import a few mobile/src files. Without this, oxc loads mobile/tsconfig.json, which extends
+  // expo/tsconfig.base, and that is installed only by the Mobile job, so those files fail to transform.
+  oxc: { tsconfig: false },
   resolve: {
     alias: {
       "@": resolve(__dirname, "./"),
