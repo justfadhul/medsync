@@ -10,11 +10,20 @@ import type {
 } from "@/lib/pharmacy/review/prescriber-read";
 import { useRouter } from "next/navigation";
 import { useEffect, useId, useRef, useState } from "react";
-import { ClockIcon } from "lucide-react";
+import { ClockIcon, XIcon } from "lucide-react";
 
 import { StatusWord } from "@/components/emr/status-word";
+import { EditorDialog } from "@/components/medsync/editor-dialog";
 import { Button } from "@/components/ui/button";
+import {
+  SheetBody,
+  SheetClose,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
 import { PRESCRIBER_PHARMACY_COPY as COPY } from "@/content/pharmacy-prescriber";
+import { PRESCRIBE_COPY } from "@/content/prescribing";
 import {
   acknowledgeNotSupplied,
   answerQuery,
@@ -139,11 +148,14 @@ export function PharmacyItemBlock({
   view,
   canWrite,
   handlers,
+  dialog = false,
 }: {
   item: PharmacyItem;
   view: PrescriberPharmacyView;
   canWrite: boolean;
   handlers: PharmacyHandlers;
+  /** The one Prescribe (prototype): the answer opens in a centred dialog, not inline. */
+  dialog?: boolean;
 }) {
   const headId = useId();
   const base = { surface: "doctor" as const, patientUserId: view.patientUserId };
@@ -173,6 +185,7 @@ export function PharmacyItemBlock({
           handlers={handlers}
           headId={headId}
           base={base}
+          dialog={dialog}
         />
       ) : (
         <NoticeBlock
@@ -212,6 +225,7 @@ function QueryBlock({
   handlers,
   headId,
   base,
+  dialog,
 }: {
   item: PharmacyQueryItem;
   view: PrescriberPharmacyView;
@@ -219,9 +233,11 @@ function QueryBlock({
   handlers: PharmacyHandlers;
   headId: string;
   base: Base;
+  dialog: boolean;
 }) {
   const dispute = useCall(handlers.onDone);
   const [disputeKey] = useState(newKey);
+  const [answering, setAnswering] = useState(false);
   const open = isOpen(item);
   return (
     <>
@@ -255,7 +271,59 @@ function QueryBlock({
         </p>
       ) : null}
       <ErrorLine error={dispute.error} />
-      {open && canWrite ? (
+      {open && canWrite && dialog ? (
+        <>
+          <Button
+            size="sm"
+            variant="secondary"
+            className="self-start"
+            onClick={() => setAnswering(true)}
+          >
+            {PRESCRIBE_COPY.answerOpen}
+          </Button>
+          <EditorDialog open={answering} onOpenChange={setAnswering} width="medium">
+            <SheetHeader className="pr-12">
+              <SheetTitle className="text-heading-m font-sans">
+                {PRESCRIBE_COPY.answerTitle}
+              </SheetTitle>
+              <SheetDescription>{PRESCRIBE_COPY.answerNote}</SheetDescription>
+            </SheetHeader>
+            <SheetBody className="flex flex-col gap-3">
+              <blockquote className="bg-muted text-body-s text-foreground rounded-lg px-3.5 py-3">
+                {item.words}
+              </blockquote>
+              <AnswerForm
+                item={item}
+                view={view}
+                base={base}
+                handlers={{
+                  ...handlers,
+                  onChange: (i, l) => {
+                    setAnswering(false);
+                    handlers.onChange(i, l);
+                  },
+                  onDone: () => {
+                    setAnswering(false);
+                    handlers.onDone?.();
+                  },
+                }}
+              />
+            </SheetBody>
+            <SheetClose
+              render={
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  aria-label="Close"
+                  className="absolute top-3 right-3 rounded-full"
+                />
+              }
+            >
+              <XIcon className="size-4" />
+            </SheetClose>
+          </EditorDialog>
+        </>
+      ) : open && canWrite ? (
         <AnswerForm item={item} view={view} handlers={handlers} base={base} />
       ) : null}
     </>

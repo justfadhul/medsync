@@ -53,6 +53,14 @@ export const CLASSES = [
   "Antihistamines",
   "Vitamins and minerals",
   "Anaesthetics",
+  "Cardiac",
+  "Antiplatelets",
+  "Emergency and antidotes",
+  "Sedatives",
+  "Haemostatics",
+  "Blood products",
+  "Gout",
+  "Urology",
 ] as const;
 
 export const ATC: Record<string, string> = {

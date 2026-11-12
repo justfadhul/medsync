@@ -15,6 +15,10 @@ export const NURSE_TASKS_COPY = {
   title: "Nurse tasks",
   sub: "Tasks the prescription created. IV medicines for a patient with no line add “Insert an IV cannula” here.",
   empty: "Nothing to do.",
+  emptyWhy: "IV medicines for a patient with no line add a task here.",
+  tasksTitle: "Tasks",
+  runningHead: "{short} chart · {patient}",
+  runningMeta: "{d} on the chart · last charted {last}",
   toDo: "To do",
   done: "Done",
   asked: "Asked {at} · {by}",
@@ -28,6 +32,7 @@ export const NURSE_TASKS_COPY = {
   size: "Size",
   site: "Site",
   ivDone: "Done: cannula in",
+  ivNeeds: "Pick the size and the site.",
   ivResult: "{size}, {site}",
   sizes: ["18G", "20G", "22G", "24G"],
   sites: [
@@ -42,9 +47,14 @@ export const NURSE_TASKS_COPY = {
   resultTitle: "Enter the result: {test}",
   resultValue: "Result",
   saveResult: "Save result",
+  resultNeeds: "Type the result.",
   // On the patient
-  ivAccess: "IV access: {lines}",
-  noIvAccess: "No IV line on record",
+  ivAccessLabel: "IV access",
+  ivCannula: "Cannula {size}",
+  ivSiteDay: "{site} · day {day}",
+  noLine: "No line",
+  noLineTask: "Nurse asked to insert one",
+  noLineSub: "No cannula task done this visit",
   // Medicine chart (MAR)
   marTitle: "Medicine chart",
   marSub: "Doses from the prescription. Given or Withhold for each one.",
@@ -58,6 +68,7 @@ export const NURSE_TASKS_COPY = {
   wrongEntryReason: "What was wrong?",
   wrongEntryNote: "The record stays on the chart, marked undone, with your reason.",
   save: "Save",
+  reasonNeeds: "Write the reason.",
   cancel: "Cancel",
   notHere:
     "High-alert and controlled medicines are recorded on the Medications form or the CD dose page.",

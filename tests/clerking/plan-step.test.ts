@@ -170,6 +170,12 @@ const type = (el: Element | null | undefined, value: string) =>
     Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")!.set!.call(input, value);
     input.dispatchEvent(new Event("input", { bubbles: true }));
   });
+const pick = (el: Element | null | undefined, value: string) =>
+  act(() => {
+    const select = el as HTMLSelectElement;
+    Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, "value")!.set!.call(select, value);
+    select.dispatchEvent(new Event("change", { bubbles: true }));
+  });
 const plan = () => (latest.plan ?? {}) as PlanDraft;
 const headings = () => [...host.querySelectorAll("h3")].map((x) => x.textContent?.trim());
 
@@ -270,44 +276,40 @@ describe("step 10, Plan by problem", () => {
     expect(host.textContent).toMatch(/Ready to mark done/);
   });
 
-  it("the prescribing dialog: chips announce pressed, the disabled reason is in words", async () => {
+  it("the prescribing dialog: the prototype's selects, the disabled reason is in words", async () => {
     mount(payload());
     await act(async () => {});
     tap(button("Ceftriaxone", host));
     const dialog = document.querySelector('[role="dialog"]')!;
     expect(dialog).toBeTruthy();
-    expect(dialog.textContent).toMatch(/Prescribe · for Sepsis/);
+    expect(dialog.textContent).toMatch(/for Sepsis/);
+    expect(dialog.textContent).toMatch(/1 · What/);
+    expect(dialog.textContent).toMatch(/2 · How/);
+    expect(dialog.textContent).toMatch(/3 · Check/);
     expect(dialog.textContent).toMatch(/No verified regimen yet: type the dose/);
     expect(dialog.textContent).toMatch(/Choose the route\./);
-    const iv = [...dialog.querySelectorAll('[aria-label="Route"] button')].find(
-      (b) => b.textContent?.trim() === "IV",
-    )!;
-    expect(iv.getAttribute("aria-pressed")).toBe("false");
-    tap(iv);
-    expect(iv.getAttribute("aria-pressed")).toBe("true");
+    const route = dialog.querySelector('select[aria-label="Route"]') as HTMLSelectElement;
+    expect(route.value).toBe("");
+    pick(route, "iv");
+    expect(route.value).toBe("iv");
     expect(dialog.textContent).toMatch(/Type the dose\./);
-    type(dialog.querySelector("input[inputmode=decimal]"), "2");
-    tap(
-      [...dialog.querySelectorAll('[aria-label="Unit"] button')].find(
-        (b) => b.textContent?.trim() === "g",
-      ),
-    );
-    tap(
-      [...dialog.querySelectorAll('[aria-label="How often"] button')].find(
-        (b) => b.textContent?.trim() === "Once daily",
-      ),
-    );
+    type(dialog.querySelector('input[aria-label="Dose"]'), "2");
+    pick(dialog.querySelector('select[aria-label="Unit"]'), "g");
+    pick(dialog.querySelector('select[aria-label="How often"]'), "daily");
     // No blood culture ordered for a sepsis-type problem: an answer is needed before adding.
     expect(dialog.textContent).toMatch(/Answer "Cultures before antibiotics" to continue\./);
-    const add = button("Add to basket", dialog) as HTMLButtonElement;
+    const add = button(/^Add · 1 to answer$/, dialog) as HTMLButtonElement;
     expect(add.disabled).toBe(true);
-    tap(
-      [...dialog.querySelectorAll("button")].find(
-        (b) => b.textContent?.trim() === "Aware; will monitor",
-      ),
-    );
-    expect(add.disabled).toBe(false);
-    tap(add);
+    const chip = [...dialog.querySelectorAll("button")].find(
+      (b) => b.textContent?.trim() === "Aware; will monitor",
+    )!;
+    expect(chip.getAttribute("aria-pressed")).toBe("false");
+    tap(chip);
+    // Answered, the check folds to one line with Change.
+    expect(dialog.textContent).toMatch(/Cultures before antibiotics · Aware; will monitor/);
+    const added = button("Add to prescription", dialog) as HTMLButtonElement;
+    expect(added.disabled).toBe(false);
+    tap(added);
     expect(plan().basket!.prescriptions).toMatchObject([
       {
         drugId: "ceftriaxone",
@@ -320,47 +322,33 @@ describe("step 10, Plan by problem", () => {
     ]);
   });
 
-  it("Show all medicines: every class by body system; choosing one prescribes it", async () => {
+  it("the medicine list groups by pharmacy class; search narrows it; choosing one prescribes it", async () => {
     mount(payload());
     await act(async () => {});
     tap(button("Ceftriaxone", host));
     const rx = document.querySelector('[role="dialog"]')!;
-    const showAll = [...rx.querySelectorAll("button")].find(
-      (b) => b.textContent === "Show all medicines",
+    const group = [...rx.querySelectorAll("select")].find((x) =>
+      /^All groups \(\d+\)$/.test(x.options[0]?.textContent ?? ""),
     )!;
-    expect(showAll.getAttribute("aria-haspopup")).toBe("dialog");
-    tap(showAll);
-    const all = [...document.querySelectorAll('[role="dialog"]')].find((d) =>
-      /All medicines/.test(d.textContent ?? ""),
-    )!;
-    expect(all).toBeTruthy();
-    expect(all.textContent).toMatch(/192 medicines in \d+ classes, by body system/);
-    const systems = [...all.querySelectorAll("h3")].map((x) => x.firstChild?.textContent);
-    expect(systems[0]).toBe("Anti-infectives");
-    expect(systems).toContain("Cardiovascular");
-    const classes = [...all.querySelectorAll("h4")].map((x) => x.firstChild?.textContent);
-    expect(classes).toContain("Penicillins");
-    expect(classes).toContain("Cephalosporins, third generation");
-    // The medicine the dialog is on is ticked.
-    const ceftriaxone = [...all.querySelectorAll("button[aria-pressed]")].find((b) =>
-      /^Ceftriaxone/.test(b.textContent ?? ""),
-    )!;
-    expect(ceftriaxone.getAttribute("aria-pressed")).toBe("true");
-    // The filter narrows to the class typed, and says how many match.
-    type(all.querySelector('input[placeholder^="Name, class"]'), "penicillin");
-    const rows = [...all.querySelectorAll("button[aria-pressed]")].map((b) => b.textContent);
+    const names = [...group.options].slice(1).map((o) => o.value);
+    expect(names[0]).toBe("Antibiotics");
+    expect(names).toContain("Antihypertensives");
+    expect(names).toContain("Emergency and antidotes");
+    expect(rx.querySelector('[role="group"][aria-label="Antibiotics"]')).toBeTruthy();
+    // The medicine the dialog is on is pressed.
+    const on = [...rx.querySelectorAll("button[aria-pressed=true]")].map((b) => b.textContent);
+    expect(on.some((t) => /^Ceftriaxone/.test(t ?? ""))).toBe(true);
+    // The search narrows the list.
+    type(rx.querySelector('input[aria-label^="Search medicines"]'), "amoxicillin");
+    const rows = [...rx.querySelectorAll("button[aria-pressed]")].map((b) => b.textContent);
     expect(rows.some((t) => /^Amoxicillin/.test(t ?? ""))).toBe(true);
     expect(rows.some((t) => /^Ceftriaxone/.test(t ?? ""))).toBe(false);
-    expect(all.textContent).toMatch(/\d+ medicines match/);
     tap(
-      [...all.querySelectorAll("button[aria-pressed]")].find((b) =>
+      [...rx.querySelectorAll("button[aria-pressed]")].find((b) =>
         /^Amoxicillin(?!–)/.test(b.textContent ?? ""),
       ),
     );
-    await act(async () => {});
-    const open = [...document.querySelectorAll('[role="dialog"]')];
-    expect(open.some((d) => /All medicines/.test(d.textContent ?? ""))).toBe(false);
-    expect(open[0]!.textContent).toMatch(/Amoxicillin · Penicillins/);
+    expect(rx.querySelector("h4")?.textContent).toBe("Amoxicillin");
   });
 
   it("off (no Plan payload), step 10 is the v1 Plan", async () => {

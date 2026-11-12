@@ -817,16 +817,6 @@ export function HandoverScreen({
       </Section>
 
       <Section n={cd ? 7 : 3} title={H.section.explained}>
-        {explainRequired ? (
-          <label className="flex min-h-11 items-center gap-2">
-            <input
-              type="checkbox"
-              checked={explained}
-              onChange={(e) => setExplained(e.target.checked)}
-            />
-            <span className="text-body-s">{PRESCRIBE_HANDOFF_COPY.explained}</span>
-          </label>
-        ) : null}
         {data.counselling?.length ? (
           <fieldset className="flex flex-col gap-1">
             <legend className="text-label mb-1">{H.counselling}</legend>
@@ -909,7 +899,25 @@ export function HandoverScreen({
         </div>
       ) : null}
 
+      {explainRequired ? (
+        // Kit F4, the prototype's hand-over order: what is given, who collects, then this tick, then Confirm.
+        <label className="bg-card border-border flex min-h-12 items-center gap-2.5 rounded-lg border px-4 py-2">
+          <input
+            type="checkbox"
+            className="size-5.5 shrink-0"
+            checked={explained}
+            onChange={(e) => setExplained(e.target.checked)}
+          />
+          <span className="text-body-s">{PRESCRIBE_HANDOFF_COPY.explained}</span>
+        </label>
+      ) : null}
+
       <div className="flex flex-wrap items-center justify-end gap-3">
+        {explainRequired && !explained ? (
+          <p id="handover-explain-why" className="text-caption text-muted-foreground">
+            {PRESCRIBE_HANDOFF_COPY.explainedRefused}
+          </p>
+        ) : null}
         <Refusal error={error} />
         <Link
           href={`/pharmacy/prescriptions/${encodeURIComponent(data.key)}`}
@@ -927,6 +935,7 @@ export function HandoverScreen({
             (readiness !== null && !readiness.ready) ||
             (explainRequired && !explained)
           }
+          aria-describedby={explainRequired && !explained ? "handover-explain-why" : undefined}
           onClick={record}
         >
           {cd ? C.record : H.record}

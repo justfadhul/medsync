@@ -7,6 +7,7 @@ import type { PlanBasketRx } from "@/lib/clerking/plan/draft";
 import type { PlanPayload } from "@/lib/clerking/plan/payload";
 import type { ProblemCard } from "@/lib/clerking/plan/problems";
 import type { BrandOption } from "@/lib/emr/read/prescribe";
+import type { ResolvedRegimen } from "@/lib/prescribing/formulary";
 import type { StockLine } from "@/lib/prescribing/pharmacy";
 import type { PrescribePlace } from "@/lib/prescribing/places";
 import type { PlanCheck, PlanCheckContext } from "@/lib/prescribing/plan-checks";
@@ -18,11 +19,13 @@ import type {
   RxCourse,
   RxFrequency,
 } from "@/lib/prescribing/reference/formulary-types";
+import type { ReactNode } from "react";
 import { useEffect, useId, useMemo, useState } from "react";
-import { LayoutGridIcon, SearchIcon, StarIcon } from "lucide-react";
+import { ArrowRightIcon, CheckIcon, SearchIcon, StarIcon, XIcon } from "lucide-react";
 
-import { EmrDialog } from "@/components/emr/emr-dialog";
+import { EditorDialog } from "@/components/medsync/editor-dialog";
 import { Button } from "@/components/ui/button";
+import { SheetBody, SheetClose, SheetFooter, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { PRESCRIBE_COPY as C, fill } from "@/content/prescribing";
 import { basketOf } from "@/lib/clerking/plan/draft";
 import { standing } from "@/lib/clerking/plan/record";
@@ -32,10 +35,9 @@ import {
   BAND_WORD,
   classById,
   drugById,
+  DRUGS,
   drugsInClass,
-  formularyBrowse,
   isFluid,
-  offersRegimens,
   patientBand,
   REFERENCE_TAG_WORD,
   referenceTag,
@@ -43,8 +45,10 @@ import {
   searchDrugs,
 } from "@/lib/prescribing/formulary";
 import { STOCK_LINE_COPY, stockLineWords } from "@/lib/prescribing/pharmacy";
+import { pharmacyGroups } from "@/lib/prescribing/pharmacy-classes";
 import { PLACE } from "@/lib/prescribing/places";
 import {
+  egfrOf,
   needingAnswer,
   OUTCOME_WORD,
   planChecks,
@@ -67,23 +71,22 @@ import {
   willRead,
 } from "@/lib/prescribing/plan-rx";
 import {
-  DOSE_BANDS,
   DOSE_UNITS,
   RX_COURSES,
   RX_FREQUENCIES,
 } from "@/lib/prescribing/reference/formulary-types";
 import { supplyQuantity } from "@/lib/prescribing/supply";
 import { cn } from "@/lib/utils";
-import { FactChips } from "./medicines";
-import { MedicinesBrowseDialog } from "./medicines-browse-dialog";
-import { Caution, DraftLabel, FOCUS, inputClass, Seg, Tag, Toggle } from "./parts";
+import { Caution, Chevron, DraftLabel, FOCUS, inputClass, Seg, Tag, Toggle } from "./parts";
 import { NO_REPEATS, readRepeats, RepeatsField } from "./repeats";
 
 /**
- * The prescribing dialog (ADR 0186): a centred landscape dialog in three columns, what, how and
- * check. A dose arrives pre-set only from a signed, verified regimen; otherwise the prescriber
- * types the number and taps the rest. Every change from a regimen is shown struck through and
- * recorded. The checks run live here and again on the server when the basket is placed.
+ * The one Prescribe dialog (ADR 0186, prescribing kit F1–F3), laid out as the 11 Nov 2026 prototype:
+ * the patient strip under the name, then three columns, 1 · What (search, group, order sets, the
+ * medicine list with the brand under the one picked), 2 · How (weight, regimen, your own dose, how to
+ * give it, the problem, the supply) and 3 · Check (the checks, then this prescription and what is
+ * already prescribed). A dose arrives pre-set only from a signed, verified regimen; every change from
+ * it is shown and recorded. The checks run live here and again on the server.
  */
 
 /**
@@ -140,6 +143,29 @@ export function envOfPlan(v: PlanView): PrescribeEnv {
   };
 }
 
+/** "Medicines | Protocols · N" (kit F6). */
+export interface PrescribeModes {
+  value: "medicines" | "protocols";
+  count: number | null;
+  onChange: (m: "medicines" | "protocols") => void;
+}
+
+/**
+ * The one Prescribe outside the clerking Plan (prescribe-session.tsx) fills these: the patient's
+ * name, the mode switch and the Protocols columns, the order sets, the basket and what is already
+ * prescribed (column 3), and the footer's Review and send. Without them the dialog is the Plan's.
+ */
+export interface PrescribeSessionSlots {
+  patient: { name: string; mrn: string | null };
+  home: string[];
+  modes: PrescribeModes | null;
+  protocols: ReactNode;
+  sets: { id: string; label: string; title: string; onPick: () => void }[];
+  notice: string | null;
+  lists: ReactNode;
+  footer: { n: number; summary: string; onReview: () => void };
+}
+
 const STAR_KEY = (drugId: string) => `medsync.rx.star.${drugId}`;
 const readStar = (drugId: string) => {
   try {
@@ -154,6 +180,7 @@ const VOLUMES = [250, 500, 1000] as const;
 const OVER_BOLUS = [15, 30, 60] as const;
 const OVER_INFUSION = [240, 360, 480, 720, 1440] as const;
 const PURPOSES: FluidPurpose[] = ["bolus", "maintenance", "replacement"];
+const LEVEL_ORDER: Record<string, number> = { stop: 0, check: 1, note: 2 };
 
 const newKey = () => `plan-rx-${crypto.randomUUID()}`;
 const notLinkedLine: StockLine = {
@@ -167,6 +194,8 @@ const notLinkedLine: StockLine = {
   elsewhere: [],
 };
 const intermittent = (m: string | null) => !!m && /intermittent infusion/i.test(m);
+const selectClass = cn(inputClass, "pointer-coarse:min-h-11");
+const OVER = "text-caption text-muted-foreground font-medium tracking-[0.06em] uppercase";
 
 interface FluidState {
   purpose: FluidPurpose | null;
@@ -296,6 +325,54 @@ function initial(
   };
 }
 
+type Facts = PlanPayload["facts"];
+
+/** The regimens for this use: fluid regimens (a bolus) in fluid mode, drug regimens otherwise. */
+function regimensFor(drug: Drug | undefined, f: Facts, fluidMode: boolean) {
+  if (!drug) return null;
+  const r = resolveRegimens(drug, { ageYears: f.ageYears, weight: f.weight });
+  const regimens = r.regimens.filter((x) => !!x.regimen.fluidPurpose === fluidMode);
+  return regimens.length || !r.regimens.length
+    ? { ...r, regimens }
+    : { ...r, regimens, note: "No verified regimen for this use yet: choose the values." };
+}
+
+/** A regimen's values into the state (also "Use the regimen"). */
+function withRegimen(x: State, r: ResolvedRegimen): State {
+  const g = r.regimen;
+  if (x.mode === "fluid")
+    return {
+      ...x,
+      regimenId: g.id,
+      route: "iv",
+      fluid: {
+        ...x.fluid,
+        purpose: g.fluidPurpose ?? x.fluid.purpose,
+        volumeMl: r.dose.num ?? x.fluid.volumeMl,
+      },
+    };
+  return {
+    ...x,
+    regimenId: g.id,
+    doseNum: r.dose.num,
+    unit: g.unit,
+    strength: g.strength ?? null,
+    route: g.route,
+    method: g.method ?? null,
+    frequency: g.freq,
+    course: g.course ?? null,
+  };
+}
+
+/** Kit F2: picking a medicine pre-selects the signed regimen that applies to this patient, if any. */
+function picked(st: State, f: Facts): State {
+  if (!st.drugId || st.regimenId) return st;
+  const r = regimensFor(drugById(st.drugId), f, st.mode === "fluid")?.regimens.find(
+    (x) => x.applies && x.dose.num != null,
+  );
+  return r ? withRegimen(st, r) : st;
+}
+
 function toRx(s: State, drug: Drug | undefined, weightAt: string | null): PlanRx | null {
   if (!drug || !s.route) return null;
   const fluidMode = s.mode === "fluid";
@@ -347,7 +424,7 @@ function toRx(s: State, drug: Drug | undefined, weightAt: string | null): PlanRx
   };
 }
 
-/** Why "Add to basket" is disabled, in words; null when it can be pressed. */
+/** Why "Add" is disabled, in words; null when it can be pressed. */
 function blocked(
   s: State,
   drug: Drug | undefined,
@@ -398,13 +475,233 @@ function Chips<V extends string | number>({
   );
 }
 
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
+function Field({ label, children }: { label: string; children: ReactNode }) {
   return (
     <div className="flex flex-col gap-1.5">
-      <span className="text-caption text-muted-foreground">{label}</span>
+      <span className="text-label text-muted-foreground">{label}</span>
       {children}
     </div>
   );
+}
+
+/** A labelled native select (the prototype's "How to give it" grid). */
+function SelectField<V extends string>({
+  label,
+  value,
+  options,
+  onPick,
+  empty = true,
+}: {
+  label: string;
+  value: V | null;
+  options: readonly { v: V; label: string }[];
+  onPick: (v: V | null) => void;
+  empty?: boolean;
+}) {
+  return (
+    <label className="flex min-w-0 flex-col gap-1">
+      <span className="text-label text-muted-foreground">{label}</span>
+      <select
+        aria-label={label}
+        value={value ?? ""}
+        onChange={(e) => onPick((e.target.value || null) as V | null)}
+        className={selectClass}
+      >
+        {empty ? (
+          <option value="" disabled={value != null}>
+            {C.choose}
+          </option>
+        ) : null}
+        {options.map((o) => (
+          <option key={o.v} value={o.v}>
+            {o.label}
+          </option>
+        ))}
+      </select>
+    </label>
+  );
+}
+
+/** The mode switch (kit F6), above column 1 in both modes. */
+export function ModeSwitch({ modes }: { modes: PrescribeModes }) {
+  return (
+    <div
+      role="group"
+      aria-label="Prescribe a medicine or a protocol"
+      className="bg-muted inline-flex gap-1 self-start rounded-full p-1"
+    >
+      {(["medicines", "protocols"] as const).map((m) => (
+        <button
+          key={m}
+          type="button"
+          aria-pressed={modes.value === m}
+          onClick={() => modes.onChange(m)}
+          className={cn(
+            "text-label min-h-8 rounded-full px-3.5 pointer-coarse:min-h-11",
+            FOCUS,
+            modes.value === m
+              ? "bg-card text-teal-text shadow-xs"
+              : "text-muted-foreground hover:text-foreground",
+          )}
+        >
+          {m === "medicines"
+            ? C.medicines
+            : modes.count != null
+              ? `Protocols · ${modes.count}`
+              : "Protocols"}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+interface Fact {
+  label: string;
+  value: string;
+  sub: string;
+  tone?: "warn" | "unknown";
+  /** The line under it shows always (otherwise only for a caution or an unknown). */
+  showSub?: boolean;
+}
+
+/** The patient strip (kit F1): what the checks read, as the prototype's label · value chips. */
+function factsOf(
+  f: Facts,
+  allergies: AllergyItems,
+  kidneyTestOrdered: boolean,
+  time: (iso: string) => string,
+  v2: boolean,
+  home: string[] | null,
+): Fact[] {
+  const out: Fact[] = [];
+  if (allergies.status === "listed" && allergies.items.length)
+    out.push({
+      label: C.allergy,
+      value: allergies.items.map((i) => i.name).join(", "),
+      sub: allergies.items
+        .map((i) => (i.reactions.length ? i.reactions.join(", ") : C.reactionUnknown))
+        .join("; ")
+        .concat(allergies.items.some((i) => !i.coded) ? ` · ${C.notCoded}` : ""),
+      tone: "warn",
+    });
+  else if (allergies.status === "no_known_drug_allergies")
+    out.push({ label: C.allergy, value: C.allergyNone, sub: C.recorded });
+  else
+    out.push({
+      label: C.allergy,
+      value: allergies.status === "unable_to_assess" ? C.allergyUnable : C.allergyNotAsked,
+      sub: C.allergyAsk,
+      tone: "unknown",
+    });
+  out.push(
+    f.weight
+      ? {
+          label: C.weight,
+          value: `${f.weight.kg} kg`,
+          sub: `${f.weight.source}, ${time(f.weight.at)}`,
+        }
+      : { label: C.weight, value: C.notRecorded, sub: C.weightNeeded, tone: "unknown" },
+  );
+  const e = v2 ? egfrOf(f) : null;
+  if (f.creatinine) {
+    const cr = fill(C.creatinine, {
+      value: f.creatinine.value,
+      unit: f.creatinine.unit,
+      date: time(f.creatinine.at),
+    });
+    out.push(
+      e
+        ? {
+            label: C.kidney,
+            value: `${fill(C.egfr, { value: e.value })} (${e.category})`,
+            sub: cr,
+            tone: e.value < 60 ? "warn" : undefined,
+            showSub: true,
+          }
+        : { label: C.kidney, value: C.noEgfr, sub: cr, showSub: true },
+    );
+  } else
+    out.push({
+      label: C.kidney,
+      value: kidneyTestOrdered ? C.creatinineOrdered : C.noEgfr,
+      sub: kidneyTestOrdered ? C.waitingResult : C.noCreatinine,
+      tone: "unknown",
+    });
+  if (v2 && f.sex === "female" && f.ageYears != null && f.ageYears >= 12 && f.ageYears <= 55) {
+    const p = f.pregnancy;
+    out.push(
+      !p
+        ? { label: C.pregnancy, value: C.notRecorded, sub: C.pregnancyAsk, tone: "unknown" }
+        : p.state === "pregnant"
+          ? {
+              label: C.pregnancy,
+              value: p.weeks != null ? fill(C.pregnantWeeks, { n: p.weeks }) : C.pregnant,
+              sub: C.recorded,
+              tone: "warn",
+            }
+          : {
+              label: C.pregnancy,
+              value: p.state === "postpartum" ? C.postpartum : C.notPregnant,
+              sub: C.recorded,
+            },
+    );
+  }
+  if (home)
+    out.push(
+      home.length
+        ? {
+            label: C.taking,
+            value: home.length === 1 ? C.takingOne : fill(C.takingN, { n: home.length }),
+            sub: home.join(", "),
+            showSub: true,
+          }
+        : { label: C.taking, value: C.takingNone, sub: C.takingNoneSub },
+    );
+  return out;
+}
+
+const FACT_TONE = {
+  warn: "bg-status-caution-bg text-amber-800 dark:text-status-caution-fg",
+  unknown: "border-border border border-dashed",
+  none: "bg-muted text-foreground",
+} as const;
+
+function FactStrip({ facts }: { facts: Fact[] }) {
+  return (
+    <ul aria-label="What the checks read" className="flex flex-wrap gap-1.5">
+      {facts.map((x) => (
+        <li
+          key={x.label}
+          title={x.sub}
+          className={cn(
+            "inline-flex max-w-full flex-wrap items-baseline gap-x-1.5 rounded-full px-3 py-1",
+            FACT_TONE[x.tone ?? "none"],
+          )}
+        >
+          <span
+            className={cn(
+              "text-caption tracking-[0.06em] uppercase",
+              !x.tone && "text-muted-foreground",
+            )}
+          >
+            {x.label}
+          </span>
+          <span className="text-body-s font-medium">{x.value}</span>
+          {x.tone || x.showSub ? (
+            <span className={cn("text-caption", !x.tone && "text-muted-foreground")}>{x.sub}</span>
+          ) : (
+            <span className="sr-only">{`, ${x.sub}`}</span>
+          )}
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+interface Row {
+  key: string;
+  drug: Drug;
+  via: "fluids" | "list";
 }
 
 export function PlanPrescribeDialog({
@@ -414,6 +711,7 @@ export function PlanPrescribeDialog({
   onClose,
   onAdd,
   time,
+  session,
 }: {
   env: PrescribeEnv;
   allergies: AllergyItems;
@@ -421,18 +719,25 @@ export function PlanPrescribeDialog({
   onClose: () => void;
   onAdd: (rx: PlanBasketRx) => void;
   time: (iso: string) => string;
+  session?: PrescribeSessionSlots;
 }) {
-  const [s, setS] = useState<State>(() => initial(target));
+  const f = env.facts;
+  const [s, setS] = useState<State>(() => picked(initial(target), f));
+  const [seen, setSeen] = useState(target);
   const [query, setQuery] = useState("");
-  const [browsing, setBrowsing] = useState(false);
-  const [byAge, setByAge] = useState(false);
-  const [more, setMore] = useState(false);
-  const [rep, setRep] = useState(NO_REPEATS);
-  const [group, setGroup] = useState<string | null>(null);
+  const [group, setGroup] = useState("");
   const [hi, setHi] = useState(-1);
-  const groups = useMemo(() => (env.v2 ? formularyBrowse() : []), [env.v2]);
-  const searchId = useId();
-  const doseId = useId();
+  const [brandOpen, setBrandOpen] = useState(true);
+  const [showPassed, setShowPassed] = useState(false);
+  const [rep, setRep] = useState(NO_REPEATS);
+  // A new target (the next order-set medicine, Edit, Prescribe again) starts the line afresh.
+  if (seen !== target) {
+    setSeen(target);
+    setS(picked(initial(target), f));
+    setBrandOpen(true);
+    setRep(NO_REPEATS);
+  }
+  const ids = { what: useId(), how: useId(), check: useId(), list: useId(), group: useId() };
   const noteId = useId();
   const witnessId = useId();
   const typedId = useId();
@@ -507,61 +812,38 @@ export function PlanPrescribeDialog({
   const drug = s.drugId ? drugById(s.drugId) : undefined;
   const fluidMode = s.mode === "fluid";
   const problem = env.cards.find((c) => c.versionId === s.conditionId) ?? target.problem ?? null;
-  const f = env.facts;
   const weight = f.weight;
   const band = patientBand(f.ageYears);
 
-  const resolution = useMemo(() => {
-    if (!drug) return null;
-    const r = resolveRegimens(drug, { ageYears: f.ageYears, weight });
-    // Fluid regimens (a bolus) in fluid mode; drug regimens (hypoglycaemia) in drug mode.
-    const regimens = r.regimens.filter((x) => !!x.regimen.fluidPurpose === fluidMode);
-    return regimens.length || !r.regimens.length
-      ? { ...r, regimens }
-      : { ...r, regimens, note: "No verified regimen for this use yet: choose the values." };
-  }, [drug, f.ageYears, weight, fluidMode]);
+  const resolution = useMemo(
+    () => regimensFor(drug, f, fluidMode),
+    // f is the env's, fixed for the dialog's life.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [drug, f.ageYears, weight, fluidMode],
+  );
   const chosen = resolution?.regimens.find((r) => r.regimen.id === s.regimenId) ?? null;
 
   const pickDrug = (d: Drug, via: "fluids" | "list") => {
     setS((x) => {
-      const next = initial({ ...target, drugId: d.id }, via);
-      return {
-        ...next,
-        conditionId: x.conditionId,
-        start: x.start,
-        note: x.note,
-        fluid: next.mode === "fluid" ? x.fluid : EMPTY_FLUID,
-      };
+      const next = initial({ ...target, from: undefined, drugId: d.id }, via);
+      return picked(
+        {
+          ...next,
+          conditionId: x.conditionId,
+          start: x.start,
+          note: x.note,
+          fluid: next.mode === "fluid" ? x.fluid : EMPTY_FLUID,
+        },
+        f,
+      );
     });
+    setBrandOpen(true);
+    setRep(NO_REPEATS);
   };
 
   const applyRegimen = (id: string) => {
     const r = resolution?.regimens.find((x) => x.regimen.id === id);
-    if (!r || !drug) return;
-    const g = r.regimen;
-    if (fluidMode) {
-      setS((x) => ({
-        ...x,
-        regimenId: g.id,
-        route: "iv",
-        fluid: {
-          ...x.fluid,
-          purpose: g.fluidPurpose ?? x.fluid.purpose,
-          volumeMl: r.dose.num ?? x.fluid.volumeMl,
-        },
-      }));
-      return;
-    }
-    set({
-      regimenId: g.id,
-      doseNum: r.dose.num,
-      unit: g.unit,
-      strength: g.strength ?? null,
-      route: g.route,
-      method: g.method ?? null,
-      frequency: g.freq,
-      course: g.course ?? null,
-    });
+    if (r) setS((x) => withRegimen(x, r));
   };
 
   const weightAt = chosen?.regimen.perKg && weight ? weight.at : null;
@@ -611,17 +893,19 @@ export function PlanPrescribeDialog({
   // D-PH1-22: "Pick something else" answers nothing; it goes back to choosing.
   const pickElse = () =>
     setS((x) => ({
-      ...initial({ ...target, drugId: undefined }),
+      ...initial({ ...target, from: undefined, drugId: undefined }),
       conditionId: x.conditionId,
       start: x.start,
       note: x.note,
     }));
   const checks: PlanCheck[] = drug && rx ? planChecks(drug, rx, ctx) : [];
   const verdict = rx ? verifyAnswers(checks, rx) : null;
-  const firing = checks.filter(
-    (c) => c.outcome === "stop" || c.outcome === "check" || c.outcome === "note",
-  );
+  const firing = checks
+    .filter((c) => c.outcome === "stop" || c.outcome === "check" || c.outcome === "note")
+    .sort((a, b) => LEVEL_ORDER[a.outcome]! - LEVEL_ORDER[b.outcome]!);
   const rest = checks.filter((c) => !firing.includes(c));
+  const passed = rest.filter((c) => c.outcome === "passed");
+  const toAnswer = needingAnswer(firing).filter((c) => !s.answers[c.code]).length;
   const edits = rx ? regimenEdits(rx, chosen) : [];
   // Kit F2: the supply from the chosen brand's own strength and pack; the server works it out again.
   const product = drug && s.productId ? brands[drug.id]?.find((b) => b.id === s.productId) : null;
@@ -636,7 +920,6 @@ export function PlanPrescribeDialog({
           product,
         })
       : null;
-  const stop = checks.some((c) => c.outcome === "stop" && c.overrideable);
   // Pharmacy Phase 4 (5.2): the Repeats step, only for a medicine the signed list allows; never a controlled drug.
   const repeats = env.repeats;
   const repBounds =
@@ -662,800 +945,1127 @@ export function PlanPrescribeDialog({
     });
   };
 
-  // Kit F2: groups (the catalogue's systems) filter the search; a group alone lists its medicines.
-  const groupDrugs = group
-    ? (groups.find((g) => g.id === group)?.classes.flatMap((c) => c.drugs) ?? [])
-    : null;
-  const searchHits = query.trim()
-    ? searchDrugs(query).filter((d) => !groupDrugs || groupDrugs.includes(d))
-    : (groupDrugs ?? []);
-  const pickHit = (d: Drug) => {
-    pickDrug(d, "list");
-    setQuery("");
-    setGroup(null);
-    setHi(-1);
+  /* ── 1 · What: the list (kit F2) ── */
+  // The usual dose on a row comes only from a signed regimen that applies to this patient.
+  const usual = useMemo(
+    () =>
+      new Map(
+        DRUGS.map((d) => {
+          const r = regimensFor(d, f, false)?.regimens.find((x) => x.applies && x.dose.num != null);
+          return [
+            d.id,
+            r
+              ? fill(C.usual, {
+                  dose: `${r.dose.num} ${r.dose.unit} · ${FREQUENCY_WORD[r.regimen.freq].toLowerCase()}`,
+                })
+              : null,
+          ] as const;
+        }),
+      ),
+    // f is the env's, fixed for the dialog's life.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [f.ageYears, weight],
+  );
+  const q = query.trim();
+  const matched = useMemo(() => (q ? searchDrugs(q, DRUGS.length) : DRUGS), [q]);
+  const allGroups = useMemo(() => pharmacyGroups(matched), [matched]);
+  const shownGroups = group ? allGroups.filter((g) => g.name === group) : allGroups;
+  const inBasket = new Set(env.basket.map((b) => b.drugId));
+  const placed = new Set(env.standing.map((b) => b.drugId));
+  const sections: { title: string; sub: string; tint: boolean; rows: Row[] }[] = [];
+  const fluidsSection =
+    problem?.supportive.includes("fluids") || fluidsFirst
+      ? {
+          title: C.fluids,
+          sub: C.fluidsSub,
+          tint: true,
+          rows: FLUID_DRUGS.flatMap((id) => {
+            const d = drugById(id);
+            return d ? [{ key: `fluid:${id}`, drug: d, via: "fluids" as const }] : [];
+          }),
+        }
+      : null;
+  if (!q && !group) {
+    if (fluidsFirst && fluidsSection) sections.push(fluidsSection);
+    const mapped = problem?.classes.flatMap((id) => drugsInClass(id)) ?? [];
+    if (mapped.length)
+      sections.push({
+        title: C.suggested,
+        sub: C.suggestedSub,
+        tint: true,
+        rows: [...new Map(mapped.map((d) => [d.id, d])).values()].map((d) => ({
+          key: `sug:${d.id}`,
+          drug: d,
+          via: "list" as const,
+        })),
+      });
+    if (!fluidsFirst && fluidsSection) sections.push(fluidsSection);
+  }
+  for (const g of shownGroups)
+    sections.push({
+      title: g.name,
+      sub: String(g.drugs.length),
+      tint: false,
+      rows: g.drugs.map((d) => ({ key: `${g.name}:${d.id}`, drug: d, via: "list" as const })),
+    });
+  const flat = sections.flatMap((x) => x.rows);
+  const rowId = (i: number) => `${ids.list}-row-${i}`;
+  useEffect(() => {
+    if (hi >= 0) document.getElementById(rowId(hi))?.scrollIntoView?.({ block: "nearest" });
+    // rowId is stable for the dialog's life.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hi]);
+  const pickRow = (r: Row) => {
+    if (drug?.id === r.drug.id && (r.via === "fluids") === fluidMode) {
+      setBrandOpen((x) => !x);
+      return;
+    }
+    pickDrug(r.drug, r.via);
   };
-  const cls = drug ? classById(drug.class) : undefined;
-  const title = drug
-    ? `${drug.generic} · ${cls?.name ?? drug.class}`
-    : fluidsFirst
-      ? "IV fluids"
-      : "Choose a medicine";
+  const emptyText = q
+    ? group
+      ? fill(C.noMatchIn, { q, group: group.toLowerCase() })
+      : fill(C.noMatch, { q })
+    : C.emptyGroup;
+
+  const brandList = drug ? (brands[drug.id] ?? []) : [];
+  const starOf = drug ? (starred ?? readStar(drug.id)) : null;
+  const showBrands = !!v2 && !fluidMode;
+  const brandName = brandList.find((b) => b.id === s.productId)?.name ?? C.anyBrand;
   const methods = drug && s.route ? (drug.methods[s.route] ?? []) : [];
   const overOptions = s.fluid.purpose === "bolus" ? OVER_BOLUS : OVER_INFUSION;
+  const weightBased = !!resolution?.regimens.some((r) => r.regimen.perKg);
+  const modes = session?.modes ?? null;
+  const protocols = modes?.value === "protocols";
+  const n = session?.footer.n ?? 0;
+  const addWord = toAnswer ? fill(C.addAnswer, { n: toAnswer }) : C.add;
+  const meta = [
+    f.ageYears == null ? "Age not recorded" : `${f.ageYears} y${v2 && f.sex ? ` · ${f.sex}` : ""}`,
+    band ? BAND_WORD[band] : null,
+    session?.patient.mrn ?? null,
+    !session && problem ? fill(C.forProblem, { problem: problem.display }) : null,
+  ]
+    .filter(Boolean)
+    .join(" · ");
+  const name = session?.patient.name || C.title;
+  const initials = name
+    .split(/\s+/)
+    .slice(0, 2)
+    .map((w) => w[0] ?? "")
+    .join("")
+    .toUpperCase();
 
   return (
-    <EmrDialog
+    <EditorDialog
       open
       onOpenChange={(o) => !o && onClose()}
       width="xl"
-      sheet="tall"
-      kicker={
-        v2
-          ? fill(C.kicker, { place: PLACE[v2.place].label, collect: v2.collect }) +
-            (problem ? ` · for ${problem.display}` : "")
-          : `Prescribe · for ${problem?.display ?? ""}`
-      }
-      title={title}
-      footer={
-        <div className="flex w-full flex-wrap items-center justify-end gap-3">
-          {reason ? (
-            <span className="text-body-s text-muted-foreground mr-auto" aria-live="polite">
-              {reason}
+      className="ease-expo-out duration-100"
+    >
+      <SheetHeader className="gap-3 px-4 py-3 sm:px-6">
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-2 pr-10">
+          <span
+            aria-hidden
+            className="bg-muted text-label text-foreground grid size-9 shrink-0 place-items-center rounded-full"
+          >
+            {initials}
+          </span>
+          <div className="flex min-w-0 flex-1 flex-wrap items-baseline gap-x-2.5">
+            <SheetTitle className="text-heading-m font-sans">{name}</SheetTitle>
+            <span className="text-body-s text-muted-foreground">{meta}</span>
+          </div>
+          {v2 ? (
+            <span className="bg-muted text-body-s inline-flex max-w-full flex-wrap items-center gap-x-1.5 rounded-full px-3 py-1.5">
+              <span className="text-muted-foreground">{C.from}</span>
+              <span className="font-medium">{PLACE[v2.place].label}</span>
+              <ArrowRightIcon
+                aria-label="collected at"
+                className="text-muted-foreground size-3.5"
+              />
+              <span className="font-medium">{v2.collect}</span>
             </span>
           ) : null}
-          <Button variant="secondary" onClick={onClose}>
-            Cancel
-          </Button>
-          <Button disabled={!!reason} onClick={add}>
-            {stop ? "Override and add" : "Add to basket"}
-          </Button>
         </div>
-      }
-    >
-      <div className="mb-5">
-        <FactChips
-          facts={f}
-          kidneyTestOrdered={env.kidneyTestOrdered}
-          allergies={allergies}
-          time={time}
-          v2={!!v2}
+        <FactStrip
+          facts={factsOf(f, allergies, env.kidneyTestOrdered, time, !!v2, session?.home ?? null)}
         />
         {v2?.place === "resus" ? (
-          <p className="text-caption text-muted-foreground mt-2">{C.resusNote}</p>
+          <p className="text-caption text-muted-foreground">{C.resusNote}</p>
         ) : null}
-      </div>
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[300px_minmax(0,1fr)_360px]">
-        {/* ── What ── */}
-        <section aria-labelledby="rx-what" className="flex min-w-0 flex-col gap-4">
-          <h3 id="rx-what" className="text-label text-foreground">
-            What
-          </h3>
-          {env.cards.length ? (
-            <Field label="For">
-              <div role="group" aria-label="For which problem" className="flex flex-wrap gap-1.5">
-                {env.cards.map((c) => (
-                  <Toggle
-                    key={c.versionId}
-                    on={s.conditionId === c.versionId}
-                    onPress={() => set({ conditionId: c.versionId })}
-                  >
-                    {c.display}
-                  </Toggle>
-                ))}
-              </div>
-            </Field>
-          ) : null}
-          <div className="flex flex-col gap-1">
-            <div className="flex items-center justify-between gap-2">
-              <label htmlFor={searchId} className="text-caption text-muted-foreground">
-                Search all classes
-              </label>
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                aria-haspopup="dialog"
-                className="pointer-coarse:min-h-11"
-                onClick={() => setBrowsing(true)}
-              >
-                <LayoutGridIcon aria-hidden />
-                Show all<span className="sr-only"> medicines</span>
-              </Button>
-            </div>
-            <MedicinesBrowseDialog
-              open={browsing}
-              onOpenChange={setBrowsing}
-              current={s.drugId}
-              onPick={(d) => {
-                pickDrug(d, "list");
-                setQuery("");
-              }}
-            />
-            <div className="relative">
-              <SearchIcon
-                aria-hidden
-                className="text-muted-foreground absolute top-2.5 left-2.5 size-4"
-              />
-              <input
-                id={searchId}
-                value={query}
-                onChange={(e) => {
-                  setQuery(e.target.value);
-                  setHi(-1);
-                }}
-                onKeyDown={(e) => {
-                  // Kit F2: arrow keys move through the results, Enter picks.
-                  if (e.key === "ArrowDown" || e.key === "ArrowUp") {
-                    e.preventDefault();
-                    const n = searchHits.length;
-                    if (n) setHi((h) => (e.key === "ArrowDown" ? (h + 1) % n : (h - 1 + n) % n));
-                  } else if (e.key === "Enter" && searchHits.length) {
-                    e.preventDefault();
-                    pickHit(searchHits[Math.max(hi, 0)]!);
-                  }
-                }}
-                role="combobox"
-                aria-expanded={searchHits.length > 0}
-                aria-controls={`${searchId}-hits`}
-                aria-activedescendant={hi >= 0 ? `${searchId}-hit-${hi}` : undefined}
-                className={cn(inputClass, "pl-8")}
-                placeholder="Generic name or class"
-              />
-            </div>
-            {groups.length ? (
-              <div role="group" aria-label={C.groups} className="flex flex-wrap gap-1.5">
-                <Toggle on={!group} onPress={() => setGroup(null)}>
-                  {C.allGroups}
-                </Toggle>
-                {groups.map((g) => (
-                  <Toggle
-                    key={g.id}
-                    on={group === g.id}
-                    onPress={() => setGroup(group === g.id ? null : g.id)}
-                  >
-                    {g.name}
-                  </Toggle>
-                ))}
-              </div>
-            ) : null}
-            {searchHits.length ? (
-              <ul
-                id={`${searchId}-hits`}
-                role="listbox"
-                aria-label="Search results"
-                className="flex max-h-64 flex-col gap-1 overflow-y-auto"
-              >
-                {searchHits.map((d, i) => (
-                  <li key={d.id} id={`${searchId}-hit-${i}`} role="option" aria-selected={i === hi}>
+      </SheetHeader>
+      <SheetBody
+        className="px-4 py-4 sm:px-6"
+        onKeyDown={(e) => {
+          // Kit F2: Ctrl+Enter adds the line.
+          if ((e.ctrlKey || e.metaKey) && e.key === "Enter" && !protocols) {
+            e.preventDefault();
+            add();
+          }
+        }}
+      >
+        {protocols ? (
+          session?.protocols
+        ) : (
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)_minmax(0,1fr)]">
+            {/* ── 1 · What ── */}
+            <section aria-labelledby={ids.what} className="flex min-w-0 flex-col gap-3">
+              {modes ? <ModeSwitch modes={modes} /> : null}
+              <h3 id={ids.what} className={OVER}>
+                {C.whatHead}
+              </h3>
+              <div className="flex gap-2">
+                <div className="relative min-w-0 flex-1">
+                  <SearchIcon
+                    aria-hidden
+                    className="text-muted-foreground absolute top-1/2 left-3 size-4 -translate-y-1/2"
+                  />
+                  <input
+                    value={query}
+                    placeholder={C.search}
+                    aria-label={C.searchLabel}
+                    aria-controls={ids.list}
+                    onChange={(e) => {
+                      setQuery(e.target.value);
+                      setHi(-1);
+                    }}
+                    onKeyDown={(e) => {
+                      // Kit F2: arrow keys move through the list, Enter picks.
+                      if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+                        e.preventDefault();
+                        const k = flat.length;
+                        if (k)
+                          setHi((h) => (e.key === "ArrowDown" ? (h + 1) % k : (h - 1 + k) % k));
+                      } else if (e.key === "Enter" && !e.ctrlKey && !e.metaKey && flat.length) {
+                        e.preventDefault();
+                        pickRow(flat[Math.max(hi, 0)]!);
+                      }
+                    }}
+                    className={cn(inputClass, "min-h-10 pl-9", query && "pr-16")}
+                  />
+                  {query ? (
                     <button
                       type="button"
-                      tabIndex={-1}
-                      onClick={() => pickHit(d)}
+                      onClick={() => {
+                        setQuery("");
+                        setHi(-1);
+                      }}
+                      aria-label="Clear the search"
                       className={cn(
-                        "text-body-s hover:bg-muted w-full rounded-sm px-2 py-1 text-left",
+                        "bg-muted text-caption text-muted-foreground absolute top-1/2 right-1.5 -translate-y-1/2 rounded-full px-2.5 py-1",
                         FOCUS,
-                        i === hi && "bg-muted",
                       )}
                     >
-                      {d.generic}
-                      <span className="text-muted-foreground">{` · ${classById(d.class)?.name ?? d.class}`}</span>
+                      {C.clear}
                     </button>
-                  </li>
-                ))}
-              </ul>
-            ) : null}
-          </div>
-          {problem ? (
-            <div className="flex flex-col gap-2">
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="text-caption text-muted-foreground tracking-[0.06em] uppercase">
-                  Mapped to this problem
-                </span>
-                <DraftLabel>Draft map, not CSO-signed</DraftLabel>
-              </div>
-              {problem.classes.length ? (
-                <ul className="flex flex-col gap-2.5">
-                  {problem.classes.map((id) => (
-                    <li key={id} className="flex flex-col gap-1">
-                      <span className="text-body-s text-foreground">
-                        {classById(id)?.name ?? id}
-                      </span>
-                      <ul className="flex flex-col">
-                        {drugsInClass(id).map((d) => (
-                          <li key={d.id}>
-                            <button
-                              type="button"
-                              aria-pressed={s.drugId === d.id}
-                              onClick={() => pickDrug(d, "list")}
-                              className={cn(
-                                "text-body-s flex w-full items-center justify-between gap-2 rounded-sm px-2 py-1 text-left",
-                                FOCUS,
-                                s.drugId === d.id ? "bg-teal-50 text-teal-800" : "hover:bg-muted",
-                              )}
-                            >
-                              <span>{d.generic}</span>
-                            </button>
-                          </li>
-                        ))}
-                      </ul>
-                    </li>
+                  ) : null}
+                </div>
+                <label htmlFor={ids.group} className="sr-only">
+                  {C.group}
+                </label>
+                <select
+                  id={ids.group}
+                  value={group}
+                  onChange={(e) => {
+                    setGroup(e.target.value);
+                    setHi(-1);
+                  }}
+                  className={cn(inputClass, "min-h-10 w-auto max-w-[45%] font-medium")}
+                >
+                  <option value="">
+                    {fill(C.groupN, { name: C.allGroups, n: matched.length })}
+                  </option>
+                  {allGroups.map((g) => (
+                    <option key={g.name} value={g.name}>
+                      {fill(C.groupN, { name: g.name, n: g.drugs.length })}
+                    </option>
                   ))}
-                </ul>
-              ) : (
-                <p className="text-body-s text-muted-foreground">
-                  No classes mapped: search above.
-                </p>
-              )}
-            </div>
-          ) : null}
-          <div className="flex flex-col gap-2">
-            {problem?.supportive.includes("fluids") || fluidsFirst ? (
-              <div className="flex flex-col gap-1">
-                <span className="text-body-s text-foreground">Supportive: IV fluids</span>
-                <Chips
-                  label="IV fluids"
-                  options={FLUID_DRUGS}
-                  value={FLUID_DRUGS.find((x) => x === s.drugId) ?? null}
-                  onPick={(id) => pickDrug(drugById(id)!, "fluids")}
-                  word={(id) => drugById(id)?.generic.split(" (")[0] ?? id}
-                />
+                </select>
               </div>
-            ) : null}
-          </div>
-        </section>
-
-        {/* ── How ── */}
-        <section aria-labelledby="rx-how" className="flex min-w-0 flex-col gap-4">
-          <h3 id="rx-how" className="text-label text-foreground">
-            How
-          </h3>
-          {!drug ? (
-            <p className="text-body-s text-muted-foreground">
-              {fluidsFirst
-                ? "Choose a fluid."
-                : "Choose a medicine from the classes or the search."}
-            </p>
-          ) : (
-            <>
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="text-body-m text-foreground">{drug.generic}</span>
-                <Tag>{REFERENCE_TAG_WORD[referenceTag(drug.dose)]}</Tag>
-                <span className="text-caption text-muted-foreground">
-                  {drug.presentationsDraft.join(", ")}
-                </span>
-              </div>
-              {v2 && !fluidMode ? (
-                <Field label={C.brand}>
-                  <div role="radiogroup" aria-label={C.brand} className="flex flex-col gap-1.5">
-                    <Toggle on={!s.productId} onPress={() => set({ productId: null })}>
-                      {C.anyBrand}
-                    </Toggle>
-                    {(brands[drug.id] ?? []).map((b) => (
-                      <div key={b.id} className="flex items-center gap-1.5">
-                        <Toggle on={s.productId === b.id} onPress={() => set({ productId: b.id })}>
-                          {[b.name, b.strength, b.manufacturer].filter(Boolean).join(" · ")}
-                        </Toggle>
-                        {b.inStock != null ? (
-                          <Tag>
-                            {fill(b.inStock ? C.inStock : C.outOfStock, { collect: v2.collect })}
-                          </Tag>
-                        ) : null}
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="icon"
-                          aria-label={C.star}
-                          aria-pressed={(starred ?? readStar(drug.id)) === b.id}
-                          className="pointer-coarse:size-11"
-                          onClick={() => {
-                            try {
-                              window.localStorage.setItem(STAR_KEY(drug.id), b.id);
-                            } catch {
-                              // A per-viewer convenience: nothing is lost without storage.
-                            }
-                            setStarred(b.id);
-                          }}
-                        >
-                          <StarIcon
-                            aria-hidden
-                            className={cn(
-                              (starred ?? readStar(drug.id)) === b.id && "fill-current",
-                            )}
-                          />
-                        </Button>
-                      </div>
+              {session?.sets.length ? (
+                <div role="group" aria-label={C.sets} className="flex flex-col gap-1.5">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="text-label text-muted-foreground">{C.sets}</span>
+                    <DraftLabel>{C.setsDraft}</DraftLabel>
+                  </div>
+                  <div className="flex gap-1.5 overflow-x-auto pb-0.5">
+                    {session.sets.map((x) => (
+                      <button
+                        key={x.id}
+                        type="button"
+                        title={x.title}
+                        onClick={x.onPick}
+                        className={cn(
+                          "border-border bg-card text-label text-teal-text hover:bg-teal-tint min-h-9 shrink-0 rounded-full border px-3 pointer-coarse:min-h-11",
+                          FOCUS,
+                        )}
+                      >
+                        {x.label}
+                      </button>
                     ))}
                   </div>
-                </Field>
+                </div>
               ) : null}
-
-              <Field label="Formulary regimens for this patient">
-                {resolution && resolution.regimens.length ? (
-                  <div className="flex flex-col gap-1.5">
-                    <div role="radiogroup" aria-label="Regimen" className="flex flex-col gap-1.5">
-                      {resolution.regimens.map((r) => (
-                        <button
-                          key={r.regimen.id}
-                          type="button"
-                          role="radio"
-                          aria-checked={s.regimenId === r.regimen.id}
-                          onClick={() => applyRegimen(r.regimen.id)}
-                          className={cn(
-                            "text-body-s flex flex-col items-start rounded-md border px-3 py-2 text-left",
-                            FOCUS,
-                            s.regimenId === r.regimen.id
-                              ? "border-teal-600 bg-teal-50"
-                              : "border-border bg-card hover:bg-muted",
-                          )}
-                        >
-                          <span className="text-foreground">
-                            {r.regimen.label}
-                            {r.applies ? (
-                              <span className="text-muted-foreground">
-                                {" · applies to this patient"}
-                              </span>
-                            ) : null}
-                          </span>
-                          <span className="text-muted-foreground">
-                            {r.working ??
-                              r.unresolved ??
-                              (r.dose.num != null
-                                ? `${r.dose.num} ${r.dose.unit}${r.regimen.strength ? ` of ${r.regimen.strength}` : ""}`
-                                : `${r.dose.low}–${r.dose.high} ${r.dose.unit}`)}
-                            {` · ${ROUTE_WORD[r.regimen.route]}${r.regimen.admin ? ` ${r.regimen.admin}` : ""} · ${FREQUENCY_WORD[r.regimen.freq]}`}
-                          </span>
-                          {r.regimen.then ? (
-                            <span className="text-caption text-muted-foreground">
-                              {r.regimen.then}
-                            </span>
-                          ) : null}
-                        </button>
-                      ))}
-                    </div>
-                    {resolution.note ? (
-                      <p className="text-caption text-muted-foreground">{resolution.note}</p>
-                    ) : null}
-                  </div>
-                ) : (
-                  <p className="border-border text-body-s text-muted-foreground rounded-md border border-dashed px-3 py-2">
-                    {resolution?.note ?? "No verified regimen yet: type the dose."}
-                  </p>
-                )}
-                {offersRegimens(drug.dose) ? (
-                  <div className="flex flex-col gap-1.5">
-                    <Toggle on={byAge} onPress={() => setByAge((x) => !x)}>
-                      Dose by age
-                    </Toggle>
-                    {byAge ? (
-                      <div className="overflow-x-auto">
-                        <table className="text-body-s w-full">
-                          <caption className="sr-only">
-                            Dose by age, from the signed reference
-                          </caption>
-                          <tbody>
-                            {DOSE_BANDS.map((b) => (
-                              <tr
-                                key={b}
-                                className={cn(
-                                  "border-border border-t align-top",
-                                  b === band && "bg-teal-50",
-                                )}
-                              >
-                                <th scope="row" className="text-label py-1.5 pr-3 text-left">
-                                  {BAND_WORD[b]}
-                                  {b === band ? (
-                                    <span className="text-caption text-muted-foreground block">
-                                      This patient
-                                    </span>
-                                  ) : null}
-                                </th>
-                                <td className="py-1.5">
-                                  {drug.dose.bands[b] ?? "No verified regimen"}
-                                </td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      </div>
-                    ) : null}
-                    {byAge ? (
-                      <p className="text-caption text-muted-foreground font-mono">
-                        {[
-                          ...new Set(
-                            drug.dose.regimens.flatMap((r) =>
-                              r.sources.map((x) => `${x.citation} Checked ${x.checkedAt}.`),
-                            ),
-                          ),
-                        ].join(" ")}
-                      </p>
-                    ) : null}
+              {session?.notice ? (
+                <p role="status" className="bg-teal-tint text-body-s rounded-lg px-3 py-2">
+                  {session.notice}
+                </p>
+              ) : null}
+              <div
+                id={ids.list}
+                role="group"
+                aria-label={C.medicines}
+                className="border-border bg-card max-h-[470px] overflow-y-auto rounded-xl border"
+              >
+                {!flat.length ? (
+                  <div className="flex flex-col items-start gap-1.5 p-4">
+                    <span className="text-body-s font-medium">{emptyText}</span>
+                    <span className="text-caption text-muted-foreground">{C.emptyHint}</span>
+                    <Button
+                      variant="secondary"
+                      onClick={() => {
+                        setQuery("");
+                        setGroup("");
+                      }}
+                    >
+                      {C.showAll}
+                    </Button>
                   </div>
                 ) : null}
-              </Field>
-
-              {fluidMode ? (
-                <>
-                  <Field label="Purpose">
-                    <Seg
-                      label="Purpose"
-                      options={PURPOSES.map((p) => ({ id: p, label: PURPOSE_WORD[p] }))}
-                      value={s.fluid.purpose}
-                      onPick={(purpose) => setFluid({ purpose, overMinutes: null })}
-                    />
-                  </Field>
-                  <Field label="Volume">
-                    <div className="flex flex-wrap items-center gap-1.5">
-                      <Chips
-                        label="Volume"
-                        options={VOLUMES}
-                        value={
-                          (VOLUMES as readonly number[]).includes(s.fluid.volumeMl ?? -1)
-                            ? (s.fluid.volumeMl as 250)
-                            : null
-                        }
-                        onPick={(volumeMl) => setFluid({ volumeMl })}
-                        word={(n) => `${n} mL`}
-                      />
-                      <label htmlFor={otherId} className="sr-only">
-                        Other volume in mL
-                      </label>
-                      <input
-                        id={otherId}
-                        inputMode="decimal"
-                        placeholder="Other mL"
-                        value={
-                          s.fluid.volumeMl != null &&
-                          !(VOLUMES as readonly number[]).includes(s.fluid.volumeMl)
-                            ? String(s.fluid.volumeMl)
-                            : ""
-                        }
-                        onChange={(e) => {
-                          const n = Number(e.target.value);
-                          setFluid({ volumeMl: e.target.value && n > 0 ? n : null });
-                        }}
-                        className={cn(inputClass, "w-28")}
-                      />
+                {sections.map((sec, si) => (
+                  <div key={sec.title} role="group" aria-label={sec.title}>
+                    <div
+                      className={cn(
+                        "text-caption sticky top-0 z-[1] flex items-baseline justify-between gap-2 px-3.5 py-2 font-medium tracking-[0.06em] uppercase",
+                        si > 0 && "border-border border-t",
+                        sec.tint ? "bg-teal-tint text-teal-text" : "bg-muted text-muted-foreground",
+                      )}
+                    >
+                      <span>{sec.title}</span>
+                      <span className="font-normal tracking-normal normal-case">{sec.sub}</span>
                     </div>
-                  </Field>
-                  <Field label="Over">
-                    <Chips
-                      label="Over"
-                      options={overOptions}
-                      value={
-                        (overOptions as readonly number[]).includes(s.fluid.overMinutes ?? -1)
-                          ? (s.fluid.overMinutes as number)
-                          : null
-                      }
-                      onPick={(overMinutes) => setFluid({ overMinutes })}
-                      word={durationWords}
-                    />
-                  </Field>
-                  <Field label="How given">
-                    <Seg
-                      label="How given"
-                      options={[
-                        { id: "pump" as const, label: "Infusion pump" },
-                        { id: "gravity" as const, label: "Gravity drip" },
-                      ]}
-                      value={s.fluid.delivery}
-                      onPick={(delivery) =>
-                        setFluid({
-                          delivery,
-                          dropsPerMl: delivery === "pump" ? null : s.fluid.dropsPerMl,
-                        })
-                      }
-                    />
-                    {s.fluid.delivery === "gravity" ? (
-                      <Seg
-                        label="Giving set"
-                        options={[
-                          { id: "20" as const, label: "20 drops/mL" },
-                          { id: "60" as const, label: "60 drops/mL" },
-                        ]}
-                        value={
-                          s.fluid.dropsPerMl ? (String(s.fluid.dropsPerMl) as "20" | "60") : null
-                        }
-                        onPick={(d) => setFluid({ dropsPerMl: d === "20" ? 20 : 60 })}
-                      />
-                    ) : null}
-                  </Field>
-                  <Field label="Warmed">
-                    <Seg
-                      label="Warmed"
-                      options={[
-                        { id: "yes" as const, label: "Yes" },
-                        { id: "no" as const, label: "No" },
-                      ]}
-                      value={s.fluid.warmed ? "yes" : "no"}
-                      onPick={(w) => setFluid({ warmed: w === "yes" })}
-                    />
-                  </Field>
-                  {rate && rate.mlPerHour != null ? (
-                    <p className="text-body-s text-foreground font-mono tabular-nums">
-                      {`${rate.mlPerHour} mL/h`}
-                      {rate.dropsPerMinute != null ? ` · ${rate.dropsPerMinute} drops/min` : ""}
-                      <span className="text-caption text-muted-foreground font-sans">
-                        {" · arithmetic only"}
-                      </span>
-                    </p>
-                  ) : null}
-                </>
+                    {sec.rows.map((r) => {
+                      const i = flat.indexOf(r);
+                      const d = r.drug;
+                      const on = drug?.id === d.id && (r.via === "fluids") === fluidMode;
+                      const usualDose = r.via === "list" ? (usual.get(d.id) ?? null) : null;
+                      const tag = inBasket.has(d.id)
+                        ? C.inPrescription
+                        : placed.has(d.id)
+                          ? C.alreadyPrescribed
+                          : null;
+                      return (
+                        <div
+                          key={r.key}
+                          className={cn("border-border border-t", on && "bg-teal-tint")}
+                        >
+                          <button
+                            id={rowId(i)}
+                            type="button"
+                            aria-pressed={on}
+                            aria-expanded={on && showBrands ? brandOpen : undefined}
+                            onClick={() => {
+                              setHi(i);
+                              pickRow(r);
+                            }}
+                            className={cn(
+                              "flex min-h-14 w-full items-center gap-3 px-3.5 py-2.5 text-left outline-none",
+                              "focus-visible:shadow-focus",
+                              !on && "hover:bg-muted",
+                              i === hi && "shadow-focus",
+                            )}
+                          >
+                            <span className="flex min-w-0 flex-1 flex-col gap-0.5">
+                              <span className="text-body-m text-foreground font-medium">
+                                {d.generic}
+                              </span>
+                              {usualDose ? (
+                                <span className="text-body-s text-foreground flex min-w-0 items-center gap-1.5">
+                                  <span className="bg-muted text-caption text-muted-foreground shrink-0 rounded-[3px] px-1.5 font-medium uppercase">
+                                    {d.routes.map((x) => ROUTE_WORD[x] ?? x).join(" / ")}
+                                  </span>
+                                  <span className="truncate">{usualDose}</span>
+                                </span>
+                              ) : null}
+                              <span className="text-caption text-muted-foreground truncate">
+                                {[
+                                  classById(d.class)?.name ?? d.class,
+                                  d.flags.controlled ? C.controlled : null,
+                                ]
+                                  .filter(Boolean)
+                                  .join(" · ")}
+                              </span>
+                              {tag ? <Tag className="self-start">{tag}</Tag> : null}
+                            </span>
+                            {on && showBrands ? <Chevron open={brandOpen} /> : null}
+                          </button>
+                          {on && showBrands ? (
+                            brandOpen ? (
+                              <div
+                                role="radiogroup"
+                                aria-label={C.brand}
+                                className="flex flex-col gap-1.5 px-3.5 pb-3"
+                              >
+                                <span className="text-label text-muted-foreground">
+                                  {`${C.brand} `}
+                                  <span className="text-caption">
+                                    {brandList.length === 1
+                                      ? C.brandOne
+                                      : brandList.length
+                                        ? fill(C.brandsHere, { n: brandList.length })
+                                        : C.brandsNone}
+                                  </span>
+                                </span>
+                                <BrandButton
+                                  on={!s.productId}
+                                  name={C.anyBrand}
+                                  sub={C.anyBrandSub}
+                                  onPick={() => {
+                                    set({ productId: null });
+                                    setBrandOpen(false);
+                                  }}
+                                />
+                                {brandList.map((b) => (
+                                  <div key={b.id} className="flex items-center gap-1.5">
+                                    <BrandButton
+                                      on={s.productId === b.id}
+                                      name={b.name}
+                                      sub={[b.strength, b.manufacturer].filter(Boolean).join(" · ")}
+                                      stock={
+                                        b.inStock == null || !v2
+                                          ? null
+                                          : fill(b.inStock ? C.inStock : C.outOfStock, {
+                                              collect: v2.collect,
+                                            })
+                                      }
+                                      onPick={() => {
+                                        set({ productId: b.id });
+                                        setBrandOpen(false);
+                                      }}
+                                    />
+                                    <Button
+                                      type="button"
+                                      variant="ghost"
+                                      size="icon"
+                                      aria-label={C.star}
+                                      aria-pressed={starOf === b.id}
+                                      className="pointer-coarse:size-11"
+                                      onClick={() => {
+                                        try {
+                                          window.localStorage.setItem(STAR_KEY(d.id), b.id);
+                                        } catch {
+                                          // A per-viewer convenience: nothing is lost without storage.
+                                        }
+                                        setStarred(b.id);
+                                      }}
+                                    >
+                                      <StarIcon
+                                        aria-hidden
+                                        className={cn(starOf === b.id && "fill-current")}
+                                      />
+                                    </Button>
+                                  </div>
+                                ))}
+                              </div>
+                            ) : (
+                              <div className="text-body-s flex items-center justify-between gap-2 px-3.5 pb-2.5">
+                                <span className="text-muted-foreground">
+                                  {fill(C.brandIs, { name: brandName })}
+                                </span>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => setBrandOpen(true)}
+                                >
+                                  {C.change}
+                                </Button>
+                              </div>
+                            )
+                          ) : null}
+                          {on && stockAt ? (
+                            <p
+                              className="text-caption text-muted-foreground px-3.5 pb-3"
+                              aria-live="polite"
+                            >
+                              {stockLine ? stockLineWords(stockLine) : C.stockAsking}
+                              <span className="block">{STOCK_LINE_COPY.footer}</span>
+                            </p>
+                          ) : null}
+                        </div>
+                      );
+                    })}
+                  </div>
+                ))}
+              </div>
+              <span className="text-caption text-muted-foreground">
+                {v2 ? fill(C.listFoot, { collect: v2.collect }) : C.listFootPlan}
+              </span>
+            </section>
+
+            {/* ── 2 · How ── */}
+            <section aria-labelledby={ids.how} className="flex min-w-0 flex-col gap-4">
+              <h3 id={ids.how} className={OVER}>
+                {C.howHead}
+              </h3>
+              {!drug ? (
+                <p className="border-border bg-muted/40 text-body-s text-muted-foreground rounded-xl border border-dashed px-3.5 py-3">
+                  {fluidsFirst ? C.pickFluid : modes ? C.pickFirst : C.pickFirstMeds}
+                </p>
               ) : (
                 <>
-                  <Field label="Dose">
+                  <div className="flex flex-col gap-1">
+                    <h4 className="text-heading-m text-foreground">{drug.generic}</h4>
                     <div className="flex flex-wrap items-center gap-2">
-                      <label htmlFor={doseId} className="sr-only">
-                        Dose
-                      </label>
-                      <input
-                        id={doseId}
-                        inputMode="decimal"
-                        value={s.doseNum ?? ""}
-                        onChange={(e) => {
-                          const n = Number(e.target.value);
-                          set({
-                            doseNum: e.target.value && Number.isFinite(n) && n > 0 ? n : null,
-                          });
-                        }}
-                        className={cn(inputClass, "w-28 font-mono tabular-nums")}
-                      />
-                      <Chips
-                        label="Unit"
-                        options={DOSE_UNITS}
-                        value={s.unit}
-                        onPick={(unit) => set({ unit })}
-                      />
+                      <Tag>{REFERENCE_TAG_WORD[referenceTag(drug.dose)]}</Tag>
+                      <span className="text-caption text-muted-foreground">
+                        {drug.presentationsDraft.join(", ")}
+                      </span>
                     </div>
-                  </Field>
-                  <Field label="Route">
-                    <Chips
-                      label="Route"
-                      options={drug.routes}
-                      value={s.route}
-                      onPick={(route) =>
-                        set({ route, method: null, infusionOver: null, diluent: null })
-                      }
-                      word={(r) => ROUTE_WORD[r] ?? r}
-                    />
-                  </Field>
-                  {methods.length ? (
-                    <Field label="How given">
-                      <Chips
-                        label="How given"
-                        options={methods}
-                        value={s.method}
-                        onPick={(method) =>
-                          set({
-                            method,
-                            ...(intermittent(method) ? {} : { infusionOver: null, diluent: null }),
-                          })
-                        }
-                      />
-                    </Field>
+                  </div>
+
+                  {weightBased ? (
+                    <div
+                      className={cn(
+                        "flex flex-col gap-0.5 rounded-xl px-3.5 py-3",
+                        weight
+                          ? "border-border border"
+                          : "bg-status-caution-bg dark:text-status-caution-fg text-amber-800",
+                      )}
+                    >
+                      <span className={cn("text-label", weight && "text-muted-foreground")}>
+                        {C.weightUsed}
+                      </span>
+                      <span className="text-body-m font-medium">
+                        {weight ? `${weight.kg} kg` : C.weightNone}
+                      </span>
+                      <span className={cn("text-caption", weight && "text-muted-foreground")}>
+                        {weight
+                          ? fill(C.weightFrom, { source: weight.source, date: time(weight.at) })
+                          : C.weightNeed}
+                      </span>
+                    </div>
                   ) : null}
-                  {intermittent(s.method) ? (
+
+                  <Field label={C.regimen}>
+                    {resolution && resolution.regimens.length ? (
+                      <div role="radiogroup" aria-label="Regimen" className="flex flex-col gap-1.5">
+                        {resolution.regimens.map((r) => (
+                          <button
+                            key={r.regimen.id}
+                            type="button"
+                            role="radio"
+                            aria-checked={s.regimenId === r.regimen.id}
+                            onClick={() => applyRegimen(r.regimen.id)}
+                            className={cn(
+                              "text-body-s flex flex-col items-start gap-0.5 rounded-xl border px-3.5 py-2.5 text-left",
+                              FOCUS,
+                              s.regimenId === r.regimen.id
+                                ? "bg-teal-tint border-teal-600"
+                                : "border-border bg-card hover:bg-muted",
+                            )}
+                          >
+                            <span className="text-foreground font-medium">
+                              {r.regimen.label}
+                              {r.applies ? (
+                                <span className="text-muted-foreground font-normal">
+                                  {` · ${C.regimenThis}`}
+                                </span>
+                              ) : null}
+                            </span>
+                            <span className="text-muted-foreground">
+                              {r.working ??
+                                r.unresolved ??
+                                (r.dose.num != null
+                                  ? `${r.dose.num} ${r.dose.unit}${r.regimen.strength ? ` of ${r.regimen.strength}` : ""}`
+                                  : `${r.dose.low}–${r.dose.high} ${r.dose.unit}`)}
+                              {` · ${ROUTE_WORD[r.regimen.route]}${r.regimen.admin ? ` ${r.regimen.admin}` : ""} · ${FREQUENCY_WORD[r.regimen.freq]}`}
+                            </span>
+                            {r.regimen.then ? (
+                              <span className="text-caption text-muted-foreground">
+                                {r.regimen.then}
+                              </span>
+                            ) : null}
+                          </button>
+                        ))}
+                        {resolution.note ? (
+                          <p className="text-caption text-muted-foreground">{resolution.note}</p>
+                        ) : null}
+                      </div>
+                    ) : (
+                      <p className="border-border text-body-s text-muted-foreground rounded-xl border border-dashed px-3.5 py-2.5">
+                        {resolution?.note ?? "No verified regimen yet: type the dose."}
+                      </p>
+                    )}
+                  </Field>
+
+                  {fluidMode ? (
                     <>
-                      <Field label="Over">
-                        <Chips
-                          label="Infusion over"
-                          options={INFUSION_OVER}
-                          value={s.infusionOver}
-                          onPick={(infusionOver) => set({ infusionOver })}
+                      <Field label={C.purpose}>
+                        <Seg
+                          label={C.purpose}
+                          options={PURPOSES.map((p) => ({ id: p, label: PURPOSE_WORD[p] }))}
+                          value={s.fluid.purpose}
+                          onPick={(purpose) => setFluid({ purpose, overMinutes: null })}
                         />
                       </Field>
-                      <Field label="Diluted in">
+                      <Field label={C.volume}>
+                        <div className="flex flex-wrap items-center gap-1.5">
+                          <Chips
+                            label={C.volume}
+                            options={VOLUMES}
+                            value={
+                              (VOLUMES as readonly number[]).includes(s.fluid.volumeMl ?? -1)
+                                ? (s.fluid.volumeMl as 250)
+                                : null
+                            }
+                            onPick={(volumeMl) => setFluid({ volumeMl })}
+                            word={(v) => `${v} mL`}
+                          />
+                          <label htmlFor={otherId} className="sr-only">
+                            Other volume in mL
+                          </label>
+                          <input
+                            id={otherId}
+                            inputMode="decimal"
+                            placeholder={C.otherVolume}
+                            value={
+                              s.fluid.volumeMl != null &&
+                              !(VOLUMES as readonly number[]).includes(s.fluid.volumeMl)
+                                ? String(s.fluid.volumeMl)
+                                : ""
+                            }
+                            onChange={(e) => {
+                              const v = Number(e.target.value);
+                              setFluid({ volumeMl: e.target.value && v > 0 ? v : null });
+                            }}
+                            className={cn(inputClass, "w-28")}
+                          />
+                        </div>
+                      </Field>
+                      <Field label={C.over}>
                         <Chips
-                          label="Diluted in"
-                          options={DILUENTS}
-                          value={s.diluent}
-                          onPick={(diluent) => set({ diluent })}
+                          label={C.over}
+                          options={overOptions}
+                          value={
+                            (overOptions as readonly number[]).includes(s.fluid.overMinutes ?? -1)
+                              ? (s.fluid.overMinutes as number)
+                              : null
+                          }
+                          onPick={(overMinutes) => setFluid({ overMinutes })}
+                          word={durationWords}
+                        />
+                      </Field>
+                      <Field label={C.method}>
+                        <Seg
+                          label={C.method}
+                          options={[
+                            { id: "pump" as const, label: "Infusion pump" },
+                            { id: "gravity" as const, label: "Gravity drip" },
+                          ]}
+                          value={s.fluid.delivery}
+                          onPick={(delivery) =>
+                            setFluid({
+                              delivery,
+                              dropsPerMl: delivery === "pump" ? null : s.fluid.dropsPerMl,
+                            })
+                          }
+                        />
+                        {s.fluid.delivery === "gravity" ? (
+                          <Seg
+                            label={C.givingSet}
+                            options={[
+                              { id: "20" as const, label: "20 drops/mL" },
+                              { id: "60" as const, label: "60 drops/mL" },
+                            ]}
+                            value={
+                              s.fluid.dropsPerMl
+                                ? (String(s.fluid.dropsPerMl) as "20" | "60")
+                                : null
+                            }
+                            onPick={(v) => setFluid({ dropsPerMl: v === "20" ? 20 : 60 })}
+                          />
+                        ) : null}
+                      </Field>
+                      <Field label={C.warmed}>
+                        <Seg
+                          label={C.warmed}
+                          options={[
+                            { id: "yes" as const, label: "Yes" },
+                            { id: "no" as const, label: "No" },
+                          ]}
+                          value={s.fluid.warmed ? "yes" : "no"}
+                          onPick={(w) => setFluid({ warmed: w === "yes" })}
+                        />
+                      </Field>
+                      <Field label={C.start}>
+                        <Seg
+                          label={C.start}
+                          options={[
+                            { id: "now" as const, label: "Give now" },
+                            { id: "next_round" as const, label: "Next drug round" },
+                          ]}
+                          value={s.start}
+                          onPick={(start) => set({ start })}
                         />
                       </Field>
                     </>
-                  ) : null}
-                  <Field label="How often">
-                    <div className="flex flex-wrap items-center gap-1.5">
-                      <Chips
-                        label="How often"
-                        options={RX_FREQUENCIES}
-                        value={s.frequency}
-                        onPick={(frequency) => set({ frequency })}
-                        word={(x) => FREQUENCY_WORD[x]}
-                      />
-                      <Toggle on={s.prn} onPress={() => set({ prn: !s.prn })}>
-                        PRN
-                      </Toggle>
+                  ) : (
+                    <div className="border-border flex flex-col gap-2 rounded-xl border px-3.5 py-3">
+                      <div className="flex flex-wrap items-end gap-2">
+                        <label className="flex min-w-0 flex-[1_1_120px] flex-col gap-1">
+                          <span className="text-label text-muted-foreground">
+                            {s.regimenId ? C.ownDose : C.yourDose}
+                          </span>
+                          <input
+                            inputMode="decimal"
+                            placeholder={C.amount}
+                            aria-label="Dose"
+                            value={s.doseNum ?? ""}
+                            onChange={(e) => {
+                              const v = Number(e.target.value);
+                              set({
+                                doseNum: e.target.value && Number.isFinite(v) && v > 0 ? v : null,
+                              });
+                            }}
+                            className={cn(selectClass, "font-mono tabular-nums")}
+                          />
+                        </label>
+                        <div className="flex-[0_1_150px]">
+                          <SelectField
+                            label={C.unit}
+                            value={s.unit}
+                            empty={false}
+                            options={DOSE_UNITS.map((u) => ({ v: u, label: u }))}
+                            onPick={(unit) => unit && set({ unit })}
+                          />
+                        </div>
+                      </div>
+                      {resolution?.regimens.length ? (
+                        <span className="text-caption text-muted-foreground">
+                          {fill(C.standard, {
+                            list: [
+                              ...new Set(
+                                resolution.regimens.map(
+                                  (r) =>
+                                    `${r.working ?? r.regimen.label} ${FREQUENCY_WORD[r.regimen.freq].toLowerCase()}`,
+                                ),
+                              ),
+                            ].join(" · "),
+                          })}
+                        </span>
+                      ) : null}
                     </div>
-                  </Field>
-                  <Field label="Course">
-                    <Chips
-                      label="Course"
-                      options={RX_COURSES}
-                      value={s.course}
-                      onPick={(course) => set({ course })}
-                      word={(x) => COURSE_WORD[x]}
+                  )}
+
+                  <div className="bg-teal-tint flex flex-col gap-1 rounded-xl px-3.5 py-3">
+                    <span className="text-label text-muted-foreground">{C.dose}</span>
+                    <span className="text-body-m text-foreground font-medium" aria-live="polite">
+                      {rx && drug && (fluidMode || s.doseNum != null)
+                        ? willRead(rx, drug)
+                        : C.doseEmpty}
+                    </span>
+                    {rate && rate.mlPerHour != null ? (
+                      <span className="text-body-s text-foreground font-mono tabular-nums">
+                        {`${rate.mlPerHour} mL/h`}
+                        {rate.dropsPerMinute != null ? ` · ${rate.dropsPerMinute} drops/min` : ""}
+                        <span className="text-caption text-muted-foreground font-sans">
+                          {` · ${C.arithmetic}`}
+                        </span>
+                      </span>
+                    ) : null}
+                    {chosen?.regimen.then ? (
+                      <span className="text-caption text-muted-foreground">
+                        {chosen.regimen.then}
+                      </span>
+                    ) : null}
+                  </div>
+
+                  <div className="flex flex-col gap-2">
+                    <div className="flex flex-wrap items-baseline justify-between gap-2">
+                      <span className="text-label text-muted-foreground">{C.howToGive}</span>
+                      {edits.length && s.regimenId ? (
+                        <span className="text-caption text-muted-foreground inline-flex items-center gap-1.5">
+                          <Tag>{C.changedFromRegimen}</Tag>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => applyRegimen(s.regimenId!)}
+                          >
+                            {C.useRegimen}
+                          </Button>
+                        </span>
+                      ) : null}
+                    </div>
+                    {edits.map((e) => (
+                      <p key={e.field} className="text-caption text-muted-foreground">
+                        {`${EDIT_FIELD_WORD[e.field]}: `}
+                        <s>{e.from}</s>
+                        {` → ${e.to}`}
+                        <span className="sr-only">{`, changed from ${e.from}`}</span>
+                      </p>
+                    ))}
+                    {fluidMode ? null : (
+                      <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                        <SelectField
+                          label={C.route}
+                          value={s.route}
+                          options={drug.routes.map((r) => ({ v: r, label: ROUTE_WORD[r] ?? r }))}
+                          onPick={(route) =>
+                            set({ route, method: null, infusionOver: null, diluent: null })
+                          }
+                        />
+                        <SelectField
+                          label={C.howOften}
+                          value={s.frequency}
+                          options={RX_FREQUENCIES.map((x) => ({
+                            v: x,
+                            label: `${FREQUENCY_WORD[x]}${chosen?.regimen.freq === x ? " (regimen)" : ""}`,
+                          }))}
+                          onPick={(frequency) => set({ frequency })}
+                        />
+                        <SelectField
+                          label={C.forHowLong}
+                          value={s.course}
+                          options={RX_COURSES.map((x) => ({
+                            v: x,
+                            label: `${COURSE_WORD[x]}${chosen?.regimen.course === x ? " (regimen)" : ""}`,
+                          }))}
+                          onPick={(course) => set({ course })}
+                        />
+                        <SelectField
+                          label={C.start}
+                          value={s.start}
+                          empty={false}
+                          options={[
+                            { v: "now" as const, label: C.startNow },
+                            { v: "next_round" as const, label: C.startNext },
+                          ]}
+                          onPick={(start) => start && set({ start })}
+                        />
+                        {methods.length ? (
+                          <SelectField
+                            label={C.method}
+                            value={s.method}
+                            options={methods.map((m) => ({ v: m, label: m }))}
+                            onPick={(method) =>
+                              set({
+                                method,
+                                ...(intermittent(method)
+                                  ? {}
+                                  : { infusionOver: null, diluent: null }),
+                              })
+                            }
+                          />
+                        ) : null}
+                        {intermittent(s.method) ? (
+                          <>
+                            <SelectField
+                              label={C.infusionOver}
+                              value={s.infusionOver}
+                              options={INFUSION_OVER.map((x) => ({ v: x, label: x }))}
+                              onPick={(infusionOver) => set({ infusionOver })}
+                            />
+                            <SelectField
+                              label={C.dilutedIn}
+                              value={s.diluent}
+                              options={DILUENTS.map((x) => ({ v: x, label: x }))}
+                              onPick={(diluent) => set({ diluent })}
+                            />
+                          </>
+                        ) : null}
+                        <label className="text-body-s flex min-h-9 items-center gap-2 sm:col-span-2">
+                          <input
+                            type="checkbox"
+                            checked={s.prn}
+                            onChange={(e) => set({ prn: e.target.checked })}
+                            className="size-4 accent-teal-600"
+                          />
+                          {C.prn}
+                        </label>
+                      </div>
+                    )}
+                  </div>
+
+                  {env.cards.length ? (
+                    <div className="flex flex-col gap-1.5">
+                      <span className="text-label text-muted-foreground">{C.forWhich}</span>
+                      <div
+                        role="group"
+                        aria-label={C.forWhich}
+                        className="grid grid-cols-1 gap-1.5 sm:grid-cols-2"
+                      >
+                        {env.cards.map((c, i) => (
+                          <button
+                            key={c.versionId}
+                            type="button"
+                            aria-pressed={s.conditionId === c.versionId}
+                            onClick={() => set({ conditionId: c.versionId })}
+                            className={cn(
+                              "text-body-s flex min-h-11 flex-col items-start rounded-lg border px-3 py-1.5 text-left",
+                              FOCUS,
+                              s.conditionId === c.versionId
+                                ? "bg-teal-tint border-teal-600"
+                                : "border-border bg-card hover:bg-muted",
+                            )}
+                          >
+                            <span className="font-medium">{c.display}</span>
+                            <span className="text-caption text-muted-foreground">
+                              {fill(C.problemN, { n: i + 1 })}
+                            </span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  ) : null}
+
+                  <div className="flex flex-col gap-1">
+                    <label htmlFor={noteId} className="text-label text-muted-foreground">
+                      {C.note}
+                    </label>
+                    <input
+                      id={noteId}
+                      value={s.note}
+                      maxLength={500}
+                      onChange={(e) => set({ note: e.target.value })}
+                      className={selectClass}
                     />
-                  </Field>
+                  </div>
+
+                  {v2 && !fluidMode ? (
+                    <div className="bg-muted flex flex-col gap-1 rounded-xl px-3.5 py-3">
+                      <span className="text-label text-muted-foreground">{C.toSupply}</span>
+                      <span className="text-body-m font-medium">
+                        {supply?.text ?? (s.doseNum != null ? C.quantityUnknown : C.supplyLater)}
+                      </span>
+                    </div>
+                  ) : null}
+                  {repBounds && repeats ? (
+                    <RepeatsField
+                      bounds={repBounds}
+                      today={repeats.today}
+                      value={rep}
+                      onChange={setRep}
+                    />
+                  ) : null}
                 </>
               )}
-              <Field label="Start">
-                <Seg
-                  label="Start"
-                  options={[
-                    { id: "now" as const, label: "Give now" },
-                    { id: "next_round" as const, label: "Next drug round" },
-                  ]}
-                  value={s.start}
-                  onPick={(start) => set({ start })}
-                />
-              </Field>
-              <div className="flex flex-col gap-1">
-                <label htmlFor={noteId} className="text-caption text-muted-foreground">
-                  Note (optional)
-                </label>
-                <input
-                  id={noteId}
-                  value={s.note}
-                  maxLength={500}
-                  onChange={(e) => set({ note: e.target.value })}
-                  className={inputClass}
-                />
-              </div>
-            </>
-          )}
-        </section>
+            </section>
 
-        {/* ── Check ── */}
-        <section
-          aria-labelledby="rx-check"
-          className="flex min-w-0 flex-col gap-4 lg:sticky lg:top-0 lg:self-start"
-        >
-          <h3 id="rx-check" className="text-label text-foreground">
-            Check
-          </h3>
-          <Field label="Will read">
-            <p
-              className="text-body-s text-foreground bg-muted rounded-md px-3 py-2"
-              aria-live="polite"
-            >
-              {rx && drug ? willRead(rx, drug) : "Nothing chosen yet."}
-            </p>
-            {edits.map((e) => (
-              <p key={e.field} className="text-caption text-muted-foreground">
-                {`${EDIT_FIELD_WORD[e.field]}: `}
-                <s>{e.from}</s>
-                {` → ${e.to}`}
-                <span className="sr-only">{`, changed from ${e.from}`}</span>
-              </p>
-            ))}
-            {v2 && edits.length && s.regimenId ? (
-              <div className="flex flex-wrap items-center gap-2">
-                <Tag>{C.changedFromRegimen}</Tag>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => applyRegimen(s.regimenId!)}
-                >
-                  {C.useRegimen}
-                </Button>
-              </div>
-            ) : null}
-            {v2 && !fluidMode && drug ? (
-              <p className="text-caption text-muted-foreground">
-                {`${C.quantity}: `}
-                {supply?.text ?? C.quantityUnknown}
-              </p>
-            ) : null}
-            <p className="text-caption text-muted-foreground">
-              {`${band ? BAND_WORD[band] : "Age not recorded"} · `}
-              {weight ? (
-                <span className="font-mono tabular-nums">{`${weight.kg} kg, ${time(weight.at)}, ${weight.source}`}</span>
-              ) : (
-                "no weight in the vitals"
-              )}
-            </p>
-          </Field>
-          <Field label="Pharmacy">
-            {stockAt && drug ? (
-              <>
-                <p
-                  className="text-body-s text-foreground bg-muted rounded-md px-3 py-2"
-                  aria-live="polite"
-                >
-                  {stockLine ? stockLineWords(stockLine) : "Asking the pharmacy…"}
+            {/* ── 3 · Check ── */}
+            <section aria-labelledby={ids.check} className="flex min-w-0 flex-col gap-3">
+              <h3 id={ids.check} className={OVER}>
+                {C.checkHead}
+              </h3>
+              {!drug ? (
+                <p className="border-border bg-muted/40 text-body-s text-muted-foreground rounded-xl border border-dashed px-3.5 py-3">
+                  {modes ? C.checksHere : C.checksHereMeds}
                 </p>
-                <p className="text-caption text-muted-foreground">{STOCK_LINE_COPY.footer}</p>
-              </>
-            ) : (
-              <p className="border-border text-body-s text-muted-foreground rounded-md border border-dashed px-3 py-2">
-                Pharmacy not linked yet
-              </p>
-            )}
-          </Field>
-          <Field label="Checks">
-            {firing.length ? (
-              <ul className="flex flex-col gap-3">
-                {firing.map((c) => (
-                  <CheckItem
-                    key={c.code}
-                    c={c}
-                    answer={s.answers[c.code]}
-                    onAnswer={(a) =>
-                      setS((x) => ({ ...x, answers: { ...x.answers, [c.code]: a } }))
-                    }
-                    needsAnswer={needingAnswer([c]).length > 0}
-                    onPickElse={c.code === "stock" ? pickElse : undefined}
+              ) : rx ? (
+                <div className="flex flex-wrap items-center gap-2">
+                  <Tag>
+                    {toAnswer
+                      ? fill(C.toAnswer, { n: toAnswer })
+                      : firing.length
+                        ? needingAnswer(firing).length
+                          ? C.answered
+                          : firing.length === 1
+                            ? C.noteOne
+                            : fill(C.notes, { n: firing.length })
+                        : C.allClear}
+                  </Tag>
+                  <span className="text-caption text-muted-foreground">
+                    {toAnswer ? C.toAnswerText : firing.length ? C.readThem : C.allClearText}
+                  </span>
+                </div>
+              ) : null}
+              {firing.length ? (
+                <ul className="flex flex-col gap-2">
+                  {firing.map((c) => (
+                    <CheckItem
+                      key={c.code}
+                      c={c}
+                      answer={s.answers[c.code]}
+                      onAnswer={(a) =>
+                        setS((x) => {
+                          const answers = { ...x.answers };
+                          if (a) answers[c.code] = a;
+                          else delete answers[c.code];
+                          return { ...x, answers };
+                        })
+                      }
+                      needsAnswer={needingAnswer([c]).length > 0}
+                      onPickElse={c.code === "stock" ? pickElse : undefined}
+                    />
+                  ))}
+                </ul>
+              ) : null}
+              {rest.length ? (
+                <div className="border-border overflow-hidden rounded-xl border">
+                  <button
+                    type="button"
+                    aria-expanded={showPassed}
+                    onClick={() => setShowPassed((x) => !x)}
+                    className={cn("flex w-full items-center gap-2.5 px-3 py-2 text-left", FOCUS)}
+                  >
+                    <span className="bg-teal-tint text-teal-text grid size-[22px] shrink-0 place-items-center rounded-full">
+                      <CheckIcon aria-hidden className="size-3.5" />
+                    </span>
+                    <span className="text-body-s min-w-0 flex-1">
+                      <span className="font-medium">{fill(C.passed, { n: passed.length })}</span>
+                      <span className="text-muted-foreground">
+                        {passed.length ? ` · ${passed.map((c) => c.title).join(", ")}` : ""}
+                      </span>
+                    </span>
+                    <Chevron open={showPassed} />
+                  </button>
+                  {showPassed ? (
+                    <ul>
+                      {rest.map((c) => (
+                        <li
+                          key={c.code}
+                          className="border-border flex flex-col gap-0.5 border-t py-2 pr-3 pl-11"
+                        >
+                          <span className="text-body-s text-foreground font-medium">
+                            {`${c.title} · ${OUTCOME_WORD[c.outcome]}`}
+                            {c.proposed ? (
+                              <span className="text-muted-foreground font-normal">
+                                {" · proposed"}
+                              </span>
+                            ) : null}
+                          </span>
+                          <span className="text-caption text-muted-foreground">{c.message}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : null}
+                </div>
+              ) : null}
+              {drug?.flags.controlled ? (
+                <div className="flex flex-col gap-1">
+                  <label htmlFor={witnessId} className="text-label text-muted-foreground">
+                    {C.witness}
+                  </label>
+                  <input
+                    id={witnessId}
+                    value={s.witness}
+                    maxLength={120}
+                    onChange={(e) => set({ witness: e.target.value })}
+                    className={selectClass}
                   />
-                ))}
-              </ul>
-            ) : drug ? (
-              <p className="text-body-s text-muted-foreground">No check needs an answer.</p>
-            ) : null}
-            {drug?.flags.controlled ? (
-              <div className="flex flex-col gap-1">
-                <label htmlFor={witnessId} className="text-caption text-muted-foreground">
-                  Controlled drug: witness name or staff ID
-                </label>
-                <input
-                  id={witnessId}
-                  value={s.witness}
-                  maxLength={120}
-                  onChange={(e) => set({ witness: e.target.value })}
-                  className={inputClass}
-                />
-              </div>
-            ) : null}
-            {checks.some((c) => c.egregious) ? (
-              <div className="flex flex-col gap-1">
-                <label htmlFor={typedId} className="text-caption text-muted-foreground">
-                  Type the dose to confirm it
-                </label>
-                <input
-                  id={typedId}
-                  inputMode="decimal"
-                  value={s.typedDose}
-                  onChange={(e) => set({ typedDose: e.target.value })}
-                  className={cn(inputClass, "font-mono")}
-                />
-              </div>
-            ) : null}
-            {rest.length ? (
-              <div className="flex flex-col gap-1.5">
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  className="self-start"
-                  aria-expanded={more}
-                  onClick={() => setMore((x) => !x)}
-                >
-                  {more ? "Hide the other checks" : `Show ${rest.length} more checks`}
-                </Button>
-                {more ? (
-                  <ul className="flex flex-col gap-1.5">
-                    {rest.map((c) => (
-                      <li key={c.code} className="text-caption flex flex-col">
-                        <span className="text-foreground">
-                          {`${c.title} · ${OUTCOME_WORD[c.outcome]}`}
-                          {c.proposed ? (
-                            <span className="text-muted-foreground">{" · proposed"}</span>
-                          ) : null}
-                        </span>
-                        <span className="text-muted-foreground">{c.message}</span>
-                      </li>
-                    ))}
-                  </ul>
-                ) : null}
-              </div>
-            ) : null}
-          </Field>
-          {repBounds && repeats ? (
-            <RepeatsField bounds={repBounds} today={repeats.today} value={rep} onChange={setRep} />
-          ) : null}
-        </section>
-      </div>
-    </EmrDialog>
+                </div>
+              ) : null}
+              {checks.some((c) => c.egregious) ? (
+                <div className="flex flex-col gap-1">
+                  <label htmlFor={typedId} className="text-label text-muted-foreground">
+                    {C.typedDose}
+                  </label>
+                  <input
+                    id={typedId}
+                    inputMode="decimal"
+                    value={s.typedDose}
+                    onChange={(e) => set({ typedDose: e.target.value })}
+                    className={cn(selectClass, "font-mono")}
+                  />
+                </div>
+              ) : null}
+              {drug ? (
+                <>
+                  <p className="text-caption text-muted-foreground">{C.decisionSupport}</p>
+                  {reason ? (
+                    <p className="text-body-s text-foreground" aria-live="polite">
+                      {reason}
+                    </p>
+                  ) : null}
+                </>
+              ) : null}
+              {session?.lists}
+            </section>
+          </div>
+        )}
+      </SheetBody>
+      <SheetFooter className="flex-row flex-wrap items-center gap-3 px-4 sm:px-6">
+        {session ? (
+          <div className="flex min-w-0 flex-1 flex-col">
+            <span className="text-label text-foreground">
+              {`${C.thisPrescription} · ${n === 1 ? C.lineOne : fill(C.lines, { n })}`}
+            </span>
+            <span className="text-caption text-muted-foreground truncate">
+              {session.footer.summary || C.nothingAdded}
+            </span>
+          </div>
+        ) : (
+          <span className="flex-1" />
+        )}
+        {protocols ? null : (
+          <>
+            <span className="text-caption text-muted-foreground hidden lg:inline">{C.keys}</span>
+            <Button
+              variant={session ? "soft" : "primary"}
+              disabled={!!reason}
+              onClick={add}
+              className="pointer-coarse:min-h-11"
+            >
+              {addWord}
+            </Button>
+          </>
+        )}
+        {session ? (
+          <Button
+            disabled={!n}
+            onClick={session.footer.onReview}
+            className="pointer-coarse:min-h-11"
+          >
+            {C.reviewSend}
+          </Button>
+        ) : null}
+      </SheetFooter>
+      <SheetClose
+        render={
+          <Button
+            variant="ghost"
+            size="icon"
+            aria-label="Close"
+            className="absolute top-3 right-3 rounded-full"
+          />
+        }
+      >
+        <XIcon className="size-4" />
+      </SheetClose>
+    </EditorDialog>
+  );
+}
+
+function BrandButton({
+  on,
+  name,
+  sub,
+  stock = null,
+  onPick,
+}: {
+  on: boolean;
+  name: string;
+  sub: string;
+  stock?: string | null;
+  onPick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      role="radio"
+      aria-checked={on}
+      onClick={onPick}
+      className={cn(
+        "bg-card flex min-h-11 min-w-0 flex-1 items-center justify-between gap-2.5 rounded-lg border px-3 py-1.5 text-left",
+        FOCUS,
+        on ? "border-teal-600" : "border-border hover:bg-muted",
+      )}
+    >
+      <span className="flex min-w-0 flex-col">
+        <span className="text-body-s font-medium">{name}</span>
+        {sub ? <span className="text-caption text-muted-foreground">{sub}</span> : null}
+      </span>
+      {stock ? <Tag>{stock}</Tag> : null}
+    </button>
   );
 }
 
@@ -1468,7 +2078,7 @@ function CheckItem({
 }: {
   c: PlanCheck;
   answer: { answer: AnswerId; text?: string } | undefined;
-  onAnswer: (a: { answer: AnswerId; text?: string }) => void;
+  onAnswer: (a: { answer: AnswerId; text?: string } | null) => void;
   needsAnswer: boolean;
   /** A stock Check's second choice (D-PH1-22). */
   onPickElse?: () => void;
@@ -1477,11 +2087,29 @@ function CheckItem({
   const chips =
     c.code === "stock" ? STOCK_REASONS : c.outcome === "stop" ? OVERRIDE_REASONS : CHECK_REASONS;
   const word = OUTCOME_WORD[c.outcome];
+  // Kit F3: an answered check folds to one line, with Change to answer again.
+  if (needsAnswer && answer && answer.answer !== "other")
+    return (
+      <li className="border-border flex items-center gap-2.5 rounded-xl border px-3 py-2">
+        <span className="bg-teal-tint text-teal-text grid size-[22px] shrink-0 place-items-center rounded-full">
+          <CheckIcon aria-hidden className="size-3.5" />
+        </span>
+        <span className="text-body-s min-w-0 flex-1">
+          <span className="font-medium">{c.title}</span>
+          <span className="text-muted-foreground">
+            {` · ${(chips as Record<string, string>)[answer.answer] ?? answer.answer}`}
+          </span>
+        </span>
+        <Button variant="ghost" size="sm" onClick={() => onAnswer(null)}>
+          {C.change}
+        </Button>
+      </li>
+    );
   return (
-    <li className="flex flex-col gap-1.5">
+    <li className="bg-muted/60 flex flex-col gap-2 rounded-xl px-3.5 py-3">
       <span className="text-body-s flex flex-wrap items-center gap-2">
         {c.outcome === "note" ? <Tag>{word}</Tag> : <Caution>{word}</Caution>}
-        <span className="text-foreground">{c.title}</span>
+        <span className="text-foreground font-medium">{c.title}</span>
         {c.proposed ? <span className="text-caption text-muted-foreground">proposed</span> : null}
       </span>
       <span className="text-body-s text-muted-foreground">{c.message}</span>
@@ -1519,9 +2147,7 @@ function CheckItem({
               />
             </>
           ) : null}
-          <span className="text-caption text-muted-foreground italic">
-            Answer wording is a draft for the CSO.
-          </span>
+          <span className="text-caption text-muted-foreground italic">{C.draftAnswers}</span>
         </>
       ) : null}
     </li>

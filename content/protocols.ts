@@ -22,6 +22,28 @@ export const PROTOCOLS_COPY = {
   draftDev:
     "Prototype values, need local sign-off. Not signed: it starts here only because this is local development.",
   back: "All protocols",
+  // The prototype's two columns (kit F6)
+  protocolHead: "1 · Protocol",
+  planHead: "2 · Plan",
+  newProtocol: "+ New protocol",
+  listFoot:
+    "Protocols follow UCG 2023 and national guidance. Prototype values: each needs clinical sign-off before use. New protocols start as drafts.",
+  pickProtocol: "Pick a protocol on the left.",
+  beforeStart: "Before you start",
+  anyTime: "If at any time",
+  planFor: "Plan for {name}",
+  thisPatientPlan: "this patient",
+  flowChart: "Flow chart",
+  stepList: "Step list",
+  flowLabel: "Protocol flow chart",
+  view: "View",
+  change: "Change",
+  hereNow: "This patient",
+  builderPreview: "Preview for {name}",
+  previewEmpty: "Fill in a step to see the plan.",
+  cancel: "Cancel",
+  moveUp: "Move up",
+  stepN: "Step {n}",
   source: "Source: {source}",
   slot: "Chart time slot: {slot}",
   // Starting values

@@ -169,6 +169,22 @@ describe("the hand-over screen (5.6, S36, S47, S56)", () => {
     expect(html).toContain("Ward 4A");
   });
 
+  it("kit F4: the identity and counselling tick sits last, before Record, which says why it waits", () => {
+    const html = renderToStaticMarkup(
+      h(HandoverScreen, {
+        data: handover(),
+        canManage: false,
+        timeZone: "Africa/Kampala",
+        explainRequired: true,
+      }),
+    );
+    const tick = html.indexOf("I checked who they are, and explained how to take each medicine");
+    expect(tick).toBeGreaterThan(html.indexOf("When you record it"));
+    expect(tick).toBeLessThan(html.indexOf("Record hand-over"));
+    expect(html).toContain('aria-describedby="handover-explain-why"');
+    expect(render(handover())).not.toContain("I checked who they are");
+  });
+
   it("nothing staged: says so", () => {
     const html = render(handover({ lines: [] }));
     expect(html).toContain("No line of this prescription is ready to hand over.");

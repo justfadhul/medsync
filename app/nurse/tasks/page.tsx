@@ -5,6 +5,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { inArray } from "drizzle-orm";
 
+import { EmptyState } from "@/components/tide/work/kit";
 import { fill } from "@/content/lab-workspace-v2";
 import { NURSE_TASKS_COPY as C } from "@/content/nurse-tasks";
 import { CHART_COPY as P } from "@/content/protocol-charts";
@@ -107,43 +108,63 @@ export default async function NurseTasksPage() {
         : null,
   });
 
+  // The prototype's NURSES block: the header, then one card with Protocols running and Tasks.
   return (
-    <div className="mx-auto flex w-full max-w-3xl flex-col gap-6 px-4 py-8 sm:px-6">
-      <header className="flex flex-col gap-1.5">
-        <span className="text-muted-foreground font-mono text-[10px] tracking-[0.16em] uppercase">
-          {C.kicker}
-        </span>
+    <div className="mx-auto flex w-full max-w-3xl flex-col gap-4 px-4 py-8 sm:px-6">
+      <header className="flex flex-col gap-1">
+        <span className="text-overline text-muted-foreground uppercase">{C.kicker}</span>
         <h1 className="font-display text-display-s text-foreground">{C.title}</h1>
         <p className="text-muted-foreground text-body-s max-w-[60ch]">{C.sub}</p>
       </header>
-      {running ? (
-        <section className="flex flex-col gap-2">
-          <h2 className="text-heading-s text-foreground">{P.running}</h2>
-          <p className="text-muted-foreground text-body-s">{P.runningSub}</p>
-          {running.length ? (
-            <ul className="flex flex-col gap-2">
-              {running.map((r) => (
-                <li key={r.id}>
-                  <Link
-                    href={`/nurse/patients/${r.patientUserId}/protocols/${r.id}`}
-                    className="border-border bg-card hover:bg-muted/50 text-body-s text-foreground block rounded-lg border px-3 py-2.5"
+      <div className="bg-card shadow-tide-card rounded-tide-card flex flex-col gap-3 p-4 sm:p-5">
+        {running ? (
+          <section aria-labelledby="nurse-running-h" className="flex flex-col gap-3">
+            <div className="flex items-baseline justify-between gap-2">
+              <h2 id="nurse-running-h" className="text-heading-m text-foreground">
+                {P.running}
+              </h2>
+              <span className="text-caption text-muted-foreground tabular-nums">
+                {running.length}
+              </span>
+            </div>
+            {running.length ? (
+              <ul className="flex flex-col gap-2">
+                {running.map((r) => (
+                  <li
+                    key={r.id}
+                    className="bg-muted rounded-tide-row flex flex-wrap items-center gap-2.5 px-3.5 py-2.5"
                   >
-                    {fill(P.runningLine, {
-                      short: r.name,
-                      patient: codes.get(r.patientUserId) ?? "",
-                      d: hoursSince(r.startedAt),
-                      last: r.lastAt ? formatClock(new Date(r.lastAt)) : "—",
-                    })}
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <p className="text-muted-foreground text-body-s">{P.runningNone}</p>
-          )}
-        </section>
-      ) : null}
-      <TaskList open={open.map(view)} done={done.map(view)} />
+                    <span className="text-body-s min-w-0 flex-1">
+                      <b className="text-foreground font-semibold">
+                        {fill(C.runningHead, {
+                          short: r.name,
+                          patient: codes.get(r.patientUserId) ?? "",
+                        })}
+                      </b>{" "}
+                      <span className="text-caption text-muted-foreground">
+                        ·{" "}
+                        {fill(C.runningMeta, {
+                          d: hoursSince(r.startedAt),
+                          last: r.lastAt ? formatClock(new Date(r.lastAt)) : "—",
+                        })}
+                      </span>
+                    </span>
+                    <Link
+                      href={`/nurse/patients/${r.patientUserId}/protocols/${r.id}`}
+                      className="bg-tide-lagoon-tint text-body-s text-foreground focus-visible:shadow-focus inline-flex min-h-11 items-center rounded-full px-4 font-semibold outline-none"
+                    >
+                      {P.openChart}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <EmptyState compact title={P.runningNone} />
+            )}
+          </section>
+        ) : null}
+        <TaskList open={open.map(view)} done={done.map(view)} />
+      </div>
     </div>
   );
 }

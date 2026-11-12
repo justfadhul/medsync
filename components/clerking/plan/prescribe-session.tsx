@@ -7,13 +7,12 @@ import type { PlanBasketRx } from "@/lib/clerking/plan/draft";
 import type { PrescribeSession } from "@/lib/emr/read/prescribe";
 import type { PrescribePlace } from "@/lib/prescribing/places";
 import type { PlanRx } from "@/lib/prescribing/plan-rx";
-import { useId, useState } from "react";
+import { useEffect, useId, useState } from "react";
 import { PillIcon } from "lucide-react";
 
 import { EmrDialog } from "@/components/emr/emr-dialog";
 import { Button } from "@/components/ui/button";
 import { PRESCRIBE_COPY as C, fill } from "@/content/prescribing";
-import { PROTOCOLS_COPY as P } from "@/content/protocols";
 import { stockLines } from "@/lib/emr/actions/pharmacy-stock";
 import {
   keepPrescribeDraft,
@@ -21,22 +20,23 @@ import {
   sendPrescription,
   stopPrescribedLine,
 } from "@/lib/emr/actions/prescribe";
+import { openProtocols } from "@/lib/emr/actions/protocols";
 import { drugById, patientBand } from "@/lib/prescribing/formulary";
 import { orderSetsFor } from "@/lib/prescribing/order-sets";
-import { PLACE } from "@/lib/prescribing/places";
 import { planChecks } from "@/lib/prescribing/plan-checks";
-import { FactChips } from "./medicines";
-import { Caution, inputClass, Tag } from "./parts";
+import { cn } from "@/lib/utils";
+import { inputClass, Tag } from "./parts";
 import { PharmacyCount, PharmacyItemBlock } from "./pharmacy";
 import { PlanPrescribeDialog } from "./prescribe-dialog";
 import { ProtocolsMode } from "./protocols-mode";
 
 /**
- * The one Prescribe (prescribing kit F1–F3) for every place that is not the clerking Plan: the
- * patient strip, order sets, the basket with Edit, Again and Remove, what is already prescribed
- * (Prescribe again, Stop) and already taken, the draft kept on close, then review and "Sign and
- * send". Each line is written in the Plan's prescribing dialog, so the checks are the same ones,
- * and the server runs them again when it is sent.
+ * The one Prescribe (prescribing kit F1–F3) for every place that is not the clerking Plan, laid out
+ * as the prototype: one dialog, the line being written in columns 1–2, its checks then this
+ * prescription (Edit, Again, Remove) and what is already prescribed (Prescribe again, Stop, the
+ * pharmacy's questions) in column 3, the draft kept on close, then "Check before you send" and
+ * "Sign and send". Each line is written in the Plan's prescribing dialog, so the checks are the
+ * same ones, and the server runs them again when it is sent.
  */
 
 type Surface = "doctor" | "clinician";
@@ -138,7 +138,9 @@ export function PrescribeSessionDialog({
     setLinesRaw(v);
   };
   const [draft, setDraft] = useState(initial.draft);
-  const [editing, setEditing] = useState<{ target: Target; at: number | null } | null>(null);
+  // The line being written; a new object starts it afresh (the dialog compares by identity).
+  const [target, setTarget] = useState<Target>({});
+  const [editAt, setEditAt] = useState<number | null>(null);
   const [queue, setQueue] = useState<string[]>([]);
   const [reviewing, setReviewing] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -156,6 +158,20 @@ export function PrescribeSessionDialog({
   const sets = orderSetsFor(band, s.production);
   const allergies = allergyItems(s);
 
+  // The count on "Protocols · N" before the mode is opened.
+  useEffect(() => {
+    if (!s.protocols) return;
+    let live = true;
+    void openProtocols({ surface, patientUserId: s.patientUserId })
+      .catch(() => null)
+      .then((r) => {
+        if (live && r?.ok && r.data) setProtocolCount(r.data.items.length);
+      });
+    return () => {
+      live = false;
+    };
+  }, [s.protocols, surface, s.patientUserId]);
+
   const env: PrescribeEnv = {
     facts: s.facts,
     cosign: s.cosign,
@@ -167,7 +183,7 @@ export function PrescribeSessionDialog({
       : undefined,
     cards: [],
     standing: s.placed.filter((p) => p.stoppable),
-    basket: lines.filter((_, i) => i !== editing?.at),
+    basket: lines.filter((_, i) => i !== editAt),
     basketTests: [],
     v2: { place: s.place, collect: s.collect, surface, patientUserId: s.patientUserId },
   };
@@ -175,6 +191,12 @@ export function PrescribeSessionDialog({
   const reload = async () => {
     const r = await openPrescribe({ ...who, encounterId: s.encounterId }).catch(() => null);
     if (r?.ok && r.data) setSession(r.data.session);
+  };
+
+  const write = (t: Target, at: number | null = null) => {
+    setTarget(t);
+    setEditAt(at);
+    setMode("medicines");
   };
 
   // Kit F4: the pharmacy's questions, answered Keep / Change / Stop where the line is listed.
@@ -192,7 +214,7 @@ export function PrescribeSessionDialog({
         ref: item.id,
         kind: item.kind === "query" ? "query" : "notice",
       });
-      setEditing({ target: { drugId: line.drugId }, at: null });
+      write({ drugId: line.drugId });
     },
     onDone: () => void reload(),
   };
@@ -201,7 +223,14 @@ export function PrescribeSessionDialog({
       ? pharmacy.items
           .filter((i) => homeOf(i) === lineId)
           .map((i) => (
-            <PharmacyItemBlock key={i.id} item={i} view={pharmacy} canWrite handlers={handlers} />
+            <PharmacyItemBlock
+              key={i.id}
+              item={i}
+              view={pharmacy}
+              canWrite
+              handlers={handlers}
+              dialog
+            />
           ))
       : null;
 
@@ -214,8 +243,10 @@ export function PrescribeSessionDialog({
 
   const openNext = (ids: string[]) => {
     const [next, ...rest] = ids;
+    const d = next ? drugById(next) : undefined;
     setQueue(rest);
-    if (next) setEditing({ target: { drugId: next }, at: null });
+    write(next ? { drugId: next } : {});
+    setMsg(d ? fill(C.nextFromSet, { name: d.generic }) : null);
   };
 
   /** Kit F2: an order set queues its medicines; those the patient cannot have here are skipped. */
@@ -255,6 +286,7 @@ export function PrescribeSessionDialog({
         skipped.push({ name: d.generic, why: allergy ? C.setAllergy : C.setStock });
       return !allergy && !out;
     });
+    openNext(ok);
     setMsg(
       skipped.length
         ? fill(C.setSkipped, {
@@ -263,7 +295,6 @@ export function PrescribeSessionDialog({
           })
         : null,
     );
-    openNext(ok);
   };
 
   const send = async () => {
@@ -274,11 +305,13 @@ export function PrescribeSessionDialog({
     setBusy(false);
     if (!r?.ok) {
       setMsg(r ? r.error : "Not sent. Try again.");
+      setReviewing(false);
       return;
     }
     setLines([]);
     setDraft(null);
     setReviewing(false);
+    write({});
     setMsg(fill(C.sent, { collect: s.collect }));
     await reload();
   };
@@ -301,325 +334,285 @@ export function PrescribeSessionDialog({
     await reload();
   };
 
-  if (editing)
+  const resus = s.place === "resus";
+  if (reviewing)
     return (
-      <PlanPrescribeDialog
-        env={env}
-        allergies={allergies}
-        target={editing.target}
-        time={time}
-        onClose={() => {
-          setEditing(null);
-          setQueue([]);
-          setReplacing(null);
-        }}
-        onAdd={(added) => {
-          const rx = replacing ? { ...added, replaces: replacing } : added;
-          setLines((x) =>
-            editing.at == null ? [...x, rx] : x.map((l, i) => (i === editing.at ? rx : l)),
-          );
-          setEditing(null);
-          setReplacing(null);
-          openNext(queue);
-        }}
-      />
+      <EmrDialog
+        open
+        onOpenChange={(o) => !o && setReviewing(false)}
+        width="medium"
+        kicker={C.reviewKicker}
+        title={`${s.patient.name || C.title} · ${
+          lines.length === 1 ? C.lineOne : fill(C.lines, { n: lines.length })
+        }`}
+        description={resus ? C.reviewResus : fill(C.reviewTo, { collect: s.collect })}
+        footer={
+          <div className="flex w-full flex-wrap items-center justify-end gap-3">
+            <Button variant="secondary" onClick={() => setReviewing(false)} disabled={busy}>
+              {C.backToEdit}
+            </Button>
+            <Button onClick={() => void send()} disabled={busy || !lines.length}>
+              {busy ? C.sending : resus ? C.sendResus : C.send}
+            </Button>
+          </div>
+        }
+      >
+        <ol className="flex flex-col">
+          {lines.map((l, i) => (
+            <li
+              key={l.clientKey}
+              className="border-border flex gap-3 border-t py-3 first:border-t-0 first:pt-0"
+            >
+              <Num n={i + 1} />
+              <div className="flex min-w-0 flex-col gap-1">
+                <span className="text-body-m text-foreground font-medium">{l.drugName}</span>
+                <span className="text-body-s text-foreground">{l.display}</span>
+                {l.answers.length ? (
+                  <span className="text-caption text-muted-foreground">
+                    {fill(C.youConfirmed, {
+                      list: l.answers.map((a) => a.code.replace(/_/g, " ")).join(", "),
+                    })}
+                  </span>
+                ) : null}
+              </div>
+            </li>
+          ))}
+        </ol>
+      </EmrDialog>
     );
 
-  return (
-    <EmrDialog
-      open
-      onOpenChange={(o) => !o && close()}
-      width="xl"
-      kicker={fill(C.kicker, { place: PLACE[s.place].label, collect: s.collect })}
-      title={`${s.patient.name || C.title}${s.patient.mrn ? ` · ${s.patient.mrn}` : ""}`}
-      footer={
-        mode === "protocols" ? undefined : (
-          <div className="flex w-full flex-wrap items-center justify-end gap-3">
-            {msg ? (
-              <span className="text-body-s text-muted-foreground mr-auto" aria-live="polite">
-                {msg}
-              </span>
-            ) : null}
-            {reviewing ? (
-              <>
-                <Button variant="secondary" onClick={() => setReviewing(false)} disabled={busy}>
-                  {C.back}
-                </Button>
-                <Button onClick={() => void send()} disabled={busy || !lines.length}>
-                  {busy ? C.sending : C.sign}
-                </Button>
-              </>
-            ) : (
-              <Button onClick={() => setReviewing(true)} disabled={!lines.length}>
-                {C.review}
-              </Button>
-            )}
+  const lists = (
+    <div className="flex flex-col gap-4">
+      {draft && !lines.length ? (
+        <section
+          aria-label={C.draftTitle}
+          className="border-border flex flex-wrap items-center gap-2 rounded-xl border px-3.5 py-3"
+        >
+          <div className="flex min-w-0 flex-1 flex-col">
+            <span className="text-body-s text-foreground font-medium">{C.draftTitle}</span>
+            <span className="text-caption text-muted-foreground">
+              {fill(C.draftBody, { n: draft.lines.length, time: time(draft.at) })}
+            </span>
           </div>
-        )
-      }
-    >
-      <div className="flex flex-col gap-5">
-        <FactChips facts={s.facts} kidneyTestOrdered={false} allergies={allergies} time={time} v2 />
-        {s.place === "resus" ? (
-          <p className="text-caption text-muted-foreground">{C.resusNote}</p>
-        ) : null}
-
-        {s.protocols && !reviewing ? (
-          <div role="group" aria-label={P.protocols} className="flex flex-wrap gap-1.5">
-            {(["medicines", "protocols"] as const).map((m) => (
-              <Button
-                key={m}
-                size="sm"
-                variant={mode === m ? "primary" : "secondary"}
-                aria-pressed={mode === m}
-                onClick={() => setMode(m)}
-              >
-                {m === "medicines"
-                  ? P.medicines
-                  : protocolCount != null
-                    ? fill(P.protocolsN, { n: protocolCount })
-                    : P.protocols}
-              </Button>
-            ))}
-          </div>
-        ) : null}
-
-        {mode === "protocols" ? (
-          <ProtocolsMode
-            surface={surface}
-            patientUserId={s.patientUserId}
-            encounterId={s.encounterId}
-            place={s.place}
-            facts={s.facts}
-            onCount={setProtocolCount}
-            onSent={(m) => {
-              setMsg(m);
-              setMode("medicines");
-              void reload();
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => {
+              setLines(draft.lines);
+              setDraft(null);
             }}
-          />
-        ) : (
-          <>
-            {draft && !lines.length && !reviewing ? (
-              <section
-                aria-label={C.draftTitle}
-                className="border-border flex flex-wrap items-center gap-3 rounded-lg border p-3"
-              >
-                <div className="flex min-w-0 flex-1 flex-col">
-                  <span className="text-body-m text-foreground">{C.draftTitle}</span>
-                  <span className="text-body-s text-muted-foreground">
-                    {fill(C.draftBody, { n: draft.lines.length, time: time(draft.at) })}
-                  </span>
-                </div>
-                <Button
-                  variant="secondary"
-                  onClick={() => {
-                    setLines(draft.lines);
-                    setDraft(null);
-                  }}
-                >
-                  {C.resume}
-                </Button>
-                <Button
-                  variant="ghost"
-                  onClick={() => {
-                    setDraft(null);
-                    void keepPrescribeDraft({ ...who, encounterId: s.encounterId, lines: [] });
-                  }}
-                >
-                  {C.discard}
-                </Button>
-              </section>
-            ) : null}
+          >
+            {C.resume}
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => {
+              setDraft(null);
+              void keepPrescribeDraft({ ...who, encounterId: s.encounterId, lines: [] });
+            }}
+          >
+            {C.discard}
+          </Button>
+        </section>
+      ) : null}
 
-            {reviewing ? (
-              <section aria-labelledby="rx-review" className="flex flex-col gap-3">
-                <h3 id="rx-review" className="text-label text-foreground">
-                  {C.review}
-                </h3>
-                <ul className="flex flex-col gap-3">
-                  {lines.map((l) => (
-                    <li
-                      key={l.clientKey}
-                      className="border-border flex flex-col gap-1 border-t pt-3"
-                    >
-                      <span className="text-body-m text-foreground">{l.display}</span>
-                      <span className="text-caption text-muted-foreground">
-                        {`${C.confirmed}: `}
-                        {l.answers.length
-                          ? l.answers.map((a) => a.code.replace(/_/g, " ")).join(", ")
-                          : C.noneConfirmed}
-                      </span>
-                    </li>
-                  ))}
-                </ul>
-              </section>
-            ) : (
-              <>
-                <section aria-labelledby="rx-basket" className="flex flex-col gap-3">
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    <h3 id="rx-basket" className="text-label text-foreground">
-                      {C.thisPrescription}
-                    </h3>
-                    <Button
-                      variant="secondary"
-                      size="sm"
-                      onClick={() => setEditing({ target: {}, at: null })}
-                    >
-                      {C.addMedicine}
-                    </Button>
+      <section aria-labelledby="rx-basket" className="flex flex-col gap-2">
+        <h3
+          id="rx-basket"
+          className="text-caption text-muted-foreground font-medium tracking-[0.06em] uppercase"
+        >
+          {`${C.thisPrescription} · ${lines.length}`}
+        </h3>
+        {lines.length ? (
+          <ol className="border-border flex flex-col rounded-xl border">
+            {lines.map((l, i) => (
+              <li
+                key={l.clientKey}
+                className={cn(
+                  "border-border flex flex-wrap items-start gap-x-2.5 gap-y-1 border-t px-3 py-2.5 first:border-t-0",
+                  editAt === i && "bg-teal-tint",
+                )}
+              >
+                <Num n={i + 1} />
+                <div className="flex min-w-0 flex-1 flex-col">
+                  <span className="text-body-s text-foreground font-medium">{l.drugName}</span>
+                  <span className="text-caption text-muted-foreground">{l.display}</span>
+                </div>
+                <div className="flex gap-0.5">
+                  <Button variant="ghost" size="sm" onClick={() => write({ from: l }, i)}>
+                    {C.edit}
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setLines((x) => [...x, { ...l, clientKey: newKey() }])}
+                  >
+                    {C.again}
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      setLines((x) => x.filter((_, j) => j !== i));
+                      if (editAt === i) write({});
+                      else if (editAt != null && editAt > i) setEditAt(editAt - 1);
+                    }}
+                  >
+                    {C.remove}
+                  </Button>
+                </div>
+              </li>
+            ))}
+          </ol>
+        ) : (
+          <p className="border-border text-body-s text-muted-foreground rounded-xl border border-dashed px-3.5 py-3">
+            {C.empty}
+          </p>
+        )}
+      </section>
+
+      {s.placed.length || elsewhere.length ? (
+        <section aria-labelledby="rx-already" className="flex flex-col gap-2">
+          <div className="flex flex-wrap items-center gap-2">
+            <h3
+              id="rx-already"
+              className="text-caption text-muted-foreground font-medium tracking-[0.06em] uppercase"
+            >
+              {fill(C.alreadyFor, { name: s.patient.name.split(/\s+/)[0] || C.alreadyHere })}
+            </h3>
+            <PharmacyCount view={pharmacy} />
+          </div>
+          {elsewhere.length ? asked(null) : null}
+          {s.placed.length ? (
+            <ul className="border-border flex flex-col rounded-xl border">
+              {s.placed.map((p) => (
+                <li
+                  key={p.id}
+                  className="border-border flex flex-col gap-2 border-t px-3 py-2.5 first:border-t-0"
+                >
+                  <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                    <div className="flex min-w-0 flex-1 flex-col">
+                      <span className="text-body-s text-foreground font-medium">{p.drugName}</span>
+                      <span className="text-caption text-muted-foreground">{p.display}</span>
+                    </div>
+                    <Tag>{p.word}</Tag>
                   </div>
-                  {sets.length ? (
-                    <div className="flex flex-col gap-1.5">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <span className="text-caption text-muted-foreground">{C.sets}</span>
-                        <Caution>{C.setsDraft}</Caution>
+                  <div className="flex flex-wrap gap-1">
+                    {drugById(p.drugId) ? (
+                      <Button variant="ghost" size="sm" onClick={() => write({ drugId: p.drugId })}>
+                        {C.prescribeAgain}
+                      </Button>
+                    ) : null}
+                    {p.stoppable ? (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        aria-expanded={stopping?.id === p.id}
+                        onClick={() =>
+                          setStopping(stopping?.id === p.id ? null : { id: p.id, reason: "" })
+                        }
+                      >
+                        {C.stop}
+                      </Button>
+                    ) : null}
+                  </div>
+                  {stopping?.id === p.id ? (
+                    <div className="flex flex-wrap items-end gap-2">
+                      <div className="flex min-w-0 flex-1 flex-col gap-1">
+                        <label htmlFor={reasonId} className="text-caption text-muted-foreground">
+                          {C.stopReason}
+                        </label>
+                        <input
+                          id={reasonId}
+                          value={stopping.reason}
+                          maxLength={500}
+                          onChange={(e) => setStopping({ id: p.id, reason: e.target.value })}
+                          className={inputClass}
+                        />
                       </div>
-                      <div className="flex flex-wrap gap-1.5">
-                        {sets.map((set) => (
-                          <Button
-                            key={set.id}
-                            variant="secondary"
-                            size="sm"
-                            onClick={() => void applySet(set.drugIds)}
-                          >
-                            {`${set.name} · ${set.drugIds.length}`}
-                          </Button>
-                        ))}
-                      </div>
+                      <Button
+                        variant="secondary"
+                        disabled={busy || stopping.reason.trim().length < 3}
+                        onClick={() => void stop()}
+                      >
+                        {C.stop}
+                      </Button>
                     </div>
                   ) : null}
-                  {lines.length ? (
-                    <ul className="flex flex-col">
-                      {lines.map((l, i) => (
-                        <li
-                          key={l.clientKey}
-                          className="border-border flex flex-wrap items-center gap-2 border-t py-2.5 first:border-t-0"
-                        >
-                          <span className="text-body-s text-foreground min-w-0 flex-1">
-                            {l.display}
-                          </span>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => setEditing({ target: { from: l }, at: i })}
-                          >
-                            {C.edit}
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => setLines((x) => [...x, { ...l, clientKey: newKey() }])}
-                          >
-                            {C.again}
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => setLines((x) => x.filter((_, j) => j !== i))}
-                          >
-                            {C.remove}
-                          </Button>
-                        </li>
-                      ))}
-                    </ul>
-                  ) : (
-                    <p className="text-body-s text-muted-foreground">{C.empty}</p>
-                  )}
-                </section>
+                  {asked(p.id)}
+                </li>
+              ))}
+            </ul>
+          ) : null}
+        </section>
+      ) : null}
+    </div>
+  );
 
-                <section aria-labelledby="rx-already" className="flex flex-col gap-2">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <h3 id="rx-already" className="text-label text-foreground">
-                      {C.already}
-                    </h3>
-                    <PharmacyCount view={pharmacy} />
-                  </div>
-                  {elsewhere.length ? asked(null) : null}
-                  {s.placed.length ? (
-                    <ul className="flex flex-col">
-                      {s.placed.map((p) => (
-                        <li
-                          key={p.id}
-                          className="border-border flex flex-col gap-2 border-t py-2.5 first:border-t-0"
-                        >
-                          <div className="flex flex-wrap items-center gap-2">
-                            <span className="text-body-s text-foreground min-w-0 flex-1">
-                              {p.display}
-                            </span>
-                            <Tag>{p.word}</Tag>
-                            {drugById(p.drugId) ? (
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() =>
-                                  setEditing({ target: { drugId: p.drugId }, at: null })
-                                }
-                              >
-                                {C.prescribeAgain}
-                              </Button>
-                            ) : null}
-                            {p.stoppable ? (
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => setStopping({ id: p.id, reason: "" })}
-                              >
-                                {C.stop}
-                              </Button>
-                            ) : null}
-                          </div>
-                          {stopping?.id === p.id ? (
-                            <div className="flex flex-wrap items-end gap-2">
-                              <div className="flex min-w-0 flex-1 flex-col gap-1">
-                                <label
-                                  htmlFor={reasonId}
-                                  className="text-caption text-muted-foreground"
-                                >
-                                  {C.stopReason}
-                                </label>
-                                <input
-                                  id={reasonId}
-                                  value={stopping.reason}
-                                  maxLength={500}
-                                  onChange={(e) =>
-                                    setStopping({ id: p.id, reason: e.target.value })
-                                  }
-                                  className={inputClass}
-                                />
-                              </div>
-                              <Button
-                                variant="secondary"
-                                disabled={busy || stopping.reason.trim().length < 3}
-                                onClick={() => void stop()}
-                              >
-                                {C.stop}
-                              </Button>
-                            </div>
-                          ) : null}
-                          {asked(p.id)}
-                        </li>
-                      ))}
-                    </ul>
-                  ) : (
-                    <p className="text-body-s text-muted-foreground">{C.alreadyNone}</p>
-                  )}
-                </section>
+  const modes = s.protocols ? { value: mode, count: protocolCount, onChange: setMode } : null;
 
-                {s.home.length ? (
-                  <section aria-labelledby="rx-home" className="flex flex-col gap-2">
-                    <h3 id="rx-home" className="text-label text-foreground">
-                      {C.takingAtHome}
-                    </h3>
-                    <p className="text-body-s text-foreground">{s.home.join(", ")}</p>
-                  </section>
-                ) : null}
-              </>
-            )}
-          </>
-        )}
-      </div>
-    </EmrDialog>
+  return (
+    <PlanPrescribeDialog
+      env={env}
+      allergies={allergies}
+      target={target}
+      time={time}
+      onClose={close}
+      onAdd={(added) => {
+        const rx = replacing ? { ...added, replaces: replacing } : added;
+        setLines((x) => (editAt == null ? [...x, rx] : x.map((l, i) => (i === editAt ? rx : l))));
+        setReplacing(null);
+        openNext(queue);
+      }}
+      session={{
+        patient: s.patient,
+        home: s.home,
+        modes,
+        protocols:
+          mode === "protocols" && modes ? (
+            <ProtocolsMode
+              surface={surface}
+              patientUserId={s.patientUserId}
+              encounterId={s.encounterId}
+              place={s.place}
+              facts={s.facts}
+              patientName={s.patient.name}
+              modes={modes}
+              onCount={setProtocolCount}
+              onSent={(m) => {
+                setMsg(m);
+                setMode("medicines");
+                void reload();
+              }}
+            />
+          ) : null,
+        sets: sets.map((set) => ({
+          id: set.id,
+          label: `${set.name} · ${set.drugIds.length}`,
+          title: set.drugIds.map((id) => drugById(id)?.generic ?? id).join(", "),
+          onPick: () => void applySet(set.drugIds),
+        })),
+        notice: msg,
+        lists,
+        footer: {
+          n: lines.length,
+          summary: lines.map((l) => l.drugName).join(" · "),
+          onReview: () => setReviewing(true),
+        },
+      }}
+    />
+  );
+}
+
+function Num({ n }: { n: number }) {
+  return (
+    <span
+      aria-hidden
+      className="bg-muted text-caption text-foreground grid size-6 shrink-0 place-items-center rounded-full font-medium"
+    >
+      {n}
+    </span>
   );
 }
 
