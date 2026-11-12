@@ -37,6 +37,12 @@ describe("legal pages", () => {
     expect(TERMS.sections[0]?.heading).toMatch(/not an emergency service/i);
   });
 
+  it("name the processors by company (review H-7)", () => {
+    const text = JSON.stringify(PRIVACY);
+    for (const p of ["Supabase", "Vercel", "Africa's Talking", "Expo", "Sentry"])
+      expect(text).toContain(p);
+  });
+
   it("name the Act and the regulator, and claim no registration number", () => {
     const text = JSON.stringify(PRIVACY);
     expect(text).toContain("Data Protection and Privacy Act, 2019");

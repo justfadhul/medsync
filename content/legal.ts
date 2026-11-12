@@ -76,7 +76,7 @@ export const PRIVACY: LegalDoc = {
       heading: "Who can see it",
       body: [
         "At the hospital, staff see only what their role needs. Reception sees your booking code, not your health details. Your name and photo are shown to the clinicians caring for you, and every time they are shown it is recorded.",
-        "We use a small number of service providers to run MedSync: hosting and database services, an SMS and USSD provider, and phone notification services. They process your information only on our instructions. Some of them store data on servers outside Uganda.",
+        "We use a small number of service providers to run MedSync: Supabase (hosting and database), Vercel (the website, and visit counts that do not identify you), Africa's Talking (SMS and USSD), Expo (phone app notifications) and Sentry (error reports). They process your information only on our instructions. Some of them store data on servers outside Uganda.",
         "We share information with others only when the law requires it, or when you ask us to.",
       ],
     },
