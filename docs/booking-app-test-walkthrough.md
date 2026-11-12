@@ -52,12 +52,13 @@ either way (`mobile/.env`).
 
 ### 0.4 Two browsers, one phone
 
-One browser holds up to five signed-in accounts (ADR 0280): add them at `/accounts` → **Add another account**
+One browser holds up to four signed-in accounts (ADR 0280, ADR 0472): add them at `/accounts` → **Add another account**
 and switch with **Use this account**; every tab uses the active one. Use a phone (Expo Go) for the patient
 app. The Africa's Talking simulator is your "feature phone".
 
-With all five accounts signed in, the cookies pass Node's 16 KB header limit and `next dev` answers **431**
-(§13, G3). Locally, start it with `NODE_OPTIONS=--max-http-header-size=65536`, or keep to four accounts.
+A fifth sign-in replaces the active account. (Five used to be allowed; their cookies passed Node's 16 KB header
+limit and every page answered **431**. A browser still holding a fifth account from then needs its site data
+cleared once.)
 
 Since migration 0288 (the MFA gate), Edge Functions refuse a staff session below aal2. A staff account signed
 in through `DEV_SKIP_MFA` stays at aal1: its Edge Function calls (check in, cancel a day, approvals) answer
@@ -173,8 +174,8 @@ FROM public.consent_versions WHERE consent_type = 'data_processing' AND version 
   walk-ins now") and **Next open day: <day> · Ask for a day** ("Pick an open clinic day. The clinic confirms
   it."). The footnote: "Very unwell right now? Do not book. Press the red Help button."
 - **Why are you coming?** offers **Something is wrong** and **Planned care**. While the symptom catalogue is off
-  (production, until Gate CS is signed and `FEATURE_SYMPTOM_CATALOG=1`), Something is wrong reads "This is not
-  available yet. You can still book a visit or come to the hospital today." — see §13, G1.
+  (production, until Gate CS is signed and `FEATURE_SYMPTOM_CATALOG=1`), only the Planned care list shows: the
+  Something is wrong door is hidden (§13, G1).
 
 ### 3.3 Ask for a day (`/patient/book/day`)
 
@@ -560,12 +561,12 @@ Walked as Sarah (patient), receptionistth1, clinicianth1 and adminth1 at Test Ho
 | D8  | cancel a clinic day                       | the Why box emptied after "See who this affects", so the cancel could never be sent     |
 | D9  | any staff action calling an Edge Function | a Supabase 520 printed the whole Cloudflare HTML page in the dialog                     |
 
-**Needs an owner ruling**
+**Owner rulings**
 
-| #   | What                                                                                                                                                                                                      |
-| --- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| G1  | "Something is wrong" is a dead end while the symptom catalogue is off. Sign Gate CS and set `FEATURE_SYMPTOM_CATALOG=1` for the pilot, or hide the door. Today symptoms can only be typed as a free note. |
-| G3  | Five signed-in accounts → HTTP 431 on Node's default 16 KB header limit. Raise the limit where the app runs, or cap ADR 0280 at four.                                                                     |
+| #   | What                                                                                                                                                 |
+| --- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
+| G1  | "Something is wrong" was a dead end while the symptom catalogue is off. **Ruled 12 Nov: hide it.** The door now shows only when the catalogue is on. |
+| G3  | Five signed-in accounts → HTTP 431 on Node's default 16 KB header limit. **Ruled 12 Nov: cap at four** (ADR 0472).                                   |
 
 **Seen, not fixed**
 
