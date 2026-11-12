@@ -42,7 +42,6 @@ export interface VisitRow {
   confirmedByPatientAtIso: string | null;
   cancelledReason: string | null;
   quotedFeeUgx: number | null;
-  quotedFeeLabel: string | null;
 }
 
 const LIMIT = 30;
@@ -73,7 +72,6 @@ async function readVisits(userId: string, past: boolean, now: Date): Promise<Vis
       confirmedByPatientAt: appointments.confirmedByPatientAt,
       cancelledReason: appointments.cancelledReason,
       quotedFeeUgx: appointments.quotedFeeUgx,
-      quotedFeeLabel: appointments.quotedFeeLabel,
     })
     .from(appointments)
     .leftJoin(users, eq(users.id, appointments.clinicianUserId))
@@ -118,7 +116,6 @@ async function readVisits(userId: string, past: boolean, now: Date): Promise<Vis
     confirmedByPatientAtIso: r.confirmedByPatientAt?.toISOString() ?? null,
     cancelledReason: r.cancelledReason,
     quotedFeeUgx: r.quotedFeeUgx,
-    quotedFeeLabel: r.quotedFeeLabel,
   }));
 }
 

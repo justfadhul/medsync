@@ -652,12 +652,19 @@ function Countdown({ iso, whenLine }: { iso: string; whenLine: string }) {
       role="timer"
       aria-label={D.visitInLabel(spoken, whenLine)}
       className="bg-pw-surface-2 rounded-pw-card flex flex-col gap-1.5 p-3"
+      suppressHydrationWarning
     >
       <p className="text-pw-ink-3 text-[11px] font-bold tracking-[0.06em] uppercase">{D.visitIn}</p>
-      <div aria-hidden className="flex gap-1.5" suppressHydrationWarning>
+      {/* The clock differs between server and browser: suppress on the elements that hold the digits (one level only). */}
+      <div aria-hidden className="flex gap-1.5">
         {[...units, [pad(seconds), "sec"] as [string, string]].map(([n, u]) => (
           <span key={u} className="flex min-w-[34px] flex-col items-center">
-            <span className="font-pw-mono text-[22px] font-semibold tabular-nums">{n}</span>
+            <span
+              className="font-pw-mono text-[22px] font-semibold tabular-nums"
+              suppressHydrationWarning
+            >
+              {n}
+            </span>
             <span className="text-pw-ink-3 text-[11px] font-semibold">{u}</span>
           </span>
         ))}
