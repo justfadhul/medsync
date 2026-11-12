@@ -32,6 +32,10 @@ const testEnv = Object.fromEntries(
 ) as Record<string, string>;
 
 export default defineConfig({
+  // Tests import a few mobile/src files. Without this, oxc loads mobile/tsconfig.json, which extends
+  // expo/tsconfig.base, and that is installed only by the Mobile job, so those files fail to transform.
+  // Vite's OxcOptions type omits `tsconfig`, but it passes the option through to oxc at runtime.
+  oxc: { tsconfig: false } as never,
   resolve: {
     alias: {
       "@": resolve(__dirname, "./"),
