@@ -5,6 +5,17 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); version
 
 ## [Unreleased]
 
+### Added — Reception registers a walk-in who has no MedSync account — 12 Nov 2026
+
+- **Register new patient** (a centred dialog) on the front door, on Confirm identity and on Book: sign-up's
+  questions and rules, no email or password. The record gets a patient code and is booked and checked in like any
+  patient; nobody can sign in with it ([ADR 0475](docs/adr/0475-walk-in-patients-registered-at-the-desk.md)).
+- Before creating anything, this hospital's patients with the same phone, or the same name and year of birth, are
+  shown instead; the desk uses one or says it is someone else (audited).
+- The patient's agreement to the data-processing notice is recorded with the receptionist's name. Wording is draft.
+- GATED migration 0291; deploy the new Edge Function `ha-register-patient` after it. Taking the record over at a
+  later sign-up is designed in the ADR, not built.
+
 ### Changed — Four signed-in accounts per browser, and no "Something is wrong" door while it leads nowhere — 12 Nov 2026
 
 - One browser holds four signed-in accounts, not five: five sessions of cookies passed Node's 16 KB header limit and

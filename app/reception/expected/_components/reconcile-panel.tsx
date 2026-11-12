@@ -1,35 +1,45 @@
 "use client";
 
 import type { ReceptionActionState } from "../../actions";
+import type { DeskNotice } from "@/components/intake/register-patient-dialog";
 import type { ProvisionalSummary, ReconciliationCandidate } from "@/lib/reception/queries";
 import Link from "next/link";
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 import { CheckIcon, XIcon } from "lucide-react";
 
-import { Button, buttonVariants } from "@/components/ui/button";
+import { RegisterPatientDialog } from "@/components/intake/register-patient-dialog";
+import { Button } from "@/components/ui/button";
 import { Pill } from "@/components/ui/pill";
-import { cn } from "@/lib/utils";
-import { reconcileIdentityAction } from "../../actions";
+import { reconcileIdentityAction, registerWalkInAction } from "../../actions";
 
 /**
  * "Identity to confirm" (PRD §2.8). The declared booking identity on the
  * left; candidate matches, each with its BASIS in words, on the right. No
  * candidate is selected until the clerk presses Confirm on that card; there
  * is no bulk action and no default. "Not this person" rejects the whole
- * provisional (the booking stays, unlinked); "Register new" leaves for the
- * intake register.
+ * provisional (the booking stays, unlinked); "Register new patient" opens
+ * the desk's register (ADR 0475), and the person registered or chosen there
+ * joins the list as one more card to Confirm — still one press, still
+ * ha-reconcile-identity.
  */
 export function ReconcilePanel({
   provisional,
-  candidates,
+  candidates: found,
+  notice,
 }: {
   provisional: ProvisionalSummary;
   candidates: ReadonlyArray<ReconciliationCandidate>;
+  /** The sign-up notice; null when none is published (no register button). */
+  notice: DeskNotice | null;
 }) {
   const [state, formAction, pending] = useActionState<ReceptionActionState, FormData>(
     reconcileIdentityAction,
     {},
   );
+  const [registered, setRegistered] = useState<ReconciliationCandidate | null>(null);
+  const candidates = registered
+    ? [registered, ...found.filter((c) => c.patientUserId !== registered.patientUserId)]
+    : found;
   const done = state.ok || provisional.reconciliationState !== "unreconciled";
 
   return (
@@ -157,12 +167,22 @@ export function ReconcilePanel({
                 Not this person
               </Button>
             </form>
-            <Link
-              href="/reception/intake"
-              className={cn(buttonVariants({ variant: "ghost", size: "sm" }), "tap min-h-11 px-4")}
-            >
-              Register new →
-            </Link>
+            {notice ? (
+              <RegisterPatientDialog
+                notice={notice}
+                action={registerWalkInAction}
+                variant="ghost"
+                onDone={(p) =>
+                  setRegistered({
+                    patientUserId: p.patientUserId,
+                    patientCode: p.patientCode,
+                    displayName: p.displayName,
+                    dateOfBirth: p.dateOfBirth,
+                    basis: ["chosen at the desk"],
+                  })
+                }
+              />
+            ) : null}
           </div>
           {state.error ? (
             <p role="alert" className="text-status-caution-fg text-body-s">

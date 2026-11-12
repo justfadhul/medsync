@@ -174,7 +174,9 @@ export type SaAuditAction =
   | "admit_patient"
   | "allocate_bed"
   | "confirm_arrival"
-  | "cancel_allocation";
+  | "cancel_allocation"
+  // 0291: a walk-in registered at the desk (written in SQL by migration 0291, ADR 0475)
+  | "register_patient";
 
 export type SaAuditTargetKind =
   | "staff_affiliation"

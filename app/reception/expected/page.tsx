@@ -7,6 +7,7 @@ import { SectionRule } from "@/components/medsync/panel";
 import { PatientIdentityCard } from "@/components/medsync/patient-identity";
 import { Pill } from "@/components/ui/pill";
 import { listHospitalDepartments } from "@/lib/intake/queries";
+import { liveNotice } from "@/lib/onboarding/notice";
 import { appointmentBookedVia } from "@/lib/reception/booked-via";
 import {
   fetchExpectedArrivals,
@@ -135,7 +136,13 @@ export default async function ReceptionExpectedPage({ searchParams }: PageProps)
         {provisional ? null : <AutoRefresh />}
       </header>
 
-      {provisional ? <ReconcilePanel provisional={provisional} candidates={candidates} /> : null}
+      {provisional ? (
+        <ReconcilePanel
+          provisional={provisional}
+          candidates={candidates}
+          notice={await liveNotice()}
+        />
+      ) : null}
 
       <DayStrip
         counts={weekCounts}

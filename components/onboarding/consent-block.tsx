@@ -16,11 +16,14 @@ export function ConsentBlock({
   effective,
   body,
   sms,
+  agree = CONSENT.agree,
 }: {
   version: string;
   effective: string;
   body: string;
   sms?: { body: string; declined: string; receipt: string } | null;
+  /** The box's words: the person's own by default; the desk records an agreement given in front of it (ADR 0475). */
+  agree?: string;
 }) {
   const { register } = useFormContext();
   const error = useFieldError("consent");
@@ -54,7 +57,7 @@ export function ConsentBlock({
             aria-describedby={error ? `${id}-error` : undefined}
             className="mt-0.5 size-5 shrink-0 accent-teal-700"
           />
-          <span className="text-body-m text-foreground">{CONSENT.agree}</span>
+          <span className="text-body-m text-foreground">{agree}</span>
         </label>
         <FieldError name="consent" />
       </div>

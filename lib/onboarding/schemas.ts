@@ -82,18 +82,40 @@ const placeField = (required: string) => z.string(required).check(z.regex(PLACE,
 
 // ── Patient ────────────────────────────────────────────────────────────────
 
+/** Who the patient is and where they live — sign-up and the desk ask the same (ADR 0475). */
+const patientFields = {
+  firstName: text(80, "Enter your first name."),
+  surname: text(80, "Enter your surname."),
+  sex: z.enum(["male", "female", "intersex", "prefer_not_say"], "Choose your sex at birth."),
+  // One message for the three boxes (below), not three.
+  dobDay: optionalString(),
+  dobMonth: optionalString(),
+  dobYear: optionalString(),
+  phone: phoneField("Enter your mobile number.", true),
+  place: placeField("Choose where you live from the list."),
+  village: optionalText(200),
+};
+
+/** A real date of birth, 18 or over (DPPA s.8, D13). */
+const adultDob = z.superRefine(
+  (v: { dobDay?: string; dobMonth?: string; dobYear?: string }, ctx) => {
+    const issue = (path: string, message: string) =>
+      ctx.addIssue({ code: "custom", path: [path], message });
+    if (!v.dobDay || !v.dobMonth || !v.dobYear)
+      return issue("dobDay", "Enter your date of birth: day, month and year.");
+    const iso = isoFromParts(v.dobDay, v.dobMonth, v.dobYear);
+    if (!iso) return issue("dobDay", "That date doesn't exist. Check the day, month and year.");
+    const age = ageOn(iso);
+    if (age < 0) issue("dobDay", "That date is in the future.");
+    else if (age > 120) issue("dobYear", "Check the year.");
+    else if (age < ADULT_AGE) issue("dobDay", UNDER_18);
+  },
+  ALWAYS,
+);
+
 export const patientSchema = z
   .object({
-    firstName: text(80, "Enter your first name."),
-    surname: text(80, "Enter your surname."),
-    sex: z.enum(["male", "female", "intersex", "prefer_not_say"], "Choose your sex at birth."),
-    // One message for the three boxes (below), not three.
-    dobDay: optionalString(),
-    dobMonth: optionalString(),
-    dobYear: optionalString(),
-    phone: phoneField("Enter your mobile number.", true),
-    place: placeField("Choose where you live from the list."),
-    village: optionalText(200),
+    ...patientFields,
     email: emailField,
     password: passwordField,
     smsConsent: z.optional(z.boolean()),
@@ -101,21 +123,12 @@ export const patientSchema = z
     smsSha: z.optional(z.string().check(z.regex(SHA256))),
     ...consentFields,
   })
-  .check(
-    z.superRefine((v, ctx) => {
-      const issue = (path: string, message: string) =>
-        ctx.addIssue({ code: "custom", path: [path], message });
-      if (!v.dobDay || !v.dobMonth || !v.dobYear)
-        return issue("dobDay", "Enter your date of birth: day, month and year.");
-      const iso = isoFromParts(v.dobDay, v.dobMonth, v.dobYear);
-      if (!iso) return issue("dobDay", "That date doesn't exist. Check the day, month and year.");
-      const age = ageOn(iso);
-      if (age < 0) issue("dobDay", "That date is in the future.");
-      else if (age > 120) issue("dobYear", "Check the year.");
-      else if (age < ADULT_AGE) issue("dobDay", UNDER_18);
-    }, ALWAYS),
-  );
+  .check(adultDob);
 export type PatientInput = z.infer<typeof patientSchema>;
+
+/** A walk-in registered at the desk: sign-up's questions, no sign-in; the patient agrees in front of the desk. */
+export const deskPatientSchema = z.object({ ...patientFields, ...consentFields }).check(adultDob);
+export type DeskPatientInput = z.infer<typeof deskPatientSchema>;
 
 // ── Clinical staff ─────────────────────────────────────────────────────────
 
