@@ -10,7 +10,7 @@
 
 import { z } from "npm:zod@4.4.3";
 
-import { getCaller, hasRole, serviceClient } from "../_shared/auth.ts";
+import { banAuthUser, getCaller, hasRole, serviceClient } from "../_shared/auth.ts";
 import { preflight } from "../_shared/cors.ts";
 import {
   badRequest,
@@ -93,6 +93,13 @@ Deno.serve(async (request: Request) => {
   // If the user was previously suspended we need to clear the
   // suspension trio because the CHECK constraint enforces "all set
   // when state=suspended, all null otherwise."
+  // Ban first: if it fails nothing is saved, so a retry is clean (review C-4).
+  const banError = await banAuthUser(user.id);
+  if (banError) {
+    log.error("ban failed", { requestId, reason: banError });
+    return serverError("sign-in ban failed", init);
+  }
+
   const { error } = await sb
     .from("users")
     .update({

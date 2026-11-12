@@ -79,17 +79,14 @@ describe.skipIf(!RLS_TESTS_ENABLED)("RLS: public.user_roles", () => {
     expect(error).not.toBeNull();
   });
 
-  test("hospital_admin CAN INSERT a role in their hospital", async () => {
+  // Review M-3 (0284): roles are granted only through the audited Edge Functions.
+  test("hospital_admin CANNOT INSERT a role directly, even in their hospital", async () => {
     const { error } = await admin.client.from("user_roles").insert({
       user_id: bob.id,
       role: "pharmacist",
       hospital_id: hospitalA.id,
     });
-    expect(error).toBeNull();
-    await serviceSql`
-      DELETE FROM public.user_roles
-      WHERE user_id = ${bob.id} AND role = 'pharmacist'
-    `;
+    expect(error).not.toBeNull();
   });
 
   test("hospital_admin CANNOT INSERT a role in another hospital", async () => {
@@ -102,8 +99,7 @@ describe.skipIf(!RLS_TESTS_ENABLED)("RLS: public.user_roles", () => {
   });
 
   test("authenticated CANNOT DELETE another user's role", async () => {
-    const { error } = await alice.client.from("user_roles").delete().eq("user_id", bob.id);
-    expect(error).toBeNull();
+    await alice.client.from("user_roles").delete().eq("user_id", bob.id);
     const [row] = await serviceSql<{ user_id: string }[]>`
       SELECT user_id FROM public.user_roles WHERE user_id = ${bob.id}
     `;

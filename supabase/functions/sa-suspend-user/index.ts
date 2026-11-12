@@ -13,7 +13,7 @@
 
 import { z } from "npm:zod@4.4.3";
 
-import { getCaller, hasRole, serviceClient } from "../_shared/auth.ts";
+import { banAuthUser, getCaller, hasRole, serviceClient } from "../_shared/auth.ts";
 import { preflight } from "../_shared/cors.ts";
 import {
   badRequest,
@@ -99,6 +99,13 @@ Deno.serve(async (request: Request) => {
   } catch (e) {
     log.error("audit insert failed", { requestId, reason: String(e) });
     return serverError("audit write failed", init);
+  }
+
+  // Ban first: if it fails nothing is saved, so a retry is clean (review C-4).
+  const banError = await banAuthUser(user.id);
+  if (banError) {
+    log.error("ban failed", { requestId, reason: banError });
+    return serverError("sign-in ban failed", init);
   }
 
   const { error } = await sb

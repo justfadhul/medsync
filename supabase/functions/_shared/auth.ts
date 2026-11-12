@@ -41,7 +41,28 @@ export async function getCaller(request: Request): Promise<User | null> {
 
   const { data, error } = await client.auth.getUser();
   if (error || !data.user) return null;
+  // Review C-4: a suspended or deactivated person's token still validates until it expires.
+  const { data: row } = await serviceClient()
+    .from("users")
+    .select("state")
+    .eq("id", data.user.id)
+    .maybeSingle();
+  if (row && CUT_OFF_STATES.includes(row.state)) return null;
   return data.user;
+}
+
+const CUT_OFF_STATES = ["suspended", "deactivated"];
+
+/**
+ * Ban the auth user so no token can be refreshed (review C-4). Supabase cannot revoke sessions by
+ * user id, so an access token already issued lives until it expires (an hour at most); `getCaller`
+ * and the app's scopes refuse it meanwhile because they read `users.state`.
+ */
+export async function banAuthUser(userId: string): Promise<string | null> {
+  const { error } = await serviceClient().auth.admin.updateUserById(userId, {
+    ban_duration: "876000h",
+  });
+  return error?.message ?? null;
 }
 
 /**

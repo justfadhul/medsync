@@ -71,6 +71,13 @@ describe.skipIf(!RLS_TESTS_ENABLED)("RLS: public.users", () => {
     expect(row?.full_name).toBe("Bob");
   });
 
+  test("alice CANNOT change her own state or email (review C-4, 0284)", async () => {
+    for (const patch of [{ state: "active" }, { email: "boss@example.org" }]) {
+      const { error } = await alice.client.from("users").update(patch).eq("id", alice.id);
+      expect(error).not.toBeNull();
+    }
+  });
+
   test("authenticated CANNOT INSERT into users", async () => {
     const { error } = await alice.client
       .from("users")
@@ -79,9 +86,8 @@ describe.skipIf(!RLS_TESTS_ENABLED)("RLS: public.users", () => {
   });
 
   test("authenticated CANNOT DELETE users", async () => {
-    const { error } = await alice.client.from("users").delete().eq("id", alice.id);
-    // Supabase returns no error on RLS-blocked DELETE; verify row still there.
-    expect(error).toBeNull();
+    // Refused by grant since 0284; either way the row must still be there.
+    await alice.client.from("users").delete().eq("id", alice.id);
     const [row] = await serviceSql<{ id: string }[]>`
       SELECT id FROM public.users WHERE id = ${alice.id}
     `;
