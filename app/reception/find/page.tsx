@@ -1,4 +1,6 @@
 import type { Metadata } from "next";
+import { refresh } from "next/cache";
+import { cookies } from "next/headers";
 import Link from "next/link";
 import { ArrowLeftIcon, SearchIcon } from "lucide-react";
 
@@ -27,14 +29,34 @@ const BOARD_STAGE_LABEL: Record<string, string> = {
   triaged: "Triaged",
 };
 
-interface PageProps {
-  searchParams: Promise<{ q?: string }>;
+/**
+ * Review H-7: a patient's name never goes in a URL (history, logs, analytics). The search is a POST; the query
+ * lives five minutes in an httpOnly cookie that only this page receives.
+ */
+const QUERY_COOKIE = "reception_find_q";
+
+async function find(formData: FormData) {
+  "use server";
+  await requireReceptionScope();
+  const q = String(formData.get("q") ?? "")
+    .trim()
+    .slice(0, 100);
+  const jar = await cookies();
+  if (!q) jar.delete({ name: QUERY_COOKIE, path: "/reception/find" });
+  else
+    jar.set(QUERY_COOKIE, q, {
+      httpOnly: true,
+      sameSite: "strict",
+      path: "/reception/find",
+      secure: process.env.NODE_ENV === "production",
+      maxAge: 300,
+    });
+  refresh();
 }
 
-export default async function ReceptionFindPage({ searchParams }: PageProps) {
-  const { q } = await searchParams;
+export default async function ReceptionFindPage() {
   const scope = await requireReceptionScope();
-  const query = (q ?? "").trim();
+  const query = ((await cookies()).get(QUERY_COOKIE)?.value ?? "").trim();
 
   // Two searches, two different bases, kept visibly apart.
   //
@@ -93,7 +115,7 @@ export default async function ReceptionFindPage({ searchParams }: PageProps) {
         className="group reveal-up relative"
         style={{ animationDelay: "100ms" }}
         role="search"
-        action="/reception/find"
+        action={find}
       >
         <label htmlFor="reception-find-q" className="sr-only">
           Search today&rsquo;s board by name, or all records by patient code

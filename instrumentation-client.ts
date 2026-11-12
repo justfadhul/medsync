@@ -1,12 +1,14 @@
 import * as Sentry from "@sentry/nextjs";
 
+import { scrubSentryUrls } from "@/lib/scrub-url";
+
 /**
  * Client-side Sentry init. Runs once per browser page load.
  *
- * Note: PII scrubbing on the client uses Sentry's own `sendDefaultPii: false`
- * + minimal `beforeSend` because lib/logger imports `server-only` and can't
- * be loaded here. The patterns are duplicated; keep them in sync if either
- * side adds a new PII field.
+ * PII on the client: `sendDefaultPii: false`, the user trimmed to an id,
+ * cookies dropped, and every URL scrubbed (lib/scrub-url, shared with the
+ * server): no query strings, ids masked. lib/logger's field redaction is
+ * server-only and is not applied here.
  */
 const dsn = process.env.NEXT_PUBLIC_SENTRY_DSN;
 
@@ -20,8 +22,9 @@ if (dsn) {
     beforeSend(event) {
       if (event.user) event.user = { id: event.user.id };
       if (event.request?.cookies) event.request.cookies = { _redacted: "true" };
-      return event;
+      return scrubSentryUrls(event);
     },
+    beforeSendTransaction: scrubSentryUrls,
   });
 }
 

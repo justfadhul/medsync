@@ -2,6 +2,7 @@ import * as Sentry from "@sentry/nextjs";
 
 import { productionOverrides } from "@/lib/boot-guard";
 import { redactPII } from "@/lib/logger";
+import { scrubSentryUrls } from "@/lib/scrub-url";
 
 /**
  * Next.js 16 instrumentation entry. Runs once per server cold-start in both
@@ -54,8 +55,9 @@ export async function register() {
           data: b.data ? (redactPII(b.data) as typeof b.data) : b.data,
         }));
       }
-      return event;
+      return scrubSentryUrls(event);
     },
+    beforeSendTransaction: scrubSentryUrls,
   };
 
   if (process.env.NEXT_RUNTIME === "nodejs") {

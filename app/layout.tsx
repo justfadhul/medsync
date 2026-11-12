@@ -1,10 +1,9 @@
 import type { Metadata, Viewport } from "next";
 import { Bricolage_Grotesque, Figtree, Geist, Geist_Mono } from "next/font/google";
-import { Analytics } from "@vercel/analytics/next";
 
 import { EmergencyPill } from "@/components/emergency/emergency-pill";
 import { OPEN_GRAPH, SITE_DESCRIPTION, SITE_NAME, SITE_TITLE, SITE_URL } from "@/lib/site-config";
-import { Providers } from "./providers";
+import { Providers, ScrubbedAnalytics } from "./providers";
 
 import "./globals.css";
 
@@ -121,7 +120,7 @@ export default function RootLayout({
               Emergency (ADR 0099). */}
           <EmergencyPill tide={process.env.TIDE_SURFACES} />
         </Providers>
-        <Analytics />
+        <ScrubbedAnalytics />
         <script
           type="application/ld+json"
           // schema.org JSON-LD — payload is a literal object we control,
