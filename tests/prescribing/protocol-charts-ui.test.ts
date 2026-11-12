@@ -103,20 +103,32 @@ const render = (role: "dr" | "rn" | "ph") =>
   );
 
 describe("protocol chart screens", () => {
-  it("the doctor sees Steps and orders, the medicines with Sign and send, and the nurse's buttons locked", () => {
+  it("the doctor sees Steps and orders: the flow chart, the open step beside it, the medicines", () => {
     const html = render("dr");
     expect(html).toContain("Steps and orders");
     expect(html).toContain("Monitoring chart");
+    expect(html).toContain("Flow chart");
+    expect(html).toContain("Patient&#x27;s path");
+    expect(html).toContain("‹ Previous");
+    expect(html).toContain("Medicines for this chart");
     expect(html).toContain("Sign and send to the pharmacy");
-    expect(html).toContain("Confirm the diagnosis");
+    expect(html).toMatch(/>Step \d+</); // the open step, beside the flow chart
     expect(html).toContain("End this chart");
     expect(html).not.toContain("Tasks and recording");
   });
 
-  it("the nurse sees Tasks and recording with the chart's tasks", () => {
+  it("the role is the signed-in user's: a word, never a switch", () => {
+    const html = render("dr");
+    expect(html).toContain("Viewing as");
+    expect(html).not.toMatch(/<button[^>]*>Nurse<\/button>/);
+    expect(html).not.toMatch(/<button[^>]*>Pharmacy<\/button>/);
+  });
+
+  it("the nurse sees Tasks and recording: the chart's tasks and the record form", () => {
     const html = render("rn");
     expect(html).toContain("Tasks and recording");
     expect(html).toContain("Nurse tasks");
+    expect(html).toContain("Save hour");
     expect(html).not.toContain("Sign and send to the pharmacy");
   });
 
@@ -124,7 +136,10 @@ describe("protocol chart screens", () => {
     const html = render("ph");
     expect(html).toContain("Drug orders");
     expect(html).toContain("What the chart needs");
-    expect(html).not.toContain("<button");
+    expect(html).not.toContain("Sign and send");
+    expect(html).not.toContain("Steps and orders");
+    // The only buttons are the rail's two places (Drug orders, Monitoring chart).
+    expect(html.match(/<button/g)).toHaveLength(2);
   });
 
   it("follows the design rules: no left accent bars, no red outside StatusWord, no bold headings, no side sheets", () => {
@@ -152,10 +167,14 @@ describe("protocol chart screens", () => {
 
   // Playwright is not set up in this repo, so the 1440 and 390 px smoke is the classes each width
   // relies on: the screens' own layout at 1440, and nothing wider than a phone at 390.
-  it("1440 px: the doctor's work screen is two columns from lg; 390 px: one column", () => {
-    const html = render("dr");
-    expect(html).toContain('class="grid gap-5 lg:grid-cols-[minmax(0,1fr)_340px]"');
-    expect(html).toContain("grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5");
+  it("1440 px: the prototype's three columns from 1180 px, two from 860 px; 390 px: one", () => {
+    expect(render("dr")).toContain(
+      "min-[1180px]:grid-cols-[minmax(250px,300px)_minmax(0,1fr)_minmax(280px,340px)]",
+    );
+    expect(render("rn")).toContain(
+      "min-[1180px]:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)_minmax(260px,320px)]",
+    );
+    expect(render("dr")).toContain("min-[860px]:grid-cols-[minmax(0,1fr)_minmax(0,1.3fr)]");
   });
 
   it("390 px: no fixed width wider than a phone, tables scroll in their own box, grid inputs shrink", () => {
@@ -183,8 +202,8 @@ describe("protocol chart screens", () => {
           );
       });
     }
-    // The record form and the vitals card: two and three columns at 390 px, so each input shrinks.
+    // The step fields and the record form sit in auto-fill grids, so each input shrinks.
     const chart = readFileSync(resolve(root, "components/protocols/chart-screen.tsx"), "utf8");
-    expect(chart.match(/h-8 w-full min-w-0 rounded-md border px-2 font-mono/g)).toHaveLength(2);
+    expect(chart.match(/h-10 w-full min-w-0 rounded-xl border px-3 font-mono/g)).toHaveLength(2);
   });
 });

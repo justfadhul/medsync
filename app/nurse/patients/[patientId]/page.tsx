@@ -22,7 +22,7 @@ import { clinicalObservations, medicationAdministrationRecords } from "@/db/sche
 import { asClinicalReader } from "@/lib/emr/db";
 import { emrV1Live, emrV1LiveFor, nurseTasksLiveFor, protocolsLiveFor } from "@/lib/emr/feature";
 import { loadChart } from "@/lib/emr/read/chart";
-import { ivLinesFor } from "@/lib/emr/read/nursing";
+import { ivLinesFor, loadNurseTasks } from "@/lib/emr/read/nursing";
 import { loadCfcVitals } from "@/lib/emr/read/vitals";
 import { toEncounterScope } from "@/lib/encounter/workspace-scope";
 import { isOperator } from "@/lib/lab/bedside-store";
@@ -69,6 +69,9 @@ const OBS_LABEL: Record<string, string> = {
   other: "Observation",
 };
 
+// Server-rendered on each request: a cannula put in today is day 1.
+const dayOf = (at: Date) => Math.floor((Date.now() - at.getTime()) / 86_400_000) + 1;
+
 export default async function NursePatientSummaryPage({ params }: PageProps) {
   const { patientId } = await params;
   const scope = await requireNurseScope();
@@ -88,9 +91,17 @@ export default async function NursePatientSummaryPage({ params }: PageProps) {
       labBedsideLiveFor(scope.hospitalId) &&
       (await isOperator(db as unknown as EmrTx, scope.hospitalId, scope.userId));
     // Prescribing kit P2 (b): the IV lines recorded from tasks on this patient's open visits.
-    const lines = nurseTasksLiveFor(scope.hospitalId)
-      ? await asClinicalReader({ userId: scope.userId, hospitalId: scope.hospitalId }, (tx) =>
-          ivLinesFor(tx, chart.patientUserId),
+    // The prototype's IV access tile: the line and its day, or "No line" and whether a task asks for one.
+    const iv = nurseTasksLiveFor(scope.hospitalId)
+      ? await asClinicalReader(
+          { userId: scope.userId, hospitalId: scope.hospitalId },
+          async (tx) => ({
+            lines: await ivLinesFor(tx, chart.patientUserId),
+            // ponytail: the ward's open tasks filtered here; a per-patient read if the ward list grows past 200.
+            asked: (await loadNurseTasks(tx, scope.hospitalId, 0)).open.some(
+              (t) => t.patientUserId === chart.patientUserId && t.type === "iv_cannula",
+            ),
+          }),
         )
       : null;
     // The open visit's monitoring charts and the fluid balance entry (ADR 0189).
@@ -106,15 +117,34 @@ export default async function NursePatientSummaryPage({ params }: PageProps) {
             </Link>
           </div>
         ) : null}
-        {lines ? (
+        {iv ? (
           <div className="mx-auto flex w-full max-w-[1200px] flex-wrap items-center gap-3 px-4 pb-4 md:px-8">
-            <p className="text-body-s text-foreground">
-              {lines.length
-                ? fill(NURSE_TASKS_COPY.ivAccess, {
-                    lines: lines.map((l) => `${l.size}, ${l.site}`).join(" · "),
-                  })
-                : NURSE_TASKS_COPY.noIvAccess}
-            </p>
+            {(iv.lines.length ? iv.lines : [null]).map((l, i) => (
+              <div
+                key={i}
+                className="bg-tide-sunken rounded-tide-tile flex min-w-0 flex-col gap-px px-3 py-2"
+              >
+                <span className="text-overline text-muted-foreground uppercase">
+                  {NURSE_TASKS_COPY.ivAccessLabel}
+                </span>
+                <span
+                  className={
+                    l
+                      ? "text-body-m text-foreground font-semibold"
+                      : "text-body-m text-muted-foreground"
+                  }
+                >
+                  {l ? fill(NURSE_TASKS_COPY.ivCannula, { size: l.size }) : NURSE_TASKS_COPY.noLine}
+                </span>
+                <span className="text-caption text-muted-foreground">
+                  {l
+                    ? fill(NURSE_TASKS_COPY.ivSiteDay, { site: l.site, day: dayOf(l.at) })
+                    : iv.asked
+                      ? NURSE_TASKS_COPY.noLineTask
+                      : NURSE_TASKS_COPY.noLineSub}
+                </span>
+              </div>
+            ))}
             <Link
               href={`/nurse/mar?patient=${chart.patientUserId}`}
               className="text-body-s text-foreground underline-offset-4 hover:underline"

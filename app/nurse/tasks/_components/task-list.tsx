@@ -4,8 +4,10 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
+import { ChoiceChips } from "@/components/emr/orders/choice-chips";
 import { Tag } from "@/components/medsync/tag";
-import { Button } from "@/components/ui/button";
+import { LabButton } from "@/components/tide/work/button";
+import { EmptyState } from "@/components/tide/work/kit";
 import { Input } from "@/components/ui/input";
 import { NURSE_TASKS_COPY as C } from "@/content/nurse-tasks";
 import { CHART_COPY } from "@/content/protocol-charts";
@@ -26,39 +28,13 @@ export interface TaskView {
 }
 
 const SELECT =
-  "border-input bg-background text-foreground focus-visible:ring-ring/50 text-body-s h-11 w-full rounded-md border px-3 outline-none focus-visible:ring-[3px]";
+  "border-input bg-background text-foreground focus-visible:ring-ring/50 text-body-s rounded-tide-field h-11 w-full border px-3 outline-none focus-visible:ring-[3px]";
+const BTN = "text-body-s h-11 px-5 max-sm:w-full";
 
-function Pick({
-  label,
-  value,
-  options,
-  onChange,
-}: {
-  label: string;
-  value: string;
-  options: readonly string[];
-  onChange: (v: string) => void;
-}) {
-  return (
-    <label className="flex min-w-0 flex-1 flex-col gap-1.5 sm:max-w-56">
-      <span className="text-caption text-muted-foreground">{label}</span>
-      <select className={SELECT} value={value} onChange={(e) => onChange(e.target.value)}>
-        <option value="" disabled>
-          —
-        </option>
-        {options.map((o) => (
-          <option key={o} value={o}>
-            {o}
-          </option>
-        ))}
-      </select>
-    </label>
-  );
-}
-
+/** One open task, as the prototype's `.ntask`: the To do tag, what, who, why, when; then the form in one row. */
 function OpenTask({ t }: { t: TaskView }) {
   const router = useRouter();
-  const [size, setSize] = useState("");
+  const [size, setSize] = useState<string | null>(null);
   const [site, setSite] = useState("");
   const [value, setValue] = useState("");
   const [busy, setBusy] = useState(false);
@@ -77,7 +53,7 @@ function OpenTask({ t }: { t: TaskView }) {
     setMsg(null);
     const r =
       t.type === "iv_cannula"
-        ? await doneCannulaTask({ ...who, size, site }).catch(() => null)
+        ? await doneCannulaTask({ ...who, size: size ?? "", site }).catch(() => null)
         : await saveTaskResult({ ...who, value }).catch(() => null);
     setBusy(false);
     if (!r?.ok) {
@@ -88,34 +64,58 @@ function OpenTask({ t }: { t: TaskView }) {
   };
 
   return (
-    <li className="border-border bg-card flex flex-col gap-3 rounded-lg border p-4">
-      <div className="flex min-w-0 flex-col gap-1">
+    <li className="bg-background rounded-tide-tile flex flex-col gap-2 px-4 py-3.5">
+      <div className="flex min-w-0 flex-col gap-0.5">
         <Tag hue="slate">{C.toDo}</Tag>
         <span className="text-heading-s text-foreground mt-1">{t.title}</span>
         <Link
           href={`/nurse/patients/${t.patientUserId}`}
-          className="text-body-s text-foreground w-fit underline-offset-4 hover:underline"
+          className="text-body-s text-foreground w-fit font-mono underline-offset-4 hover:underline"
         >
           {t.patient}
         </Link>
-        {t.why ? <span className="text-muted-foreground text-body-s">{t.why}</span> : null}
-        <span className="text-muted-foreground text-caption">{t.asked}</span>
+        {t.why ? <span className="text-body-s text-muted-foreground">{t.why}</span> : null}
+        <span className="text-caption text-muted-foreground">{t.asked}</span>
       </div>
       {t.type === "iv_cannula" ? (
-        <div className="flex flex-wrap items-end gap-3">
-          <Pick label={C.size} value={size} options={C.sizes} onChange={setSize} />
-          <Pick label={C.site} value={site} options={C.sites} onChange={setSite} />
-          <Button
-            className="h-11 w-full sm:w-auto"
-            disabled={busy || !size || !site}
+        <div className="mt-1 flex flex-wrap items-end gap-2">
+          <div className="flex min-w-0 flex-col gap-1">
+            <span className="text-caption text-muted-foreground">{C.size}</span>
+            <ChoiceChips
+              name={`${t.id}-size`}
+              label={C.size}
+              options={C.sizes.map((s) => ({ value: s, label: s }))}
+              value={size}
+              onChange={setSize}
+            />
+          </div>
+          <label className="flex min-w-0 flex-[1_1_200px] flex-col gap-1">
+            <span className="text-caption text-muted-foreground">{C.site}</span>
+            <select className={SELECT} value={site} onChange={(e) => setSite(e.target.value)}>
+              <option value="" disabled>
+                —
+              </option>
+              {C.sites.map((o) => (
+                <option key={o} value={o}>
+                  {o}
+                </option>
+              ))}
+            </select>
+          </label>
+          <LabButton
+            variant="primary"
+            className={BTN}
+            busy={busy}
+            disabledReason={!size || !site ? C.ivNeeds : null}
+            reasonPlacement="below"
             onClick={save}
           >
             {C.ivDone}
-          </Button>
+          </LabButton>
         </div>
       ) : t.type === "enter_result" ? (
-        <div className="flex flex-wrap items-end gap-3">
-          <label className="flex min-w-0 flex-1 flex-col gap-1.5 sm:max-w-56">
+        <div className="mt-1 flex flex-wrap items-end gap-2">
+          <label className="flex min-w-0 flex-[1_1_160px] flex-col gap-1">
             <span className="text-caption text-muted-foreground">
               {C.resultValue}
               {t.unit ? ` (${t.unit})` : ""}
@@ -127,13 +127,23 @@ function OpenTask({ t }: { t: TaskView }) {
               onChange={(e) => setValue(e.target.value)}
             />
           </label>
-          <Button className="h-11 w-full sm:w-auto" disabled={busy || !value.trim()} onClick={save}>
+          <LabButton
+            variant="primary"
+            className={BTN}
+            busy={busy}
+            disabledReason={!value.trim() ? C.resultNeeds : null}
+            reasonPlacement="below"
+            onClick={save}
+          >
             {C.saveResult}
-          </Button>
+          </LabButton>
         </div>
       ) : t.href ? (
-        <Link href={t.href} className="w-fit">
-          <Button className="h-11 w-full sm:w-auto">{CHART_COPY.openChart}</Button>
+        <Link
+          href={t.href}
+          className="bg-tide-lagoon-tint text-body-s text-foreground focus-visible:shadow-focus inline-flex min-h-11 w-fit items-center rounded-full px-4 font-semibold outline-none"
+        >
+          {CHART_COPY.openChart}
         </Link>
       ) : null}
       {msg ? (
@@ -145,9 +155,13 @@ function OpenTask({ t }: { t: TaskView }) {
   );
 }
 
+/** The prototype's Tasks block: the heading, the open tasks (or nothing to do), then the Done lines. */
 export function TaskList({ open, done }: { open: TaskView[]; done: TaskView[] }) {
   return (
-    <section className="flex flex-col gap-4">
+    <section aria-labelledby="nurse-tasks-h" className="flex flex-col gap-3">
+      <h2 id="nurse-tasks-h" className="text-heading-m text-foreground mt-2">
+        {C.tasksTitle}
+      </h2>
       {open.length ? (
         <ul className="flex flex-col gap-3">
           {open.map((t) => (
@@ -155,17 +169,16 @@ export function TaskList({ open, done }: { open: TaskView[]; done: TaskView[] })
           ))}
         </ul>
       ) : (
-        <p className="border-border text-muted-foreground text-body-s rounded-lg border border-dashed p-4">
-          {C.empty}
-        </p>
+        <EmptyState compact title={C.empty} why={C.emptyWhy} />
       )}
       {done.length ? (
-        <div className="flex flex-col">
-          <span className="text-muted-foreground font-mono text-[10px] tracking-[0.16em] uppercase">
-            {C.done}
-          </span>
+        <div className="mt-1 flex flex-col">
+          <span className="text-overline text-muted-foreground uppercase">{C.done}</span>
           {done.map((t) => (
-            <p key={t.id} className="border-border text-body-s text-muted-foreground border-t py-2">
+            <p
+              key={t.id}
+              className="border-border text-caption text-muted-foreground border-t py-1.5"
+            >
               {t.doneLine}
             </p>
           ))}

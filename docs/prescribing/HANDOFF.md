@@ -399,3 +399,121 @@ and unsigned. Lab values typed on a chart go to results tagged with the chart an
    mode, the chart screens) was opened in a browser at 1440 or 390 px: it needs 0279–0286 on a database and doctor,
    nurse and pharmacy sign-ins. Offline was tested through the outbox and the server, not by pulling a real
    connection.
+
+# UI matched to the prototype
+
+## Pharmacy (F4) and nurse (F5) screens
+
+What changed (presentation and client wiring only; actions, reads and safety gates unchanged):
+
+- **Nurse tasks** (`app/nurse/tasks/`): the prototype's NURSES block. Overline, title and sub, then one card holding
+  Protocols running (heading with its count; each chart a row "{protocol} chart · {patient} · time on the chart ·
+  last charted" with Open the chart) and Tasks (each task: To do, title, patient, why, asked; then Size, Site and
+  Done: cannula in in one row, or Result and Save result; Done lines underneath).
+- **Medicine chart** (`chart-doses.tsx`): each line a card, its doses as the prototype's step rows: the time in its
+  own column, the word, then Given before Withhold (40 px). Withhold and Wrong entry keep the centred reason dialog.
+- **Patient page**: the IV-access line is the prototype's fact tile: IV ACCESS · Cannula 18G · left forearm · day 1;
+  with none, "No line" and "Nurse asked to insert one" when a cannula task is open.
+- **Hand-over**: the "I checked who they are, and explained how to take each medicine" tick moved from the
+  Explained section to the end, right before Record (the prototype's order: what is given, who collects, the
+  tick, Confirm).
+
+Differences forced by the owner's rules and the design system:
+
+- Cannula size is chips, not a select (four or fewer choices are chips); no size or site is preselected (the
+  prototype's 20G / left hand would be invented data).
+- "To do" and each dose word are grey square Tags; the prototype's dashed empty boxes are the Tide empty state
+  (no dashed boxes); one lagoon Given per line (the first open dose), later ones outlined.
+- Every disabled button says why beside it (Done: cannula in, Save result, the reason dialogs' Save, Record
+  hand-over), which the prototype does not.
+- Withhold asks for a reason (FEATURES F5); the prototype withholds at a tap.
+
+Not matched, and why:
+
+- The pharmacy queue keeps the rework's signed words and tabs (Waiting, Queried, Ready to collect, Owed, Handed
+  over), not the prototype's (Asked the prescriber, Stopped by prescriber); its Ask the prescriber dialog is the
+  rework's signed one, not the prototype's Hold › Talk to the prescriber › question. Both are signed pharmacy
+  copy, not kit additions; relabelling needs the CSO.
+- The prototype's hand-over dialog (who collects as chips, one witness tick) stays the rework's numbered hand-over
+  page: two identifiers, the controlled witness and count, labels, counselling and payment are safety steps.
+- Resus lines never reach the dispense queue (no "Restock the cart" line); the cart is restocked by the existing
+  count-based cart check.
+- Task rows show the patient code only, not the prototype's name, age, sex and ward (no per-row PHI decrypt);
+  running protocols show no step list or End protocol here (they live on the chart).
+
+## Protocol chart screens (F7–F8)
+
+What changed (`components/protocols/`, presentation and client wiring only; engine, server writes, actions and the
+P11 outbox unchanged): the prototype's PROTOCOLS block. Header card (source overline, "{protocol} · {patient}",
+Started · hour now · phase; Protocol chips; Viewing as {role} and its note; Patient chips; stat tiles; Recent line;
+Aims Met / Not met / —). One large switch: "Steps and orders" (badge: steps that need you) or "Tasks and
+recording" (badge: N due), and "Monitoring chart" (badge: the chart's hour). Doctor: three columns from 1180 px
+(two from 860, one below) — Steps (Flow chart | List, flow by default, the patient's path filled in with its key),
+the open step beside them with ‹ Previous / Next ›, then Medicines for this chart (stock, Sign and send), Notes and
+the recent log with Undo. Nurse: Nurse tasks · Record ({slot} · due, Save {slot}) and the check card · the
+medicines' sent state and Notes. Pharmacy: a rail (Drug orders, Monitoring chart read only, Recent) and the drug
+orders with What the chart needs. Monitoring chart: Trends card (one panel per measure on one shared time axis,
+thresholds kept apart, dashed target, Now line) beside the Vitals card (tiles with mini trends, + Add a parameter
+inline with Quick pick, one-row entry with GCS E/V/M totalled, history), then the time grid. The protocols page
+is the same header with the Protocol chips; a protocol with no running chart opens "Start the {short} chart for
+{patient}" (`?start=`), Start for a doctor, "The doctor starts …" for anyone else.
+
+Differences forced by the owner's rules and the design system:
+
+- No "Viewing as" switch: the role is the signed-in cadre's, shown as a grey tag with its note.
+- Step and flow states (done, needs you, to do, later) are a filled, ringed or empty grey mark plus a grey Tag or
+  hidden word, not green/amber; "Now" is a grey Tag; badges are grey. Teal marks only the selection and the
+  patient's path (the action colour, never a state).
+- Amber/red only for a value's clinical reading (vital tiles, grid and table cells, field borders, trend points),
+  always with a word or a glyph; a stop branch "This patient" and overdue tasks/vitals use the caution word.
+  Threshold lines are the graph frame's amber; the prototype's green target lines are grey.
+- The open step sits inline in the middle column (the prototype's "open it beside"), not a drawer; End and Undo
+  reasons stay centred `EditorDialog`s. On a phone the step scrolls into view under the steps.
+- Grid, vitals table, trend panels and picker rows scroll in their own box at 390 px; trends are drawn on
+  `components/emr/chart/graphs/frame` (labels in its right gutter, not over the plot).
+- "Live stock" is "Stock at {t}": the words are read at page load and after each write, not streamed; one line
+  per medicine (the stock answer's own point), not the Ward 4B / Main pair with deltas.
+
+Not matched, and why:
+
+- Patients show by code (no per-row name decrypt). The Patient picker lists this patient and the ward's other
+  patients already on this protocol; eligible patients not on it are not listed (no eligibility read exists).
+- No "Prototype clock" / "Start again": the dev-only `?at=` clock stays (+1 h / +6 h), production has none.
+- A doctor keeps "End this chart" in the header beside Reopen (ending early needs a reason; every module also
+  ends from its last step). The quantity reads "Qty n" (the formulary has no pack unit).
+- "Open in the pharmacy queue" is not shown: the pharmacy workspace does not open EMR charts (P4 default).
+- The nurse Tasks page's "Protocols running" stays inline in `app/nurse/tasks/page.tsx`, already matched to the
+  prototype in the nurse screens pass above; no separate component was split out.
+
+## UI matched to the prototype
+
+Prescribe (`components/clerking/plan/prescribe-dialog.tsx`, `prescribe-session.tsx`, `protocols-mode.tsx`) now
+follows `docs/prescribing/kit/prototype/Main.dc.html`: one dialog with the patient name, place → collect pill and
+fact strip (Allergy, Weight, Kidney, Pregnancy, Already taking), then 1 · What (search with arrows and Enter, the
+group select, order sets, the list with "Suggested for this patient", IV fluids and the pharmacy classes, the brand
+under the picked row), 2 · How (weight, regimen cards, your own dose, the dose line, "How to give it" selects with
+"Changed from the regimen" / "Use the regimen", problem, note, To supply, repeats) and 3 · Check (checks that fold
+to one line when answered, "N passed", then This prescription and "Already prescribed for {name}"). Footer: "Add to
+prescription" / "Add · N to answer" and "Review and send" → "Check before you send" → "Sign and send to the
+pharmacy". Protocols: 1 · Protocol list and 2 · Plan (starting values, Before you start, If at any time, the
+supply, Flow chart | Step list); the builder is its own dialog with a live preview. Logic, actions and checks are
+unchanged.
+
+The class list is one: `CLASSES` in `content/pharmacy-medicines.ts` gained Cardiac, Antiplatelets, Emergency and
+antidotes, Sedatives, Haemostatics, Blood products, Gout and Urology; `lib/prescribing/pharmacy-classes.ts` maps
+all 75 formulary classes to one each (test: `tests/prescribing/pharmacy-classes.test.ts`). `PHARMACY_MEDICINES_COPY`
+is still draft, so nothing to re-sign.
+
+Differences forced by the owner's rules, and not matched:
+
+- Review, the pharmacy's question and the builder are centred `EditorDialog`s; nothing slides in.
+- Workflow words (In this prescription, Already prescribed, the pharmacy status, In stock / None, check counts) are
+  grey square Tags; amber only for a patient fact (allergy, low eGFR, pregnancy, missing weight) and stop/check.
+- No per-row stock counts or live feed: the prescriber sees stock words only for the picked medicine (AV-6).
+- "Usual: …" on a row and pre-set doses come only from a signed regimen that applies; no dose-by-age table.
+- No favourites section, no IV access chip (no data), no per-row allergy warnings (the checks carry them).
+- Weight cannot be entered in the dialog (no weight write here); the box says to weigh and record it.
+- Pharmacy answers keep the signed Keep / Change / Stop words and need a reason, not one tap.
+- Protocols send from the protocol (its own Sign and send), not through the basket. The fluid chips stay.
+- The clerking Plan shows no basket in column 3 (its basket is the Plan's own).
+- `components/clerking/plan/medicines-browse-dialog.tsx` is no longer used by Prescribe (left in place).

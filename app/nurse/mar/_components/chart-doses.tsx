@@ -7,7 +7,8 @@ import { useState } from "react";
 
 import { EmrDialog } from "@/components/emr/emr-dialog";
 import { Tag } from "@/components/medsync/tag";
-import { Button } from "@/components/ui/button";
+import { LabButton } from "@/components/tide/work/button";
+import { EmptyState } from "@/components/tide/work/kit";
 import { NURSE_TASKS_COPY as C } from "@/content/nurse-tasks";
 import { recordChartDose, undoChartDose } from "@/lib/emr/actions/nursing";
 import { formatClock } from "@/lib/emr/charts/scale";
@@ -93,44 +94,49 @@ export function ChartDoses({
     }
   };
 
-  const cell = (line: NurseMarLine, c: MarCell) => {
+  // The prototype's step row (`.rev`): the time in its own column, the word, then Given / Withhold.
+  const cell = (line: NurseMarLine, c: MarCell, first: boolean) => {
     const open = c.state === "due" || c.state === "delayed";
     const dose = open ? undefined : line.doses.find((d) => d.at === c.at);
     return (
-      <li
-        key={c.at}
-        className="border-border flex flex-wrap items-center justify-between gap-2 border-t py-2"
-      >
-        <span className="flex min-w-0 items-center gap-2">
-          <span className="text-body-s text-foreground font-mono">{formatClock(c.at)}</span>
-          <Tag hue="slate">{c.word}</Tag>
+      <li key={c.at} className="border-border flex gap-3 border-t px-3 py-2.5 first:border-t-0">
+        <span className="text-caption text-ink-700 w-14 shrink-0 pt-0.5 font-bold tabular-nums">
+          {formatClock(c.at)}
         </span>
-        {open && line.chartable ? (
-          <span className="flex gap-2">
-            <Button size="sm" disabled={busy} onClick={() => give(line.row.prescriptionId, c.at)}>
-              {C.given}
-            </Button>
-            <Button
+        <div className="flex min-w-0 flex-1 flex-col gap-2">
+          <Tag hue="slate">{c.word}</Tag>
+          {open && line.chartable ? (
+            <span className="flex flex-wrap gap-2">
+              <LabButton
+                variant={first ? "primary" : "secondary"}
+                className="h-10 px-5"
+                busy={busy}
+                onClick={() => give(line.row.prescriptionId, c.at)}
+              >
+                {C.given}
+              </LabButton>
+              <LabButton
+                className="h-10 px-5"
+                busy={busy}
+                onClick={() =>
+                  setAsk({ kind: "withhold", prescriptionId: line.row.prescriptionId, at: c.at })
+                }
+              >
+                {C.withhold}
+              </LabButton>
+            </span>
+          ) : dose ? (
+            <LabButton
+              variant="text"
               size="sm"
-              variant="secondary"
-              disabled={busy}
-              onClick={() =>
-                setAsk({ kind: "withhold", prescriptionId: line.row.prescriptionId, at: c.at })
-              }
+              className="w-fit"
+              busy={busy}
+              onClick={() => setAsk({ kind: "undo", marId: dose.id })}
             >
-              {C.withhold}
-            </Button>
-          </span>
-        ) : dose ? (
-          <Button
-            size="sm"
-            variant="ghost"
-            disabled={busy}
-            onClick={() => setAsk({ kind: "undo", marId: dose.id })}
-          >
-            {C.wrongEntry}
-          </Button>
-        ) : null}
+              {C.wrongEntry}
+            </LabButton>
+          ) : null}
+        </div>
       </li>
     );
   };
@@ -143,28 +149,36 @@ export function ChartDoses({
       </header>
       {lines.length ? (
         <ul className="flex flex-col gap-3">
-          {lines.map((l) => (
-            <li key={l.row.prescriptionId} className="border-border bg-card rounded-lg border p-4">
-              <div className="flex flex-col gap-0.5">
-                <span className="text-body-m text-foreground font-medium">{l.row.label}</span>
-                <span className="text-muted-foreground text-body-s">{l.row.detail}</span>
-                {l.row.note ? (
-                  <span className="text-muted-foreground text-caption">{l.row.note}</span>
+          {lines.map((l) => {
+            const firstOpen = l.row.cells.findIndex(
+              (c) => c.state === "due" || c.state === "delayed",
+            );
+            return (
+              <li
+                key={l.row.prescriptionId}
+                className="bg-card shadow-tide-card rounded-tide-card flex flex-col gap-2.5 p-4"
+              >
+                <div className="flex min-w-0 flex-col gap-0.5">
+                  <span className="text-heading-s text-foreground">{l.row.label}</span>
+                  <span className="text-muted-foreground text-body-s">{l.row.detail}</span>
+                  {l.row.note ? (
+                    <span className="text-muted-foreground text-caption">{l.row.note}</span>
+                  ) : null}
+                  {!l.chartable ? (
+                    <span className="text-muted-foreground text-caption">{C.notHere}</span>
+                  ) : null}
+                </div>
+                {l.row.cells.length ? (
+                  <ul className="bg-background rounded-tide-row ring-border flex flex-col overflow-hidden ring-1 ring-inset">
+                    {l.row.cells.map((c, i) => cell(l, c, i === firstOpen))}
+                  </ul>
                 ) : null}
-                {!l.chartable ? (
-                  <span className="text-muted-foreground text-caption">{C.notHere}</span>
-                ) : null}
-              </div>
-              {l.row.cells.length ? (
-                <ul className="mt-2 flex flex-col">{l.row.cells.map((c) => cell(l, c))}</ul>
-              ) : null}
-            </li>
-          ))}
+              </li>
+            );
+          })}
         </ul>
       ) : (
-        <p className="border-border text-muted-foreground text-body-s rounded-lg border border-dashed p-4">
-          {C.marEmpty}
-        </p>
+        <EmptyState compact title={C.marEmpty} />
       )}
       {msg && !ask ? (
         <p role="alert" className="text-body-s text-foreground">
@@ -185,12 +199,18 @@ export function ChartDoses({
         description={ask?.kind === "undo" ? C.wrongEntryNote : undefined}
         footer={
           <>
-            <Button variant="secondary" onClick={() => setAsk(null)}>
+            <LabButton className="h-11 px-5" onClick={() => setAsk(null)}>
               {C.cancel}
-            </Button>
-            <Button disabled={busy || reason.trim().length < 3} onClick={confirm}>
+            </LabButton>
+            <LabButton
+              variant="primary"
+              className="h-11 px-5"
+              busy={busy}
+              disabledReason={reason.trim().length < 3 ? C.reasonNeeds : null}
+              onClick={confirm}
+            >
               {C.save}
-            </Button>
+            </LabButton>
           </>
         }
       >
