@@ -3,7 +3,9 @@
 A hands-on walkthrough for the owner and anyone they hand a phone to. It covers what only a person can see;
 the machine already checks the rest (§0). Every step is **Do → Expect**. Where a step is expected to be
 _refused_, the refusal is the pass. Every label and sentence below was checked against the code on
-2026-09-20.
+2026-09-20; §3 (patient web), §5 (reception) and §6 (doctor, cancel a clinic day) were re-walked against the
+Tide redesign on a local dev server on 2026-11-12. §4 (phone) and §7–§11 were not re-walked. What broke on
+that run, and what is still open, is in §13.
 
 Read alongside: `docs/booking-app-handoff.md` (deploy order, secrets), `docs/ops-channels.md` (USSD/SMS
 runbook), ADRs 0084–0094 (why things behave as they do).
@@ -50,8 +52,12 @@ either way (`mobile/.env`).
 
 ### 0.4 Two browsers, one phone
 
-Roles cannot share a browser session. Use one browser (or profile) per role, and a phone (Expo Go) for the
-patient app. The Africa's Talking simulator is your "feature phone".
+One browser holds up to five signed-in accounts (ADR 0280): add them at `/accounts` → **Add another account**
+and switch with **Use this account**; every tab uses the active one. Use a phone (Expo Go) for the patient
+app. The Africa's Talking simulator is your "feature phone".
+
+With all five accounts signed in, the cookies pass Node's 16 KB header limit and `next dev` answers **431**
+(§13, G3). Locally, start it with `NODE_OPTIONS=--max-http-header-size=65536`, or keep to four accounts.
 
 ---
 
@@ -126,12 +132,15 @@ Everything below happens at `/hospital-admin`.
 
 ---
 
-## 3. Patient on the web
+## 3. Patient on the web (Tide)
 
-Sign in as **Patient A**. A patient with no hospital yet lands on the directory ("Welcome, <name>. Choose
-your hospital…") — on the phone the same list is the home — and nothing about vitals or doses until one is
-chosen. Only **active** hospitals are listed: a hospital still `provisioning` (not yet activated at
-`/admin/tenants`) does not appear.
+With `PATIENT_WEB_TIDE` on, every `/patient/*` page is the Tide design (served from `app/pw/`). The old URLs
+redirect: `/patient/appointments` → `/patient/visits`, `/patient/clinician/<id>` →
+`/patient/book/day?doctor=<id>`, `/patient/symptoms` → `/patient/book/wrong`, `/patient/household` →
+`/patient/me/household`.
+
+Sign in as **Patient A**. A patient with no hospital yet is asked to choose one ("Choose your hospital first")
+at `/patient/hospitals`; only **active** hospitals are listed.
 
 ### 3.1 Consent re-acceptance (Gate H)
 
@@ -147,90 +156,67 @@ FROM public.consent_versions WHERE consent_type = 'data_processing' AND version 
 ```
 
 - **Do:** open `/patient`.
-- **Expect:** you land on `/patient/consent` with the **full text** of v1.1, a checkbox, "Agree and continue"
-  and the header's Sign out. The left rail and the bottom tab bar are **gone** — nothing to tap that would
-  lead back here. Submit **without** ticking: the browser refuses and points at the box (its own "please tick
-  this box" prompt); the server's red "Tick the box to continue." is the second line of defence. Tick and
-  submit: you are on the home. Open `/patient/consent` again: "Data-processing notice v1.1 accepted — On
-  <date>" in East Africa Time.
-- **Also:** while gated, try `/patient/appointments` directly → redirected back to consent.
+- **Expect:** you land on `/patient/consent` with the full text of v1.1, a checkbox and "Agree and continue".
+  Nothing else to tap leads back in. Tick and submit: you are on the home.
+- **Also:** while gated, try `/patient/visits` directly → redirected back to consent.
 
-### 3.2 The home (the reference design)
+### 3.2 Book a visit (`/patient/book`)
 
-- **Expect:** the two doors ("Coming to the hospital today" first and filled; "Ask for a day" second), then
-  **Let's find your doctor** with a search box, **Your clinicians** as a horizontal carousel — clinicians of
-  departments with a slot-mode line (photo or monogram, rating or "No ratings yet", "Next open <day>" from the
-  §2.5 block, else "No days open here yet") — then **Find care** tiles, one filled (the clinic open soonest),
-  each with its mode word and the fee: `UGX 30,000 to UGX 35,000, depending on which clinician you see` on
-  Follow-up review (base + override = a range), `UGX 20,000` on General clinic, both sentences beneath ("You
-  pay at the hospital, not in the app." / "Waivers may apply — ask at the desk."), and **nothing** on the
-  free line.
-- **Do:** type the doctor's surname in the search.
-- **Expect:** the carousel narrows to the doctor, the Find care tiles disappear, and the count line announces
-  "1 clinician and 0 clinics match" (a screen reader hears it). Type the department name instead and both
-  lists match. Clear it: everything returns.
+- **Do:** from the home, Book (or open `/patient/book`).
+- **Expect:** "Book a visit" with two doors: **Open now · Come to the hospital today** (or "No clinic takes
+  walk-ins now") and **Next open day: <day> · Ask for a day** ("Pick an open clinic day. The clinic confirms
+  it."). The footnote: "Very unwell right now? Do not book. Press the red Help button."
+- **Why are you coming?** offers **Something is wrong** and **Planned care**. While the symptom catalogue is off
+  (production, until Gate CS is signed and `FEATURE_SYMPTOM_CATALOG=1`), Something is wrong reads "This is not
+  available yet. You can still book a visit or come to the hospital today." — see §13, G1.
 
-### 3.3 The provider screen
+### 3.3 Ask for a day (`/patient/book/day`)
 
-- **Do:** tap the doctor's card → `/patient/clinician/<id>`.
-- **Expect:** photo card with a circular Back, rating badge (or none), name · cadre · department, the action
-  row (the video circle reads "Video" or "In person"; phone and chat read "No calls" / "No chat" with the
-  reason in their label), the stats strip — **With us** / **Patients** / **Reviews** — reading "—" where there
-  is nothing yet (never a flattering 0). Date strip with a month stepper; the days and **times** come from the
-  doctor's §2.5 availability on the slot line (Follow-up review) — positions never appear here. The fee reads
-  **one number** for that line with the cadre's name: `Medical Officer · UGX 35,000` (the §2.3 override), not
-  the range. The docked button sits above the tab bar, never under it.
-- **Do:** pick a day **and a time**, then tap **Book this time** (disabled as "Pick a day and time" until both
-  are chosen).
-- **Expect:** `/patient/book?line=…&clinician=…&slot=…` opens with that choice already made.
+- **Expect:** a month calendar ("Open days are bold with a dot"), **Morning or afternoon?** with "Doors 08:00"
+  or "No clinic", and the sentence "The time is when doors open, not your hour. You are seen in the order
+  people arrive with a code." Then **Who do you want to see?** (Any doctor, or a named clinician, each with the
+  fee), **Anything the doctor should know? · Optional** (text, Voice note, Add photo, Camera), and **Pay now ·
+  Mobile Money** / **Pay later**. "Demo payment: no money moves, and your ticket says so." The submit button
+  names the fee, the day and the part of the day.
+- **Do:** pick a day and send.
+- **Expect:** "The clinic confirms it. You will see the answer in Visits." The visit is on `/patient/visits`
+  (Confirmed at once where the clinician has auto-confirm on). The notification "Your visit is booked" is on
+  `/patient/notifications`.
+- **Try:** book 5 more times quickly → the sixth is refused (5 per hour).
 
-### 3.4 Book a clinic day (session mode)
+### 3.4 A doctor's time (slot mode)
 
-- **Do:** `/patient/book`. Steps: Reason → (Before you book, for a new problem) → Clinic → Clinic day → Check.
-- **Expect:** the reason list is the 13 administrative reasons; **no clinical question anywhere**. The "Before
-  you book" interstitial is static text — no form. On **Clinic day**, the unnamed rule's days are disabled with
-  "Clinician not yet named"; the named days show places left. On **Check**: who, the day ("Clinic day — a
-  position, not an exact time"), the reason, and the sentence about the code. The fee is **not** repeated in
-  the wizard — it was on the tile and the provider screen, and the quoted number appears on
-  `/patient/appointments` after booking. Confirm.
-- **Expect (receipt):** a booking code, the day, a **position** and an **arrival window** — never a clock time
-  for the appointment itself. `/patient/appointments` lists it with the quoted fee.
-- **Try:** book 5 more times quickly with different reasons → the sixth is refused (5 per hour).
+- **Do:** open a slot-mode doctor: `/patient/book/day?doctor=<id>&department=<id>&hospital=<id>` (the old
+  provider link redirects here).
+- **Expect:** days and **times** from the doctor's availability (§2.5). Picking a time shows a live countdown,
+  "Your visit is in … hrs … min … sec", with no hydration error in the console.
 
-### 3.5 Book a time (slot mode)
+### 3.5 Waitlist
 
-- **Do:** again, choose _Follow-up review_ → a day and a time from the doctor's availability.
-- **Expect:** `pending_approval` until the doctor confirms (§6.2); the receipt says so in plain words.
+- **Expect:** "Tell me if a place opens" appears on the day page **only** when the chosen line has no open
+  day and takes a waiting list. Set that up first: a line whose days are all full or none published inside its
+  time-to-care window (default 7 days). At Test Hospital-1 every line had open days on 12 Nov, so the door
+  could not be reached.
+- **Then:** join; free a place (cancel another patient's booking) → the entry is **offered** and a
+  `waitlist_offer` dispatch is queued; `pt-accept-waitlist-offer` books it when accepted.
 
-### 3.6 Waitlist
+### 3.6 Visits: move, cancel, arrive (`/patient/visits`)
 
-- **Do:** as hospital admin, set the General clinic rule's **bookable** capacity to 1. This re-stamps only
-  **empty** future days, so use a day nobody has booked (or cancel §3.4's bookings first), and make sure no
-  other named day of the line inside its time-to-care window (default 7 days) still has a place. As Patient B
-  (phone or a second browser) book that day; as Patient A try it.
-- **Expect:** the day shows Full → the wizard offers **"Tell me if a place opens"**. Join. Then cancel Patient
-  B's booking.
-- **Expect:** Patient A's waitlist entry is **offered** the released place and a `waitlist_offer` row is queued
-  at once in `notification_dispatches`; the dispatcher (§8) sends it; `pt-accept-waitlist-offer` books it when
-  accepted.
+- **Expect:** "This week": the month calendar, the next visit, and the week ahead. Tap a visit →
+  `/patient/visits/<id>`: the band (department, status · code), the clinician, the **ticket** (hospital, day,
+  clinic, who, time, the fee as money — "Not paid · UGX 50,000" — never the line's name), then **I'm coming**
+  (it becomes **I'm here** on the day), **Move it**, **Cancel**, and **Getting there**.
+- **Move it:** a dialog with this clinician's open days and times and a reason (8 characters at least) →
+  "Your visit has moved." The moved visit has a new code and keeps the quoted fee.
+- **Cancel:** a reason (8 characters at least) → "Your visit is cancelled." An ended visit shows the sentence
+  ("Cancelled at the patient's request.") and no ticket, arrive note or Getting there.
+- **I'm here:** on the day; the reception board (§5.2) shows the patient as arrived.
 
-### 3.7 Move, cancel, arrive
+### 3.7 Household
 
-- **Move:** on `/patient/appointments`, the §3.4 clinic-day booking says "A place in a clinic day cannot be
-  moved yet" (by design — cancel and book another day). Use the §3.5 slot booking: **Move this visit** → pick
-  another time. The new booking carries the **same quoted fee** even if the admin changed the price in between
-  (a quote is a snapshot).
-- **Cancel:** cancel one. The appointments page shows "Cancelled at the patient's request." — a sentence, never
-  a raw column value.
-- **Arrive:** on the day of a confirmed in-person visit (any time that day), "I have arrived" appears; tap it.
-  The reception board (§5.2) shows you as checked in.
-
-### 3.8 Household
-
-- **Do:** `/patient/household` → add an adult member (declared adult, an adult age). Try a member aged 12.
-- **Expect:** the adult saves; the child is refused with "Booking for a child is not available yet." Booking
-  for the member shows "For <name>" on the receipt; the quoted fee is on `/patient/appointments` as for your
-  own visits (they will pay).
+- **Do:** `/patient/me/household` → add an adult member. Try a member aged 12.
+- **Expect:** the adult saves; the child is refused with "Booking for a child is not available yet." A
+  member's visit is logistics only: "You booked this for <name>. It can be moved or cancelled at the desk."
 
 ---
 
@@ -289,71 +275,77 @@ Sign in as **Reception** (MFA). `/reception`.
 
 ### 5.1 Book on behalf (`/reception/book`)
 
-- **Do:** a **new caller**: name, phone, date of birth, "declared adult" ticked. Choose General clinic, a day.
-  For §5.2, give the caller **Patient A's phone** (or A's name and year of birth).
-- **Expect:** a **provisional** booking with a code; the caller is told the position and the window.
-- **Do:** a caller with **age 15**; then a caller with **age 18 typed beside a 2015 birthday**.
-- **Expect:** both refused — the form says "Booking for a child is not available yet." before you can submit,
-  and if you force the request the **server** refuses with the same sentence (either number under 18).
-- **Do:** a caller born exactly 18 years ago today.
-- **Expect:** accepted on both sides — the desk and the server count whole calendar years the same way.
+- **Do:** **Who is calling?** → **New caller** (Name as given, Phone, Date of birth) or an existing patient
+  (from a record, `/reception/book?patient=<id>` fills it in). **Why are they coming?** (Reason; What is
+  bothering them) → **Which clinic?** → **Which clinic day?** (or **Which day and time?** on a slot line) →
+  **Check before booking** → **Book a place** (or **Book this time**). For §5.2, give the caller **Patient A's
+  phone** (or A's name and year of birth).
+- **Expect:** "Place booked" with **Booking code — read it out**, the **Position** and **Arrive between**.
+  "The booking code is texted here." A new caller's booking is provisional (**Identity to confirm**).
+- **Do:** a caller aged 15; then age 18 typed beside a 2015 birthday.
+- **Expect:** both refused with "Booking for a child is not available yet." on the form and from the server.
 
 ### 5.2 Expected today (`/reception/expected`)
 
-- **Expect:** today's bookings with their time and position; **Check in** and **No-show…** actions; the
-  provisional booking reads **Identity to confirm** with a **Confirm identity** link that opens the "Who is
-  this booking for?" panel. Candidates appear only on the same phone, or the same name and year of birth —
-  that is why §5.1 used A's phone.
-- **Reconcile:** **Confirm** on Patient A's card. The booking now names A.
-- **Un-reconcile:** no button — call `ha-reconcile-identity` directly with `action: "unreconcile"`,
-  `hospital_id`, `provisional_patient_id` and a reason ≥ 20 chars, as hospital admin → the row is back to
-  "Identity to confirm".
-- **Cross-tenant:** if the same provisional (a household member's) holds a booking at a second hospital that
-  was also confirmed to the same patient there, the un-reconcile is **refused (409)** naming that count; a
-  superadmin can do it and it reverses everywhere.
-- **No-show:** once a confirmed booking's start time has passed, "No-show…" → a reason ≥ 8 chars → **Mark
-  no-show**. For a past day open `/reception/expected?date=YYYY-MM-DD`. It feeds the reports (§9) — the
-  clinic's number, never the patient's.
+- **Expect:** today's bookings with time and position, a status word (Confirmed, Arrived, …) and tags
+  ("Coming today", "Patient confirmed", "Urgent booking"). A provisional booking reads **Identity to confirm**
+  with **Confirm identity**; candidates appear only on the same phone, or the same name and year of birth.
+- **Check in**, then route: **Send to triage** or **Send to clinic** → "Sent to triage" / "Sent to clinic". The
+  patient appears in that clinic's queue (§6).
+- **Urgent goes to triage:** an **Urgent booking** is sent to triage whichever button is pressed (ADR 0425,
+  `effectiveRoute`; `tests/functions/arrival-routing.test.ts`). An urgent booking only comes from the symptom
+  catalogue, so with it off (§13, G1) this cannot be walked by hand.
+- **Reconcile / un-reconcile, cross-tenant, no-show:** unchanged — **Confirm** on Patient A's card names A;
+  un-reconcile is a direct `ha-reconcile-identity` call with a reason ≥ 20 chars; "No-show…" needs a reason
+  ≥ 8 chars once the start time has passed (`/reception/expected?date=YYYY-MM-DD` for a past day).
 
 ### 5.3 Find (`/reception/find`)
 
-- **Do:** type a surname (finds people on today's board) or a patient code (any record; ≥ 3 characters).
-- **Expect:** patient records with **Register an entry**. No booking lookup lives here; to find a _patient_ by
-  phone for a desk booking use `/reception/book`. Booking status and cancel sentences are patient-side (§3.7,
-  §4.3); a staff member's typed cancel reason is only in `/admin/audit`.
+- **Do:** type a surname (people on today's board) or a patient code (any record; ≥ 3 characters).
+- **Expect:** patient records with **Register an entry**. To book for a found patient use `/reception/book`.
+
+Cancelling a clinic day is a **hospital admin** action, not reception's (§6.4).
 
 ---
 
 ## 6. The doctor
 
-Sign in as the **doctor** (MFA). `/doctor/schedule`.
+Sign in as the **doctor** (MFA). A doctor cadre (Intern, Clinical Officer, Medical Officer and above —
+`DOCTOR_CADRE_CODES`) lands on `/doctor`; other clinical cadres land on `/clinician`, which has no queue or End
+visit.
 
-### 6.1 The day
+### 6.1 The day (`/doctor/schedule`)
 
-- **Expect:** the calendar with the clinic day and the slot bookings; the **pending rail** with the slot
-  request from §3.5; the queue rail once patients are checked in.
+- **Expect:** "Your week" counts (Appointments, Confirmed, Pending, Urgent, Completed, Cancelled), the calendar
+  with **Bookable** blocks and bookings by patient name, and **Today's queue**: WAITING rows with the ticket
+  number, name, patient code and the patient's note in quotes.
+- **Do:** tap a booking on the calendar.
+- **Expect:** the card: name, the note, the time, Patient code, Starts / Ends, and **Cancel…**.
 
 ### 6.2 Confirm and decline
 
-- **Do:** confirm one request; decline another with a reason.
-- **Expect:** the label on the decline form says the reason is **audited, staff only — the patient reads a
-  fixed sentence**. On the patient's side: "The clinic could not take this request." and nothing of your words.
+- **Do:** with auto-confirm off, confirm one request; decline another with a reason.
+- **Expect:** the decline reason is staff only; the patient reads "The clinic could not take this request."
 
-### 6.3 Start the encounter (this writes `called_at`)
+### 6.3 Call, see, end the visit
 
-- **Do:** with a patient **checked in**, start their encounter from the queue rail.
-- **Expect:** the entry moves from **Waiting** to **Now seeing** (the encounter row is created; no encounter
-  page opens from here). This is the moment the §3.6 detector measures: called inside the arrival window, or
-  not.
+- **Do:** on a checked-in patient's WAITING row, press ▶ ("Call <name> and start the encounter").
+- **Expect:** the row moves to **NOW SEEING** (reload if it does not move — §13). Where the EMR is on, the row
+  shows **Open** → `/doctor/encounters/<id>`, and **End visit** is in that page's top bar; where it is off,
+  **End visit** is on the row. End visit takes two taps and closes the queue row, the intake and the booking
+  in one audited write.
 
 ### 6.4 Running late / cancel a clinic day (hospital admin)
 
-- **Running late:** `/hospital-admin/scheduling` → **Next 14 days** → the day → set 30 minutes. Patients' windows shift; a
-  "Window moved" message is queued for them.
-- **Cancel the day:** the two-step cancel with a reason. Every live booking becomes `cancelled` with the code
-  `session_cancelled`; patients see "This clinic day was cancelled." and a one-tap **rebooking** offer of the
-  next open day of that clinic ("Book <day>"), with "Choose another day" beside it. The staff reason stays on
-  the session row, which patients cannot read once it is not published.
+- **Do:** `/hospital-admin/scheduling` → **Next 14 days** → tap the day's row.
+- **Running late:** **Late by (minutes)** → **Set**. Un-arrived patients' windows move; a message goes when
+  the move is 30 minutes or more.
+- **Cancel the day:** **Why** (10 characters at least) → **See who this affects** → "1 patient holds a place on
+  this day. They will be offered <day>." → tick "I have read the number above and want to cancel this day." →
+  **Cancel the day (N affected)**. The row reads **Cancelled**, 0 booked.
+- **Patient side:** the notification "Clinic day cancelled · Choose a day" opens the visit: "This clinic day
+  was cancelled.", **Book <day>** (one tap, `pt-accept-rebooking`; a second tap books nothing new) and
+  **Choose another day**. The rebooked visit is on `/patient/visits`.
 
 ### 6.5 Edit a rule (Gate H ruling)
 
@@ -542,6 +534,46 @@ Each of these is a pass when it fails.
 | `*/15` dispatcher cadence   | Vercel Pro                                                                                                    | billing (or Supabase pg_cron, free — ops-channels) |
 | Payments in the app         | ADR 0092: the fee is stated, nothing is charged; PRD Part 8 #8/#14 are unresolved legal items; billing paused | a new ADR, not a switch                            |
 | Booking a child at the desk | CSO + legal guardian model                                                                                    | PRD Part 8 #12                                     |
+
+---
+
+## 13. Dry run, 12 Nov 2026 — what broke and what is open
+
+Walked as Sarah (patient), receptionistth1, clinicianth1 and adminth1 at Test Hospital-1, on
+`fix/booking-dry-run`.
+
+**Fixed on the branch**
+
+| #   | Where                                     | What was wrong                                                                          |
+| --- | ----------------------------------------- | --------------------------------------------------------------------------------------- |
+| D2  | `/patient/visits/<id>` ticket             | the fee strip said "Not paid · Diabetes Clinic" (the line's name) instead of the amount |
+| —   | `/reception/book?patient=<id>`            | 500: a bare `Date` inside raw SQL (`booking-options.ts`); now bound through `ts()`      |
+| D3  | `/patient/visits/<id>`, an ended visit    | still showed the arrive note and "Getting there · Show code at the desk"                |
+| D4  | after a clinic day is cancelled           | "Choose a day" opened a visit with no way to choose: the one-tap offer is back          |
+| D6  | `/patient/book/day`, a doctor's time      | the live countdown threw a hydration error                                              |
+| D8  | cancel a clinic day                       | the Why box emptied after "See who this affects", so the cancel could never be sent     |
+| D9  | any staff action calling an Edge Function | a Supabase 520 printed the whole Cloudflare HTML page in the dialog                     |
+
+**Needs an owner ruling**
+
+| #   | What                                                                                                                                                                                                      |
+| --- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| G1  | "Something is wrong" is a dead end while the symptom catalogue is off. Sign Gate CS and set `FEATURE_SYMPTOM_CATALOG=1` for the pilot, or hide the door. Today symptoms can only be typed as a free note. |
+| G3  | Five signed-in accounts → HTTP 431 on Node's default 16 KB header limit. Raise the limit where the app runs, or cap ADR 0280 at four.                                                                     |
+
+**Seen, not fixed**
+
+- The first real "Cancel the day" got a Supabase **520** after 43 s; the retry took 5 s and worked. The day
+  stayed published in between, so nothing half-happened, but watch `ha-cancel-session` in the pilot.
+- After ▶ Call, the doctor's queue did not move to NOW SEEING until a reload.
+- **End visit was not walked in the browser.** With the EMR on, it sits on `/doctor/encounters/<id>`, and that
+  page did not finish compiling under `next dev` on an 8 GB machine in 20 minutes. Walk it on the deployed
+  app; the close itself is covered by `tests/doctor/end-visit.test.ts`.
+- The phone's visit screen has the same two gaps as D3 and D4 (helpers exist in `mobile/src/lib/notifications.ts`,
+  no screen uses them).
+- "Next open day" on the Book page ignores the chosen reason (D5).
+- Page titles repeat "MedSync" ("Schedule · Doctor · MedSync · MedSync"); a missing React `key` in
+  `MedSyncCalendar`; the landing page's theme toggle has a hydration warning.
 
 ---
 
