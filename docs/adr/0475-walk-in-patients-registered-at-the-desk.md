@@ -1,7 +1,8 @@
 # ADR 0475 — Walk-in patients registered at the desk, with no login account
 
 **Status:** Proposed — 2026-11-12, for the owner (CSO). Built on `feat/reception-walk-in-register` (migration 0291,
-Edge Function `ha-register-patient`). New wording is draft (`content/desk-register.ts`).
+Edge Function `ha-register-patient`). The takeover was built on 2026-11-13 on `feat/desk-record-takeover` (migration
+0292, same Edge Function). New wording is draft (`content/desk-register.ts`).
 
 **Builds on** [ADR 0089](0089-gate-d-identity-and-lifecycle.md) (provisional identities, one writer of a
 reconciliation), [ADR 0119](0119-onboarding-v2-one-page-per-form.md) (patient sign-up), [ADR 0161](0161-pop-ups-are-centred-landscape-dialogs.md) (pop-ups).
@@ -70,28 +71,50 @@ this notice to the patient, and they agreed to it. My name is recorded with thei
   notice version, the matches the desk set aside). 0291 re-issues `sa_audit_log_action_check` as 0091's list plus
   `register_patient`; **any later migration that re-issues it must keep that value.**
 
-### Taking the record over later (designed, not built)
+### Taking the record over later (built: migration 0292)
 
-When the person later signs up with the same phone, they should end up with **one** record, the desk's. Because the
-record is already an auth user, taking it over is giving that user a credential — no data moves and no ids change:
+When the person later wants an account, they end up with **one** record, the desk's. Because the record is already an
+auth user, taking it over is giving that user a credential: no data moves, no id changes, nothing is deleted.
 
-1. Sign-up looks for a desk record (`desk_registered`) with the same phone blind index **and** the same name and date
-   of birth.
-2. A match alone is not proof: sign-up does not verify the phone, and a name, date of birth and phone number are not
-   secret. So the takeover needs a **claim code**: a one-time code the desk gives at registration (printed or read
-   out, or by SMS when SMS is live), stored hashed with an expiry; or, without one, the desk issues a new code after
-   checking the person in front of it.
-3. With the code, the server sets the email and password on the desk's auth user
-   (`auth.admin.updateUserById`), sends the usual confirmation, clears `desk_registered`, sets `claimed_at`, and
-   records the person's own acceptance of the notice (the unique `(user, type, version)` index means the desk's row
-   for that version stands as the record; the self-acceptance needs a new version or a `claimed` column — to decide).
-4. Without a code, sign-up proceeds as today and tells the person to ask the clinic to link their record. Merging two
-   existing records is a clinical-record correction and stays out of scope (ADR 0089).
+1. **The claim code.** The desk opens **Give a sign-up code** on the front door, types the patient code, and has
+   checked it is the person in front of it. `ha-register-patient` (`{ action: "claim_code" }`, same `getCaller` with
+   MFA and `authoriseAtHospital`) makes a code of 8 characters that cannot be misread (`ABCD-EFGH`, ~40 bits,
+   `_shared/desk-record.ts`) and stores only its blind index (the phone's HMAC, with a label of its own) in
+   `desk_claim_codes`. It works once, for 30 days; five wrong tries spend it; a new code replaces the old one.
+   `desk_issue_claim_code()` refuses staff of another hospital (the record's primary facility must be the caller's
+   hospital), a superadmin, a record already taken over and a login account, and audits `issue_claim_code` (never
+   the code). The code is shown once, to write on the patient's slip or read out (by SMS once SMS is live).
+2. **The claim.** Sign-up links to `/signup/patient/claim` ("A clinic registered you at its desk? Use the code they
+   gave you"). The person gives the **mobile number the desk took and the code**, then an email and password, and
+   agrees to the notice. Name, date of birth and place are not asked again: they are the record's own. The phone
+   narrows (a family can share one), the code proves and picks the record.
+3. **The server** (`submitDeskClaim`, the sign-up pattern: a server action with the service role):
+   `desk_claim_begin()` compares blind indexes; a wrong code counts a try against every live code for that phone;
+   expired, spent and claimed codes are refused. The right code opens a **5-minute permit**. Then
+   `auth.admin.updateUserById` sets the email and password on the desk's auth user (`email_confirm: true`, as
+   sign-up auto-confirms today, ADR 0010) and clears `desk_registered`. Then `desk_claim_finish()` checks the auth
+   row really changed, marks the code used, records the person's own acceptance, copies the email to `public.users`
+   and audits `claim_desk_record` with the patient as actor. The person is signed in, in their own account slot.
+4. **Consent.** The unique `(user, type, version)` index keeps one row per notice version. Under the version the
+   desk recorded, the desk's row stands and the person's own acceptance is on the claim row
+   (`claim_consent_version`, `claim_consent_sha256`, `claimed_at`); under a newer version it is a
+   `consent_records` row of its own (`recorded_by_user_id` NULL).
+5. **No credential any other way.** A `BEFORE UPDATE` trigger on `auth.users` (`desk_record_guard`) refuses, while
+   a row is desk-registered, any change to its password, email, phone or desk flag unless a claim permit is open.
+   Password reset (ADR 0474), an admin call or a later bug cannot give a desk record a password. Password reset
+   also refuses a desk record before asking Supabase: the request answers as usual and sends nothing, and a desk
+   session never reaches the new-password step.
+6. **When the claim fails or there is no code.** Nothing is created or changed. The page says why (wrong or
+   mismatched phone, expired, too many tries, already has an account) and that the person can come back with a new
+   code from the clinic at any time. Ordinary sign-up still works and stays one link away ("No code? Create an
+   account without one (a separate record)"): choosing it is the person's own, not a silent duplicate. Sign-up
+   does not look for desk records by phone on its own: it would tell anyone typing a number that a clinic
+   registered it. Merging two existing records is a clinical-record correction and stays out of scope (ADR 0089).
 
-**Follow-up:** build steps 1–4 (a small migration for the claim code; a branch in `submitPatientSignup`; a desk
-button "Give a claim code"; an audit verb). Until then, a desk patient who signs up gets a second record, as any
-patient who forgets they have an account does today. The password-reset work must never set a password on a
-`desk_registered` user by email or phone alone.
+If `desk_claim_finish()` fails after the credential is set (the database unreachable between two calls), the action
+retries once and then logs `desk-claim.finish_failed` with the id: the person has their account, but the code is not
+marked used and the `claim_desk_record` audit row is missing until the owner reconciles it. A later claim of that
+record is refused as already taken over.
 
 ## Consequences
 
@@ -108,6 +131,12 @@ patient who forgets they have an account does today. The password-reset work mus
 - Children cannot be registered at the desk (refused, draft wording). A parent's or guardian's consent is a legal
   question (`docs/legal/REVIEW.md`).
 - No rate limit beyond the audit; add one if a desk account is ever abused.
+- A desk record can only be taken over at the hospital that registered it (the code comes from there). A record
+  whose phone or code the desk got wrong cannot be claimed until the desk gives a new code; the phone itself cannot
+  be corrected at the desk yet.
+- The claim page is rate-limited per address in memory (10 a minute, as the other public sign-up doors). The
+  per-phone count of wrong tries is the real cap: five, then the desk gives a new code.
+- The phone app has no claim screen; the web page works on a phone.
 
 ## Alternatives considered
 
@@ -118,4 +147,11 @@ patient who forgets they have an account does today. The password-reset work mus
 - **An auth user with the patient's phone on it** — a later phone sign-in would open the record with no step the desk
   or the patient chose; and the desk-typed number may be wrong. Rejected for the claim code.
 - **Create from a Next server action with the service key** — the brief asks for the Edge Function with `getCaller`
-  and MFA, and the other privileged writes live there.
+  and MFA, and the other privileged writes live there. (The claim itself is a server action: the person has no
+  account to call a function with yet, and sign-up already works that way.)
+- **Sign-up links a desk record when phone, name and date of birth match, without a code** — none of the three is
+  secret, and sign-up does not verify the phone. Rejected.
+- **A code issued with every registration** — most walk-ins never sign up, and a code on every slip is one more thing
+  to lose. The desk gives one when the person asks (it can do so right after registering).
+- **Code alone (no phone)** — works, but then wrong tries cannot be counted against a record. The phone narrows and
+  carries the count.

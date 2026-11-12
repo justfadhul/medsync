@@ -18,18 +18,25 @@
  *    the `register_patient` audit row in one transaction. If that fails the auth user is deleted again.
  *
  * Adults only, as at sign-up: a child's record needs a parent or guardian's consent, which is not built.
+ *
+ * { action: "claim_code", hospital_id, patient_code } instead gives a claim code for a record this hospital registered
+ * (migration 0292): the person takes the record over with it at sign-up. Same auth; the SQL refuses another
+ * hospital's record, a claimed one and a login account, and audits. Only the code's blind index is stored; the code
+ * itself is returned once, for the desk to hand over.
  */
 
 import { z } from "npm:zod@4.4.3";
 
 import { getCaller, serviceClient } from "../_shared/auth.ts";
 import { preflight } from "../_shared/cors.ts";
+import { claimCodeIndexInput, formatClaimCode, newClaimCode } from "../_shared/desk-record.ts";
 import { blindIndex, decrypt, encrypt } from "../_shared/encryption.ts";
 import {
   badRequest,
   conflict,
   forbidden,
   methodNotAllowed,
+  notFound,
   ok,
   serverError,
   unauthorized,
@@ -67,6 +74,12 @@ const InputSchema = z.object({
   register_despite: z.array(z.string().max(32)).max(20).default([]),
 });
 
+const ClaimSchema = z.object({
+  action: z.literal("claim_code"),
+  hospital_id: z.string().uuid(),
+  patient_code: z.string().trim().min(1).max(32),
+});
+
 function yearsBetween(dob: string, today: string): number {
   const years = Number(today.slice(0, 4)) - Number(dob.slice(0, 4));
   return today.slice(5) < dob.slice(5) ? years - 1 : years;
@@ -87,6 +100,8 @@ Deno.serve(async (request: Request) => {
   } catch {
     return badRequest("Body must be JSON", init);
   }
+  const claim = ClaimSchema.safeParse(body);
+  if (claim.success) return giveClaimCode(request, claim.data, init);
   const parsed = InputSchema.safeParse(body);
   if (!parsed.success) return badRequest("Invalid input", init, parsed.error.flatten());
   const input = parsed.data;
@@ -212,3 +227,50 @@ Deno.serve(async (request: Request) => {
     init,
   );
 });
+
+type Init = Parameters<typeof forbidden>[0];
+
+/** DRAFT (owner): the desk's words for each refusal. */
+const CLAIM_REFUSALS: Record<string, (init: Init) => Response> = {
+  not_staff_here: (init) => forbidden(init, "You are not staff at this hospital."),
+  other_hospital: (init) =>
+    forbidden(init, "Another hospital registered this patient. Their code comes from there."),
+  no_such_patient: (init) => notFound(init, "No patient has that code."),
+  already_claimed: (init) =>
+    conflict("This patient already took the record over. They sign in with their email.", init),
+  has_account: (init) =>
+    conflict("This patient has their own account. They sign in; no code is needed.", init),
+};
+
+async function giveClaimCode(
+  request: Request,
+  input: z.infer<typeof ClaimSchema>,
+  init: Init,
+): Promise<Response> {
+  const caller = await getCaller(request);
+  if (!caller) return unauthorized(init);
+  const authError = await authoriseAtHospital(caller.id, input.hospital_id);
+  if (authError) return forbidden(init, authError);
+
+  const key = Deno.env.get("MEDSYNC_PHI_KEY");
+  if (!key) return serverError("MEDSYNC_PHI_KEY is not configured for Functions.", init);
+
+  const code = newClaimCode();
+  const { ipAddress, userAgent } = networkContext(request);
+  const { data: expiresAt, error } = await serviceClient().rpc("desk_issue_claim_code", {
+    p_hospital_id: input.hospital_id,
+    p_actor_id: caller.id,
+    p_patient_code: input.patient_code,
+    p_code_hash: await blindIndex(claimCodeIndexInput(code), key),
+    p_request_id: /^[0-9a-f-]{36}$/i.test(init.requestId ?? "") ? init.requestId : null,
+    p_ip: ipAddress,
+    p_user_agent: userAgent,
+  });
+  if (error) {
+    const refusal = Object.keys(CLAIM_REFUSALS).find((k) => error.message.includes(k));
+    if (refusal) return CLAIM_REFUSALS[refusal]!(init);
+    log.error("claim code failed", { requestId: init.requestId, reason: error.message });
+    return serverError("Couldn't give a code. Try again.", init);
+  }
+  return ok({ code: formatClaimCode(code), expiresAt }, init);
+}

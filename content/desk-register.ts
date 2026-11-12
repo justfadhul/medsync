@@ -33,3 +33,51 @@ export const DESK_REGISTER = {
   bookFor: "Book a visit for them →",
   confirmNow: "Now confirm the booking above",
 } as const;
+
+/** The desk gives a claim code, so the patient can take this record over when they sign up (ADR 0475, 0292). */
+export const DESK_CLAIM = {
+  open: "Give a sign-up code",
+  title: "Give a sign-up code",
+  /** DRAFT (owner). */
+  lead: "For a patient this desk registered. Check it is them first. The code lets them take this record over when they create an account, so their visits stay in one record.",
+  patientCode: "Patient code",
+  patientCodeHint: "Like MS-2026-00012.",
+  submit: "Give code",
+  pending: "Giving…",
+  close: "Close",
+  /** DRAFT (owner). */
+  given: "Write this on the patient's slip, or read it out:",
+  /** DRAFT (owner). */
+  how: (until: string) =>
+    `On MedSync's sign-up page they choose "Use the code they gave you", and enter it with their mobile number. It works once, until ${until}. A new code replaces this one.`,
+} as const;
+
+/** The patient's side: /signup/patient/claim. DRAFT (owner) unless it is sign-up's own wording. */
+export const PATIENT_CLAIM = {
+  kicker: "Patient",
+  title: "Take over your clinic record",
+  lead: "A clinic registered you at its front desk and gave you a code. Use it here, and your visits stay in one record.",
+  sections: { record: "Your clinic record", signin: "Your sign-in" },
+  phone: "Mobile number",
+  phoneHint: "The number you gave the clinic.",
+  code: "Code from the clinic",
+  codeHint: "8 letters and numbers, like ABCD-EFGH.",
+  submit: "Take over my record",
+  pending: "Checking…",
+  after:
+    "Your name, date of birth and visits come from the clinic's record. You can check them on your profile.",
+  noCodeLink: "No code? Create an account without one (a separate record)",
+  /** On sign-up, before anything is created. */
+  signupLink: "A clinic registered you at its desk? Use the code they gave you",
+  errors: {
+    wrong_code:
+      "That code and mobile number don't match. Check both, or ask the clinic for a new code.",
+    expired: "This code has expired. Ask the clinic for a new one.",
+    too_many_tries: "Too many wrong tries. Ask the clinic for a new code.",
+    already_claimed: "This record already has an account. Sign in instead.",
+    later: "Nothing was saved. Come back to this page with a new code from the clinic at any time.",
+    emailTaken: "An account already uses this email. Sign in, or use another email.",
+    busy: "Too many tries from here. Wait a minute and try again.",
+    failed: "We couldn't take over the record. Nothing was changed. Try again.",
+  },
+} as const;

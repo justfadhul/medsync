@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { ArrowLeftIcon } from "lucide-react";
 
+import { ClaimCodeDialog } from "@/components/intake/claim-code-dialog";
 import { FrontDoorForm } from "@/components/intake/front-door-form";
 import { loadBookingSymptoms } from "@/lib/catalog/symptoms";
 import { catalogRenderMode } from "@/lib/emergency/feature";
@@ -15,7 +16,7 @@ import {
   CATALOG,
   CATALOG_CHECKSUM,
 } from "@/supabase/functions/_shared/symptom-catalog/catalog.v0.1";
-import { registerWalkInAction } from "../actions";
+import { giveClaimCodeAction, registerWalkInAction } from "../actions";
 import { receptionRegisterIntakeAction, receptionSearchPatientsAction } from "./actions";
 
 export const metadata: Metadata = { title: "Register · Reception · MedSync" };
@@ -86,6 +87,12 @@ export default async function ReceptionIntakePage() {
           Walk-in, booked check-in, referral, emergency, transfer, follow-up. Emergency entries skip
           required fields — capture fast, complete later.
         </p>
+        {/* A walk-in this desk registered takes the record over at sign-up with this code (ADR 0475). */}
+        {notice ? (
+          <div>
+            <ClaimCodeDialog action={giveClaimCodeAction} />
+          </div>
+        ) : null}
       </header>
 
       <FrontDoorForm

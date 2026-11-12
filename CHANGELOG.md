@@ -5,6 +5,19 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); version
 
 ## [Unreleased]
 
+### Added — A desk-registered patient takes their record over at sign-up — 13 Nov 2026
+
+- **Give a sign-up code** on the front door: for a patient this desk registered, after checking it is them. The code
+  (`ABCD-EFGH`) works once, for 30 days; five wrong tries spend it; only its blind index is stored
+  ([ADR 0475](docs/adr/0475-walk-in-patients-registered-at-the-desk.md)).
+- `/signup/patient/claim` (linked from sign-up): the mobile number the desk took, the code, then an email and
+  password. The desk's record gets the sign-in: same id, so bookings, visits and notes stay in one record. Nothing
+  is deleted; the code, the claim and the person's own consent are audited.
+- A wrong, expired, spent or used code changes nothing and says how to finish later. Ordinary sign-up still works.
+- A desk record can never get a password any other way: a guard on `auth.users` refuses it without an open claim,
+  and password reset refuses a desk record before asking Supabase.
+- GATED migration 0292 (after 0291); redeploy `ha-register-patient` after it. Wording is draft.
+
 ### Added — Reception registers a walk-in who has no MedSync account — 12 Nov 2026
 
 - **Register new patient** (a centred dialog) on the front door, on Confirm identity and on Book: sign-up's

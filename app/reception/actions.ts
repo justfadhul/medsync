@@ -313,3 +313,24 @@ export async function registerWalkInAction(
   }
   return data;
 }
+
+/* ─── A sign-up code for a record this desk registered (ADR 0475, migration 0292) ─── */
+
+export type ClaimCodeResult =
+  | { ok: true; code: string; expiresAt: string }
+  | { ok: false; error: string };
+
+/** The desk has checked the person in front of it. `ha-register-patient` refuses another hospital's record. */
+export async function giveClaimCodeAction(patientCode: unknown): Promise<ClaimCodeResult> {
+  const scope = await requireReceptionScope();
+  const parsed = z.string().trim().min(1).max(32).safeParse(patientCode);
+  if (!parsed.success) return { ok: false, error: "Enter the patient code." };
+  const result = await callEdge<{ data?: { code: string; expiresAt: string } }>(
+    "ha-register-patient",
+    { action: "claim_code", hospital_id: scope.hospitalId, patient_code: parsed.data },
+    "reception.claim-code",
+  );
+  if (!result.ok) return { ok: false, error: result.error };
+  const data = result.data.data;
+  return data ? { ok: true, ...data } : { ok: false, error: "No answer. Try again." };
+}

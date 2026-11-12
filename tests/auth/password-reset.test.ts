@@ -153,6 +153,12 @@ describe("asking for a link", () => {
     }
   });
 
+  it("a desk-registered record's address gets the same answer, and no link is asked for (ADR 0475)", async () => {
+    const email = "desk-4f1c@patients.medsync.invalid";
+    expect(await requestResetAction({}, form({ email }))).toEqual({ sentTo: email });
+    expect(called("resetPasswordForEmail")).toHaveLength(0);
+  });
+
   it("refuses a malformed email before asking Supabase", async () => {
     expect(await requestResetAction({}, form({ email: "not-an-email" }))).toEqual({
       errors: { email: RESET.errors.email },
@@ -204,6 +210,12 @@ describe("choosing the password", () => {
     sb.updateError = { code: "insufficient_aal", status: 403, message: "x" };
     expect(await submit()).toBe(MFA_PATH);
     expect(called("signOut")).toHaveLength(0);
+  });
+
+  it("a desk-registered record never gets a password here, even with a session (ADR 0475)", async () => {
+    sb.user = { id: "desk", email: "desk-4f1c@patients.medsync.invalid" };
+    expect(await submit()).toBe(EXPIRED_PATH);
+    expect(called("updateUser")).toHaveLength(0);
   });
 
   it("no session: back to ask for a link", async () => {

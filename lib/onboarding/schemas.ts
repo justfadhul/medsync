@@ -1,5 +1,6 @@
 import * as z from "zod/mini";
 
+import { normalizeClaimCode } from "@/supabase/functions/_shared/desk-record";
 import {
   ADULT_AGE,
   ageOn,
@@ -129,6 +130,26 @@ export type PatientInput = z.infer<typeof patientSchema>;
 /** A walk-in registered at the desk: sign-up's questions, no sign-in; the patient agrees in front of the desk. */
 export const deskPatientSchema = z.object({ ...patientFields, ...consentFields }).check(adultDob);
 export type DeskPatientInput = z.infer<typeof deskPatientSchema>;
+
+/**
+ * Taking over the record the desk registered (ADR 0475): the phone the desk took and its claim code prove it; the
+ * person adds a sign-in. Names, date of birth and place are the record's own, so they are not asked again.
+ */
+export const deskClaimSchema = z.object({
+  phone: phoneField("Enter the mobile number you gave the clinic.", true),
+  claimCode: z
+    .string("Enter the code from the clinic.")
+    .check(
+      z.refine(
+        (v) => normalizeClaimCode(v) !== null,
+        "Enter the 8 letters and numbers from the clinic, like ABCD-EFGH.",
+      ),
+    ),
+  email: emailField,
+  password: passwordField,
+  ...consentFields,
+});
+export type DeskClaimInput = z.infer<typeof deskClaimSchema>;
 
 // ── Clinical staff ─────────────────────────────────────────────────────────
 

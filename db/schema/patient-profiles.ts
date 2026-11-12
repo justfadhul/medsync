@@ -1,5 +1,15 @@
 import { sql } from "drizzle-orm";
-import { check, date, index, numeric, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
+import {
+  check,
+  date,
+  index,
+  integer,
+  numeric,
+  pgTable,
+  text,
+  timestamp,
+  uuid,
+} from "drizzle-orm/pg-core";
 
 import { authUsers } from "./_auth";
 import { hospitals } from "./hospitals";
@@ -100,3 +110,32 @@ export const patientProfiles = pgTable(
 
 export type PatientProfile = typeof patientProfiles.$inferSelect;
 export type NewPatientProfile = typeof patientProfiles.$inferInsert;
+
+/**
+ * The claim code the desk gives a walk-in it registered (migration 0292, ADR 0475): with it and their phone, the
+ * person takes the desk's record over at sign-up. One row per desk record; `codeHash` is the code's blind index,
+ * never the code. RLS on with no policies: the service role only (the SQL functions in 0292).
+ */
+export const deskClaimCodes = pgTable(
+  "desk_claim_codes",
+  {
+    patientUserId: uuid("patient_user_id")
+      .primaryKey()
+      .references(() => authUsers.id, { onDelete: "cascade" }),
+    hospitalId: uuid("hospital_id")
+      .notNull()
+      .references(() => hospitals.id),
+    codeHash: text("code_hash").notNull(),
+    issuedBy: uuid("issued_by").references(() => authUsers.id, { onDelete: "set null" }),
+    issuedAt: timestamp("issued_at", { withTimezone: true }).notNull().defaultNow(),
+    expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+    failedAttempts: integer("failed_attempts").notNull().default(0),
+    /** Open for 5 minutes after the right code: the auth.users guard lets the credential through only then. */
+    claimPermitUntil: timestamp("claim_permit_until", { withTimezone: true }),
+    claimedAt: timestamp("claimed_at", { withTimezone: true }),
+    /** The person's own acceptance of the notice when they took the record over. */
+    claimConsentVersion: text("claim_consent_version"),
+    claimConsentSha256: text("claim_consent_sha256"),
+  },
+  (t) => [index("desk_claim_codes_hash_idx").on(t.codeHash)],
+);

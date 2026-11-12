@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 
 import { createClient } from "@/lib/supabase/server";
+import { isDeskRecord } from "@/supabase/functions/_shared/desk-record";
 import { EXPIRED_PATH, MFA_PATH, needsMfa } from "../flow";
 import { NewPasswordForm } from "./form";
 
@@ -16,7 +17,7 @@ export default async function NewPasswordPage() {
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user?.email) redirect(EXPIRED_PATH);
+  if (!user?.email || isDeskRecord(user)) redirect(EXPIRED_PATH);
   const { data: aal } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
   if (needsMfa(aal)) redirect(MFA_PATH);
   return <NewPasswordForm email={user.email} />;

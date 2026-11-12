@@ -75,6 +75,8 @@ const storage = {
 
 export interface SectionedFormProps<T extends FieldValues> {
   form: OnboardingEvent["form"];
+  /** The draft's own name, when two pages share a form's funnel events (sign-up and the desk claim). */
+  draft?: string;
   schema: z.ZodMiniType<T>;
   defaults: DefaultValues<T>;
   sections: readonly SectionDef[];
@@ -124,7 +126,7 @@ export function SectionedForm<T extends FieldValues>(props: SectionedFormProps<T
   const { control, formState, handleSubmit, setError, reset } = methods;
   const values = useWatch({ control }) as T;
 
-  const draftKey = `onboarding-v2:${formName}`;
+  const draftKey = `onboarding-v2:${props.draft ?? formName}`;
   const secret = useMemo(
     () => new Set([...SECRET_ALWAYS, ...(props.secret ?? [])]),
     [props.secret],

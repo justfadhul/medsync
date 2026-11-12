@@ -9,6 +9,7 @@ import { logger } from "@/lib/logger";
 import { emailField } from "@/lib/onboarding/schemas";
 import { SITE_URL } from "@/lib/site-config";
 import { createClient, setActiveAccount, slotForSignIn } from "@/lib/supabase/server";
+import { isDeskRecord } from "@/supabase/functions/_shared/desk-record";
 import {
   CONFIRM_PATH,
   EXPIRED_PATH,
@@ -31,6 +32,8 @@ export async function requestResetAction(
   const parsed = emailField.safeParse(formData.get("email"));
   if (!parsed.success) return { errors: { email: RESET.errors.email } };
   const email = parsed.data;
+  // A record the desk registered has no mailbox and gets a password only by being taken over (ADR 0475).
+  if (isDeskRecord({ email })) return { sentTo: email };
 
   // The slot a sign-in as this email would use: a PKCE verifier lands there, and the confirm step finds it.
   const supabase = await createClient(await slotForSignIn(email));
@@ -88,7 +91,7 @@ export async function setNewPasswordAction(
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user?.email) redirect(EXPIRED_PATH);
+  if (!user?.email || isDeskRecord(user)) redirect(EXPIRED_PATH);
   const { data: aal } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
   if (needsMfa(aal)) redirect(MFA_PATH);
 
