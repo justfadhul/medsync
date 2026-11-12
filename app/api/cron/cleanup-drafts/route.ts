@@ -6,6 +6,7 @@ import { ussdSessions } from "@/db/schema/channels";
 import { onboardingEvents } from "@/db/schema/onboarding";
 import { bookingAgents, provisionalPatients } from "@/db/schema/provisional-patients";
 import { appointments } from "@/db/schema/scheduling";
+import { secretMatches } from "@/lib/channels/webhook-auth";
 import { env } from "@/lib/env";
 import { logger } from "@/lib/logger";
 import { materialiseClinicSessions } from "@/lib/scheduling/materialise-sessions";
@@ -52,7 +53,7 @@ export async function GET(request: Request) {
       { status: 503 },
     );
   }
-  if (!supplied || supplied !== env.CRON_SECRET) {
+  if (!supplied || !secretMatches(supplied, env.CRON_SECRET)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 

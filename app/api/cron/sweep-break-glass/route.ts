@@ -3,6 +3,7 @@ import { and, isNull, lte } from "drizzle-orm";
 
 import { db } from "@/db";
 import { saBreakGlassGrants } from "@/db/schema/sa-break-glass-grants";
+import { secretMatches } from "@/lib/channels/webhook-auth";
 import { env } from "@/lib/env";
 import { logger } from "@/lib/logger";
 
@@ -34,7 +35,7 @@ export async function GET(request: Request) {
       { status: 503 },
     );
   }
-  if (!supplied || supplied !== env.CRON_SECRET) {
+  if (!supplied || !secretMatches(supplied, env.CRON_SECRET)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 

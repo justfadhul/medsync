@@ -369,6 +369,13 @@ export async function attachScanAction(raw: unknown): Promise<ActionResult> {
     })
     .safeParse(raw);
   if (!p.success) return bad(p.error);
+  // Review M-16: who is asking, and is the file this referral's, before the service role touches storage.
+  const allowed = await run("result", async (tx, a) => {
+    await referralForEntry(tx, a.hospitalId, p.data.referralId);
+    if (!p.data.path.startsWith(`${a.hospitalId}/${p.data.referralId}/`))
+      throw new EmrWriteError("forbidden", "That file is not this referral's.");
+  });
+  if (!allowed.ok) return allowed;
   const { data: blob, error } = await createServiceClient()
     .storage.from(SCAN_BUCKET)
     .download(p.data.path);

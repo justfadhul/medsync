@@ -7,21 +7,11 @@
  * surfaces; widen here when (if) we expose functions to third parties.
  */
 
-const ALLOWED_ORIGINS = new Set<string>([
-  "http://localhost:3000",
-  "https://medsync.health",
-  // Vercel preview deploys land at *.vercel.app; allow at the matcher level.
-]);
+const ALLOWED_ORIGINS = new Set<string>(["http://localhost:3000", "https://medsync.health"]);
 
+// Review L-3: no wildcard. Any *.vercel.app site could call with a token it held; the app calls from its server.
 function isAllowedOrigin(origin: string | null): boolean {
-  if (!origin) return false;
-  if (ALLOWED_ORIGINS.has(origin)) return true;
-  try {
-    const url = new URL(origin);
-    return url.hostname.endsWith(".vercel.app");
-  } catch {
-    return false;
-  }
+  return !!origin && ALLOWED_ORIGINS.has(origin);
 }
 
 export function corsHeaders(origin: string | null): HeadersInit {

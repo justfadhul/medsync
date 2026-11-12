@@ -3,6 +3,7 @@ import { eq } from "drizzle-orm";
 
 import { db } from "@/db";
 import { ncdDemoLoad } from "@/db/schema/ncd-registry";
+import { secretMatches } from "@/lib/channels/webhook-auth";
 import { resolveContext } from "@/lib/ncdreg/context";
 import { continueLoad } from "@/lib/ncdreg/demo/service";
 import { ncdRegistryLiveFor } from "@/lib/ncdreg/scope";
@@ -14,7 +15,9 @@ import { ncdRegistryLiveFor } from "@/lib/ncdreg/scope";
  */
 export async function GET(req: Request) {
   const secret = process.env.CRON_SECRET;
-  if (!secret || req.headers.get("authorization") !== `Bearer ${secret}`)
+  if (
+    !secretMatches(req.headers.get("authorization") ?? "", secret ? `Bearer ${secret}` : undefined)
+  )
     return new NextResponse("Unauthorized", { status: 401 });
   const loads = await db.select().from(ncdDemoLoad).where(eq(ncdDemoLoad.status, "loading"));
   const out = [];

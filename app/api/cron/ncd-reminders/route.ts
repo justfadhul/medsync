@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 
 import { db } from "@/db";
 import { ncdFacilitySettings } from "@/db/schema";
+import { secretMatches } from "@/lib/channels/webhook-auth";
 import { env } from "@/lib/env";
 import { logger } from "@/lib/logger";
 import { resolveContext } from "@/lib/ncdreg/context";
@@ -28,7 +29,7 @@ export async function GET(request: Request) {
       { status: 503 },
     );
   }
-  if (!supplied || supplied !== env.CRON_SECRET)
+  if (!supplied || !secretMatches(supplied, env.CRON_SECRET))
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const flag = process.env.NCD_REGISTRY?.trim();

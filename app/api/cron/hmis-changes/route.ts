@@ -3,6 +3,7 @@ import { inArray } from "drizzle-orm";
 
 import { db } from "@/db";
 import { labHmisReports } from "@/db/schema";
+import { secretMatches } from "@/lib/channels/webhook-auth";
 import { env } from "@/lib/env";
 import { labHmisLiveFor } from "@/lib/lab/feature";
 import { changedSinceSigning } from "@/lib/lab/hmis-store";
@@ -23,7 +24,7 @@ async function run(request: Request) {
       { error: "CRON_SECRET not configured on the server." },
       { status: 503 },
     );
-  if (!supplied || supplied !== env.CRON_SECRET)
+  if (!supplied || !secretMatches(supplied, env.CRON_SECRET))
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const signed = await db
     .selectDistinct({ hospitalId: labHmisReports.hospitalId, month: labHmisReports.month })

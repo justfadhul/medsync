@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { db } from "@/db";
+import { secretMatches } from "@/lib/channels/webhook-auth";
 import { env } from "@/lib/env";
 import { escalateIpcAlerts } from "@/lib/ipc/store";
 import { deliverAfterCommit, runEscalations } from "@/lib/lab/criticals/store";
@@ -26,7 +27,7 @@ async function run(request: Request) {
       { status: 503 },
     );
   }
-  if (!supplied || supplied !== env.CRON_SECRET)
+  if (!supplied || !secretMatches(supplied, env.CRON_SECRET))
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   try {
     const database = db as unknown as Parameters<typeof runEscalations>[0];
