@@ -70,7 +70,8 @@ export function HonestNote({ after }: { after?: string }) {
  * "Why are you coming?" (mobile/src/features/visits/why-coming.tsx), shared by Book a visit and Ask for a day.
  * "Something is wrong" shows the symptom catalogue's body areas and opens the steps on the one chosen; "Planned
  * care" lists every other Appendix A reason, grouped. The "Something is wrong" card draws its own red Help, so a
- * page showing it hides the header Help (L6).
+ * page showing it hides the header Help (L6). With the catalogue off (Gate CS unsigned) the door is not shown at
+ * all, only the planned list: it would lead nowhere. It comes back by itself once the catalogue is signed.
  */
 export function WhyComing({
   n,
@@ -86,101 +87,102 @@ export function WhyComing({
   onDoor: (door: Door) => void;
   reason: PatientReasonCode | null;
   onReason: (reason: PatientReasonCode) => void;
-  /** The catalogue's areas (labels from the package), or null when the catalogue is off. */
+  /** The catalogue's areas (labels from the package), or null when the catalogue is off (no "wrong" door). */
   areas: { key: string; label: string }[] | null;
   /** The symptom steps, opened on an area or (null) at the start. */
   wrongHref: (area: string | null) => string;
 }) {
+  const open = areas ? door : "planned";
   return (
     <section className="flex flex-col gap-3">
       <StepTitle n={n}>{C.whyTitle}</StepTitle>
-      <div role="radiogroup" aria-label={C.whyTitle} className="grid grid-cols-2 gap-3">
-        {(
-          [
-            ["wrong", C.doorWrong, C.doorWrongSub, ActivityIcon],
-            ["planned", C.doorPlanned, C.doorPlannedSub, CalendarIcon],
-          ] as const
-        ).map(([key, label, sub, Icon]) => {
-          const on = door === key;
-          return (
-            <button
-              key={key}
-              type="button"
-              role="radio"
-              aria-checked={on}
-              onClick={() => onDoor(key)}
-              className={cn(
-                "rounded-pw-card flex min-h-[164px] flex-col justify-between gap-3 p-4 text-left ring-2 ring-inset",
-                "transition-[scale,background-color] duration-150 ease-out active:scale-[0.98] motion-reduce:transition-none",
-                FOCUS,
-                on
-                  ? "bg-pw-act text-pw-on-act ring-pw-act shadow-pw-float"
-                  : "bg-pw-surface text-pw-ink ring-pw-line",
-              )}
-            >
-              <span className="flex items-start justify-between">
-                <span
-                  className={cn(
-                    "grid size-11 place-items-center rounded-full",
-                    on ? "bg-pw-band-glass text-pw-on-band-accent" : "bg-pw-surface-3",
-                  )}
-                >
-                  <Icon className="size-5" {...ICON} />
-                </span>
-                {on ? (
-                  <span className="bg-pw-on-band-accent text-pw-act grid size-[22px] place-items-center rounded-full">
-                    <CheckIcon className="size-[13px]" strokeWidth={3} aria-hidden />
+      {areas ? (
+        <div role="radiogroup" aria-label={C.whyTitle} className="grid grid-cols-2 gap-3">
+          {(
+            [
+              ["wrong", C.doorWrong, C.doorWrongSub, ActivityIcon],
+              ["planned", C.doorPlanned, C.doorPlannedSub, CalendarIcon],
+            ] as const
+          ).map(([key, label, sub, Icon]) => {
+            const on = door === key;
+            return (
+              <button
+                key={key}
+                type="button"
+                role="radio"
+                aria-checked={on}
+                onClick={() => onDoor(key)}
+                className={cn(
+                  "rounded-pw-card flex min-h-[164px] flex-col justify-between gap-3 p-4 text-left ring-2 ring-inset",
+                  "transition-[scale,background-color] duration-150 ease-out active:scale-[0.98] motion-reduce:transition-none",
+                  FOCUS,
+                  on
+                    ? "bg-pw-act text-pw-on-act ring-pw-act shadow-pw-float"
+                    : "bg-pw-surface text-pw-ink ring-pw-line",
+                )}
+              >
+                <span className="flex items-start justify-between">
+                  <span
+                    className={cn(
+                      "grid size-11 place-items-center rounded-full",
+                      on ? "bg-pw-band-glass text-pw-on-band-accent" : "bg-pw-surface-3",
+                    )}
+                  >
+                    <Icon className="size-5" {...ICON} />
                   </span>
-                ) : null}
-              </span>
-              <span className="flex flex-col gap-1">
-                <span className="text-[17px] leading-[21px] font-semibold">{label}</span>
-                <span
-                  className={cn(
-                    "text-[13px] leading-[18px] font-medium",
-                    on ? "text-pw-on-band-2" : "text-pw-ink-2",
-                  )}
-                >
-                  {sub}
+                  {on ? (
+                    <span className="bg-pw-on-band-accent text-pw-act grid size-[22px] place-items-center rounded-full">
+                      <CheckIcon className="size-[13px]" strokeWidth={3} aria-hidden />
+                    </span>
+                  ) : null}
                 </span>
-              </span>
-            </button>
-          );
-        })}
-      </div>
+                <span className="flex flex-col gap-1">
+                  <span className="text-[17px] leading-[21px] font-semibold">{label}</span>
+                  <span
+                    className={cn(
+                      "text-[13px] leading-[18px] font-medium",
+                      on ? "text-pw-on-band-2" : "text-pw-ink-2",
+                    )}
+                  >
+                    {sub}
+                  </span>
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      ) : null}
 
-      {door === "wrong" ? (
+      {open === "wrong" && areas ? (
         <Card className="flex flex-col gap-3 p-4">
           <div className="flex flex-col gap-0.5">
             <p className="text-base leading-5 font-semibold">{C.whereTitle}</p>
             <p className="text-pw-ink-2 text-[15px] leading-[21px]">{C.whereLine}</p>
           </div>
-          {areas ? (
-            <ul className="grid grid-cols-2 gap-2">
-              {areas.map((a) => (
-                <li key={a.key} className="flex">
-                  <Link
-                    href={wrongHref(a.key)}
-                    className={cn(
-                      "rounded-pw-field bg-pw-surface-2 hover:bg-pw-surface-3 flex min-h-12 flex-1 items-center px-3 py-2 text-[15px] font-semibold",
-                      FOCUS,
-                    )}
-                  >
-                    {a.label}
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          ) : null}
+          <ul className="grid grid-cols-2 gap-2">
+            {areas.map((a) => (
+              <li key={a.key} className="flex">
+                <Link
+                  href={wrongHref(a.key)}
+                  className={cn(
+                    "rounded-pw-field bg-pw-surface-2 hover:bg-pw-surface-3 flex min-h-12 flex-1 items-center px-3 py-2 text-[15px] font-semibold",
+                    FOCUS,
+                  )}
+                >
+                  {a.label}
+                </Link>
+              </li>
+            ))}
+          </ul>
           <Link href={wrongHref(null)} className={buttonClass("soft")}>
-            {areas ? C.somethingElse : C.tellUs}
+            {C.somethingElse}
           </Link>
           <div className="rounded-pw-row bg-pw-surface-2 flex flex-wrap items-center gap-3 p-3">
             <p className="min-w-0 flex-1 text-[15px] leading-[21px] font-medium">{C.veryUnwell}</p>
             <HelpButton />
           </div>
         </Card>
-      ) : door === "planned" ? (
+      ) : open === "planned" ? (
         PLANNED_GROUPS.map((g) => (
           <div key={g.title} className="flex flex-col gap-1.5">
             <p className="text-pw-ink-3 pl-1 text-xs font-bold tracking-[0.06em] uppercase">

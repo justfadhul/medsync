@@ -1,6 +1,7 @@
 "use client";
 
 import type { MoveOption } from "@/lib/patient-web/visits-data";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import {
@@ -13,12 +14,13 @@ import {
 import { CalendarIcon, CheckIcon, XIcon } from "lucide-react";
 
 import {
+  acceptRebookingAction,
   cancelMyAppointmentAction,
   confirmAttendanceAction,
   markArrivedAction,
 } from "@/app/patient/appointments/actions";
 import { Chip, ChipRow, Dialog, TextField } from "@/components/tide/controls";
-import { Button, ICON, Note } from "@/components/tide/kit";
+import { Button, buttonClass, ICON, Note } from "@/components/tide/kit";
 import { VISITS_COPY as C } from "@/content/patient/visits";
 import { moveOptionsAction, moveVisitAction } from "../../_lib/actions";
 
@@ -36,6 +38,7 @@ export function VisitActions({
   controls,
   live,
   answered,
+  rebook,
 }: {
   visitId: string;
   controls: {
@@ -48,6 +51,8 @@ export function VisitActions({
   live: boolean;
   /** The patient already said they are coming. */
   answered: boolean;
+  /** The clinic cancelled the day: the next day its message offered (null: none open), or undefined. */
+  rebook?: { sessionId: string; day: string } | null;
 }) {
   const router = useRouter();
   const [mode, setMode] = useState<Mode>("idle");
@@ -194,6 +199,33 @@ export function VisitActions({
             <XIcon className="size-5" {...ICON} />
             {C.cancel}
           </Button>
+        </div>
+      ) : null}
+
+      {rebook !== undefined && !notice ? (
+        <div className="flex flex-col items-start gap-2">
+          {rebook ? (
+            <>
+              <Button
+                tone="accent"
+                busy={busy}
+                onClick={() =>
+                  void run(
+                    acceptRebookingAction,
+                    { cancelled_appointment_id: visitId, session_id: rebook.sessionId },
+                    C.rebookDone,
+                  )
+                }
+              >
+                <CalendarIcon className="size-5" {...ICON} />
+                {C.rebook(rebook.day)}
+              </Button>
+              <p className="text-pw-ink-2 text-[15px]">{C.rebookHint}</p>
+            </>
+          ) : null}
+          <Link href="/patient/book" className={buttonClass("soft", "l")}>
+            {C.chooseAnotherDay}
+          </Link>
         </div>
       ) : null}
 
