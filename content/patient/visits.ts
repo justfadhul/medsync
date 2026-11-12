@@ -91,6 +91,11 @@ export const VISITS_COPY = {
   comingDone: "Thank you. The clinic expects you.",
   movedDone: "Your visit has moved.",
   cancelledDone: "Your visit is cancelled.",
+  /** web: the clinic cancelled the day (Gate E, PRD §3.2.6); the next day is one tap away. */
+  rebook: (day: string) => `Book ${day}`,
+  rebookHint: "Same clinic, same reason. You get a new code and place in line.",
+  rebookDone: "Booked. You will find it in your visits.",
+  chooseAnotherDay: "Choose another day",
   householdLine: (member: string) =>
     `You booked this for ${member}. It can be moved or cancelled at the desk.`,
   gettingThere: "Getting there",

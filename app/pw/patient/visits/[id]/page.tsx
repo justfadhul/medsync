@@ -23,6 +23,7 @@ import { VISITS_COPY as C } from "@/content/patient/visits";
 import { patientFlag } from "@/lib/patient-web/flags";
 import { loadVisit } from "@/lib/patient-web/visits-data";
 import { requirePatientScope } from "@/lib/patient/scope";
+import { fetchRebookingOffers } from "@/lib/patient/waitlist";
 import { cancellationSentence } from "@/supabase/functions/_shared/cancel-reasons";
 import { reasonTitle } from "../_lib/reason";
 import { RetryButton } from "../../_components/home-bits";
@@ -70,6 +71,11 @@ export default async function VisitPage({ params }: { params: Promise<{ id: stri
   const slot = visit.sessionId === null;
   const live = !ended && visit.status !== "completed" && visit.status !== "no_show";
   const maps = directionsUrl(visit.hospitalPin);
+  // The clinic cancelled the day: the next equivalent day its message offered, one tap away (Gate E).
+  const rebook =
+    visit.cancelledReason === "session_cancelled"
+      ? ((await fetchRebookingOffers([visit.id]).catch(() => null))?.get(visit.id) ?? null)
+      : null;
 
   return (
     <>
@@ -82,7 +88,9 @@ export default async function VisitPage({ params }: { params: Promise<{ id: stri
               {visit.forMember ? C.bandFor(visit.forMember) : C.bandDept(visit.departmentName)}
             </Pill>
             {place ? <p className="text-pw-on-band-2 text-[17px] font-medium">{place}</p> : null}
-            <p className="text-pw-on-band-2 text-[15px]">{slot ? C.slotNote : C.honest}</p>
+            {live ? (
+              <p className="text-pw-on-band-2 text-[15px]">{slot ? C.slotNote : C.honest}</p>
+            ) : null}
           </div>
           <div
             role="img"
@@ -129,49 +137,59 @@ export default async function VisitPage({ params }: { params: Promise<{ id: stri
                   : C.ticket.notPromised,
               },
             ]}
-            // The fee quoted at booking (ADR 0092); none quoted means no strip, never a guess.
+            // The fee quoted at booking (ADR 0092); none quoted means no strip, never a guess. The ticket's
+            // `feeLabel` is money words, never the stored cadre or line name.
             fee={visit.quotedFeeUgx ?? undefined}
-            feeLabel={visit.quotedFeeLabel}
             code={visit.bookingCode}
           />
         ) : null}
 
+        {ended ? <Note>{ended}</Note> : null}
         <VisitActions
           visitId={visit.id}
           controls={controls}
           live={live}
           answered={visit.confirmedByPatientAtIso !== null}
+          rebook={
+            visit.cancelledReason === "session_cancelled"
+              ? rebook && {
+                  sessionId: rebook.nextSessionId,
+                  day: shortDayOf(dayKeyOf(rebook.nextSessionStartsAtIso)),
+                }
+              : undefined
+          }
         />
 
-        {ended ? <Note>{ended}</Note> : null}
         {visit.forMember ? <Note>{C.householdLine(visit.forMember)}</Note> : null}
 
-        <section
-          id="getting-there"
-          aria-labelledby="getting-there-h"
-          className="flex scroll-mt-20 flex-col gap-2"
-        >
-          <h2 id="getting-there-h" className="text-lg leading-6 font-semibold">
-            {C.gettingThere}
-          </h2>
-          <p className="text-pw-ink-2 text-[17px]">{`${visit.hospitalName} · ${visit.departmentName}`}</p>
-          <p className="text-pw-ink-3 text-[13px] font-medium">
-            {visit.bookingCode ? C.showCode(visit.bookingCode) : C.showNumber}
-          </p>
-          {maps ? (
-            <a
-              href={maps}
-              target="_blank"
-              rel="noopener noreferrer"
-              className={buttonClass("soft", "l") + " self-start"}
-            >
-              <NavigationIcon className="size-5" {...ICON} />
-              {C.directionsInMaps}
-            </a>
-          ) : (
-            <p className="text-pw-ink-3 text-[13px] font-medium">{C.noPin(visit.hospitalName)}</p>
-          )}
-        </section>
+        {live ? (
+          <section
+            id="getting-there"
+            aria-labelledby="getting-there-h"
+            className="flex scroll-mt-20 flex-col gap-2"
+          >
+            <h2 id="getting-there-h" className="text-lg leading-6 font-semibold">
+              {C.gettingThere}
+            </h2>
+            <p className="text-pw-ink-2 text-[17px]">{`${visit.hospitalName} · ${visit.departmentName}`}</p>
+            <p className="text-pw-ink-3 text-[13px] font-medium">
+              {visit.bookingCode ? C.showCode(visit.bookingCode) : C.showNumber}
+            </p>
+            {maps ? (
+              <a
+                href={maps}
+                target="_blank"
+                rel="noopener noreferrer"
+                className={buttonClass("soft", "l") + " self-start"}
+              >
+                <NavigationIcon className="size-5" {...ICON} />
+                {C.directionsInMaps}
+              </a>
+            ) : (
+              <p className="text-pw-ink-3 text-[13px] font-medium">{C.noPin(visit.hospitalName)}</p>
+            )}
+          </section>
+        ) : null}
       </div>
     </>
   );

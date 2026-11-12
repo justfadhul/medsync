@@ -77,7 +77,8 @@ async function post<T>(
     });
     const text = await res.text();
     if (!res.ok) {
-      let detail = text;
+      // A gateway error page (Cloudflare 520, 502) is HTML: staff never see markup.
+      let detail = text.trimStart().startsWith("<") ? "" : text;
       let code: string | null = null;
       try {
         const parsed = JSON.parse(text) as {

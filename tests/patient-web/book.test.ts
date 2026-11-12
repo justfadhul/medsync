@@ -1,6 +1,8 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import type { ClinicSession, DayOption, ServiceLineLite } from "@patient-core/book-days";
+import { createElement as h } from "react";
+import { renderToStaticMarkup } from "react-dom/server";
 import { attachmentPath, storedMime } from "@patient-core/book-attachments";
 import {
   addDays,
@@ -15,6 +17,7 @@ import {
 import { interruptOf } from "@patient-core/symptoms";
 import { describe, expect, it } from "vitest";
 
+import { WhyComing } from "@/app/pw/patient/book/_components/why-coming";
 import { BOOK_COPY, PLANNED_GROUPS } from "@/content/patient/book";
 import { PATIENT_REASON_CODES } from "@/supabase/functions/_shared/sessions-sql";
 import { CATALOG } from "@/supabase/functions/_shared/symptom-catalog/catalog.v0.1";
@@ -67,6 +70,32 @@ describe("Book a visit", () => {
     const src = read("app/pw/patient/book/_components/book-form.tsx");
     expect(src).toMatch(/todayOff = who !== null/);
     expect(src).toMatch(/todayOff \? C\.comeTodayOff : C\.honest/);
+  });
+});
+
+describe("Why are you coming?", () => {
+  const why = (areas: { key: string; label: string }[] | null) =>
+    renderToStaticMarkup(
+      h(WhyComing, {
+        door: null,
+        onDoor: () => {},
+        reason: null,
+        onReason: () => {},
+        areas,
+        wrongHref: () => "/patient/book/wrong",
+      }),
+    );
+
+  it("G1: with the catalogue off there is no Something is wrong door, only the planned list", () => {
+    const off = why(null);
+    expect(off).not.toContain(BOOK_COPY.doorWrong);
+    expect(off).toContain(PLANNED_GROUPS[0]!.reasons[0]!.label);
+  });
+
+  it("with the catalogue on, both doors and nothing chosen yet", () => {
+    const on = why([{ key: "head", label: "Head" }]);
+    expect(on).toContain(BOOK_COPY.doorWrong);
+    expect(on).not.toContain(PLANNED_GROUPS[0]!.reasons[0]!.label);
   });
 });
 

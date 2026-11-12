@@ -9,7 +9,8 @@ import { env } from "@/lib/env";
  * existed stay signed in.
  */
 export const ACTIVE_ACCOUNT_COOKIE = "ms-account";
-export const MAX_ACCOUNTS = 5;
+// Four, not five (ADR 0472): five sessions of cookies pass Node's 16 KB request-header limit (HTTP 431).
+export const MAX_ACCOUNTS = 4;
 
 export function authCookieName(slot: number): string {
   // Read on call, not at import: the build collects page data with no Supabase env (CI).
