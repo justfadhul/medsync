@@ -5,6 +5,14 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); version
 
 ## [Unreleased]
 
+### Fixed — The doctor's auto-confirm is the one bookings follow, and the doctor's queue updates itself — 13 Nov 2026
+
+- A booking's first status follows the doctor's own auto-confirm, else the department's default, else manual: the
+  chain the doctor's page already showed. Before, a doctor with no setting of their own saw "Auto-confirm on" while
+  their requests sat unconfirmed and unshown ([ADR 0476](docs/adr/0476-doctor-auto-confirm-and-live-queue.md)). The
+  patient's booking screens promise the same. Needs the booking Edge Functions redeployed.
+- `/doctor/schedule` re-reads itself every 15 s while visible, so check-ins and calls show without a reload.
+
 ### Changed — Four signed-in accounts per browser, and no "Something is wrong" door while it leads nowhere — 12 Nov 2026
 
 - One browser holds four signed-in accounts, not five: five sessions of cookies passed Node's 16 KB header limit and
