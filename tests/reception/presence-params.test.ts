@@ -30,4 +30,10 @@ describe("presenceAt comparisons", () => {
       }
     }
   });
+
+  // The same driver rule in the desk's "elsewhere" read: /reception/book?patient=… 500'd on it (Nov 2026).
+  it("booking-options binds its instants through ts()", () => {
+    const src = readFileSync(resolve(ROOT, "lib/scheduling/booking-options.ts"), "utf8");
+    expect(src).not.toMatch(/\$\{(?:now|until)\}/);
+  });
 });
