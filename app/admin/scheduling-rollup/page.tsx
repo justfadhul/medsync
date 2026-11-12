@@ -1,15 +1,18 @@
+import type { PilotHospital } from "@/lib/hospital-admin/pilot";
 import type { Ratio, ReportDays, TenantAggregates } from "@/lib/hospital-admin/reports";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { and, count, eq, gte, inArray, sql } from "drizzle-orm";
-import { BellRingIcon, CalendarClockIcon, GaugeIcon } from "lucide-react";
+import { BellRingIcon, CalendarClockIcon, CalendarRangeIcon, GaugeIcon } from "lucide-react";
 
+import { PilotWeeksNote, PilotWeeksTable } from "@/components/scheduling/pilot-weeks";
 import { Pill } from "@/components/ui/pill";
 import { db } from "@/db";
 import { hospitals } from "@/db/schema/hospitals";
 import { appointmentReminders, appointments } from "@/db/schema/scheduling";
 import { getAuthState } from "@/lib/auth";
+import { fetchPilotWeeks, PILOT_WEEKS } from "@/lib/hospital-admin/pilot";
 import {
   fetchTenantAggregates,
   MIN_RATE_SAMPLE,
@@ -50,6 +53,9 @@ export const dynamic = "force-dynamic";
  *     aggregates — fill, no-show, wait accuracy, demand, SMS spend — read
  *     through lib/hospital-admin/reports so this page owns no query of
  *     its own. Rates and counts per hospital, nothing finer.
+ *   - Pilot numbers, week by week (lib/hospital-admin/pilot): bookings
+ *     by channel, no-shows, median check-in and wait — per hospital, then
+ *     per clinic line. Counts and medians only, worked out on the server.
  *   - Hospitals with no clinician availability declared get a soft
  *     warning row tint so the superadmin can spot tenants that
  *     onboarded but haven't set up scheduling yet.
@@ -153,10 +159,11 @@ export default async function SchedulingRollupPage({ searchParams }: PageProps) 
   if (!rolesData?.some((r) => r.role === "superadmin")) redirect("/");
 
   const days = parseReportDays((await searchParams).days);
-  const [{ perHospital, totals, errored }, dispatcher, access] = await Promise.all([
+  const [{ perHospital, totals, errored }, dispatcher, access, pilot] = await Promise.all([
     fetchRollup(),
     fetchDispatcherHealth(),
     fetchAccess(days),
+    fetchPilot(),
   ]);
 
   return (
@@ -215,6 +222,14 @@ export default async function SchedulingRollupPage({ searchParams }: PageProps) 
           access: access?.get(h.hospitalId) ?? null,
         }))}
         errored={access === null}
+      />
+
+      <PilotPanel
+        rows={perHospital.map((h) => ({
+          hospitalName: h.hospitalName,
+          data: pilot?.get(h.hospitalId) ?? null,
+        }))}
+        errored={pilot === null}
       />
 
       <section
@@ -828,6 +843,83 @@ function RateCell({ ratio }: { ratio: Ratio | undefined }) {
         </span>
       )}
     </td>
+  );
+}
+
+/* ─── pilot numbers, week by week ──────────────────────────────────── */
+
+async function fetchPilot(): Promise<Map<string, PilotHospital> | null> {
+  try {
+    return (await fetchPilotWeeks()).hospitals;
+  } catch (e) {
+    logger.error("admin.scheduling-rollup.pilot_query_failed", { reason: String(e) });
+    return null;
+  }
+}
+
+/** One closed disclosure per hospital with activity; the quiet ones in a line. */
+function PilotPanel({
+  rows,
+  errored,
+}: {
+  rows: Array<{ hospitalName: string; data: PilotHospital | null }>;
+  errored: boolean;
+}) {
+  const active = rows.filter(
+    (r): r is { hospitalName: string; data: PilotHospital } => r.data !== null,
+  );
+  const quiet = rows.filter((r) => r.data === null).map((r) => r.hospitalName);
+  return (
+    <section
+      aria-labelledby="pilot-heading"
+      className="border-border bg-card overflow-hidden rounded-lg border"
+    >
+      <header className="border-border flex items-center gap-2 border-b px-4 py-2.5 sm:px-6">
+        <CalendarRangeIcon className="text-muted-foreground size-3.5" aria-hidden />
+        <h2 id="pilot-heading" className="text-foreground text-body-s font-medium">
+          Pilot numbers, week by week
+        </h2>
+        <span className="text-muted-foreground text-caption ml-auto font-mono">
+          last {PILOT_WEEKS} weeks · EAT
+        </span>
+      </header>
+
+      {errored ? (
+        <p className="text-muted-foreground text-body-s p-8 text-center">
+          Pilot numbers unavailable — the query failed. Check the Vercel function logs.
+        </p>
+      ) : active.length === 0 ? (
+        <p className="text-muted-foreground text-body-s p-8 text-center">
+          No bookings or visits in the last {PILOT_WEEKS} weeks.
+        </p>
+      ) : (
+        active.map((r) => {
+          const booked = r.data.weeks.reduce((n, w) => n + w.booked.total, 0);
+          return (
+            <details key={r.data.hospitalId} className="border-border border-b">
+              <summary className="hover:bg-muted/40 focus-visible:ring-ring flex min-h-11 cursor-pointer items-center gap-3 px-4 py-2.5 outline-none focus-visible:ring-2 focus-visible:ring-inset sm:px-6">
+                <span className="text-foreground text-body-s font-medium">{r.hospitalName}</span>
+                <span className="text-muted-foreground text-caption ml-auto font-mono tabular-nums">
+                  {booked} booked · this week {r.data.weeks[0]?.booked.total ?? 0}
+                </span>
+              </summary>
+              <div className="border-border border-t">
+                <PilotWeeksTable data={r.data} />
+              </div>
+            </details>
+          );
+        })
+      )}
+
+      <div className="flex flex-col gap-2 px-4 py-3 sm:px-6">
+        {!errored && quiet.length > 0 ? (
+          <p className="text-muted-foreground text-caption">
+            Nothing in the window: {quiet.join(", ")}.
+          </p>
+        ) : null}
+        <PilotWeeksNote />
+      </div>
+    </section>
   );
 }
 
