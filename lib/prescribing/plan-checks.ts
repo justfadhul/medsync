@@ -18,12 +18,14 @@ import type { Fired } from "@/lib/pharmacy/clinical/interactions";
 import type { InteractionContext } from "@/lib/pharmacy/clinical/read";
 
 import { CLINICAL_B, firedLine } from "@/content/pharmacy-clinical";
+import { egfr, kdigoG } from "@/lib/ncdreg/standard/calculations";
 import { checkInteractions } from "@/lib/pharmacy/clinical/interactions";
 import { PAEDIATRIC_AGE_THRESHOLD, runSafetyChecks } from "./engine";
 import {
   allergyGroupName,
   classById,
   drugById,
+  DRUGS,
   emergencyOriginOf,
   isFluid,
   regimenById,
@@ -54,6 +56,8 @@ export type PlanCheckCode =
   | "stock"
   | "cosign"
   | "controlled"
+  | "pregnancy"
+  | "limits"
   | "engine_concentration"
   | "engine_max_cumulative"
   | "engine_contraindication";
@@ -114,11 +118,21 @@ export interface PlanCheckContext {
   bloodCulture: CultureState;
   others: readonly OtherMedicine[];
   cosign: "allowed" | "cosign_required" | "blocked";
-  pharmacy: PharmacyAvailability;
+  /** The ADR 0190 seam; absent reads as "not linked" (the stock answer below replaces it). */
+  pharmacy?: PharmacyAvailability;
   /** Pharmacy Phase 1 (5.10): the real answer, behind `pharmacyStockAnswer`; absent → `pharmacy` as before. */
   stock?: StockLine | null;
   /** Pharmacy Phase 3 (5.3): the signed pairs and the patient's current medicines, behind `pharmacyInteractions`. */
   interactions?: InteractionContext | null;
+  /**
+   * PRESCRIBE_V2 (prescribing kit F3): allergy cross-reactivity, eGFR by CKD-EPI 2021, pregnancy and
+   * limits. Off, every check reads exactly as before.
+   */
+  v2?: boolean;
+  /** Sex recorded for physiological calculations (eGFR, pregnancy question). */
+  sex?: "female" | "male" | null;
+  /** The pregnancy record: null = never asked. */
+  pregnancy?: { state: "pregnant" | "not_pregnant" | "postpartum"; weeks: number | null } | null;
 }
 
 /** Hypoglycaemia threshold (JBDS-IP 2023, signed in the emergency formulary: "CBG < 4.0 mmol/L"). */
@@ -168,6 +182,16 @@ function allergyCheck(drug: Drug, ctx: PlanCheckContext): PlanCheck {
       proposed: true,
       overrideable: true,
     };
+  const cross = ctx.v2 ? crossReactive(drug, ctx) : null;
+  if (cross)
+    return {
+      code: "allergy",
+      outcome: "check",
+      title: "Allergy",
+      message: `Allergy record: "${cross.substance}". ${drug.generic} shares the ${allergyGroupName(cross.group).split(" (")[0]!.toLowerCase()} group with it, so a cross-reaction is possible. Check what the reaction was before giving.`,
+      proposed: true,
+      overrideable: true,
+    };
   if (ctx.allergyStatus === "unknown")
     return {
       code: "allergy_status",
@@ -185,10 +209,36 @@ function allergyCheck(drug: Drug, ctx: PlanCheckContext): PlanCheck {
       (ctx.allergyStatus === "none_known"
         ? "No known allergies recorded."
         : "No recorded allergy matches by name, class or allergy group.") +
-      (beta ? " Cross-reactivity between beta-lactams is not checked." : ""),
+      (beta && !ctx.v2 ? " Cross-reactivity between beta-lactams is not checked." : ""),
     proposed: true,
     overrideable: true,
   };
+}
+
+/**
+ * Cross-reactivity (v2): an allergy that names other formulary medicines by name, class or group,
+ * where this medicine shares one of their allergy groups. Read from the formulary's groups only.
+ */
+function crossReactive(
+  drug: Drug,
+  ctx: PlanCheckContext,
+): { substance: string; group: string } | null {
+  for (const a of ctx.allergies) {
+    const w = words(a.substance);
+    const named = DRUGS.filter((d) => d.id !== drug.id && w.some((x) => allergyHaystack(d).has(x)));
+    const group = drug.allergyGroups.find((g) => named.some((d) => d.allergyGroups.includes(g)));
+    if (group) return { substance: a.substance, group };
+  }
+  return null;
+}
+
+/** eGFR by CKD-EPI 2021 (creatinine in µmol/L), with its KDIGO category; null when it cannot be worked out. */
+export function egfrOf(ctx: Pick<PlanCheckContext, "creatinine" | "ageYears" | "sex">) {
+  const cr = ctx.creatinine;
+  if (!cr || ctx.ageYears == null || ctx.ageYears < 18 || !ctx.sex) return null;
+  if (!/^(u|µ)mol\/L$/i.test(cr.unit.replace("μ", "µ"))) return null;
+  const value = egfr(cr.value, ctx.ageYears, ctx.sex);
+  return { value, category: kdigoG(value) };
 }
 
 function kidneyCheck(drug: Drug, ctx: PlanCheckContext): PlanCheck {
@@ -204,10 +254,18 @@ function kidneyCheck(drug: Drug, ctx: PlanCheckContext): PlanCheck {
       outcome: "not_applicable",
       message: "Not marked as needing a kidney-function check.",
     };
+  const e = ctx.v2 ? egfrOf(ctx) : null;
+  if (e && ctx.creatinine)
+    return {
+      ...base,
+      // KDIGO G1–G2 is not decreased kidney function; G3a and below asks for the dose to be checked.
+      outcome: e.category === "G1" || e.category === "G2" ? "passed" : "check",
+      message: `eGFR ${e.value} mL/min/1.73 m² (${e.category}), worked out with CKD-EPI 2021 from creatinine ${ctx.creatinine.value} ${ctx.creatinine.unit} at ${time(ctx.creatinine.at)}, ${ctx.sex}, ${ctx.ageYears} y. Check the ${drug.generic} dose for kidney function.`,
+    };
   if (ctx.creatinine)
     return {
       ...base,
-      outcome: "note",
+      outcome: ctx.v2 ? "check" : "note",
       message: `Creatinine ${ctx.creatinine.value} ${ctx.creatinine.unit} at ${time(ctx.creatinine.at)}. Check the dose for kidney function.`,
     };
   return {
@@ -339,20 +397,21 @@ function stockCheck(ctx: PlanCheckContext): PlanCheck {
   // D-PH1-22: a linked answer is a Note or a Check from the mapping, never a Stop.
   if (ctx.stock && ctx.stock.level !== "not_checked")
     return { ...base, outcome: ctx.stock.level, message: stockLineWords(ctx.stock) };
-  switch (ctx.pharmacy.status) {
+  const pharmacy: PharmacyAvailability = ctx.pharmacy ?? { status: "not_linked" };
+  switch (pharmacy.status) {
     case "not_linked":
       return { ...base, outcome: "not_checked", message: "Pharmacy not linked yet." };
     case "out":
       return {
         ...base,
         outcome: "check",
-        message: `Out of stock${ctx.pharmacy.point ? ` at ${ctx.pharmacy.point}` : ""}.`,
+        message: `Out of stock${pharmacy.point ? ` at ${pharmacy.point}` : ""}.`,
       };
     case "low":
       return {
         ...base,
         outcome: "note",
-        message: `Low stock${ctx.pharmacy.point ? ` at ${ctx.pharmacy.point}` : ""}.`,
+        message: `Low stock${pharmacy.point ? ` at ${pharmacy.point}` : ""}.`,
       };
     default:
       return { ...base, outcome: "passed", message: "In stock." };
@@ -461,6 +520,58 @@ const firedWords = (f: Fired) =>
       )
     : firedLine({ ...f, adding: nameOf(f.adding), other: nameOf(f.other) });
 
+/** Pregnancy (v2): asked for women aged 12 to 55 (kit F1); signed pregnancy advice shown only when signed. */
+function pregnancyCheck(drug: Drug, ctx: PlanCheckContext): PlanCheck {
+  const base = {
+    code: "pregnancy" as const,
+    title: "Pregnancy",
+    proposed: true,
+    overrideable: true,
+  };
+  const ofAge =
+    ctx.sex === "female" && ctx.ageYears != null && ctx.ageYears >= 12 && ctx.ageYears <= 55;
+  if (!ofAge) return { ...base, outcome: "not_applicable", message: "Not a woman aged 12 to 55." };
+  if (!ctx.pregnancy)
+    return {
+      ...base,
+      outcome: "check",
+      message: "Pregnancy has not been asked about on this record. Ask before giving.",
+    };
+  if (ctx.pregnancy.state !== "pregnant")
+    return { ...base, outcome: "passed", message: "Not pregnant, as recorded." };
+  const signed = drug.dose.csoSigned && drug.dose.pregnancy;
+  return {
+    ...base,
+    outcome: "check",
+    message: signed
+      ? `Pregnant${ctx.pregnancy.weeks != null ? `, ${ctx.pregnancy.weeks} weeks` : ""}. ${drug.dose.pregnancy}`
+      : `Pregnant${ctx.pregnancy.weeks != null ? `, ${ctx.pregnancy.weeks} weeks` : ""}. No signed pregnancy advice for ${drug.generic} yet: check it before giving.`,
+  };
+}
+
+/** Limits (v2): a dose above the signed regimen's own maximum. No maximum is invented. */
+function limitsCheck(drug: Drug, rx: PlanRx): PlanCheck {
+  const base = { code: "limits" as const, title: "Limits", proposed: true, overrideable: true };
+  const max = rx.regimenId ? regimenById(drug, rx.regimenId)?.perKg?.max : undefined;
+  if (max == null)
+    return {
+      ...base,
+      outcome: "not_checked",
+      message: `No signed maximum dose for ${drug.generic} yet.`,
+    };
+  if (rx.doseNum != null && rx.doseNum > max)
+    return {
+      ...base,
+      outcome: "stop",
+      message: `${rx.doseNum} ${rx.unit} is above the regimen's maximum of ${max} ${rx.unit}.`,
+    };
+  return {
+    ...base,
+    outcome: "passed",
+    message: `Within the regimen's maximum of ${max} ${rx.unit}.`,
+  };
+}
+
 export function planChecks(drug: Drug, rx: PlanRx, ctx: PlanCheckContext): PlanCheck[] {
   const out: PlanCheck[] = [];
   const origin = emergencyOriginOf(drug.id);
@@ -563,6 +674,10 @@ export function planChecks(drug: Drug, rx: PlanRx, ctx: PlanCheckContext): PlanC
   }
 
   out.push(kidneyCheck(drug, ctx));
+  if (ctx.v2) {
+    out.push(pregnancyCheck(drug, ctx));
+    if (rx.kind === "drug") out.push(limitsCheck(drug, rx));
+  }
   out.push(weightCheck(drug, rx, ctx));
   if (!isFluid(drug) || rx.kind === "drug") out.push(duplicateCheck(drug, ctx));
   out.push(indicationCheck(drug, rx, ctx));

@@ -3,27 +3,29 @@ import "server-only";
 import { randomUUID } from "node:crypto";
 import type { WriteCtx } from "./context";
 import type { WriteResult } from "./orders";
-import type { PlanOrderLine } from "@/lib/clerking/plan/draft";
+import type { PlanBasketRx, PlanOrderLine } from "@/lib/clerking/plan/draft";
 import type { ChartFrequency, ObsFrequency, PlanChartItem } from "@/lib/emr/charts/rules";
 import type { EmrTx } from "@/lib/emr/db";
 import type { DemographicFact, ObservationFact, PregnancyFact } from "@/lib/facts/types";
 import type { InteractionContext } from "@/lib/pharmacy/clinical/read";
 import type { StockLine } from "@/lib/prescribing/pharmacy";
+import type { PrescribePlace } from "@/lib/prescribing/places";
 import type { CultureState, OtherMedicine, PlanCheckContext } from "@/lib/prescribing/plan-checks";
 import type { PlanRx } from "@/lib/prescribing/plan-rx";
 import type { AdminRoute } from "@/lib/prescribing/reference/emergency-drug-catalog";
-import { and, eq, inArray, isNull } from "drizzle-orm";
+import { and, eq, inArray, isNull, sql } from "drizzle-orm";
 
 import { clinicalCosignRequests } from "@/db/schema/doctor-workspace";
 import { conditions, medicationStatements, specimens } from "@/db/schema/emr";
 import { encounterOrders } from "@/db/schema/encounter";
 import { monitoringCharts } from "@/db/schema/monitoring";
-import { pharmacyStockAnswers } from "@/db/schema/pharmacy-dispensing";
-import { prescriptions } from "@/db/schema/prescribing";
+import { pharmacyProducts, pharmacyStockAnswers } from "@/db/schema/pharmacy-dispensing";
+import { prescriptionDrafts, prescriptions } from "@/db/schema/prescribing";
 import { computeAgeYears } from "@/lib/age";
 import { DX_CATALOGUE, DX_TERM_IDS, TEST_UUIDS } from "@/lib/clerking/impression/load";
 import { chartsToOpen } from "@/lib/emr/charts/rules";
 import { readAsClinician } from "@/lib/emr/db";
+import { nurseTasksLiveFor, prescribeV2LiveFor } from "@/lib/emr/feature";
 import { loadAllergyInput } from "@/lib/emr/read/allergies";
 import { unitWords } from "@/lib/emr/unit-words";
 import { encrypt } from "@/lib/encryption";
@@ -32,12 +34,14 @@ import { interactionContextFor } from "@/lib/pharmacy/clinical/read";
 import { pharmacyInteractionsLiveFor, pharmacyStockAnswerLiveFor } from "@/lib/pharmacy/feature";
 import { stockLinesFor } from "@/lib/pharmacy/stock/availability-read";
 import { drugById, isFluid, regimenById, resolveRegimens } from "@/lib/prescribing/formulary";
-import { pharmacyAvailability } from "@/lib/prescribing/pharmacy";
+import { PLACE } from "@/lib/prescribing/places";
 import { planChecks, verifyAnswers } from "@/lib/prescribing/plan-checks";
 import { regimenEdits, willRead } from "@/lib/prescribing/plan-rx";
+import { supplyQuantity } from "@/lib/prescribing/supply";
 import { EmrWriteError, stampActivity } from "./context";
 import { loadEncounterDiagnoses } from "./diagnoses";
 import { recordMedicationStatements } from "./facts";
+import { raiseIvTaskOnSend } from "./nursing";
 import { openEncounter, placeOrders, replayed, requireCadre } from "./orders";
 import { answerQuery, chooseAlternative } from "./pharmacy-answers";
 import { prescribeRequirement, PRESCRIBING_CADRES, statementRoute } from "./prescriptions";
@@ -66,6 +70,9 @@ export interface PlanFacts {
   allergies: { substance: string }[];
   allergyStatus: PlanCheckContext["allergyStatus"];
   conditions: string[];
+  /** Kit F1/F3 (PRESCRIBE_V2): eGFR and the pregnancy question read these. */
+  sex: "female" | "male" | null;
+  pregnancy: PlanCheckContext["pregnancy"];
 }
 
 const at = (f: ObservationFact) => ("at" in f.effective ? f.effective.at : f.effective.start);
@@ -125,6 +132,20 @@ export async function loadPlanFacts(
           ? "none_known"
           : "unknown",
     conditions: pregnancy?.state === "pregnant" ? ["pregnancy"] : [],
+    sex: dob?.sexAtBirth === "female" || dob?.sexAtBirth === "male" ? dob.sexAtBirth : null,
+    pregnancy:
+      pregnancy && pregnancy.state !== "unknown"
+        ? {
+            state: pregnancy.state,
+            weeks: pregnancy.gestation
+              ? Math.floor(
+                  (pregnancy.gestation.days +
+                    (now.getTime() - new Date(pregnancy.gestation.asOf).getTime()) / 86_400_000) /
+                    7,
+                )
+              : null,
+          }
+        : null,
   };
 }
 
@@ -202,6 +223,16 @@ async function currentProblem(ctx: WriteCtx, patientUserId: string, conditionId:
 const doseWords = (rx: PlanRx) =>
   rx.kind === "fluid" && rx.fluid ? `${rx.fluid.volumeMl} mL` : `${rx.doseNum} ${rx.unit}`;
 
+/**
+ * Prescribing kit P3 (F6): a protocol's first supply, sent as one placement. The server built each
+ * line from the signed version; `lines` carries the dose words and quantity it worked out per line.
+ */
+export interface ProtocolSend {
+  versionId: string;
+  start: Record<string, unknown>;
+  lines: Record<string, { dose: string; quantity: string | null }>;
+}
+
 async function prescribeFromPlan(
   ctx: WriteCtx,
   input: {
@@ -210,6 +241,9 @@ async function prescribeFromPlan(
     placementId: string;
     placementLine: number;
     rx: PlanRx;
+    /** Prescribing kit F1 (PRESCRIBE_V2): where it was written; only the clerking Plan needs a problem. */
+    place?: PrescribePlace;
+    protocol?: ProtocolSend;
   },
   facts: PlanFacts,
   earlier: OtherMedicine[],
@@ -233,10 +267,18 @@ async function prescribeFromPlan(
     );
   if (!drug.routes.includes(rx.route))
     throw new EmrWriteError("invalid", `${drug.generic} is not given by that route.`);
-  if (rx.kind === "drug" && rx.doseNum == null)
+  // A protocol line's dose is the protocol's, in words (insulin by weight, by the potassium, …).
+  const fromProtocol = input.protocol?.lines[rx.clientKey];
+  if (rx.kind === "drug" && rx.doseNum == null && !fromProtocol)
     throw new EmrWriteError("invalid", `Write the ${drug.generic} dose.`);
-  if (!rx.conditionId) throw new EmrWriteError("invalid", "Choose the problem this is for.");
-  const problem = await currentProblem(ctx, input.patientUserId, rx.conditionId);
+  const needsProblem = !input.place || input.place === "clerking";
+  if (!rx.conditionId && needsProblem)
+    throw new EmrWriteError("invalid", "Choose the problem this is for.");
+  const problem = rx.conditionId
+    ? await currentProblem(ctx, input.patientUserId, rx.conditionId)
+    : { profileId: null };
+  const product = rx.productId ? await chosenProduct(ctx, rx.productId, drug.id) : null;
+  const v2 = !!input.place && prescribeV2LiveFor(actor.hospitalId);
 
   // The regimen, resolved again with the record's weight (ADR 0188).
   let resolved = null;
@@ -278,9 +320,11 @@ async function prescribeFromPlan(
     bloodCulture: await bloodCultureState(ctx, input.encounterId),
     others: earlier,
     cosign: requirement,
-    pharmacy: pharmacyAvailability(drug.id, actor.hospitalId),
     stock,
     interactions,
+    v2,
+    sex: facts.sex,
+    pregnancy: facts.pregnancy,
   });
   // Law 10, D-PH1-22: stock never refuses a placement. If the answer turned into a Check after the
   // dialog (stock ran out meanwhile), the line is placed and the stock answer is stored unanswered.
@@ -324,8 +368,21 @@ async function prescribeFromPlan(
       prescriberCadre: actor.cadreCode,
       drugId: drug.id,
       drugName: drug.generic,
-      dose: doseWords(rx),
-      concentration: rx.strength,
+      dose: fromProtocol ? fromProtocol.dose : doseWords(rx),
+      concentration: rx.strength ?? product?.strength ?? null,
+      // Kit F2: worked out again here from the product's own strength and pack, never taken from the screen.
+      quantity: fromProtocol
+        ? fromProtocol.quantity
+        : rx.kind === "drug" && product
+          ? (supplyQuantity({
+              doseNum: rx.doseNum,
+              unit: rx.unit,
+              frequency: rx.frequency,
+              course: rx.course,
+              prn: rx.prn,
+              product,
+            })?.text ?? null)
+          : null,
       route: rx.route,
       frequency: rx.frequency,
       duration: rx.course,
@@ -365,6 +422,10 @@ async function prescribeFromPlan(
       }),
       placementId: input.placementId,
       placementLine: input.placementLine,
+      prescribePlace: input.place ?? null,
+      productId: product?.id ?? null,
+      protocolVersionId: fromProtocol ? input.protocol!.versionId : null,
+      protocolStart: fromProtocol ? input.protocol!.start : null,
       createdAt: now,
     })
     .returning({ id: prescriptions.id });
@@ -381,6 +442,28 @@ async function prescribeFromPlan(
     });
   if (stock) await recordStockAnswer(ctx, input.patientUserId, row!.id, stock, stockTap?.answer);
   return { id: row!.id, label, drugId: drug.id, classId: drug.class, kind: rx.kind };
+}
+
+/** The brand chosen: a product of this hospital for this medicine, or the line is refused. */
+async function chosenProduct(ctx: WriteCtx, productId: string, drugId: string) {
+  const [row] = await ctx.tx
+    .select({
+      id: pharmacyProducts.id,
+      strength: pharmacyProducts.strength,
+      packSize: pharmacyProducts.packSize,
+      issueUnit: pharmacyProducts.issueUnit,
+    })
+    .from(pharmacyProducts)
+    .where(
+      and(
+        eq(pharmacyProducts.id, productId),
+        eq(pharmacyProducts.hospitalId, ctx.actor.hospitalId),
+        eq(pharmacyProducts.medicineId, drugId),
+        eq(pharmacyProducts.active, true),
+      ),
+    );
+  if (!row) throw new EmrWriteError("invalid", "That brand is not stocked for this medicine here.");
+  return row;
 }
 
 /**
@@ -422,6 +505,7 @@ async function basketStock(
   ctx: WriteCtx,
   encounterId: string,
   rxs: readonly PlanRx[],
+  place?: PrescribePlace,
 ): Promise<Map<string, StockLine> | null> {
   if (!rxs.length || !pharmacyStockAnswerLiveFor(ctx.actor.hospitalId)) return null;
   try {
@@ -431,6 +515,7 @@ async function basketStock(
         encounterId,
         medicineIds: rxs.map((r) => r.drugId),
         now: ctx.now,
+        ...(place ? { origin: PLACE[place].origin } : {}),
       }),
     );
   } catch (e) {
@@ -568,6 +653,10 @@ export interface PlacePlanInput {
   prescriptions: PlanRx[];
   observationFrequency: ObsFrequency | null;
   measureUrine: boolean;
+  /** Prescribing kit F1 (PRESCRIBE_V2): the place it was sent from, stored on every line. */
+  place?: PrescribePlace;
+  /** Prescribing kit P3: the lines are a protocol's first supply. */
+  protocol?: ProtocolSend;
 }
 
 export async function placePlan(
@@ -599,7 +688,11 @@ export async function placePlan(
   const facts = await loadPlanFacts(ctx.tx, input.patientUserId, ctx.now);
   // Already prescribed: this visit's prescriptions, then each one placed before it in this basket.
   const visit = await ctx.tx
-    .select({ drugId: prescriptions.drugId, drugName: prescriptions.drugName })
+    .select({
+      id: prescriptions.id,
+      drugId: prescriptions.drugId,
+      drugName: prescriptions.drugName,
+    })
     .from(prescriptions)
     .where(
       and(
@@ -608,6 +701,10 @@ export async function placePlan(
         eq(prescriptions.state, "active"),
       ),
     );
+  // A line placed to change one the pharmacy asked about is not "already prescribed" against that line.
+  const replaced = new Set(
+    input.prescriptions.flatMap((rx) => (rx.replaces ? [rx.replaces.lineId] : [])),
+  );
   const admission = await ctx.tx
     .select({ drugCode: medicationStatements.drugCode })
     .from(medicationStatements)
@@ -618,12 +715,14 @@ export async function placePlan(
       ),
     );
   const others: OtherMedicine[] = [
-    ...visit.map((v) => ({
-      drugId: v.drugId,
-      classId: drugById(v.drugId)?.class,
-      display: v.drugName,
-      source: "this_visit" as const,
-    })),
+    ...visit
+      .filter((v) => !replaced.has(v.id))
+      .map((v) => ({
+        drugId: v.drugId,
+        classId: drugById(v.drugId)?.class,
+        display: v.drugName,
+        source: "this_visit" as const,
+      })),
     ...admission.flatMap((a) => {
       const d = a.drugCode ? drugById(a.drugCode) : undefined;
       return d
@@ -631,7 +730,7 @@ export async function placePlan(
         : [];
     }),
   ];
-  const stock = await basketStock(ctx, encounter.id, input.prescriptions);
+  const stock = await basketStock(ctx, encounter.id, input.prescriptions, input.place);
   const interactions = pharmacyInteractionsLiveFor(ctx.actor.hospitalId)
     ? await interactionContextFor(ctx.tx, ctx.actor.hospitalId, input.patientUserId, ctx.now)
     : null;
@@ -647,6 +746,8 @@ export async function placePlan(
         placementId,
         placementLine: i + 1,
         rx,
+        place: input.place,
+        protocol: input.protocol,
       },
       facts,
       others,
@@ -720,4 +821,84 @@ async function linkReplacement(
     lineId: replaces.lineId,
     replacedByClientKey: clientKey,
   });
+}
+
+/* ─── The one Prescribe (prescribing kit P1) ─────────────────────── */
+
+const draftOf = (ctx: WriteCtx, encounterId: string, place: PrescribePlace) =>
+  and(
+    eq(prescriptionDrafts.encounterId, encounterId),
+    eq(prescriptionDrafts.authorUserId, ctx.actor.userId),
+    eq(prescriptionDrafts.place, place),
+  );
+
+/** "Sign and send" from any place: the basket placed with its place, then the draft is gone. */
+export async function sendPrescribed(
+  ctx: WriteCtx,
+  input: {
+    patientUserId: string;
+    encounterId: string;
+    place: PrescribePlace;
+    lines: PlanRx[];
+    protocol?: ProtocolSend;
+  },
+): Promise<WriteResult & { prescriptionIds: string[] }> {
+  const placed = await placePlan(ctx, {
+    protocol: input.protocol,
+    patientUserId: input.patientUserId,
+    encounterId: input.encounterId,
+    orders: [],
+    prescriptions: input.lines,
+    observationFrequency: null,
+    measureUrine: false,
+    place: input.place,
+  });
+  await ctx.tx.delete(prescriptionDrafts).where(draftOf(ctx, input.encounterId, input.place));
+  // P2 (b): IV lines for a patient with no line give the nurses "Insert an IV cannula".
+  if (nurseTasksLiveFor(ctx.actor.hospitalId))
+    await raiseIvTaskOnSend(ctx, {
+      patientUserId: input.patientUserId,
+      encounterId: input.encounterId,
+      lines: input.lines,
+      prescriptionIds: placed.prescriptionIds,
+    });
+  return placed;
+}
+
+/** Keeps the basket closed unsent ("Draft not sent", then "Resume"); an empty basket removes it. */
+export async function keepPrescribeDraft(
+  ctx: WriteCtx,
+  input: {
+    patientUserId: string;
+    encounterId: string;
+    place: PrescribePlace;
+    lines: PlanBasketRx[];
+  },
+): Promise<WriteResult> {
+  requireCadre(ctx, PRESCRIBING_CADRES, "prescribe");
+  const enc = await openEncounter(ctx, input.patientUserId, input.encounterId);
+  if (!input.lines.length) {
+    await ctx.tx.delete(prescriptionDrafts).where(draftOf(ctx, enc.id, input.place));
+    return { id: enc.id };
+  }
+  await ctx.tx
+    .insert(prescriptionDrafts)
+    .values({
+      hospitalId: ctx.actor.hospitalId,
+      encounterId: enc.id,
+      patientUserId: input.patientUserId,
+      authorUserId: ctx.actor.userId,
+      place: input.place,
+      lines: input.lines,
+      updatedAt: ctx.now,
+    })
+    .onConflictDoUpdate({
+      target: [
+        prescriptionDrafts.encounterId,
+        prescriptionDrafts.authorUserId,
+        prescriptionDrafts.place,
+      ],
+      set: { lines: sql`excluded.lines`, updatedAt: ctx.now },
+    });
+  return { id: enc.id };
 }

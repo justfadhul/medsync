@@ -1195,7 +1195,8 @@ export async function expirySection(s: DemoState): Promise<void> {
           (SELECT count(*)::int FROM medication_administration_records mar
             JOIN prescriptions rx ON rx.id = mar.emr_prescription_id
             JOIN admissions a ON a.inpatient_encounter_id = mar.encounter_id
-            WHERE a.ward_id = l.ward_id AND rx.drug_id = p.medicine_id AND mar.state = 'administered') AS charted
+            WHERE a.ward_id = l.ward_id AND rx.drug_id = p.medicine_id AND mar.state = 'administered'
+              AND NOT EXISTS (SELECT 1 FROM medication_administration_records r WHERE r.reverses_id = mar.id)) AS charted
         FROM pharmacy_stock_movements m
         JOIN pharmacy_locations l ON l.id = m.location_id AND l.kind = 'ward'
         JOIN pharmacy_batches b ON b.id = m.batch_id

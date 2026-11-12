@@ -81,7 +81,8 @@ async function regimensOf(db: EmrDb, hospitalId: string, patients: string[]) {
                p.start, p.created_at, p.duration,
                (SELECT json_agg(json_build_object('at', m.administered_at, 'for', m.scheduled_for, 'state', m.state,
                                                   'reason', m.withheld_reason))
-                  FROM public.medication_administration_records m WHERE m.emr_prescription_id = p.id) AS mar
+                  FROM public.medication_administration_records m WHERE m.emr_prescription_id = p.id
+                   AND m.state <> 'reversed' AND NOT EXISTS (SELECT 1 FROM public.medication_administration_records r WHERE r.reverses_id = m.id)) AS mar
           FROM public.prescriptions p
           JOIN public.admissions a ON a.patient_user_id = p.patient_user_id AND a.status = 'arrived'
                                   AND a.hospital_id = p.hospital_id

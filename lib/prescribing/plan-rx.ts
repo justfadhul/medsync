@@ -124,6 +124,8 @@ export const PlanRxSchema = z.object({
   /** Pharmacy Phase 4: repeats for this line (RP-1), and the renewal request this placement answers (RN-3). */
   repeats: PlanRxRepeats.nullable().optional(),
   renewalId: z.uuid().optional(),
+  /** Prescribing kit F2 (PRESCRIBE_V2): the brand chosen (pharmacy_products id); absent = any brand. */
+  productId: z.uuid().nullable().optional(),
 });
 export type PlanRx = z.infer<typeof PlanRxSchema>;
 

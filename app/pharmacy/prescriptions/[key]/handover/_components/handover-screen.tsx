@@ -18,6 +18,7 @@ import { Button, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { CONTROLLED_UI } from "@/content/pharmacy-controlled";
+import { PRESCRIBE_HANDOFF_COPY } from "@/content/pharmacy-prescriber";
 import { PAYMENT_WORDS, REVIEW } from "@/content/pharmacy-review";
 import { expiryText } from "@/content/pharmacy-stock";
 import { SUPPLY } from "@/content/pharmacy-supply";
@@ -97,6 +98,7 @@ export function HandoverScreen({
   witnesses = [],
   canSupplyControlled = false,
   slip = null,
+  explainRequired = false,
 }: {
   data: HandoverData;
   canManage: boolean;
@@ -107,6 +109,8 @@ export function HandoverScreen({
   canSupplyControlled?: boolean;
   /** LB-7: what the register slip needs that the screen does not hold. */
   slip?: { hospital: string; patientName: string; medsyncNumber: string } | null;
+  /** Kit F4 (PRESCRIBE_V2): the identity and counselling confirmation, re-checked by the action. */
+  explainRequired?: boolean;
 }) {
   const router = useRouter();
   const [clientKey] = useState(newKey);
@@ -128,6 +132,7 @@ export function HandoverScreen({
   const [repRel, setRepRel] = useState("");
   const [staffId, setStaffId] = useState("");
   const [nameAttested, setNameAttested] = useState(false);
+  const [explained, setExplained] = useState(false);
   const [kind, setKind] = useState<"date_of_birth" | "phone">("date_of_birth");
   const [typed, setTyped] = useState("");
   const [check, setCheck] = useState<{
@@ -337,6 +342,7 @@ export function HandoverScreen({
                 }
               : { route: "two_identifiers", nameAttested },
         labelsWrittenAttested: byHand,
+        explainedAttested: explained,
         counselling: points,
         ...(language.trim().length >= 2 ? { language } : {}),
         payment: {
@@ -811,6 +817,16 @@ export function HandoverScreen({
       </Section>
 
       <Section n={cd ? 7 : 3} title={H.section.explained}>
+        {explainRequired ? (
+          <label className="flex min-h-11 items-center gap-2">
+            <input
+              type="checkbox"
+              checked={explained}
+              onChange={(e) => setExplained(e.target.checked)}
+            />
+            <span className="text-body-s">{PRESCRIBE_HANDOFF_COPY.explained}</span>
+          </label>
+        ) : null}
         {data.counselling?.length ? (
           <fieldset className="flex flex-col gap-1">
             <legend className="text-label mb-1">{H.counselling}</legend>
@@ -905,7 +921,12 @@ export function HandoverScreen({
         <Button
           type="button"
           className={TARGET}
-          disabled={pending || !data.pointLive || (readiness !== null && !readiness.ready)}
+          disabled={
+            pending ||
+            !data.pointLive ||
+            (readiness !== null && !readiness.ready) ||
+            (explainRequired && !explained)
+          }
           onClick={record}
         >
           {cd ? C.record : H.record}

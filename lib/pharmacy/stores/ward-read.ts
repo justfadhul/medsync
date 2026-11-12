@@ -283,6 +283,7 @@ export async function dosesChartedSince(
           JOIN public.admissions a ON a.inpatient_encounter_id = m.encounter_id
          WHERE m.hospital_id = ${input.hospitalId}::uuid AND a.ward_id = ${input.wardId}::uuid
            AND m.state = 'administered'
+           AND NOT EXISTS (SELECT 1 FROM public.medication_administration_records r WHERE r.reverses_id = m.id)
            AND p.drug_id IN (${sql.join(
              medicines.map((m) => sql`${m}`),
              sql`, `,

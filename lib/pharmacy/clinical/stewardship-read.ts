@@ -7,7 +7,7 @@ import { medicationAdministrationRecords } from "@/db/schema/nurse-workspace";
 import { pharmacyAmsReviews } from "@/db/schema/pharmacy-clinical";
 import { prescriptions } from "@/db/schema/prescribing";
 import { TEST_UUIDS } from "@/lib/clerking/impression/load";
-import { entriesInForce } from "./read";
+import { entriesInForce, liveDose } from "./read";
 
 type Db = EmrDb | EmrTx;
 
@@ -49,10 +49,7 @@ export async function stewardshipData(db: Db, hospitalId: string, since: Date) {
           })
           .from(medicationAdministrationRecords)
           .where(
-            and(
-              inArray(medicationAdministrationRecords.emrPrescriptionId, rxIds),
-              eq(medicationAdministrationRecords.state, "administered"),
-            ),
+            and(inArray(medicationAdministrationRecords.emrPrescriptionId, rxIds), liveDose()),
           ),
         bc
           ? db

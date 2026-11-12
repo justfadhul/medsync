@@ -5,6 +5,7 @@ import { z } from "zod";
 import { runEmrWrite } from "@/lib/emr/write/orders";
 import { pharmacyStockAnswerLiveFor } from "@/lib/pharmacy/feature";
 import { stockLinesFor } from "@/lib/pharmacy/stock/availability-read";
+import { PLACE, PRESCRIBE_PLACES } from "@/lib/prescribing/places";
 
 /**
  * The prescriber's stock line in the prescribing dialog (Pharmacy Phase 1, 5.10). Zod →
@@ -17,6 +18,8 @@ const StockLines = z.object({
   patientUserId: z.uuid(),
   encounterId: z.uuid(),
   medicineIds: z.array(z.string().trim().min(1).max(80)).min(1).max(5),
+  /** Prescribing kit F1: the place's collect point; absent, the encounter's (AV-2). */
+  place: z.enum(PRESCRIBE_PLACES).optional(),
 });
 
 export async function stockLines(raw: unknown) {
@@ -29,6 +32,7 @@ export async function stockLines(raw: unknown) {
             encounterId: input.encounterId,
             medicineIds: input.medicineIds,
             now: ctx.now,
+            ...(input.place ? { origin: PLACE[input.place].origin } : {}),
           }),
         )
       : null,

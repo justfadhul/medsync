@@ -8,6 +8,7 @@ import { useId, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { standing } from "@/lib/clerking/plan/record";
 import { BAND_WORD, patientBand } from "@/lib/prescribing/formulary";
+import { egfrOf } from "@/lib/prescribing/plan-checks";
 import { EDIT_FIELD_WORD } from "@/lib/prescribing/plan-rx";
 import { Caution, inputClass, Seg, Tag } from "./parts";
 import { PharmacyChips } from "./pharmacy";
@@ -57,29 +58,36 @@ export function allergyLine(a: AllergyItems): { text: string; caution: boolean }
 
 /** The fact chips (also in the prescribing dialog's header). */
 export function FactChips({
-  v,
+  facts: f,
+  kidneyTestOrdered,
   allergies,
   time,
+  v2 = false,
 }: {
-  v: PlanView;
+  facts: PlanView["payload"]["facts"];
+  kidneyTestOrdered: boolean;
   allergies: AllergyItems;
   time: (iso: string) => string;
+  /** PRESCRIBE_V2 (kit F1): eGFR by CKD-EPI 2021 and the pregnancy question in the strip. */
+  v2?: boolean;
 }) {
-  const f = v.payload.facts;
   const band = patientBand(f.ageYears);
   const al = allergyLine(allergies);
+  const e = v2 ? egfrOf(f) : null;
   const kidney = f.creatinine
-    ? `Creatinine ${f.creatinine.value} ${f.creatinine.unit} · ${time(f.creatinine.at)}`
-    : v.payload.kidneyTestOrdered
+    ? `Creatinine ${f.creatinine.value} ${f.creatinine.unit}${e ? ` · eGFR ${e.value} (${e.category})` : ""} · ${time(f.creatinine.at)}`
+    : kidneyTestOrdered
       ? "Kidney function: not resulted"
       : "Kidney function: no U&E in the plan";
+  const askPregnancy =
+    v2 && f.sex === "female" && f.ageYears != null && f.ageYears >= 12 && f.ageYears <= 55;
   return (
     <ul aria-label="What the checks read" className="flex flex-wrap gap-1.5">
       <li>
         <Tag>
           {f.ageYears == null
             ? "Age not recorded"
-            : `${f.ageYears} y · ${band ? BAND_WORD[band] : ""}`}
+            : `${f.ageYears} y${v2 && f.sex ? ` · ${f.sex}` : ""} · ${band ? BAND_WORD[band] : ""}`}
         </Tag>
       </li>
       <li>
@@ -94,6 +102,21 @@ export function FactChips({
       </li>
       <li>{f.creatinine ? <Tag>{kidney}</Tag> : <Caution>{kidney}</Caution>}</li>
       <li>{al.caution ? <Caution>{al.text}</Caution> : <Tag>{al.text}</Tag>}</li>
+      {askPregnancy ? (
+        <li>
+          {f.pregnancy ? (
+            <Tag>
+              {f.pregnancy.state === "pregnant"
+                ? `Pregnant${f.pregnancy.weeks != null ? `, ${f.pregnancy.weeks} weeks` : ""}`
+                : f.pregnancy.state === "postpartum"
+                  ? "Postpartum"
+                  : "Not pregnant"}
+            </Tag>
+          ) : (
+            <Caution>Pregnancy: not asked</Caution>
+          )}
+        </li>
+      ) : null}
     </ul>
   );
 }
@@ -190,7 +213,13 @@ export function MedicinesSection({
   const fresh = v.record.prescriptions.filter(standing);
   return (
     <div className="flex flex-col gap-4">
-      <FactChips v={v} allergies={allergies} time={time} />
+      <FactChips
+        facts={v.payload.facts}
+        kidneyTestOrdered={v.payload.kidneyTestOrdered}
+        allergies={allergies}
+        time={time}
+        v2={!!v.payload.prescribeV2}
+      />
       <div className="flex flex-col gap-1.5">
         <span className="text-caption text-muted-foreground tracking-[0.06em] uppercase">
           On admission

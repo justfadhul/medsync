@@ -1036,7 +1036,7 @@ export async function handOverPrepared(ctx: PharmacyCtx, input: z.infer<typeof H
   const another = input.identity.route === "identified_another_way" ? input.identity : null;
   const handover: Omit<
     HandoverRow,
-    "labelMode" | "labelsWrittenAttested" | "counselling" | "language"
+    "labelMode" | "labelsWrittenAttested" | "explainedAttested" | "counselling" | "language"
   > = {
     id: handoverId,
     hospitalId,

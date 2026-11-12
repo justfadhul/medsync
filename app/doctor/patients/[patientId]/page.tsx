@@ -13,10 +13,11 @@ import {
 import { EmrChart } from "@/components/emr/chart/emr-chart";
 import { PatientClinicalRecordPanel } from "@/components/encounter/patient-clinical-record-panel";
 import { Button } from "@/components/ui/button";
+import { CHART_COPY } from "@/content/protocol-charts";
 import { db } from "@/db";
 import { fetchPatientSummaryAudited } from "@/lib/doctor/patient-access";
 import { requireDoctorScope } from "@/lib/doctor/scope";
-import { emrV1LiveFor } from "@/lib/emr/feature";
+import { emrV1LiveFor, protocolsLiveFor } from "@/lib/emr/feature";
 import { loadChart } from "@/lib/emr/read/chart";
 import { toEncounterScope } from "@/lib/encounter/workspace-scope";
 import { isOperator } from "@/lib/lab/bedside-store";
@@ -69,6 +70,15 @@ export default async function DoctorPatientSummaryPage({ params }: PageProps) {
       <>
         <ChartCriticals alerts={open} />
         <EmrChart chart={chart} surface="doctor" />
+        {protocolsLiveFor(scope.hospitalId) ? (
+          <div className="mx-auto w-full max-w-[1200px] px-4 pb-2 md:px-8">
+            <Link href={`/doctor/patients/${chart.patientUserId}/protocols`}>
+              <Button type="button" variant="secondary" className="tap">
+                {CHART_COPY.areaTitle}
+              </Button>
+            </Link>
+          </div>
+        ) : null}
         {pharmacyReconciliationLiveFor(scope.hospitalId) ? (
           <div className="mx-auto w-full max-w-[1200px] px-4 pb-2 md:px-8">
             <Link href={`/doctor/patients/${chart.patientUserId}/home-medicines`}>

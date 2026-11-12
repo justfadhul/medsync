@@ -15,7 +15,7 @@ import { pharmacyQueries, pharmacyQueryEvents } from "@/db/schema/pharmacy-dispe
 import { prescriptions } from "@/db/schema/prescribing";
 import { decrypt } from "@/lib/encryption";
 import { drugById } from "@/lib/prescribing/formulary";
-import { entriesInForce } from "./read";
+import { entriesInForce, liveDose } from "./read";
 import { changedSince } from "./reconciliation";
 
 /** Pharmacy Phase 3, Step 9 reads. Patients are named by the caller through the identity read, never here. */
@@ -165,7 +165,7 @@ export async function factsFor(db: Db, hospitalId: string, id: string, now: Date
               medicationAdministrationRecords.emrPrescriptionId,
               ward.map((w) => w.id),
             ),
-            eq(medicationAdministrationRecords.state, "administered"),
+            liveDose(),
           ),
         )
     : [];

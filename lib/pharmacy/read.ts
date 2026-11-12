@@ -37,6 +37,17 @@ import { computeQueue } from "./queue";
  * only write is the view log (RV-6).
  */
 
+/**
+ * The lines the pharmacy dispenses: not an emergency record, and not written at resus (prescribing kit
+ * F4). A resus line was given from the cart first; the cart check restocks it (EC-1), so it never enters
+ * the queue, a review or a hand-over. Every pharmacy read of prescriptions for supply uses this.
+ */
+export const dispensable = () =>
+  and(
+    eq(prescriptions.isEmergency, false),
+    sql`${prescriptions.prescribePlace} IS DISTINCT FROM 'resus'`,
+  )!;
+
 const defaultDb = () => appDb as unknown as EmrDb;
 /** "Medical Officer" → "Medical officer": the copy's sentence case for a cadre's name (Law 4). */
 const sentence = (s: string) => s.charAt(0) + s.slice(1).toLowerCase();
@@ -177,9 +188,7 @@ async function queueLines(
   const rows = await database
     .select(lineColumns)
     .from(prescriptions)
-    .where(
-      and(eq(prescriptions.hospitalId, hospitalId), eq(prescriptions.isEmergency, false), where),
-    );
+    .where(and(eq(prescriptions.hospitalId, hospitalId), dispensable(), where));
   const [cosigns, encs, names] = await Promise.all([
     cosignsFor(
       database,
@@ -406,9 +415,7 @@ export async function getPrescription(
     .from(prescriptions)
     .leftJoin(conditions, eq(conditions.id, prescriptions.conditionId))
     .leftJoin(diagnosisTerms, eq(diagnosisTerms.id, conditions.termId))
-    .where(
-      and(eq(prescriptions.hospitalId, hospitalId), eq(prescriptions.isEmergency, false), filter),
-    );
+    .where(and(eq(prescriptions.hospitalId, hospitalId), dispensable(), filter));
   if (!rows.length) return null;
   const first = rows[0]!;
   const [cosigns, encs, names] = await Promise.all([

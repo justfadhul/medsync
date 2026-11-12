@@ -1,7 +1,10 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
+import { PrescribeButton } from "@/components/clerking/plan/prescribe-session";
 import { resolveCapabilities } from "@/lib/doctor/capabilities";
+import { prescribeV2LiveFor } from "@/lib/emr/feature";
+import { PRESCRIBING_CADRES } from "@/lib/emr/write/prescriptions";
 import { fetchResusPatient } from "@/lib/resus/board";
 import { loadDeskV2 } from "@/lib/resus/desk-v2-loader";
 import { resusDeskV2 } from "@/lib/resus/feature";
@@ -32,15 +35,33 @@ export default async function ResusDeskPage({
   params: Promise<{ episodeId: string }>;
 }) {
   const { episodeId } = await params;
+  const scope = await requireResusScope(`/nurse/resus/${episodeId}`);
+  const episode = await fetchResusEpisode({ episodeId, hospitalId: scope.hospitalId });
+  if (!episode) notFound();
+  // Kit F1 "Resus": the one Prescribe, given from the cart first; a prescriber only, server-checked again.
+  const prescribe =
+    episode.patientUserId &&
+    prescribeV2LiveFor(scope.hospitalId) &&
+    PRESCRIBING_CADRES.includes(scope.cadreCode) ? (
+      <div className="fixed right-4 bottom-4 z-40">
+        <PrescribeButton
+          surface="doctor"
+          patientUserId={episode.patientUserId}
+          encounterId={episode.encounterId ?? undefined}
+          place="resus"
+        />
+      </div>
+    ) : null;
   if (resusDeskV2()) {
     const initial = await loadDeskV2({ episodeId, basePath: "/nurse/resus" });
     if (!initial) notFound();
-    return <ResusDeskV2 initial={initial} />;
+    return (
+      <>
+        <ResusDeskV2 initial={initial} />
+        {prescribe}
+      </>
+    );
   }
-  const scope = await requireResusScope(`/nurse/resus/${episodeId}`);
-
-  const episode = await fetchResusEpisode({ episodeId, hospitalId: scope.hospitalId });
-  if (!episode) notFound();
 
   const [patient, timeline, roster, responders, caps] = await Promise.all([
     fetchResusPatient({
@@ -59,33 +80,36 @@ export default async function ResusDeskPage({
   ]);
 
   return (
-    <ResusDesk
-      episode={{
-        id: episode.id,
-        state: episode.state,
-        triggerKind: episode.triggerKind,
-        triggerReason: episode.triggerReason,
-        startedAtIso: episode.startedAt.toISOString(),
-        arrestDetected: episode.arrestDetectedAt !== null,
-        disposition: episode.disposition,
-      }}
-      patient={patient}
-      timeline={timeline}
-      roster={roster}
-      responders={responders}
-      scope={{
-        userId: scope.userId,
-        fullName: scope.fullName,
-        cadreCode: scope.cadreCode,
-        cadreName: scope.cadreName,
-        hospitalName: scope.hospitalName,
-        departmentName: scope.departmentName,
-        leaderRecommended: scope.leaderRecommended,
-        prescribeAuthority: {
-          routine: caps.prescription_routine,
-          controlled: caps.prescription_controlled,
-        },
-      }}
-    />
+    <>
+      <ResusDesk
+        episode={{
+          id: episode.id,
+          state: episode.state,
+          triggerKind: episode.triggerKind,
+          triggerReason: episode.triggerReason,
+          startedAtIso: episode.startedAt.toISOString(),
+          arrestDetected: episode.arrestDetectedAt !== null,
+          disposition: episode.disposition,
+        }}
+        patient={patient}
+        timeline={timeline}
+        roster={roster}
+        responders={responders}
+        scope={{
+          userId: scope.userId,
+          fullName: scope.fullName,
+          cadreCode: scope.cadreCode,
+          cadreName: scope.cadreName,
+          hospitalName: scope.hospitalName,
+          departmentName: scope.departmentName,
+          leaderRecommended: scope.leaderRecommended,
+          prescribeAuthority: {
+            routine: caps.prescription_routine,
+            controlled: caps.prescription_controlled,
+          },
+        }}
+      />
+      {prescribe}
+    </>
   );
 }

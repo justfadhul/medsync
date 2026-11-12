@@ -1,12 +1,17 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { eq } from "drizzle-orm";
 import { SmartphoneIcon } from "lucide-react";
 
+import { PrescribeButton } from "@/components/clerking/plan/prescribe-session";
 import { buttonVariants } from "@/components/ui/button";
 import { LAB2 } from "@/content/lab-phase-2";
+import { ncdPerson } from "@/db/schema/ncd-registry";
+import { prescribeV2LiveFor } from "@/lib/emr/feature";
 import { ncdLabFeedLiveFor } from "@/lib/lab/feature";
 import { labFeedFor, visitOutsideResults } from "@/lib/ncd/lab-feed-read";
 import { can } from "@/lib/ncdreg/context";
+import { withNcd } from "@/lib/ncdreg/db";
 import { REVIEW_LABELS } from "@/lib/ncdreg/read/derive";
 import { visitView } from "@/lib/ncdreg/read/views";
 import { requireNcdScope } from "@/lib/ncdreg/scope";
@@ -45,6 +50,18 @@ export default async function VisitPage({ params }: { params: Promise<{ visitId:
       ])
     : [null, []];
   const labA1c = feed?.fields.hba1c?.kind === "filled" ? feed.fields.hba1c.result : null;
+  // Kit F1 "NCD clinic": real prescriptions need the person's patient record (a provisional person
+  // cannot be prescribed for) and an open visit, which the action finds; the cadre is checked there.
+  const patientUserId = prescribeV2LiveFor(ctx.facilityId)
+    ? ((
+        await withNcd(ctx, "app", (tx) =>
+          tx
+            .select({ id: ncdPerson.patientUserId })
+            .from(ncdPerson)
+            .where(eq(ncdPerson.id, visit.personId)),
+        )
+      )[0]?.id ?? null)
+    : null;
   return (
     <Page>
       <header className="flex flex-wrap items-start justify-between gap-4">
@@ -145,6 +162,11 @@ export default async function VisitPage({ params }: { params: Promise<{ visitId:
           <h2 id="clin-h" className="text-heading-s mb-3">
             Clinician entries
           </h2>
+          {patientUserId ? (
+            <div className="mb-4">
+              <PrescribeButton surface="doctor" patientUserId={patientUserId} place="ncd" />
+            </div>
+          ) : null}
           <ClinicianPart
             visitId={visit.id}
             personId={visit.personId}

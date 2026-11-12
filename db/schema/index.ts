@@ -79,6 +79,8 @@ export * from "./resus";
 
 // ─── Smart prescribing (migration 0039 — GATED, see prescribing.ts) ────
 export * from "./prescribing";
+// ─── Quick protocols (migration 0282 — GATED, prescribing kit P3) ────
+export * from "./protocols";
 
 // ─── Encounter / EMR engine + clerkship (migration 0040 — GATED) ───────
 export * from "./encounter";

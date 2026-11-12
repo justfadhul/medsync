@@ -8,7 +8,7 @@ import type { MonitoringPayload } from "@/lib/emr/charts/payload";
 import type { InteractionContext } from "@/lib/pharmacy/clinical/read";
 import type { PrescriberPharmacyView } from "@/lib/pharmacy/review/prescriber-read";
 import type { WeightFact } from "@/lib/prescribing/formulary";
-import type { CultureState } from "@/lib/prescribing/plan-checks";
+import type { CultureState, PlanCheckContext } from "@/lib/prescribing/plan-checks";
 
 export type CosignRequirement = "allowed" | "cosign_required" | "blocked";
 
@@ -29,7 +29,12 @@ export interface PlanPayload {
     creatinine: { value: number; unit: string; at: string } | null;
     glucose: { value: number; at: string } | null;
     conditions: string[];
+    /** PRESCRIBE_V2 (kit F1/F3): eGFR and the pregnancy question read these. */
+    sex?: "female" | "male" | null;
+    pregnancy?: PlanCheckContext["pregnancy"];
   };
+  /** PRESCRIBE_V2 is on here: the dialog shows the strip, brand, supply and the kit's checks. */
+  prescribeV2?: boolean;
   cosign: { routine: CosignRequirement; controlled: CosignRequirement };
   /** The blood culture ordered at this visit, as the record holds it. */
   bloodCulture: Exclude<CultureState, "in_basket">;

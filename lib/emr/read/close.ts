@@ -13,7 +13,7 @@ import { encounters } from "@/db/schema/scheduling";
 import { hospitalBeds } from "@/db/schema/services-hub";
 import { bedAssignments, bedStateEvents } from "@/db/schema/ward-builder";
 import { asClinicalWriter } from "@/lib/emr/db";
-import { patientVisitSummaryLiveFor } from "@/lib/emr/feature";
+import { patientVisitSummaryLiveFor, prescribeV2LiveFor } from "@/lib/emr/feature";
 import { wardBuilderLiveFor } from "@/lib/wards/feature";
 import { bedState } from "@/supabase/functions/_shared/ward-layout";
 
@@ -42,6 +42,8 @@ export interface CloseContext {
   bedsLive: boolean;
   /** PATIENT_VISIT_SUMMARY on: the patient-copy step is offered. */
   summaryLive: boolean;
+  /** PRESCRIBE_V2 (kit F1): medicines to take home are prescribed here, collected at the Main window. */
+  prescribeV2?: boolean;
   /** Active, non-restricted-or-not drug prescriptions of this visit: continue at home or stop. */
   takeHome: CloseRx[];
   /** Set once the visit is closed. */
@@ -230,6 +232,7 @@ export async function loadCloseContext(
         wards,
         bedsLive: wardBuilderLiveFor(actor.hospitalId),
         summaryLive: patientVisitSummaryLiveFor(actor.hospitalId),
+        prescribeV2: prescribeV2LiveFor(actor.hospitalId),
         takeHome: rx.map((r) => ({ id: r.id, name: r.drugName, line: rxLine(r) })),
         closed:
           enc && enc.state !== "in_progress" && enc.state !== "planned"

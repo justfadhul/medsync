@@ -1,6 +1,13 @@
 import "server-only";
 
+import { NURSE_TASKS_COPY } from "@/content/nurse-tasks";
+import { PRESCRIBE_HANDOFF_COPY } from "@/content/pharmacy-prescriber";
+import { PRESCRIBE_COPY } from "@/content/prescribing";
+import { CHART_COPY } from "@/content/protocol-charts";
+import * as RULES_COPY from "@/content/protocol-charts-rules";
+import { PROTOCOLS_COPY } from "@/content/protocols";
 import { encounterEngineLive } from "@/lib/encounter/feature";
+import { workspaceLiveFor } from "@/lib/workspace-access/flag";
 
 /**
  * EMR v1 flags (HARMONISATION §4). Migrations 0071–0073 are GATED: until the owner applies them
@@ -85,4 +92,44 @@ export function patientVisitSummaryLiveFor(hospitalId: string): boolean {
   const value = process.env.PATIENT_VISIT_SUMMARY?.trim();
   if (!value || !encounterCloseV2LiveFor(hospitalId)) return false;
   return value === "1" || value.split(",").some((id) => id.trim() === hospitalId);
+}
+
+/**
+ * One Prescribe dialog from every place that prescribes (prescribing kit P1), per hospital, off by
+ * default: `PRESCRIBE_V2=1` or a comma list of hospital ids, and only where EMR_PRESCRIBING is on. Needs
+ * migration 0279. Off in production while its wording is draft. Off, every place keeps its old form.
+ */
+export function prescribeV2LiveFor(hospitalId: string): boolean {
+  if (!emrPrescribingLive(hospitalId)) return false;
+  return workspaceLiveFor(
+    process.env.PRESCRIBE_V2,
+    hospitalId,
+    [PRESCRIBE_COPY, PRESCRIBE_HANDOFF_COPY],
+    "prescribe_v2",
+  );
+}
+
+/** The nurse side of PRESCRIBE_V2 (kit P2 b): tasks, Given / Withhold. Needs migration 0281; off in
+ *  production while the nurse wording is draft too. */
+export function nurseTasksLiveFor(hospitalId: string): boolean {
+  if (!emrPrescribingLive(hospitalId)) return false;
+  return workspaceLiveFor(
+    process.env.PRESCRIBE_V2,
+    hospitalId,
+    [PRESCRIBE_COPY, NURSE_TASKS_COPY],
+    "nurse_tasks",
+  );
+}
+
+/** Quick protocols inside Prescribe (kit P3) and the protocol charts (P4–P5): PRESCRIBE_V2's
+ *  Protocols mode. Needs migrations 0282–0286; off in production while the protocols wording, the
+ *  chart's words or any rule module's words are draft. */
+export function protocolsLiveFor(hospitalId: string): boolean {
+  if (!emrPrescribingLive(hospitalId)) return false;
+  return workspaceLiveFor(
+    process.env.PRESCRIBE_V2,
+    hospitalId,
+    [PRESCRIBE_COPY, PROTOCOLS_COPY, CHART_COPY, ...Object.values(RULES_COPY)],
+    "prescribe_protocols",
+  );
 }

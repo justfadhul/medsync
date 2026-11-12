@@ -17,6 +17,7 @@ import {
   useTransition,
 } from "react";
 
+import { PrescribeButton } from "@/components/clerking/plan/prescribe-session";
 import { VisitSummaryView } from "@/components/patient/visit-summary-view";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -729,9 +730,19 @@ function HomeFields({
         ) : (
           <p className="text-body-s text-muted-foreground">No medicine prescribed at this visit.</p>
         )}
-        <p className="text-caption text-muted-foreground">
-          Pharmacy not linked yet: stock is not checked.
-        </p>
+        {c.prescribeV2 ? (
+          // Kit F1 "Going home": the one Prescribe, collected at the Main window before leaving.
+          <PrescribeButton
+            surface={surface}
+            patientUserId={p.encounter.patientUserId}
+            encounterId={p.encounter.id}
+            place="going_home"
+          />
+        ) : (
+          <p className="text-caption text-muted-foreground">
+            Pharmacy not linked yet: stock is not checked.
+          </p>
+        )}
       </Group>
 
       <Group title="Follow-up">

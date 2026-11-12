@@ -16,7 +16,7 @@ import { monitoringCharts } from "@/db/schema/monitoring";
 import { TEST_UUIDS } from "@/lib/clerking/impression/load";
 import { countsWords } from "@/lib/emr/closure";
 import { asClinicalReader, asClinicalWriter } from "@/lib/emr/db";
-import { emrPrescribingLive } from "@/lib/emr/feature";
+import { emrPrescribingLive, prescribeV2LiveFor } from "@/lib/emr/feature";
 import { admittingWards } from "@/lib/emr/read/close";
 import { loadMonitoring } from "@/lib/emr/read/monitoring";
 import { loadPlanFacts } from "@/lib/emr/write/plan";
@@ -318,7 +318,10 @@ export async function loadPlanPayload(
       creatinine: owner.facts.creatinine,
       glucose: owner.facts.glucose,
       conditions: owner.facts.conditions,
+      sex: owner.facts.sex,
+      pregnancy: owner.facts.pregnancy,
     },
+    prescribeV2: prescribeV2LiveFor(actor.hospitalId),
     cosign: owner.cosign,
     bloodCulture: reader.cultureOrders.length
       ? reader.taken.length

@@ -8,6 +8,7 @@ import { revalidatePath } from "next/cache";
 import { unstable_rethrow } from "next/navigation";
 
 import { REVIEW } from "@/content/pharmacy-review";
+import { prescribeV2LiveFor } from "@/lib/emr/feature";
 import { logger } from "@/lib/logger";
 import { requirePharmacyActor } from "@/lib/pharmacy/actor";
 import * as store from "@/lib/pharmacy/controlled-store";
@@ -86,6 +87,8 @@ export async function recordControlledSupply(raw: unknown) {
     async (ctx, input: z.infer<typeof store.ControlledSupplyInput>) =>
       store.recordControlledSupply(ctx, input, {
         patientList: await patientListLive(ctx.actor.hospitalId, ctx.tx as unknown as EmrDb),
+        // Kit F4: under PRESCRIBE_V2 the identity and counselling confirmation is required.
+        explainRequired: prescribeV2LiveFor(ctx.actor.hospitalId),
       }),
   );
   return r.ok ? { ...bare(r), lines: r.data?.lines ?? [], entryIds: r.data?.entryIds ?? [] } : r;

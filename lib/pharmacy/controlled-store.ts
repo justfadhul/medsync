@@ -450,7 +450,7 @@ export async function recordControlledSupply(
   ctx: PharmacyCtx,
   input: z.infer<typeof ControlledSupplyInput>,
   /** ML-1: as `recordHandover`'s, decided by the action. */
-  list: { patientList: boolean } = { patientList: false },
+  list: { patientList: boolean; explainRequired?: boolean } = { patientList: false },
 ): Promise<{ id: string; lines: HandoverOutcome[]; entryIds: string[] }> {
   mustHoldControlled(ctx);
   const replay = await supply.recordHandoverIfDone(ctx, input.clientKey);

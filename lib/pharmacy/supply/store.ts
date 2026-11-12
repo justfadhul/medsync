@@ -138,6 +138,8 @@ export const HandoverInput = z.object({
     z.object({ route: z.literal("ward_staff") }),
   ]),
   labelsWrittenAttested: z.boolean().optional(),
+  /** Kit F4: "I checked who they are, and explained how to take each medicine" (required under PRESCRIBE_V2). */
+  explainedAttested: z.boolean().optional(),
   counselling: z.array(z.string().min(2).max(60)).max(20).default([]),
   language: z.string().trim().min(2).max(40).optional(),
   payment: z.object({
@@ -329,8 +331,9 @@ export async function recordHandover(
   input: z.infer<typeof HandoverInput>,
   /** CD-2: set only by `recordControlledSupply`, once its own checks have passed in this transaction. */
   controlled: { witnessAttestationId: string } | null = null,
-  /** ML-1: `pharmacyPatientList` for the hospital, decided by the action (the store reads no environment). */
-  list: { patientList: boolean } = { patientList: false },
+  /** ML-1: `pharmacyPatientList` for the hospital, decided by the action (the store reads no environment);
+   *  kit F4: `explainRequired` where PRESCRIBE_V2 is on. */
+  list: { patientList: boolean; explainRequired?: boolean } = { patientList: false },
 ): Promise<{ id: string; lines: HandoverOutcome[] }> {
   const hospitalId = ctx.actor.hospitalId;
   const point = ctx.point!;
@@ -519,6 +522,7 @@ export async function recordHandover(
     balances: new Map(sums.map((s) => [s.batchId, Number(s.n)])),
     blocked: await recalledAmong(ctx.tx, hospitalId, batchIds),
     controlledCleared: controlled !== null,
+    explainRequired: list.explainRequired === true,
   };
   const allowedPoints = new Set(counselling?.items.map((c) => c.code) ?? []);
   const plan: HandoverPlan = {
@@ -547,6 +551,7 @@ export async function recordHandover(
     identity: input.identity,
     labelMode: point.labelMode,
     labelsWrittenAttested: input.labelsWrittenAttested === true,
+    explainedAttested: input.explainedAttested === true,
     counselling: input.counselling.filter((c) => allowedPoints.has(c)),
     language: input.language ?? null,
     payment: { status: input.payment.status as PaymentStatus, detail: input.payment.detail },

@@ -3,13 +3,18 @@ import "server-only";
 import type { PrescriptionItem } from "./views";
 import { and, eq } from "drizzle-orm";
 
+import { PharmacyCount } from "@/components/clerking/plan/pharmacy";
+import { PrescribeButton } from "@/components/clerking/plan/prescribe-session";
 import { encounters } from "@/db/schema/scheduling";
 import { resolveEmrAccess } from "@/lib/emr/access";
 import { requireEmrActor } from "@/lib/emr/actor";
 import { asClinicalWriter } from "@/lib/emr/db";
-import { emrPrescribingLive } from "@/lib/emr/feature";
+import { emrPrescribingLive, prescribeV2LiveFor } from "@/lib/emr/feature";
 import { encounterPrescriptions, loadPrescribePatient } from "@/lib/emr/write/prescriptions";
 import { decrypt } from "@/lib/encryption";
+import { pharmacyDispensingLiveFor } from "@/lib/pharmacy/feature";
+import { loadPrescriberPharmacy } from "@/lib/pharmacy/review/prescriber-read";
+import { placeOfEncounter } from "@/lib/prescribing/places";
 import { PrescriptionsPanel } from "./panel";
 
 /**
@@ -31,7 +36,7 @@ export async function EncounterPrescriptions({
     { userId: actor.userId, hospitalId: actor.hospitalId },
     async (tx) => {
       const [e] = await tx
-        .select({ patientUserId: encounters.patientUserId })
+        .select({ patientUserId: encounters.patientUserId, type: encounters.encounterType })
         .from(encounters)
         .where(and(eq(encounters.id, encounterId), eq(encounters.hospitalId, actor.hospitalId)))
         .limit(1);
@@ -42,6 +47,9 @@ export async function EncounterPrescriptions({
         hospitalId: actor.hospitalId,
       });
       if (!access.allowed) return null;
+      // Kit F1: the one Prescribe replaces the sheet; a clinic visit or a ward round by the visit's type.
+      if (prescribeV2LiveFor(actor.hospitalId))
+        return { v2: true as const, patientUserId: e.patientUserId, type: e.type };
       const [patient, rows] = await Promise.all([
         loadPrescribePatient(tx, e.patientUserId, new Date()),
         encounterPrescriptions(tx, {
@@ -50,10 +58,31 @@ export async function EncounterPrescriptions({
           encounterId,
         }),
       ]);
-      return { patientUserId: e.patientUserId, patient, rows };
+      return { v2: false as const, patientUserId: e.patientUserId, patient, rows };
     },
   );
   if (!load) return null;
+  if (load.v2) {
+    // Kit F4: "n from the pharmacy" beside Prescribe, so a question is seen before the dialog opens.
+    const pharmacy = pharmacyDispensingLiveFor(actor.hospitalId)
+      ? await loadPrescriberPharmacy(actor, {
+          patientUserId: load.patientUserId,
+          encounterId,
+          now: new Date(),
+        }).catch(() => null)
+      : null;
+    return (
+      <div className="flex flex-wrap items-start gap-2">
+        <PrescribeButton
+          surface="doctor"
+          patientUserId={load.patientUserId}
+          encounterId={encounterId}
+          place={placeOfEncounter(load.type)}
+        />
+        <PharmacyCount view={pharmacy} />
+      </div>
+    );
+  }
   const items: PrescriptionItem[] = load.rows.map((r) => ({
     id: r.id,
     drugName: r.drugName,

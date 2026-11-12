@@ -42,6 +42,8 @@ export interface PharmacyHandlers {
   inBasket: ReadonlySet<string>;
   /** No problem to prescribe under: Change is absent. */
   canChange: boolean;
+  /** After an answer is recorded (the one Prescribe reloads its own session; the page refreshes anyway). */
+  onDone?: () => void;
 }
 
 const fill = (s: string, v: Record<string, string | number>) =>
@@ -218,7 +220,7 @@ function QueryBlock({
   headId: string;
   base: Base;
 }) {
-  const dispute = useCall();
+  const dispute = useCall(handlers.onDone);
   const [disputeKey] = useState(newKey);
   const open = isOpen(item);
   return (
@@ -278,7 +280,7 @@ function AnswerForm({
   const [text, setText] = useState("");
   const [key] = useState(newKey);
   const [doneKey] = useState(newKey);
-  const send = useCall();
+  const send = useCall(handlers.onDone);
   const reasonId = useId();
   const textId = useId();
   const whole = item.scope === "prescription";
@@ -456,7 +458,7 @@ function NoticeBlock({
   headId: string;
   base: Base;
 }) {
-  const leave = useCall();
+  const leave = useCall(handlers.onDone);
   const line = item.lines.find((l) => l.standing);
   const waiting = item.lines.some((l) => handlers.inBasket.has(l.id));
   return (

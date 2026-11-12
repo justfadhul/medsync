@@ -4,7 +4,7 @@ import type { ReactNode } from "react";
 import { WitnessInbox } from "@/app/pharmacy/_components/witness";
 import { TideScope } from "@/components/medsync/tide-scope";
 import { ArrestAlarm } from "@/components/resus/arrest-alarm";
-import { emrV1LiveFor } from "@/lib/emr/feature";
+import { emrV1LiveFor, nurseTasksLiveFor } from "@/lib/emr/feature";
 import { labPoctQualityLiveFor } from "@/lib/lab/feature";
 import { requireNurseScope } from "@/lib/nurse/scope";
 import { nurseHoldsWardRight } from "@/lib/nurse/ward-stock";
@@ -25,6 +25,7 @@ export default async function NurseLayout({ children }: { children: ReactNode })
         wardBuilder: wardBuilderLiveFor(scope.hospitalId),
         poctQuality: emrV1LiveFor(scope.hospitalId) && labPoctQualityLiveFor(scope.hospitalId),
         wardStock: await nurseHoldsWardRight(scope),
+        tasks: nurseTasksLiveFor(scope.hospitalId),
       }}
     >
       <TideScope group="nurse">{children}</TideScope>

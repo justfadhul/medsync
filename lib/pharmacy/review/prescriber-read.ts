@@ -129,7 +129,13 @@ export interface PatientPharmacy {
  */
 export async function loadPatientPharmacy(
   tx: EmrTx,
-  p: { hospitalId: string; patientUserId: string; queryIds?: readonly string[] },
+  p: {
+    hospitalId: string;
+    patientUserId: string;
+    queryIds?: readonly string[];
+    /** Lines read whatever their record (the one Prescribe's "already prescribed"). */
+    lineIds?: readonly string[];
+  },
 ): Promise<PatientPharmacy> {
   const qRows = await tx
     .select()
@@ -155,7 +161,11 @@ export async function loadPatientPharmacy(
           ),
         );
   const lineIds = [
-    ...new Set([...qRows.map((q) => q.prescriptionId), ...notSupplied.map((n) => n.id)]),
+    ...new Set([
+      ...qRows.map((q) => q.prescriptionId),
+      ...notSupplied.map((n) => n.id),
+      ...(p.lineIds ?? []),
+    ]),
   ];
   if (!lineIds.length)
     return {
@@ -614,6 +624,11 @@ export function buildView(
       canAcknowledge: true,
     });
   }
+  // Every loaded line's stage (the plan loads only the lines above; the one Prescribe names its own).
+  for (const id of data.lines.keys()) {
+    const st = lineStatus[id] ?? statusOf(data, id);
+    if (st) lineStatus[id] = st;
+  }
   const open = items.filter(
     (i) => i.kind === "not_supplied" || i.state === "open" || i.state === "not_sent",
   );
@@ -675,6 +690,33 @@ export async function loadPrescriberPharmacy(
       loadPatientPharmacy(tx, { hospitalId: actor.hospitalId, patientUserId: input.patientUserId }),
     input.database,
   );
+  return asClinicalWriter(scope, (tx) => viewOf(tx, actor, data, input), input.database);
+}
+
+/**
+ * The same view inside the caller's transaction, after its access check, with the stage of every named
+ * line too (the one Prescribe's "already prescribed", prescribing kit F4).
+ */
+export async function prescriberViewIn(
+  tx: EmrTx,
+  actor: EmrActor,
+  input: { patientUserId: string; encounterId: string; now: Date; lineIds: readonly string[] },
+): Promise<PrescriberPharmacyView> {
+  const data = await loadPatientPharmacy(tx, {
+    hospitalId: actor.hospitalId,
+    patientUserId: input.patientUserId,
+    lineIds: input.lineIds,
+  });
+  return viewOf(tx, actor, data, input);
+}
+
+/** The words the view needs (phones, cadre names, signed lists), read as the owner, then the view. */
+async function viewOf(
+  tx: EmrTx,
+  actor: EmrActor,
+  data: PatientPharmacy,
+  input: { patientUserId: string; encounterId: string; now: Date },
+): Promise<PrescriberPharmacyView> {
   const answerers = [
     ...new Set(
       data.queries.flatMap((q) =>
@@ -682,64 +724,55 @@ export async function loadPrescriberPharmacy(
       ),
     ),
   ];
-  const owner = await asClinicalWriter(
-    scope,
-    async (tx) => {
-      const points = [
-        ...new Set([
-          ...data.queries.map((q) => q.dispensingPointId),
-          ...[...data.lineEvents.values()].flat().flatMap((e) => (e.pointId ? [e.pointId] : [])),
-        ]),
-      ];
-      const codes = [
-        ...new Set(data.queries.flatMap((q) => (q.senderCadre ? [q.senderCadre] : []))),
-      ];
-      const [phones, names, people, keep, types, outcomes] = await Promise.all([
-        points.length
-          ? tx
-              .select({
-                id: pharmacyDispensingPoints.departmentId,
-                phone: pharmacyDispensingPoints.phone,
-              })
-              .from(pharmacyDispensingPoints)
-              .where(
-                and(
-                  eq(pharmacyDispensingPoints.hospitalId, actor.hospitalId),
-                  inArray(pharmacyDispensingPoints.departmentId, points),
-                ),
-              )
-          : [],
-        codes.length
-          ? tx
-              .select({ code: cadres.code, name: cadres.name })
-              .from(cadres)
-              .where(inArray(cadres.code, codes))
-          : [],
-        cadresOfUsers(tx, actor.hospitalId, answerers),
-        signedList(tx, actor.hospitalId, "keep_reasons", DRAFT_KEEP_REASONS),
-        signedList(tx, actor.hospitalId, "query_codes", DRAFT_QUERY_TYPES),
-        signedList(tx, actor.hospitalId, "outcome_reasons", DRAFT_NOT_SUPPLIED_REASONS),
-      ]);
-      return { phones, names, people, keep, types, outcomes };
-    },
-    input.database,
-  );
-  const phone = new Map(owner.phones.map((p) => [p.id, p.phone]));
-  const cadre = new Map(owner.names.map((n) => [n.code, n.name]));
+  const points = [
+    ...new Set([
+      ...data.queries.map((q) => q.dispensingPointId),
+      ...[...data.lineEvents.values()].flat().flatMap((e) => (e.pointId ? [e.pointId] : [])),
+    ]),
+  ];
+  const codes = [...new Set(data.queries.flatMap((q) => (q.senderCadre ? [q.senderCadre] : [])))];
+  const [phones, names, people, keep, types, outcomes] = await Promise.all([
+    points.length
+      ? tx
+          .select({
+            id: pharmacyDispensingPoints.departmentId,
+            phone: pharmacyDispensingPoints.phone,
+          })
+          .from(pharmacyDispensingPoints)
+          .where(
+            and(
+              eq(pharmacyDispensingPoints.hospitalId, actor.hospitalId),
+              inArray(pharmacyDispensingPoints.departmentId, points),
+            ),
+          )
+      : [],
+    codes.length
+      ? tx
+          .select({ code: cadres.code, name: cadres.name })
+          .from(cadres)
+          .where(inArray(cadres.code, codes))
+      : [],
+    cadresOfUsers(tx, actor.hospitalId, answerers),
+    signedList(tx, actor.hospitalId, "keep_reasons", DRAFT_KEEP_REASONS),
+    signedList(tx, actor.hospitalId, "query_codes", DRAFT_QUERY_TYPES),
+    signedList(tx, actor.hospitalId, "outcome_reasons", DRAFT_NOT_SUPPLIED_REASONS),
+  ]);
+  const phone = new Map(phones.map((p) => [p.id, p.phone]));
+  const cadre = new Map(names.map((n) => [n.code, n.name]));
   return buildView(data, {
     surface: actor.surface,
     viewerUserId: actor.userId,
     patientUserId: input.patientUserId,
     encounterId: input.encounterId,
     now: input.now,
-    keep: owner.keep,
+    keep,
     words: {
       cadreName: (c) => (c ? (cadre.get(c) ?? c) : ""),
-      answererCadre: (u) => (u ? (owner.people.get(u) ?? "") : ""),
+      answererCadre: (u) => (u ? (people.get(u) ?? "") : ""),
       phone: (id) => phone.get(id) ?? null,
       // Labels only: in production with no signed list they read as the stored code.
-      queryTypes: owner.types.items,
-      outcomeReasons: owner.outcomes.items,
+      queryTypes: types.items,
+      outcomeReasons: outcomes.items,
     },
   });
 }

@@ -6,6 +6,7 @@ import type { ReviewEvent } from "@/lib/pharmacy/review/review";
 import type { BatchRow } from "@/lib/pharmacy/stock/fefo";
 import type { Batch, MovementKind } from "@/lib/pharmacy/stock/ledger";
 
+import { PRESCRIBE_HANDOFF_COPY } from "@/content/pharmacy-prescriber";
 import { can } from "@/lib/pharmacy/access";
 import { priceSnapshot, sameStrength } from "@/lib/pharmacy/catalogue";
 import { applyMove, quantityLeft } from "@/lib/pharmacy/lines";
@@ -123,6 +124,8 @@ export interface HandoverPlan {
   identity: IdentityInput;
   labelMode: "printed" | "by_hand";
   labelsWrittenAttested?: boolean;
+  /** Kit F4: "I checked who they are, and explained how to take each medicine". */
+  explainedAttested?: boolean;
   counselling?: readonly string[];
   language?: string | null;
   payment: { status: PaymentStatus; detail?: string | null };
@@ -190,6 +193,8 @@ export interface HandoverFacts {
    * line supplied here, and only on a pharmacist's acceptance.
    */
   controlledCleared?: boolean;
+  /** Kit F4 (PRESCRIBE_V2, decided by the action): the identity and counselling confirmation is required. */
+  explainRequired?: boolean;
 }
 
 export type RefusalCode =
@@ -222,6 +227,7 @@ export type RefusalCode =
   | "identity"
   | "identity_route"
   | "labels"
+  | "explained"
   | "lines"
   | "client_key";
 
@@ -465,6 +471,8 @@ export function checkHandover(
 
   if (plan.labelMode === "by_hand" && !plan.labelsWrittenAttested)
     whole("labels", HANDOVER_COPY.labels);
+  if (facts.explainRequired && !plan.explainedAttested)
+    whole("explained", PRESCRIBE_HANDOFF_COPY.explainedRefused);
   if (!paymentPasses(plan.payment.status, facts.paymentRequired, facts.admitted))
     whole("payment", HANDOVER_COPY.payment);
 
@@ -499,6 +507,7 @@ export interface HandoverRow extends CollectorRow {
   identifiedNote: string | null;
   labelMode: "printed" | "by_hand";
   labelsWrittenAttested: boolean;
+  explainedAttested: boolean;
   counselling: string[];
   language: string | null;
   paymentStatus: PaymentStatus;
@@ -625,6 +634,7 @@ export function handoverWrites(
     identifiedNote: another ? id.note?.trim() || null : null,
     labelMode: plan.labelMode,
     labelsWrittenAttested: plan.labelMode === "by_hand" && plan.labelsWrittenAttested === true,
+    explainedAttested: plan.explainedAttested === true,
     counselling: [...(plan.counselling ?? [])],
     language: plan.language ?? null,
     paymentStatus: plan.payment.status,

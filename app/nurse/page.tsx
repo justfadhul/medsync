@@ -13,7 +13,9 @@ import {
 
 import { IncomingIntakesPanel } from "@/components/intake/incoming-panel";
 import { CautionNotice } from "@/components/medsync/caution-notice";
+import { NURSE_TASKS_COPY } from "@/content/nurse-tasks";
 import { WARDS } from "@/content/pharmacy-stores-wards";
+import { nurseTasksLiveFor } from "@/lib/emr/feature";
 import { fetchHospitalIncomingIntakes } from "@/lib/intake/queries";
 import { requireNurseScope } from "@/lib/nurse/scope";
 import { nurseWardNotices } from "@/lib/nurse/ward-stock";
@@ -136,11 +138,21 @@ export default async function NurseOverviewPage() {
           subtitle="Ward day view + queue arrives next gate"
           Icon={CalendarClockIcon}
         />
-        <PlaceholderCard
-          title="Tasks"
-          subtitle="Due obs, due meds, mentions"
-          Icon={CheckSquareIcon}
-        />
+        {nurseTasksLiveFor(scope.hospitalId) ? (
+          <DirectionCard
+            href="/nurse/tasks"
+            title={NURSE_TASKS_COPY.title}
+            subtitle={NURSE_TASKS_COPY.kicker}
+            Icon={CheckSquareIcon}
+            tone="muted"
+          />
+        ) : (
+          <PlaceholderCard
+            title="Tasks"
+            subtitle="Due obs, due meds, mentions"
+            Icon={CheckSquareIcon}
+          />
+        )}
       </section>
     </div>
   );

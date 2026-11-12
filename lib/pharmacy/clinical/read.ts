@@ -12,6 +12,17 @@ import { currentMedicines, interactionsChecked } from "./interactions";
 
 /** Pharmacy Phase 3: reads for the interaction check (IX-2) and the content pages. Server only. */
 
+/**
+ * A dose that stands on the medicine chart: given, and not undone by a later `reversed` row (0281;
+ * the same rule as `liveDoses` in lib/emr/charts/build.ts). Every pharmacy read of the MAR uses this.
+ */
+export const liveDose = () =>
+  and(
+    eq(medicationAdministrationRecords.state, "administered"),
+    sql`NOT EXISTS (SELECT 1 FROM public.medication_administration_records r
+                     WHERE r.reverses_id = ${medicationAdministrationRecords.id})`,
+  )!;
+
 type Db = EmrDb | EmrTx;
 
 export async function entriesInForce<P extends Pack>(
@@ -89,7 +100,7 @@ export async function interactionContextFor(
           .where(
             and(
               eq(medicationAdministrationRecords.patientUserId, patientUserId),
-              eq(medicationAdministrationRecords.state, "administered"),
+              liveDose(),
               gte(medicationAdministrationRecords.administeredAt, since),
             ),
           )

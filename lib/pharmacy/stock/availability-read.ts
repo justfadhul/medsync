@@ -208,9 +208,16 @@ export async function encounterOrigin(
 /** The prescriber's stock lines for one encounter's medicines: getAvailability's output, no quantity. */
 export async function stockLinesFor(
   database: Db,
-  i: { hospitalId: string; encounterId: string; medicineIds: readonly string[]; now: Date },
+  i: {
+    hospitalId: string;
+    encounterId: string;
+    medicineIds: readonly string[];
+    now: Date;
+    /** Prescribing kit F1: the place's collect point, when the page names it; else the encounter's. */
+    origin?: AvailabilityOrigin;
+  },
 ): Promise<Map<string, StockLine>> {
-  const origin = await encounterOrigin(database, i.encounterId);
+  const origin = i.origin ?? (await encounterOrigin(database, i.encounterId));
   const { answers, mapping } = await availabilityFor({ database, origin, ...i });
   return new Map([...answers].map(([m, a]) => [m, toStockLine(a, mapping)]));
 }

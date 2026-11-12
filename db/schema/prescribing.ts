@@ -25,6 +25,7 @@ import { authUsers } from "./_auth";
 import { conditions, medicationStatements } from "./emr";
 import { hospitalDepartments } from "./hospital-departments";
 import { hospitals } from "./hospitals";
+import { protocolVersions } from "./protocols";
 import { resusEpisodes } from "./resus";
 import { encounters } from "./scheduling";
 
@@ -129,8 +130,22 @@ export const prescriptions = pgTable(
     checkAnswers: jsonb("check_answers")
       .notNull()
       .default(sql`'[]'::jsonb`),
+    /** 0279 (prescribing kit P1): where the line was written, which names the collect point. */
+    prescribePlace: text("prescribe_place"),
+    /** 0279: the brand chosen (a pharmacy_products id); null = any brand. */
+    productId: uuid("product_id"),
+    /** 0282 (prescribing kit P3): the protocol version this line was sent under. */
+    protocolVersionId: uuid("protocol_version_id").references(() => protocolVersions.id, {
+      onDelete: "restrict",
+    }),
+    /** 0282: what the prescriber saw (starting values, holds, answers to the protocol checks). */
+    protocolStart: jsonb("protocol_start"),
   },
   (t) => [
+    check(
+      "prescriptions_prescribe_place_check",
+      sql`${t.prescribePlace} IS NULL OR ${t.prescribePlace} IN ('clinic','clerking','ward','resus','ncd','going_home')`,
+    ),
     check(
       "prescriptions_state_check",
       sql`${t.state} IN ('active','administered','completed','cancelled')`,
@@ -258,3 +273,37 @@ export type Prescription = typeof prescriptions.$inferSelect;
 export type CrashCart = typeof crashCarts.$inferSelect;
 export type CrashCartStock = typeof crashCartStock.$inferSelect;
 export type EmergencyAdministration = typeof emergencyAdministrations.$inferSelect;
+
+/** 0279: a basket closed without sending, one per author, visit and place ("Resume"). Server-only. */
+export const prescriptionDrafts = pgTable(
+  "prescription_drafts",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    hospitalId: uuid("hospital_id")
+      .notNull()
+      .references(() => hospitals.id, { onDelete: "restrict" }),
+    encounterId: uuid("encounter_id")
+      .notNull()
+      .references(() => encounters.id, { onDelete: "cascade" }),
+    patientUserId: uuid("patient_user_id")
+      .notNull()
+      .references(() => authUsers.id, { onDelete: "restrict" }),
+    authorUserId: uuid("author_user_id")
+      .notNull()
+      .references(() => authUsers.id, { onDelete: "restrict" }),
+    place: text("place").notNull(),
+    lines: jsonb("lines")
+      .notNull()
+      .default(sql`'[]'::jsonb`),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    check(
+      "prescription_drafts_place_check",
+      sql`${t.place} IN ('clinic','clerking','ward','resus','ncd','going_home')`,
+    ),
+    check("prescription_drafts_lines_check", sql`jsonb_typeof(${t.lines}) = 'array'`),
+    uniqueIndex("prescription_drafts_one").on(t.encounterId, t.authorUserId, t.place),
+    index("prescription_drafts_author_idx").on(t.authorUserId, t.updatedAt),
+  ],
+);

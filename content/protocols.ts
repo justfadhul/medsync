@@ -1,0 +1,121 @@
+import type { SignedCopy } from "@/content/signed-copy";
+
+/**
+ * Quick protocols inside Prescribe (prescribing kit P3, F6), in the prototype's wording. Draft: with
+ * PRESCRIBE_COPY it keeps the Protocols mode off in production until the CSO signs. The protocols'
+ * own clinical words and numbers are not here: they live in each protocol version (data, two
+ * clinician signatures).
+ */
+export const PROTOCOLS_COPY = {
+  status: "draft",
+  signedBy: null,
+  signedOn: null,
+  medicines: "Medicines",
+  protocols: "Protocols",
+  protocolsN: "Protocols · {n}",
+  loading: "Loading protocols…",
+  none: "No protocols here yet.",
+  signed: "Signed off · {date}",
+  signedShort: "Signed off",
+  draft: "Draft",
+  draftWarn: "Prototype values, need local sign-off. It can be previewed, but not started.",
+  draftDev:
+    "Prototype values, need local sign-off. Not signed: it starts here only because this is local development.",
+  back: "All protocols",
+  source: "Source: {source}",
+  slot: "Chart time slot: {slot}",
+  // Starting values
+  startTitle: "Starting values",
+  fromResult: "{value} {unit} · {source}, {date}",
+  noResult: "No result on file",
+  typed: "Entered here",
+  enter: "Enter one",
+  useResult: "Use the result on file",
+  order: "Order it",
+  ordered: "Ordered. Enter the result when it is back.",
+  thisPatient: "This patient: {range}",
+  bandsHead: "How the plan changes",
+  // Checks
+  checksTitle: "Protocol checks",
+  plan: "The plan",
+  supplyTitle: "Pharmacy supply for the first period",
+  supplyLine: "{name} · {qty} {unit}",
+  held: "On hold",
+  before: "Before each dose: {list}",
+  every: "every {n}",
+  times: "× {n}",
+  always: "Always",
+  whenNeeded: "When needed",
+  start: "Start",
+  needWeight: "Needs the weight",
+  // Answers
+  answer_confirmed: "Confirmed",
+  answer_on_purpose: "Start a second one on purpose",
+  answer_plan_changed: "Plan changed: held as shown",
+  answer_checked: "Checked: right for this patient",
+  // Buttons and messages
+  send: "Sign and send to the pharmacy",
+  sending: "Sending…",
+  sent: "{name} sent: {n} lines to the pharmacy.",
+  cannotStart: "Not signed off: this protocol cannot start.",
+  answerAll: "Answer every check to continue.",
+  witness: "Witness for the controlled medicines",
+  // Sign-off
+  signOff: "Sign off this version",
+  signing: "Signing…",
+  signedOne: "First signature recorded. A second, different consultant signs next.",
+  signedTwo: "Signed off. The protocol can start.",
+  signers: "Signatures: {n} of 2",
+  // Builder
+  build: "Build a protocol",
+  builderTitle: "Protocol builder",
+  builderNote: "Saves as a draft. It cannot start until two clinicians sign it off.",
+  name: "Name",
+  intro: "What it is for",
+  who: "Who it is for",
+  whoAny: "Any age",
+  whoAdult: "Adults",
+  addStep: "Add a step",
+  removeStep: "Remove",
+  stepKind: "Step",
+  kind_give: "Give",
+  kind_infusion: "Infusion",
+  kind_result: "By result",
+  kind_check: "Check",
+  kind_rule: "Rule",
+  stepTitle: "Title",
+  medicine: "Medicine",
+  noMedicine: "No medicine",
+  dose: "Dose",
+  unit: "Unit",
+  at: "Start minute",
+  every_: "Repeat every (min)",
+  count: "How many times",
+  volume: "Volume (ml)",
+  over: "Over (min)",
+  strength: "Strength (per ml)",
+  checksBefore: "Checks before each dose (one a line)",
+  double: "Double each dose",
+  resultLabel: "Result",
+  resultUnit: "Result unit",
+  bands: "Ranges, one a line (<4: …, 4-10: …, >10: …)",
+  note: "Note",
+  preview: "Live preview for this patient",
+  save: "Save as a draft",
+  saving: "Saving…",
+  saved: "Saved as a draft.",
+} as const satisfies SignedCopy & Record<string, string | null>;
+
+/** The F6 groups, in the prototype's order. */
+export const PROTOCOL_GROUPS = {
+  endo: "Diabetes and metabolic",
+  cardio: "Blood pressure and heart",
+  obs: "Obstetric emergencies",
+  inf: "Severe infection",
+  neuro: "Seizures",
+  lytes: "Electrolytes",
+  tox: "Poisoning",
+  custom: "Your hospital protocols",
+} as const;
+
+export { fill } from "@/content/pharmacy-rework-patients";

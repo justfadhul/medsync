@@ -16,7 +16,7 @@ export const RX_CHECKS = {
   lead: "What the prescriber was warned about. Answer each one on a line you are giving.",
   none: "No checks were raised when this was prescribed.",
   level: { stop: "Stop", check: "Check" },
-  prescriberSaid: "Prescriber answered: {answer}",
+  prescriberSaid: "Prescriber saw it and answered: {answer}",
   answers: {
     checked: "Checked, give it",
     prescriber_confirmed: "Prescriber confirmed",

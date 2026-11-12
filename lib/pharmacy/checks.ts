@@ -25,6 +25,8 @@ export const CHECK_TITLE: Readonly<Record<string, string>> = {
   stock: "Pharmacy stock",
   cosign: "Co-sign",
   controlled: "Controlled drug",
+  pregnancy: "Pregnancy",
+  limits: "Limits",
   engine_concentration: "Concentration",
   engine_max_cumulative: "Maximum dose",
   engine_contraindication: "Contraindication",

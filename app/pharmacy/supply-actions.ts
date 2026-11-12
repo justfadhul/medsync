@@ -10,6 +10,7 @@ import { unstable_rethrow } from "next/navigation";
 
 import { REVIEW } from "@/content/pharmacy-review";
 import { SUPPLY } from "@/content/pharmacy-supply";
+import { prescribeV2LiveFor } from "@/lib/emr/feature";
 import { logger } from "@/lib/logger";
 import { requirePharmacyActor } from "@/lib/pharmacy/actor";
 import { pharmacyDispensingLiveFor } from "@/lib/pharmacy/feature";
@@ -63,6 +64,8 @@ export async function recordHandover(
     async (ctx, input: z.infer<typeof store.HandoverInput>) =>
       store.recordHandover(ctx, input, null, {
         patientList: await patientListLive(ctx.actor.hospitalId, ctx.tx as unknown as EmrDb),
+        // Kit F4: under PRESCRIBE_V2 the identity and counselling confirmation is required.
+        explainRequired: prescribeV2LiveFor(ctx.actor.hospitalId),
       }),
   );
   return r.ok ? { ...bare(r), lines: r.data?.lines ?? [] } : r;

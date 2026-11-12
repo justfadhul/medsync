@@ -2,9 +2,14 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { ArrowLeftIcon } from "lucide-react";
 
+import { NURSE_TASKS_COPY } from "@/content/nurse-tasks";
+import { asClinicalReader } from "@/lib/emr/db";
+import { nurseTasksLiveFor } from "@/lib/emr/feature";
+import { loadNurseMar } from "@/lib/emr/read/nursing";
 import { fetchNursePatientSummaryAudited } from "@/lib/nurse/patient-access";
 import { requireNurseScope } from "@/lib/nurse/scope";
 import { AdministerForm } from "./_components/administer-form";
+import { ChartDoses } from "./_components/chart-doses";
 
 export const metadata: Metadata = { title: "Medications · Nurse · MedSync" };
 export const dynamic = "force-dynamic";
@@ -74,6 +79,17 @@ export default async function NurseMarPage({ searchParams }: PageProps) {
     );
   }
 
+  // Prescribing kit P2 (b): doses from the prescription, Given / Withhold (PRESCRIBE_V2 nurse side).
+  const chart = nurseTasksLiveFor(scope.hospitalId)
+    ? await asClinicalReader({ userId: scope.userId, hospitalId: scope.hospitalId }, (tx) =>
+        loadNurseMar(tx, {
+          hospitalId: scope.hospitalId,
+          patientUserId: summary.patientUserId,
+          now: new Date(),
+        }),
+      )
+    : null;
+
   return (
     <div className="stagger-children mx-auto flex w-full max-w-2xl flex-col gap-6 px-6 py-8">
       <Link
@@ -98,6 +114,12 @@ export default async function NurseMarPage({ searchParams }: PageProps) {
           against this patient — the MAR is fully audited.
         </p>
       </header>
+      {chart ? (
+        <>
+          <ChartDoses patientUserId={summary.patientUserId} lines={chart} />
+          <h2 className="text-heading-m text-foreground">{NURSE_TASKS_COPY.freeTextTitle}</h2>
+        </>
+      ) : null}
       <AdministerForm patientUserId={summary.patientUserId} isEnrolled={scope.isEnrolled} />
     </div>
   );

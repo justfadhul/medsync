@@ -102,3 +102,32 @@ export const STOP_REASONS: readonly CodedWord[] = [
   { code: "other", words: "Other (with text)" },
 ];
 export const CHANGED_REASON = "changed";
+
+/**
+ * The pharmacy hand-off of the one Prescribe (prescribing kit P2 (a), F4), in the prototype's wording.
+ * Draft: PRESCRIBE_V2 stays off in production until the CSO signs. `line` is the prescriber's word for
+ * each pharmacy line stage or outcome (lib/pharmacy/lines.ts StatusKey); the pharmacy keeps its own
+ * signed words for the same stages (Waiting, Queried, Owed, Supplied).
+ */
+export const PRESCRIBE_HANDOFF_COPY = {
+  status: "draft",
+  signedBy: null,
+  signedOn: null,
+  line: {
+    new: "Waiting at pharmacy",
+    awaiting_cosign: "Waiting for co-sign",
+    to_review: "Waiting at pharmacy",
+    queried: "Pharmacy asks you",
+    ready: "Waiting at pharmacy",
+    owed: "Owed, given later",
+    buying_outside: "Buying outside",
+    supplied: "Handed over",
+    cancelled_by_prescriber: "Stopped",
+    replaced: "Changed",
+    declined: "Not supplied",
+    closed: "Closed",
+    reviewed: "Reviewed",
+  },
+  explained: "I checked who they are, and explained how to take each medicine",
+  explainedRefused: "Confirm you checked who they are and explained how to take each medicine.",
+} as const satisfies SignedCopy & Record<string, unknown>;

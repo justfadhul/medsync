@@ -331,12 +331,25 @@ export const medicationAdministrationRecords = pgTable(
     scheduledFor: timestamp("scheduled_for", { withTimezone: true }),
     administeredAt: timestamp("administered_at", { withTimezone: true }).notNull().defaultNow(),
     notes: text("notes"),
+    /** 0281 (prescribing kit P2 b): idempotency for a dose recorded on a prescription line. */
+    clientKey: text("client_key"),
+    /** 0281: the dose this row undoes (state 'reversed', the reason in withheld_reason), at most once. */
+    reversesId: uuid("reverses_id").references(
+      (): AnyPgColumn => medicationAdministrationRecords.id,
+      {
+        onDelete: "restrict",
+      },
+    ),
 
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [
-    check("mar_state_check", sql`${t.state} IN ('administered','withheld','refused','wasted')`),
+    check(
+      "mar_state_check",
+      sql`${t.state} IN ('administered','withheld','refused','wasted','reversed')`,
+    ),
+    check("mar_reversal_shape", sql`(${t.state} = 'reversed') = (${t.reversesId} IS NOT NULL)`),
     check(
       "mar_route_check",
       sql`${t.route} IN ('oral','iv','im','sc','topical','inhaled','pr','other')`,
@@ -350,6 +363,12 @@ export const medicationAdministrationRecords = pgTable(
     index("mar_emr_prescription_idx")
       .on(t.emrPrescriptionId, t.scheduledFor)
       .where(sql`${t.emrPrescriptionId} IS NOT NULL`),
+    uniqueIndex("mar_client_key")
+      .on(t.clientKey)
+      .where(sql`${t.clientKey} IS NOT NULL`),
+    uniqueIndex("mar_reverses_once")
+      .on(t.reversesId)
+      .where(sql`${t.reversesId} IS NOT NULL`),
   ],
 );
 
@@ -388,3 +407,59 @@ export const shiftHandovers = pgTable(
 
 export type ShiftHandover = typeof shiftHandovers.$inferSelect;
 export type NewShiftHandover = typeof shiftHandovers.$inferInsert;
+
+/* ─── nurse_tasks (0281, prescribing kit P2 b) ───────────────────── */
+/**
+ * Work a prescription (later a protocol chart, P4) gives the nurses. One way: open → done |
+ * cancelled, then frozen (trigger); never deleted. RLS: the clinical reader's scoped SELECT only.
+ */
+export const nurseTasks = pgTable(
+  "nurse_tasks",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    hospitalId: uuid("hospital_id")
+      .notNull()
+      .references(() => hospitals.id, { onDelete: "restrict" }),
+    patientUserId: uuid("patient_user_id")
+      .notNull()
+      .references(() => authUsers.id, { onDelete: "restrict" }),
+    encounterId: uuid("encounter_id").references(() => encounters.id, { onDelete: "restrict" }),
+    /** "iv_cannula", "enter_result", …; P4 adds its own. */
+    type: text("type").notNull(),
+    sourceKind: text("source_kind").notNull(),
+    sourceId: uuid("source_id"),
+    payload: jsonb("payload")
+      .notNull()
+      .default(sql`'{}'::jsonb`),
+    dueAt: timestamp("due_at", { withTimezone: true }),
+    status: text("status").notNull().default("open"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    createdByUserId: uuid("created_by_user_id")
+      .notNull()
+      .references(() => authUsers.id, { onDelete: "restrict" }),
+    doneAt: timestamp("done_at", { withTimezone: true }),
+    doneByUserId: uuid("done_by_user_id").references(() => authUsers.id, { onDelete: "restrict" }),
+    outcome: jsonb("outcome"),
+    clientKey: text("client_key"),
+  },
+  (t) => [
+    check("nurse_tasks_type_check", sql`${t.type} ~ '^[a-z][a-z0-9_]{1,40}$'`),
+    check(
+      "nurse_tasks_source_kind_check",
+      sql`${t.sourceKind} IN ('prescription','order','protocol_chart','manual')`,
+    ),
+    check("nurse_tasks_payload_check", sql`jsonb_typeof(${t.payload}) = 'object'`),
+    check("nurse_tasks_status_check", sql`${t.status} IN ('open','done','cancelled')`),
+    check(
+      "nurse_tasks_closed",
+      sql`(${t.status} = 'open') = (${t.doneAt} IS NULL AND ${t.doneByUserId} IS NULL)`,
+    ),
+    uniqueIndex("nurse_tasks_client_key")
+      .on(t.clientKey)
+      .where(sql`${t.clientKey} IS NOT NULL`),
+    index("nurse_tasks_open").on(t.hospitalId, t.status, t.dueAt),
+    index("nurse_tasks_patient").on(t.patientUserId, t.createdAt),
+  ],
+);
+
+export type NurseTask = typeof nurseTasks.$inferSelect;

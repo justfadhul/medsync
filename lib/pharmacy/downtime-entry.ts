@@ -37,7 +37,7 @@ import {
   pharmacySheetLabel,
   rowRefusal,
 } from "@/lib/pharmacy/downtime";
-import { cadreNames } from "@/lib/pharmacy/read";
+import { cadreNames, dispensable } from "@/lib/pharmacy/read";
 import { loadGroupOfLine, loadHospitalContext } from "@/lib/pharmacy/review/load";
 import { reviewBasis } from "@/lib/pharmacy/review/review";
 import { localDate } from "@/lib/pharmacy/stock/ledger";
@@ -860,7 +860,7 @@ export async function patientForEntry(
         and(
           eq(prescriptions.hospitalId, hospitalId),
           eq(prescriptions.patientUserId, patient.id),
-          eq(prescriptions.isEmergency, false),
+          dispensable(),
         ),
       )
       .orderBy(desc(prescriptions.createdAt))

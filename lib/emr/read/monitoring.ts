@@ -11,7 +11,7 @@ import { fluidBalanceEntries, monitoringCharts } from "@/db/schema/monitoring";
 import { medicationAdministrationRecords } from "@/db/schema/nurse-workspace";
 import { prescriptions } from "@/db/schema/prescribing";
 import { encounters } from "@/db/schema/scheduling";
-import { buildMonitoringPayload } from "@/lib/emr/charts/build";
+import { buildMonitoringPayload, liveDoses } from "@/lib/emr/charts/build";
 import { loadFactSnapshot } from "@/lib/facts/loader";
 
 /**
@@ -173,7 +173,7 @@ export async function loadMonitoring(
     );
   const mar: MarRowIn[] =
     kinds.has("mar") && rx.length
-      ? (
+      ? liveDoses(
           await tx
             .select({
               id: medicationAdministrationRecords.id,
@@ -184,6 +184,7 @@ export async function loadMonitoring(
               administeredAt: medicationAdministrationRecords.administeredAt,
               isHighAlert: medicationAdministrationRecords.isHighAlert,
               cosignedByUserId: medicationAdministrationRecords.cosignedByUserId,
+              reversesId: medicationAdministrationRecords.reversesId,
             })
             .from(medicationAdministrationRecords)
             .where(
@@ -195,7 +196,7 @@ export async function loadMonitoring(
                 eq(medicationAdministrationRecords.patientUserId, i.patientUserId),
                 eq(medicationAdministrationRecords.hospitalId, i.hospitalId),
               ),
-            )
+            ),
         ).flatMap((m) => (m.prescriptionId ? [{ ...m, prescriptionId: m.prescriptionId }] : []))
       : [];
 

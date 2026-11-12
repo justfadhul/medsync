@@ -47,7 +47,7 @@ import {
   Toggle,
 } from "./parts";
 import { PharmacyAnnounce, PharmacyItemBlock } from "./pharmacy";
-import { PlanPrescribeDialog } from "./prescribe-dialog";
+import { envOfPlan, PlanPrescribeDialog } from "./prescribe-dialog";
 import { ProblemCard } from "./problem-card";
 
 /**
@@ -696,7 +696,7 @@ export function PlanStep(props: PlanStepProps) {
 
       {target ? (
         <PlanPrescribeDialog
-          v={v}
+          env={envOfPlan(v)}
           allergies={props.allergies}
           target={target}
           onClose={() => {

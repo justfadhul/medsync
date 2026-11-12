@@ -48,6 +48,7 @@ import {
   cadreNames,
   cadreOfUsers,
   cosignsFor,
+  dispensable,
   encountersFor,
   keyFilter,
   lineColumns,
@@ -229,9 +230,7 @@ function selectRows(database: EmrDb, hospitalId: string, where: SQL | undefined)
     .from(prescriptions)
     .leftJoin(conditions, eq(conditions.id, prescriptions.conditionId))
     .leftJoin(diagnosisTerms, eq(diagnosisTerms.id, conditions.termId))
-    .where(
-      and(eq(prescriptions.hospitalId, hospitalId), eq(prescriptions.isEmergency, false), where),
-    );
+    .where(and(eq(prescriptions.hospitalId, hospitalId), dispensable(), where));
 }
 
 async function rowsWhere(database: EmrDb, hospitalId: string, where: SQL | undefined) {

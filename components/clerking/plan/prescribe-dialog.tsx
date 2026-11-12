@@ -4,7 +4,11 @@ import type { AllergyItems } from "./medicines";
 import type { PlanView } from "./model";
 import type { PrescribeTarget } from "./problem-card";
 import type { PlanBasketRx } from "@/lib/clerking/plan/draft";
+import type { PlanPayload } from "@/lib/clerking/plan/payload";
+import type { ProblemCard } from "@/lib/clerking/plan/problems";
+import type { BrandOption } from "@/lib/emr/read/prescribe";
 import type { StockLine } from "@/lib/prescribing/pharmacy";
+import type { PrescribePlace } from "@/lib/prescribing/places";
 import type { PlanCheck, PlanCheckContext } from "@/lib/prescribing/plan-checks";
 import type { AnswerId, FluidPurpose, PlanRx } from "@/lib/prescribing/plan-rx";
 import type {
@@ -15,18 +19,21 @@ import type {
   RxFrequency,
 } from "@/lib/prescribing/reference/formulary-types";
 import { useEffect, useId, useMemo, useState } from "react";
-import { LayoutGridIcon, SearchIcon } from "lucide-react";
+import { LayoutGridIcon, SearchIcon, StarIcon } from "lucide-react";
 
 import { EmrDialog } from "@/components/emr/emr-dialog";
 import { Button } from "@/components/ui/button";
+import { PRESCRIBE_COPY as C, fill } from "@/content/prescribing";
 import { basketOf } from "@/lib/clerking/plan/draft";
 import { standing } from "@/lib/clerking/plan/record";
 import { stockLines } from "@/lib/emr/actions/pharmacy-stock";
+import { prescribeBrands } from "@/lib/emr/actions/prescribe";
 import {
   BAND_WORD,
   classById,
   drugById,
   drugsInClass,
+  formularyBrowse,
   isFluid,
   offersRegimens,
   patientBand,
@@ -35,12 +42,8 @@ import {
   resolveRegimens,
   searchDrugs,
 } from "@/lib/prescribing/formulary";
-import {
-  PHARMACY_WORD,
-  pharmacyAvailability,
-  STOCK_LINE_COPY,
-  stockLineWords,
-} from "@/lib/prescribing/pharmacy";
+import { STOCK_LINE_COPY, stockLineWords } from "@/lib/prescribing/pharmacy";
+import { PLACE } from "@/lib/prescribing/places";
 import {
   needingAnswer,
   OUTCOME_WORD,
@@ -69,6 +72,7 @@ import {
   RX_COURSES,
   RX_FREQUENCIES,
 } from "@/lib/prescribing/reference/formulary-types";
+import { supplyQuantity } from "@/lib/prescribing/supply";
 import { cn } from "@/lib/utils";
 import { FactChips } from "./medicines";
 import { MedicinesBrowseDialog } from "./medicines-browse-dialog";
@@ -81,6 +85,69 @@ import { NO_REPEATS, readRepeats, RepeatsField } from "./repeats";
  * types the number and taps the rest. Every change from a regimen is shown struck through and
  * recorded. The checks run live here and again on the server when the basket is placed.
  */
+
+/**
+ * What the dialog reads about the patient and the place (prescribing kit F1): the clerking Plan
+ * builds it from its view (`envOfPlan`), every other place from the session the server opens.
+ */
+export interface PrescribeEnv {
+  facts: PlanPayload["facts"];
+  cosign: PlanPayload["cosign"];
+  bloodCulture: PlanPayload["bloodCulture"];
+  kidneyTestOrdered: boolean;
+  interactions?: PlanPayload["interactions"];
+  stockAnswer?: PlanPayload["stockAnswer"];
+  repeats?: PlanPayload["repeats"];
+  /** The problems a line can be for (the clerking Plan); empty elsewhere. */
+  cards: ProblemCard[];
+  /** Placed and standing this visit, then the lines in the basket. */
+  standing: { drugId: string; drugName: string }[];
+  basket: { drugId: string; drugName: string }[];
+  basketTests: string[];
+  /** PRESCRIBE_V2: the place, its collect point, brands, supply and the kit's checks. */
+  v2: {
+    place: PrescribePlace;
+    collect: string;
+    surface: "doctor" | "clinician";
+    patientUserId: string;
+  } | null;
+}
+
+export function envOfPlan(v: PlanView): PrescribeEnv {
+  const basket = basketOf(v.draft);
+  const who = v.payload.stockAnswer ?? v.payload.repeats?.who;
+  return {
+    facts: v.payload.facts,
+    cosign: v.payload.cosign,
+    bloodCulture: v.payload.bloodCulture,
+    kidneyTestOrdered: v.payload.kidneyTestOrdered,
+    interactions: v.payload.interactions,
+    stockAnswer: v.payload.stockAnswer,
+    repeats: v.payload.repeats,
+    cards: v.cards,
+    standing: v.record.prescriptions.filter(standing),
+    basket: basket.prescriptions,
+    basketTests: basket.orders.map((o) => o.testKey),
+    v2:
+      v.payload.prescribeV2 && who
+        ? {
+            place: "clerking",
+            collect: PLACE.clerking.collect,
+            surface: who.surface,
+            patientUserId: who.patientUserId,
+          }
+        : null,
+  };
+}
+
+const STAR_KEY = (drugId: string) => `medsync.rx.star.${drugId}`;
+const readStar = (drugId: string) => {
+  try {
+    return window.localStorage.getItem(STAR_KEY(drugId));
+  } catch {
+    return null;
+  }
+};
 
 const FLUID_DRUGS = ["sodium_chloride_0_9", "ringers_lactate", "glucose_5", "glucose_10"] as const;
 const VOLUMES = [250, 500, 1000] as const;
@@ -111,7 +178,9 @@ interface FluidState {
 }
 
 interface State {
-  conditionId: string;
+  conditionId: string | null;
+  /** PRESCRIBE_V2: the brand chosen; null = any brand. */
+  productId: string | null;
   drugId: string | null;
   /** Glucose 10% is a drug for hypoglycaemia and a fluid for maintenance: how it was chosen says. */
   mode: "drug" | "fluid";
@@ -151,15 +220,60 @@ function modeFor(d: Drug | undefined, via: "fluids" | "list"): "drug" | "fluid" 
   return isFluid(d) && !d.dose.regimens.some((r) => !r.fluidPurpose) ? "fluid" : "drug";
 }
 
+export type Target = Omit<PrescribeTarget, "problem"> & {
+  problem?: ProblemCard;
+  /** Kit F2 "Edit": the line as it was added, to change it. */
+  from?: PlanBasketRx;
+};
+
+/** A basket line back into the dialog's state (Edit). */
+function fromRx(r: PlanBasketRx): State {
+  const f = r.fluid;
+  return {
+    conditionId: r.conditionId,
+    productId: r.productId ?? null,
+    drugId: r.drugId,
+    mode: r.kind,
+    regimenId: r.regimenId,
+    doseNum: r.kind === "fluid" ? null : r.doseNum,
+    unit: r.unit,
+    strength: r.strength,
+    route: r.route,
+    method: r.kind === "fluid" ? null : r.method,
+    infusionOver: r.infusionOver,
+    diluent: r.diluent,
+    frequency: r.kind === "fluid" ? null : r.frequency,
+    prn: r.prn,
+    course: r.course,
+    start: r.start,
+    note: r.note ?? "",
+    fluid: f
+      ? {
+          purpose: f.purpose,
+          volumeMl: f.volumeMl,
+          overMinutes: f.overMinutes,
+          delivery: f.delivery,
+          dropsPerMl: f.dropsPerMl,
+          warmed: f.warmed,
+        }
+      : EMPTY_FLUID,
+    answers: Object.fromEntries(r.answers.map((a) => [a.code, { answer: a.answer, text: a.text }])),
+    witness: r.witness ?? "",
+    typedDose: r.typedDose != null ? String(r.typedDose) : "",
+  };
+}
+
 function initial(
-  target: PrescribeTarget,
+  target: Target,
   via: "fluids" | "list" = target.fluids ? "fluids" : "list",
 ): State {
+  if (target.from) return fromRx(target.from);
   const drug = target.drugId ? drugById(target.drugId) : undefined;
   const route = drug?.routes.length === 1 ? drug.routes[0]! : null;
   const mode = modeFor(drug, via);
   return {
-    conditionId: target.problem.versionId,
+    conditionId: target.problem?.versionId ?? null,
+    productId: null,
     drugId: target.drugId ?? null,
     mode,
     regimenId: null,
@@ -229,6 +343,7 @@ function toRx(s: State, drug: Drug | undefined, weightAt: string | null): PlanRx
     witness: s.witness.trim() || null,
     weightAt,
     typedDose: s.typedDose.trim() ? Number(s.typedDose) : null,
+    ...(s.productId ? { productId: s.productId } : {}),
   };
 }
 
@@ -293,16 +408,16 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
 }
 
 export function PlanPrescribeDialog({
-  v,
+  env,
   allergies,
   target,
   onClose,
   onAdd,
   time,
 }: {
-  v: PlanView;
+  env: PrescribeEnv;
   allergies: AllergyItems;
-  target: PrescribeTarget;
+  target: Target;
   onClose: () => void;
   onAdd: (rx: PlanBasketRx) => void;
   time: (iso: string) => string;
@@ -313,6 +428,9 @@ export function PlanPrescribeDialog({
   const [byAge, setByAge] = useState(false);
   const [more, setMore] = useState(false);
   const [rep, setRep] = useState(NO_REPEATS);
+  const [group, setGroup] = useState<string | null>(null);
+  const [hi, setHi] = useState(-1);
+  const groups = useMemo(() => (env.v2 ? formularyBrowse() : []), [env.v2]);
   const searchId = useId();
   const doseId = useId();
   const noteId = useId();
@@ -322,7 +440,8 @@ export function PlanPrescribeDialog({
   const fluidsFirst = !!target.fluids && !target.drugId;
 
   // Pharmacy Phase 1 (5.10): the stock line per medicine, asked once each; absent with the flag off.
-  const stockAt = v.payload.stockAnswer;
+  const stockAt = env.stockAnswer;
+  const v2 = env.v2;
   const [lines, setLines] = useState<Record<string, StockLine>>({});
   const asked = s.drugId && stockAt && !lines[s.drugId] ? s.drugId : null;
   const surface = stockAt?.surface;
@@ -331,7 +450,13 @@ export function PlanPrescribeDialog({
   useEffect(() => {
     if (!asked || !surface) return;
     let live = true;
-    void stockLines({ surface, patientUserId, encounterId, medicineIds: [asked] })
+    void stockLines({
+      surface,
+      patientUserId,
+      encounterId,
+      medicineIds: [asked],
+      ...(v2 ? { place: v2.place } : {}),
+    })
       .then(
         (r) => (r.ok ? (r.data?.lines ?? null) : null),
         () => null,
@@ -343,15 +468,46 @@ export function PlanPrescribeDialog({
     return () => {
       live = false;
     };
+    // v2's place is fixed for the dialog's life.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [asked, surface, patientUserId, encounterId]);
+
+  // Kit F2: the brands here, with whether each is at the collect point; asked once per medicine.
+  const [brands, setBrands] = useState<Record<string, BrandOption[]>>({});
+  const brandAsked = v2 && s.drugId && !brands[s.drugId] ? s.drugId : null;
+  useEffect(() => {
+    if (!brandAsked || !v2) return;
+    let live = true;
+    void prescribeBrands({
+      surface: v2.surface,
+      patientUserId: v2.patientUserId,
+      place: v2.place,
+      medicineId: brandAsked,
+    })
+      .then(
+        (r) => (r.ok ? (r.data?.brands ?? []) : []),
+        () => [],
+      )
+      .then((got) => {
+        if (!live) return;
+        setBrands((x) => ({ ...x, [brandAsked]: got }));
+        const star = readStar(brandAsked);
+        if (star && got.some((b) => b.id === star))
+          setS((x) => (x.drugId === brandAsked ? { ...x, productId: star } : x));
+      });
+    return () => {
+      live = false;
+    };
+  }, [brandAsked, v2]);
+  const [starred, setStarred] = useState<string | null>(null);
 
   const set = (patch: Partial<State>) => setS((x) => ({ ...x, ...patch }));
   const setFluid = (patch: Partial<FluidState>) =>
     setS((x) => ({ ...x, fluid: { ...x.fluid, ...patch } }));
   const drug = s.drugId ? drugById(s.drugId) : undefined;
   const fluidMode = s.mode === "fluid";
-  const problem = v.cards.find((c) => c.versionId === s.conditionId) ?? target.problem;
-  const f = v.payload.facts;
+  const problem = env.cards.find((c) => c.versionId === s.conditionId) ?? target.problem ?? null;
+  const f = env.facts;
   const weight = f.weight;
   const band = patientBand(f.ageYears);
 
@@ -411,8 +567,7 @@ export function PlanPrescribeDialog({
   const weightAt = chosen?.regimen.perKg && weight ? weight.at : null;
   const rx = toRx(s, drug, weightAt);
 
-  const basket = basketOf(v.draft);
-  const cultureInBasket = basket.orders.some((o) => o.testKey === "test.blood_culture");
+  const cultureInBasket = env.basketTests.includes("test.blood_culture");
   const ctx: PlanCheckContext = {
     ageYears: f.ageYears,
     weight,
@@ -426,32 +581,31 @@ export function PlanPrescribeDialog({
     conditions: f.conditions,
     creatinine: f.creatinine,
     kidneyTestPlanned:
-      v.payload.kidneyTestOrdered ||
-      basket.orders.some(
-        (o) => o.testKey === "test.urea_electrolytes" || o.testKey === "test.creatinine",
-      ),
+      env.kidneyTestOrdered ||
+      env.basketTests.some((t) => t === "test.urea_electrolytes" || t === "test.creatinine"),
     glucose: f.glucose,
-    sepsisTypeProblem: problem.tests.some((t) => t.key === "test.blood_culture"),
-    bloodCulture:
-      v.payload.bloodCulture === "none" && cultureInBasket ? "in_basket" : v.payload.bloodCulture,
+    sepsisTypeProblem: !!problem?.tests.some((t) => t.key === "test.blood_culture"),
+    bloodCulture: env.bloodCulture === "none" && cultureInBasket ? "in_basket" : env.bloodCulture,
     others: [
-      ...v.record.prescriptions.filter(standing).map((r) => ({
+      ...env.standing.map((r) => ({
         drugId: r.drugId,
         classId: drugById(r.drugId)?.class,
         display: r.drugName,
         source: "this_visit" as const,
       })),
-      ...basket.prescriptions.map((r) => ({
+      ...env.basket.map((r) => ({
         drugId: r.drugId,
         classId: drugById(r.drugId)?.class,
         display: r.drugName,
         source: "basket" as const,
       })),
     ],
-    cosign: drug?.flags.controlled ? v.payload.cosign.controlled : v.payload.cosign.routine,
-    pharmacy: pharmacyAvailability(drug?.id ?? ""),
+    cosign: drug?.flags.controlled ? env.cosign.controlled : env.cosign.routine,
     stock: drug ? (lines[drug.id] ?? null) : null,
-    interactions: v.payload.interactions ?? null,
+    interactions: env.interactions ?? null,
+    v2: !!v2,
+    sex: f.sex ?? null,
+    pregnancy: f.pregnancy ?? null,
   };
   const stockLine = drug && stockAt ? (lines[drug.id] ?? null) : null;
   // D-PH1-22: "Pick something else" answers nothing; it goes back to choosing.
@@ -469,9 +623,22 @@ export function PlanPrescribeDialog({
   );
   const rest = checks.filter((c) => !firing.includes(c));
   const edits = rx ? regimenEdits(rx, chosen) : [];
+  // Kit F2: the supply from the chosen brand's own strength and pack; the server works it out again.
+  const product = drug && s.productId ? brands[drug.id]?.find((b) => b.id === s.productId) : null;
+  const supply =
+    rx && rx.kind === "drug" && product
+      ? supplyQuantity({
+          doseNum: rx.doseNum,
+          unit: rx.unit,
+          frequency: rx.frequency,
+          course: rx.course,
+          prn: rx.prn,
+          product,
+        })
+      : null;
   const stop = checks.some((c) => c.outcome === "stop" && c.overrideable);
   // Pharmacy Phase 4 (5.2): the Repeats step, only for a medicine the signed list allows; never a controlled drug.
-  const repeats = v.payload.repeats;
+  const repeats = env.repeats;
   const repBounds =
     repeats?.bounds && drug && !drug.flags.controlled && repeats.bounds.offered.includes(drug.id)
       ? repeats.bounds
@@ -489,13 +656,25 @@ export function PlanPrescribeDialog({
       clientKey,
       display: willRead(rx, drug),
       drugName: drug.generic,
-      problemLogicalId: problem.logicalId,
+      problemLogicalId: problem?.logicalId ?? null,
       repeats: repRead?.terms ?? null,
       ...(target.renewalId ? { renewalId: target.renewalId } : {}),
     });
   };
 
-  const searchHits = query.trim() ? searchDrugs(query) : [];
+  // Kit F2: groups (the catalogue's systems) filter the search; a group alone lists its medicines.
+  const groupDrugs = group
+    ? (groups.find((g) => g.id === group)?.classes.flatMap((c) => c.drugs) ?? [])
+    : null;
+  const searchHits = query.trim()
+    ? searchDrugs(query).filter((d) => !groupDrugs || groupDrugs.includes(d))
+    : (groupDrugs ?? []);
+  const pickHit = (d: Drug) => {
+    pickDrug(d, "list");
+    setQuery("");
+    setGroup(null);
+    setHi(-1);
+  };
   const cls = drug ? classById(drug.class) : undefined;
   const title = drug
     ? `${drug.generic} · ${cls?.name ?? drug.class}`
@@ -511,7 +690,12 @@ export function PlanPrescribeDialog({
       onOpenChange={(o) => !o && onClose()}
       width="xl"
       sheet="tall"
-      kicker={`Prescribe · for ${problem.display}`}
+      kicker={
+        v2
+          ? fill(C.kicker, { place: PLACE[v2.place].label, collect: v2.collect }) +
+            (problem ? ` · for ${problem.display}` : "")
+          : `Prescribe · for ${problem?.display ?? ""}`
+      }
       title={title}
       footer={
         <div className="flex w-full flex-wrap items-center justify-end gap-3">
@@ -530,7 +714,16 @@ export function PlanPrescribeDialog({
       }
     >
       <div className="mb-5">
-        <FactChips v={v} allergies={allergies} time={time} />
+        <FactChips
+          facts={f}
+          kidneyTestOrdered={env.kidneyTestOrdered}
+          allergies={allergies}
+          time={time}
+          v2={!!v2}
+        />
+        {v2?.place === "resus" ? (
+          <p className="text-caption text-muted-foreground mt-2">{C.resusNote}</p>
+        ) : null}
       </div>
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-[300px_minmax(0,1fr)_360px]">
         {/* ── What ── */}
@@ -538,19 +731,21 @@ export function PlanPrescribeDialog({
           <h3 id="rx-what" className="text-label text-foreground">
             What
           </h3>
-          <Field label="For">
-            <div role="group" aria-label="For which problem" className="flex flex-wrap gap-1.5">
-              {v.cards.map((c) => (
-                <Toggle
-                  key={c.versionId}
-                  on={s.conditionId === c.versionId}
-                  onPress={() => set({ conditionId: c.versionId })}
-                >
-                  {c.display}
-                </Toggle>
-              ))}
-            </div>
-          </Field>
+          {env.cards.length ? (
+            <Field label="For">
+              <div role="group" aria-label="For which problem" className="flex flex-wrap gap-1.5">
+                {env.cards.map((c) => (
+                  <Toggle
+                    key={c.versionId}
+                    on={s.conditionId === c.versionId}
+                    onPress={() => set({ conditionId: c.versionId })}
+                  >
+                    {c.display}
+                  </Toggle>
+                ))}
+              </div>
+            </Field>
+          ) : null}
           <div className="flex flex-col gap-1">
             <div className="flex items-center justify-between gap-2">
               <label htmlFor={searchId} className="text-caption text-muted-foreground">
@@ -585,24 +780,62 @@ export function PlanPrescribeDialog({
               <input
                 id={searchId}
                 value={query}
-                onChange={(e) => setQuery(e.target.value)}
+                onChange={(e) => {
+                  setQuery(e.target.value);
+                  setHi(-1);
+                }}
+                onKeyDown={(e) => {
+                  // Kit F2: arrow keys move through the results, Enter picks.
+                  if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+                    e.preventDefault();
+                    const n = searchHits.length;
+                    if (n) setHi((h) => (e.key === "ArrowDown" ? (h + 1) % n : (h - 1 + n) % n));
+                  } else if (e.key === "Enter" && searchHits.length) {
+                    e.preventDefault();
+                    pickHit(searchHits[Math.max(hi, 0)]!);
+                  }
+                }}
+                role="combobox"
+                aria-expanded={searchHits.length > 0}
+                aria-controls={`${searchId}-hits`}
+                aria-activedescendant={hi >= 0 ? `${searchId}-hit-${hi}` : undefined}
                 className={cn(inputClass, "pl-8")}
                 placeholder="Generic name or class"
               />
             </div>
+            {groups.length ? (
+              <div role="group" aria-label={C.groups} className="flex flex-wrap gap-1.5">
+                <Toggle on={!group} onPress={() => setGroup(null)}>
+                  {C.allGroups}
+                </Toggle>
+                {groups.map((g) => (
+                  <Toggle
+                    key={g.id}
+                    on={group === g.id}
+                    onPress={() => setGroup(group === g.id ? null : g.id)}
+                  >
+                    {g.name}
+                  </Toggle>
+                ))}
+              </div>
+            ) : null}
             {searchHits.length ? (
-              <ul aria-label="Search results" className="flex flex-col gap-1">
-                {searchHits.map((d) => (
-                  <li key={d.id}>
+              <ul
+                id={`${searchId}-hits`}
+                role="listbox"
+                aria-label="Search results"
+                className="flex max-h-64 flex-col gap-1 overflow-y-auto"
+              >
+                {searchHits.map((d, i) => (
+                  <li key={d.id} id={`${searchId}-hit-${i}`} role="option" aria-selected={i === hi}>
                     <button
                       type="button"
-                      onClick={() => {
-                        pickDrug(d, "list");
-                        setQuery("");
-                      }}
+                      tabIndex={-1}
+                      onClick={() => pickHit(d)}
                       className={cn(
                         "text-body-s hover:bg-muted w-full rounded-sm px-2 py-1 text-left",
                         FOCUS,
+                        i === hi && "bg-muted",
                       )}
                     >
                       {d.generic}
@@ -613,48 +846,51 @@ export function PlanPrescribeDialog({
               </ul>
             ) : null}
           </div>
-          <div className="flex flex-col gap-2">
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="text-caption text-muted-foreground tracking-[0.06em] uppercase">
-                Mapped to this problem
-              </span>
-              <DraftLabel>Draft map, not CSO-signed</DraftLabel>
+          {problem ? (
+            <div className="flex flex-col gap-2">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-caption text-muted-foreground tracking-[0.06em] uppercase">
+                  Mapped to this problem
+                </span>
+                <DraftLabel>Draft map, not CSO-signed</DraftLabel>
+              </div>
+              {problem.classes.length ? (
+                <ul className="flex flex-col gap-2.5">
+                  {problem.classes.map((id) => (
+                    <li key={id} className="flex flex-col gap-1">
+                      <span className="text-body-s text-foreground">
+                        {classById(id)?.name ?? id}
+                      </span>
+                      <ul className="flex flex-col">
+                        {drugsInClass(id).map((d) => (
+                          <li key={d.id}>
+                            <button
+                              type="button"
+                              aria-pressed={s.drugId === d.id}
+                              onClick={() => pickDrug(d, "list")}
+                              className={cn(
+                                "text-body-s flex w-full items-center justify-between gap-2 rounded-sm px-2 py-1 text-left",
+                                FOCUS,
+                                s.drugId === d.id ? "bg-teal-50 text-teal-800" : "hover:bg-muted",
+                              )}
+                            >
+                              <span>{d.generic}</span>
+                            </button>
+                          </li>
+                        ))}
+                      </ul>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="text-body-s text-muted-foreground">
+                  No classes mapped: search above.
+                </p>
+              )}
             </div>
-            {problem.classes.length ? (
-              <ul className="flex flex-col gap-2.5">
-                {problem.classes.map((id) => (
-                  <li key={id} className="flex flex-col gap-1">
-                    <span className="text-body-s text-foreground">{classById(id)?.name ?? id}</span>
-                    <ul className="flex flex-col">
-                      {drugsInClass(id).map((d) => (
-                        <li key={d.id}>
-                          <button
-                            type="button"
-                            aria-pressed={s.drugId === d.id}
-                            onClick={() => pickDrug(d, "list")}
-                            className={cn(
-                              "text-body-s flex w-full items-center justify-between gap-2 rounded-sm px-2 py-1 text-left",
-                              FOCUS,
-                              s.drugId === d.id ? "bg-teal-50 text-teal-800" : "hover:bg-muted",
-                            )}
-                          >
-                            <span>{d.generic}</span>
-                            {stockAt ? null : (
-                              <span className="text-caption text-muted-foreground">
-                                {PHARMACY_WORD[pharmacyAvailability(d.id).status]}
-                              </span>
-                            )}
-                          </button>
-                        </li>
-                      ))}
-                    </ul>
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <p className="text-body-s text-muted-foreground">No classes mapped: search above.</p>
-            )}
-            {problem.supportive.includes("fluids") || fluidsFirst ? (
+          ) : null}
+          <div className="flex flex-col gap-2">
+            {problem?.supportive.includes("fluids") || fluidsFirst ? (
               <div className="flex flex-col gap-1">
                 <span className="text-body-s text-foreground">Supportive: IV fluids</span>
                 <Chips
@@ -689,6 +925,50 @@ export function PlanPrescribeDialog({
                   {drug.presentationsDraft.join(", ")}
                 </span>
               </div>
+              {v2 && !fluidMode ? (
+                <Field label={C.brand}>
+                  <div role="radiogroup" aria-label={C.brand} className="flex flex-col gap-1.5">
+                    <Toggle on={!s.productId} onPress={() => set({ productId: null })}>
+                      {C.anyBrand}
+                    </Toggle>
+                    {(brands[drug.id] ?? []).map((b) => (
+                      <div key={b.id} className="flex items-center gap-1.5">
+                        <Toggle on={s.productId === b.id} onPress={() => set({ productId: b.id })}>
+                          {[b.name, b.strength, b.manufacturer].filter(Boolean).join(" · ")}
+                        </Toggle>
+                        {b.inStock != null ? (
+                          <Tag>
+                            {fill(b.inStock ? C.inStock : C.outOfStock, { collect: v2.collect })}
+                          </Tag>
+                        ) : null}
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          aria-label={C.star}
+                          aria-pressed={(starred ?? readStar(drug.id)) === b.id}
+                          className="pointer-coarse:size-11"
+                          onClick={() => {
+                            try {
+                              window.localStorage.setItem(STAR_KEY(drug.id), b.id);
+                            } catch {
+                              // A per-viewer convenience: nothing is lost without storage.
+                            }
+                            setStarred(b.id);
+                          }}
+                        >
+                          <StarIcon
+                            aria-hidden
+                            className={cn(
+                              (starred ?? readStar(drug.id)) === b.id && "fill-current",
+                            )}
+                          />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                </Field>
+              ) : null}
 
               <Field label="Formulary regimens for this patient">
                 {resolution && resolution.regimens.length ? (
@@ -748,34 +1028,36 @@ export function PlanPrescribeDialog({
                       Dose by age
                     </Toggle>
                     {byAge ? (
-                      <table className="text-body-s w-full">
-                        <caption className="sr-only">
-                          Dose by age, from the signed reference
-                        </caption>
-                        <tbody>
-                          {DOSE_BANDS.map((b) => (
-                            <tr
-                              key={b}
-                              className={cn(
-                                "border-border border-t align-top",
-                                b === band && "bg-teal-50",
-                              )}
-                            >
-                              <th scope="row" className="text-label py-1.5 pr-3 text-left">
-                                {BAND_WORD[b]}
-                                {b === band ? (
-                                  <span className="text-caption text-muted-foreground block">
-                                    This patient
-                                  </span>
-                                ) : null}
-                              </th>
-                              <td className="py-1.5">
-                                {drug.dose.bands[b] ?? "No verified regimen"}
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
+                      <div className="overflow-x-auto">
+                        <table className="text-body-s w-full">
+                          <caption className="sr-only">
+                            Dose by age, from the signed reference
+                          </caption>
+                          <tbody>
+                            {DOSE_BANDS.map((b) => (
+                              <tr
+                                key={b}
+                                className={cn(
+                                  "border-border border-t align-top",
+                                  b === band && "bg-teal-50",
+                                )}
+                              >
+                                <th scope="row" className="text-label py-1.5 pr-3 text-left">
+                                  {BAND_WORD[b]}
+                                  {b === band ? (
+                                    <span className="text-caption text-muted-foreground block">
+                                      This patient
+                                    </span>
+                                  ) : null}
+                                </th>
+                                <td className="py-1.5">
+                                  {drug.dose.bands[b] ?? "No verified regimen"}
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
                     ) : null}
                     {byAge ? (
                       <p className="text-caption text-muted-foreground font-mono">
@@ -1047,6 +1329,25 @@ export function PlanPrescribeDialog({
                 <span className="sr-only">{`, changed from ${e.from}`}</span>
               </p>
             ))}
+            {v2 && edits.length && s.regimenId ? (
+              <div className="flex flex-wrap items-center gap-2">
+                <Tag>{C.changedFromRegimen}</Tag>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => applyRegimen(s.regimenId!)}
+                >
+                  {C.useRegimen}
+                </Button>
+              </div>
+            ) : null}
+            {v2 && !fluidMode && drug ? (
+              <p className="text-caption text-muted-foreground">
+                {`${C.quantity}: `}
+                {supply?.text ?? C.quantityUnknown}
+              </p>
+            ) : null}
             <p className="text-caption text-muted-foreground">
               {`${band ? BAND_WORD[band] : "Age not recorded"} · `}
               {weight ? (

@@ -5,6 +5,7 @@ import { PHARMACY } from "@/content/pharmacy";
 import { CONTROLLED_UI } from "@/content/pharmacy-controlled";
 import { SUPPLY } from "@/content/pharmacy-supply";
 import { db } from "@/db";
+import { prescribeV2LiveFor } from "@/lib/emr/feature";
 import { identitiesFor } from "@/lib/emr/read/results";
 import { can } from "@/lib/pharmacy/access";
 import { requirePharmacyActor } from "@/lib/pharmacy/actor";
@@ -74,6 +75,7 @@ export default async function HandoverPage({
         witnesses={witnesses}
         canSupplyControlled={can(actor.access, "pharmacy.controlled")}
         slip={{ hospital: scope.hospitalName, patientName: who.name, medsyncNumber: who.mrn }}
+        explainRequired={prescribeV2LiveFor(scope.hospitalId)}
       />
     </div>
   );

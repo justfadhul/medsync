@@ -403,6 +403,8 @@ export const pharmacyHandovers = pgTable("pharmacy_handovers", {
   labelMode: text("label_mode").notNull(),
   labelsWrittenAttested: boolean("labels_written_attested").notNull().default(false),
   counselling: text("counselling").array().notNull().default([]),
+  // 0280 (prescribing kit F4): "I checked who they are, and explained how to take each medicine".
+  explainedAttested: boolean("explained_attested").notNull().default(false),
   language: text("language"),
   paymentStatus: text("payment_status").notNull().default("not_recorded"),
   paymentDetail: text("payment_detail"),

@@ -112,6 +112,14 @@ export interface MarRowIn {
   cosignedByUserId: string | null;
 }
 
+/** The doses that stand: a reversal row (0281) and the dose it undoes both drop out. */
+export function liveDoses<T extends { id: string; state: string; reversesId: string | null }>(
+  rows: readonly T[],
+): T[] {
+  const undone = new Set(rows.flatMap((r) => (r.reversesId ? [r.reversesId] : [])));
+  return rows.filter((r) => r.state !== "reversed" && !undone.has(r.id));
+}
+
 export type VitalKey = "rr" | "spo2" | "sbp" | "pulse" | "temp" | "acvpu" | "glucose";
 
 /** One vital-sign value from clinical_observations (or the encounter's triage record). */
