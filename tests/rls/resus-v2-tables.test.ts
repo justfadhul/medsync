@@ -5,9 +5,9 @@ import { anonClient, cleanup, createTestUser, RLS_TESTS_ENABLED, serviceSql } fr
 
 /**
  * RLS: the six Resus Desk v2 tables (migration 0068). Same actors as
- * resus-tables.test.ts. Reads: active clinical staff of the hospital (+
- * superadmin); reception, other hospitals and anonymous read nothing. Writes:
- * never from a client — service role inside audited server actions only. Also
+ * resus-tables.test.ts. Reads: active clinical staff of the hospital (the
+ * superadmin lost its read in 0287); reception, other hospitals and anonymous
+ * read nothing. Writes: never from a client — service role inside audited server actions only. Also
  * proves the immutability triggers (arrest records, after-death tasks,
  * submitted debriefs).
  *

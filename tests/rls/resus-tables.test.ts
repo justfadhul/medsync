@@ -17,7 +17,7 @@ import {
  * Actors: same-hospital clinical staff (read), another hospital's clinical
  * staff (deny), a reception (non-clinical) cadre at the same hospital (deny),
  * anonymous (deny), the patient (own episode), the recorder of an entry, and a
- * superadmin. Every client-side INSERT / UPDATE / DELETE is denied — writes go
+ * superadmin (deny since 0287: break-glass only). Every client-side INSERT / UPDATE / DELETE is denied — writes go
  * through the service role inside audited server actions only.
  *
  * Live-DB suite: SKIPS unless MEDSYNC_ALLOW_RLS_DB_WRITES=1 and the Supabase
@@ -149,13 +149,13 @@ describe.skipIf(!RLS_TESTS_ENABLED)("RLS: resus tables", () => {
       expect(data ?? []).toHaveLength(0);
     });
 
-    test(`${table}: superadmin can read`, async () => {
-      const { data, error } = await superadmin.client
+    // Review C-3 (0287): the superadmin reads a patient's record through break-glass only.
+    test(`${table}: superadmin cannot read`, async () => {
+      const { data } = await superadmin.client
         .from(table)
         .select("id")
         .eq(episodeKey(table), episodeId);
-      expect(error).toBeNull();
-      expect(data?.length ?? 0).toBeGreaterThan(0);
+      expect(data ?? []).toHaveLength(0);
     });
 
     test(`${table}: client INSERT is denied`, async () => {

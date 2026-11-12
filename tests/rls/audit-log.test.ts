@@ -41,13 +41,13 @@ describe.skipIf(!RLS_TESTS_ENABLED)("RLS: public.audit_log", () => {
     expect(data?.length ?? 0).toBe(0);
   });
 
-  test("superadmin CAN SELECT audit_log", async () => {
-    const { data, error } = await superAdmin.client
+  // Review C-3 (0287): audit rows hold whole patient records; the superadmin reads them through break-glass only.
+  test("superadmin CANNOT SELECT audit_log", async () => {
+    const { data } = await superAdmin.client
       .from("audit_log")
       .select("table_name")
       .eq("table_name", "rls_audit_test");
-    expect(error).toBeNull();
-    expect(data?.length ?? 0).toBeGreaterThan(0);
+    expect(data?.length ?? 0).toBe(0);
   });
 
   test("authenticated CANNOT INSERT into audit_log directly", async () => {
