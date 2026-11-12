@@ -166,7 +166,6 @@ export const BOOK_COPY = {
   whereTitle: "Where do you feel it?",
   whereLine: "Pick an area. We ask a few questions, then suggest the right door.",
   somethingElse: "Something else",
-  tellUs: "Tell us what is wrong",
   veryUnwell: "Very unwell right now? Do not book.",
 
   // mobile/src/features/visits/hospital-picker.tsx
