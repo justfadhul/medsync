@@ -80,7 +80,7 @@ describe("callEdge", () => {
     respond(502, "<html>bad gateway</html>");
     expect(await callEdge("f", {}, "reception")).toEqual({
       ok: false,
-      error: "<html>bad gateway</html>",
+      error: "Edge Function returned 502.",
     });
 
     respond(500, "");

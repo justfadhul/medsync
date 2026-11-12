@@ -2,7 +2,7 @@
 
 import type { CancelSessionState, SessionDelayState } from "../actions";
 import type { ClinicSessionRow } from "./clinic-sessions-section";
-import { useActionState, useEffect } from "react";
+import { useActionState, useEffect, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -124,6 +124,9 @@ function CancelForm({ session, onDone }: { session: ClinicSessionRow; onDone: ()
     cancelSessionAction,
     {},
   );
+  // Controlled: React resets an uncontrolled form after its action, which wiped the reason between the count
+  // and the confirm, so the second press was blocked by `required`.
+  const [reason, setReason] = useState("");
   useEffect(() => {
     if (state.ok) onDone();
   }, [state.ok, onDone]);
@@ -149,6 +152,8 @@ function CancelForm({ session, onDone }: { session: ClinicSessionRow; onDone: ()
         <Input
           id="cancel-reason"
           name="reason"
+          value={reason}
+          onChange={(e) => setReason(e.target.value)}
           minLength={10}
           required
           placeholder="At least 10 characters — recorded in the audit log"
