@@ -9,6 +9,7 @@ import {
   DEFAULT_QUIET_HOURS,
   dispatchRows,
   fallbackKey,
+  HELD_IN_QUIET_HOURS,
   inQuietHours,
   OFFER_WINDOW_MS,
   planDispatch,
@@ -507,6 +508,79 @@ describe("planDispatch — one per (kind, related) per run, and the cap", () => 
     expect(p.holds).toHaveLength(0);
     expect(p.reaps).toHaveLength(0);
     expect(new Set(p.pushSends.map((s) => s.relatedId)).size).toBe(300);
+  });
+});
+
+describe("planDispatch — the 15-minute cron (vercel.json */15) never sends twice", () => {
+  it("a day of runs sends each row once, no held kind at night, one fallback", () => {
+    // What the route does between runs: a send is claimed 'sent'; a quiet-hour
+    // hold is parked 'held' at the window's end; a reap takes its state; a
+    // fallback is inserted ON CONFLICT (idempotency_key) DO NOTHING; a sent
+    // push whose :sms row exists is not re-read. Every row is fed every run,
+    // harsher than the route's due-only scan.
+    const START = new Date("2026-09-15T17:00:00.000Z"); // 20:00 EAT
+    const at = (m: number) => ms(m, START);
+    const visit = { live: true, status: "confirmed", startsAtIso: at(60 * 23) };
+    const table: DispatchRow[] = [
+      row({ scheduledAtIso: at(-5), fallbackAfterIso: at(240), related: visit }),
+      row({ kind: "booking_receipt", channel: "sms", scheduledAtIso: at(-5), related: visit }),
+      row({
+        kind: "waitlist_offer",
+        channel: "sms",
+        relatedKind: "waitlist_entry",
+        scheduledAtIso: at(90),
+        related: { live: true, status: "offered", startsAtIso: null },
+      }),
+    ];
+    const sends = new Map<string, number>();
+    const nightSends: string[] = [];
+    let fallbacksInserted = 0;
+    for (let run = 0; run < 96; run += 1) {
+      const now = new Date(START.getTime() + run * 15 * 60_000);
+      const keys = new Set(table.map((r) => r.idempotencyKey));
+      const byId = new Map(table.map((r) => [r.id, r]));
+      const sentPush = (r: DispatchRow) =>
+        r.channel === "push" && (r.state === "sent" || r.state === "delivered");
+      const p = plan(
+        table.filter((r) => !(sentPush(r) && keys.has(fallbackKey(r.idempotencyKey)))),
+        {},
+        now,
+      );
+      for (const s of [...p.pushSends, ...p.smsSends]) {
+        const r = byId.get(s.dispatchId) as DispatchRow;
+        sends.set(r.id, (sends.get(r.id) ?? 0) + 1);
+        const held = (HELD_IN_QUIET_HOURS as ReadonlySet<string>).has(r.kind);
+        if (held && inQuietHours(now, DEFAULT_QUIET_HOURS)) nightSends.push(r.kind);
+        r.state = "sent";
+      }
+      for (const h of p.holds) {
+        if (h.releaseAtIso) {
+          Object.assign(byId.get(h.dispatchId) as DispatchRow, {
+            state: "held",
+            scheduledAtIso: h.releaseAtIso,
+          });
+        }
+      }
+      for (const x of p.reaps) (byId.get(x.dispatchId) as DispatchRow).state = x.state;
+      for (const f of p.fallbacks) {
+        if (keys.has(f.insert.idempotency_key)) continue;
+        fallbacksInserted += 1;
+        table.push({
+          ...(byId.get(f.fromDispatchId) as DispatchRow),
+          id: `fallback-${run}`,
+          channel: "sms",
+          state: "queued",
+          scheduledAtIso: f.insert.scheduled_at,
+          fallbackChannel: null,
+          fallbackAfterIso: null,
+          idempotencyKey: f.insert.idempotency_key,
+        });
+      }
+    }
+    // push, receipt, the push's SMS fallback (held to 07:00), the offer (held to 07:00)
+    expect([...sends.values()]).toEqual([1, 1, 1, 1]);
+    expect(fallbacksInserted).toBe(1);
+    expect(nightSends).toEqual([]);
   });
 });
 

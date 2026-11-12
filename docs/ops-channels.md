@@ -38,23 +38,15 @@ deploy once. `system-ussd-book` and `system-ussd-act` refuse any Bearer that is 
 (`_shared/system-actor.ts`: the injected key byte-for-byte, or a gateway-verified JWT with `role =
 service_role`), so exposing them is safe; they still should not be advertised.
 
-### The dispatcher's cadence, while billing is deferred
+### The dispatcher's cadence
 
-`vercel.json` schedules `/api/cron/dispatch-reminders` **daily** (`0 5 * * *` ≈ 08:00 EAT, ±59 min — Hobby's
-precision). Vercel's Hobby plan allows 100 cron jobs per project but refuses any sub-daily expression **at
-deploy time** ("Hobby accounts are limited to daily cron jobs"), so `*/15 * * * *` would fail the deploy
-outright. Daily costs nothing and blocks nothing today: with `AFRICASTALKING_*` unset the run 503s before it
-touches either queue.
-
-**Before the first real patient message**, pick one — a T-2h arrival window or a 2-hour waitlist offer
-delivered once a day is worse than not delivering it:
-
-1. **Vercel Pro** — restore `"schedule": "*/15 * * * *"` in `vercel.json` and redeploy. One line.
-2. **Free, no upgrade** — leave the daily entry and drive the real cadence from Supabase `pg_cron` + `pg_net`
-   (both available on the free tier): a scheduled `net.http_get` to
-   `https://<host>/api/cron/dispatch-reminders` with an `Authorization: Bearer <CRON_SECRET>` header, the
-   secret held in Supabase Vault, scheduled by a GATED migration. Not built — it is one migration when
-   wanted.
+`vercel.json` schedules `/api/cron/dispatch-reminders` **every 15 minutes** (`*/15 * * * *`) from branch
+`feat/booking-pilot-go-live`. That entry **needs Vercel Pro**: Hobby refuses any sub-daily expression at
+deploy time ("Hobby accounts are limited to daily cron jobs"), so the deploy fails outright. Do not merge it
+to `main` until the hosting account is on Pro (checklist: [booking-pilot/GO-LIVE.md](booking-pilot/GO-LIVE.md)).
+The free alternative stays open: keep a daily entry and drive the cadence from Supabase `pg_cron` + `pg_net`
+(a scheduled `net.http_get` to `https://<host>/api/cron/dispatch-reminders` with
+`Authorization: Bearer <CRON_SECRET>`, the secret in Supabase Vault, one GATED migration; not built).
 
 ## 3. Africa's Talking dashboard
 

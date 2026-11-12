@@ -15,7 +15,7 @@
     },
     {
       "path": "/api/cron/dispatch-reminders",
-      "schedule": "0 5 * * *"
+      "schedule": "*/15 * * * *"
     },
     {
       "path": "/api/cron/sweep-pre-arrivals",

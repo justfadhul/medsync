@@ -59,16 +59,13 @@ export const maxDuration = 60;
  *
  * Same `CRON_SECRET` Bearer auth as the other crons.
  *
- * ponytail: vercel.json schedules this DAILY (`0 5 * * *` ≈ 08:00 EAT), not
- * every 15 minutes. Vercel's Hobby plan refuses any sub-daily expression at
- * DEPLOY time, and billing is deferred — a daily tick costs nothing and
- * blocks nothing while Africa's Talking is unconfigured (the run 503s before
- * it touches the queue). Ceiling: with live SMS, a T-2h arrival window or a
- * 2-hour waitlist offer sent once a day is worse than not sending it.
- * Upgrade path, before the first real patient: restore `*∕15 * * * *` on
- * Vercel Pro, or keep the daily entry and drive the real cadence for free
- * from Supabase `pg_cron` + `pg_net` (GET this route with the CRON_SECRET
- * bearer) — docs/ops-channels.md §2.
+ * vercel.json schedules this every 15 minutes (`*∕15 * * * *`). That needs
+ * Vercel PRO: Hobby refuses any sub-daily expression at DEPLOY time, so this
+ * entry must not be deployed from a Hobby account (docs/booking-pilot/GO-LIVE.md).
+ * Safe at that rate: the claim below, quiet-hour holds that move
+ * `scheduled_at` to the window's end, and fallback rows keyed `:sms` with
+ * ON CONFLICT DO NOTHING. tests/notifications/dispatches.test.ts runs a day
+ * of 15-minute runs and fails on any second send.
  *
  * ── Idempotency, and which way it is allowed to fail ──
  * Rows are CLAIMED before the transport is touched: one conditional
@@ -626,7 +623,12 @@ async function drainDispatches(sender: SmsSender, now: Date) {
     await db
       .update(notificationDispatches)
       .set({ state: "failed", failureReason: "no_reachable_phone", updatedAt: now })
-      .where(inArray(notificationDispatches.id, unreachable));
+      .where(
+        and(
+          inArray(notificationDispatches.id, unreachable),
+          inArray(notificationDispatches.state, ["queued", "held"]),
+        ),
+      );
   }
 
   // Gate F: "Reply STOP to opt out" — by phone, stronger than consent, the
@@ -656,7 +658,13 @@ async function drainDispatches(sender: SmsSender, now: Date) {
       await db
         .update(notificationDispatches)
         .set({ state: "cancelled", failureReason: "sms_opted_out", updatedAt: now })
-        .where(inArray(notificationDispatches.id, optedOut));
+        // Conditional like the claim: an overlapping run may already have sent it.
+        .where(
+          and(
+            inArray(notificationDispatches.id, optedOut),
+            inArray(notificationDispatches.state, ["queued", "held"]),
+          ),
+        );
     }
   }
 

@@ -103,11 +103,15 @@ describe("nobody is dropped silently (PRD §3.2.6)", () => {
 describe("the dispatcher (at-most-once, cost, consent, DLR)", () => {
   const route = read("app/api/cron/dispatch-reminders/route.ts");
 
-  it("claims before it sends, on both queues", () => {
-    expect(
-      route.match(/set\(\{ state: "sent", sentAt: now, failureReason: null, updatedAt: now \}\)/g)
-        ?.length,
-    ).toBe(2);
+  it("claims before it sends, on both queues, only rows no other run has claimed", () => {
+    // The conditional WHERE is what makes an overlapping 15-minute run a no-op.
+    const claims = route
+      .split('.set({ state: "sent", sentAt: now, failureReason: null, updatedAt: now })')
+      .slice(1)
+      .map((c) => c.slice(0, c.indexOf(".returning(")));
+    expect(claims).toHaveLength(2);
+    expect(claims[0]).toContain('eq(appointmentReminders.state, "queued")');
+    expect(claims[1]).toContain('inArray(notificationDispatches.state, ["queued", "held"])');
   });
 
   it("records the provider id and cost per SMS row", () => {
