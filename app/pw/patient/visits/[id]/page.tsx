@@ -129,9 +129,9 @@ export default async function VisitPage({ params }: { params: Promise<{ id: stri
                   : C.ticket.notPromised,
               },
             ]}
-            // The fee quoted at booking (ADR 0092); none quoted means no strip, never a guess.
+            // The fee quoted at booking (ADR 0092); none quoted means no strip, never a guess. The ticket's
+            // `feeLabel` is money words, never the stored cadre or line name.
             fee={visit.quotedFeeUgx ?? undefined}
-            feeLabel={visit.quotedFeeLabel}
             code={visit.bookingCode}
           />
         ) : null}
