@@ -4,6 +4,7 @@ import type { ReceptionIconKey } from "../_lib/features";
 import type { Domain } from "@/lib/design/domains";
 import type { LucideIcon } from "lucide-react";
 import {
+  CalendarClockIcon,
   CalendarPlusIcon,
   ClipboardListIcon,
   LayoutDashboardIcon,
@@ -23,6 +24,7 @@ const ICONS: Record<ReceptionIconKey, LucideIcon> = {
   expected: ClipboardListIcon,
   intake: UserPlusIcon,
   book: CalendarPlusIcon,
+  bookings: CalendarClockIcon,
   find: SearchIcon,
   flow: ListChecksIcon,
   labPayments: ReceiptIcon,
@@ -34,6 +36,7 @@ const DOMAIN: Partial<Record<ReceptionIconKey, Domain>> = {
   expected: "operations",
   intake: "patients",
   book: "operations",
+  bookings: "operations",
   find: "patients",
   flow: "operations",
   labPayments: "operations",

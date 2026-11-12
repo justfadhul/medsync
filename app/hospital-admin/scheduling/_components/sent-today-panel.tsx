@@ -16,6 +16,7 @@ const KIND_LABEL: Record<string, string> = {
   session_cancelled: "Clinic day cancelled",
   window_shifted: "Window moved",
   unconfirmed_release: "Unconfirmed place released",
+  visit_cancelled: "Visit cancelled by the clinic",
   reminder: "Reminders",
 };
 

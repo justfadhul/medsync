@@ -22,6 +22,7 @@
  * release, or the cron's cascade, gets the next chance.
  */
 
+import type { DispatchRecipient } from "./dispatches.ts";
 import type { SupabaseClient } from "npm:@supabase/supabase-js@2.106.1";
 
 import { dispatchRows } from "./dispatches.ts";
@@ -122,4 +123,22 @@ export async function cancelPendingDispatches(
     .eq("related_kind", relatedKind)
     .eq("related_id", relatedId)
     .in("state", ["queued", "held"]);
+}
+
+/**
+ * Who hears about a booking: the account, or a provisional caller's phone
+ * ciphertext (never decrypted here). Null when the booking names neither.
+ */
+export async function bookingRecipient(
+  sb: SupabaseClient,
+  appt: { patient_user_id: string | null; provisional_patient_id: string | null },
+): Promise<DispatchRecipient | null> {
+  if (appt.patient_user_id) return { userId: appt.patient_user_id };
+  if (!appt.provisional_patient_id) return null;
+  const { data: prov } = await sb
+    .from("provisional_patients")
+    .select("phone_encrypted")
+    .eq("id", appt.provisional_patient_id)
+    .maybeSingle();
+  return prov?.phone_encrypted ? { phoneEncrypted: prov.phone_encrypted as string } : null;
 }

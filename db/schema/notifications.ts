@@ -45,6 +45,8 @@ export const DISPATCH_KINDS = [
   "deterioration_flag",
   /** Beyond §5.11: PRD §3.2.3's release at T-minus-X must never be silent. */
   "unconfirmed_release",
+  /** ADR 0473 (0290): staff cancelled one booking; the patient is told. */
+  "visit_cancelled",
   /** Gate F (0062): the one reply to an inbound SMS keyword; payload = a reply key. */
   "sms_reply",
 ] as const;
@@ -103,7 +105,7 @@ export const notificationDispatches = pgTable(
   (t) => [
     check(
       "notification_dispatches_kind_check",
-      sql`${t.kind} IN ('booking_receipt','confirmation_request','reminder','arrival_window','waitlist_offer','session_cancelled','window_shifted','position_called','payment','deterioration_flag','unconfirmed_release','sms_reply','results_ready')`,
+      sql`${t.kind} IN ('booking_receipt','confirmation_request','reminder','arrival_window','waitlist_offer','session_cancelled','window_shifted','position_called','payment','deterioration_flag','unconfirmed_release','sms_reply','results_ready','visit_cancelled')`,
     ),
     check(
       "notification_dispatches_recipient_check",

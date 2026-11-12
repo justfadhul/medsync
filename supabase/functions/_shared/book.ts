@@ -27,6 +27,11 @@
  *
  * A confidential line (PRD §2.9) is refused when a patient books for
  * someone else; the desk may book it.
+ *
+ * A MOVE (`reschedule-appointment`'s `to`, ADR 0473) books here like any
+ * other booking — capacity, opening hours, the clinic-day number — and only
+ * `movedFrom` differs: the new row links back to the one it replaces and
+ * carries that row's quote (ADR 0092: a held price is never re-quoted).
  */
 import type { CadreFee } from "./fees.ts";
 import type { BookingSymptom } from "./symptoms.ts";
@@ -112,6 +117,13 @@ export interface BookInput {
   /** The advisory tier from a signed catalog (ruling 3) — on the row, never on an element. */
   symptomTier?: "E" | "U" | "R" | null;
   symptomSubmissionId?: string | null;
+  /** A move: the booking this one replaces, and the quote it carries over verbatim. */
+  movedFrom?: {
+    appointmentId: string;
+    quotedFeeUgx: number | null;
+    quotedFeeLabel: string | null;
+    quotedFeeAt: string | null;
+  };
   idempotencyKey: string;
   slot?: SlotInput;
   session?: { sessionId: string };
@@ -553,6 +565,13 @@ export async function bookAppointment(ctx: BookContext, input: BookInput): Promi
       quoted_fee_label: slotQuote.label,
       quoted_fee_at: slotQuote.feeUgx === null ? null : new Date().toISOString(),
     };
+  }
+
+  if (input.movedFrom) {
+    row.rescheduled_from_appointment_id = input.movedFrom.appointmentId;
+    row.quoted_fee_ugx = input.movedFrom.quotedFeeUgx;
+    row.quoted_fee_label = input.movedFrom.quotedFeeLabel;
+    row.quoted_fee_at = input.movedFrom.quotedFeeAt;
   }
 
   // 4. INSERT, with a fresh booking code per attempt. Uniqueness per

@@ -68,6 +68,12 @@ export const KIND_WORDS: Record<string, KindWords> = {
     type: "visit",
     act: "Choose a day",
   },
+  visit_cancelled: {
+    title: "Visit cancelled",
+    line: "The clinic cancelled this visit. We are sorry. Book another day when you are ready.",
+    icon: "calendar",
+    type: "visit",
+  },
   unconfirmed_release: {
     title: "Your place was released",
     line: "It was not confirmed. If you still need a visit, book again.",
