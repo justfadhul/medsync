@@ -59,6 +59,12 @@ app. The Africa's Talking simulator is your "feature phone".
 With all five accounts signed in, the cookies pass Node's 16 KB header limit and `next dev` answers **431**
 (§13, G3). Locally, start it with `NODE_OPTIONS=--max-http-header-size=65536`, or keep to four accounts.
 
+Since migration 0288 (the MFA gate), Edge Functions refuse a staff session below aal2. A staff account signed
+in through `DEV_SKIP_MFA` stays at aal1: its Edge Function calls (check in, cancel a day, approvals) answer
+**401** and its own-token reads come back empty, while pages that read through Drizzle still render. That is
+expected, not a booking defect. To test staff actions, enrol at `/onboarding/mfa-setup` and sign in with the
+6-digit code, with `DEV_SKIP_MFA` unset for that run.
+
 ---
 
 ## 1. The cast
