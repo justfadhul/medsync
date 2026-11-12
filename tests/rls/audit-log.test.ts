@@ -41,7 +41,7 @@ describe.skipIf(!RLS_TESTS_ENABLED)("RLS: public.audit_log", () => {
     expect(data?.length ?? 0).toBe(0);
   });
 
-  // Review C-3 (0287): audit rows hold whole patient records; the superadmin reads them through break-glass only.
+  // Review C-3 (0289): audit rows hold whole patient records; the superadmin reads them through break-glass only.
   test("superadmin CANNOT SELECT audit_log", async () => {
     const { data } = await superAdmin.client
       .from("audit_log")

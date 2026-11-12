@@ -2,14 +2,14 @@ import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
-// Review C-2: 0285 put a RESTRICTIVE `mfa_gate` policy on every RLS table that existed then. A later migration that
+// Review C-2: 0288 put a RESTRICTIVE `mfa_gate` policy on every RLS table that existed then. A later migration that
 // turns RLS on for a new table must give it the same policy, or staff reach that table without MFA.
 const dir = join(process.cwd(), "supabase/migrations");
 const read = (f: string) => readFileSync(join(dir, f), "utf8");
 
-describe("every table that gets RLS after 0285 gets the MFA gate", () => {
+describe("every table that gets RLS after 0288 gets the MFA gate", () => {
   const later = readdirSync(dir).filter(
-    (f) => /^\d{4}_.*\.sql$/.test(f) && Number(f.slice(0, 4)) > 285,
+    (f) => /^\d{4}_.*\.sql$/.test(f) && Number(f.slice(0, 4)) > 288,
   );
   const enabling = later.filter((f) =>
     /(public|pharmacy_practice)\.\w+\s+ENABLE ROW LEVEL SECURITY/i.test(read(f)),
@@ -24,8 +24,8 @@ describe("every table that gets RLS after 0285 gets the MFA gate", () => {
 });
 
 describe("the layers below the pages ask the same question", () => {
-  it("0285 defines the rule and the gate", () => {
-    const sql = read("0285_mfa_below_the_pages.sql");
+  it("0288 defines the rule and the gate", () => {
+    const sql = read("0288_mfa_below_the_pages.sql");
     expect(sql).toMatch(/FUNCTION public\.caller_mfa_ok\(\)/);
     expect(sql).toMatch(/AS RESTRICTIVE FOR ALL TO authenticated/);
   });

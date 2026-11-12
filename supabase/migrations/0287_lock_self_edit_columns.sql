@@ -1,4 +1,4 @@
--- 0284 — Lock down what a signed-in person can write directly (senior review 2026-11-11: C-4, M-1, M-2, M-3, L-2).
+-- 0287 — Lock down what a signed-in person can write directly (senior review 2026-11-11: C-4, M-1, M-2, M-3, L-2).
 --
 -- A column-level REVOKE does nothing while the table-level grant stands, so the earlier column revokes in
 -- 0013, 0014 and 0018 never took effect. Here every table-level write grant comes off, and only the columns

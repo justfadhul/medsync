@@ -1,4 +1,4 @@
--- 0287 — The superadmin loses its standing view of patient data; photos are no longer readable by every account
+-- 0289 — The superadmin loses its standing view of patient data; photos are no longer readable by every account
 -- (senior review 2026-11-11: C-3, H-11).
 --
 -- C-3. 102 policies let `user_has_role('superadmin')` read a table. On the tables that hold a patient's identity or
@@ -26,7 +26,7 @@
 -- `clinician_directory`). Staff see a patient's photo through the server, which signs it with the service role after
 -- its own access check (lib/avatars.ts), so they need no arm here.
 --
--- GATED: owner-applied (`npm run db:migrate`), after 0285.
+-- GATED: owner-applied (`npm run db:migrate`), after 0288.
 
 DROP POLICY IF EXISTS audit_log_select_superadmin ON public.audit_log;
 

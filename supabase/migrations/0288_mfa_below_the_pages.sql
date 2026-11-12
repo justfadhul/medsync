@@ -1,4 +1,4 @@
--- 0285 — Staff need MFA (aal2) below the web pages too (senior review 2026-11-11: C-2).
+-- 0288 — Staff need MFA (aal2) below the web pages too (senior review 2026-11-11: C-2).
 --
 -- The web scopes already refuse a staff session that has not passed MFA. PostgREST, Realtime and the Edge Functions did
 -- not, so a phished password alone reached them. One rule now serves both layers:
@@ -17,7 +17,7 @@
 --
 -- A table created after this migration needs its own `mfa_gate` policy; tests/auth/mfa-below-pages.test.ts names the rule.
 --
--- GATED: owner-applied (`npm run db:migrate`), after 0284.
+-- GATED: owner-applied (`npm run db:migrate`), after 0287.
 
 CREATE SCHEMA IF NOT EXISTS private;
 

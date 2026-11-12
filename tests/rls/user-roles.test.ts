@@ -79,7 +79,7 @@ describe.skipIf(!RLS_TESTS_ENABLED)("RLS: public.user_roles", () => {
     expect(error).not.toBeNull();
   });
 
-  // Review M-3 (0284): roles are granted only through the audited Edge Functions.
+  // Review M-3 (0287): roles are granted only through the audited Edge Functions.
   test("hospital_admin CANNOT INSERT a role directly, even in their hospital", async () => {
     const { error } = await admin.client.from("user_roles").insert({
       user_id: bob.id,

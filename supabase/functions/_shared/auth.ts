@@ -48,7 +48,7 @@ export async function getCaller(request: Request): Promise<User | null> {
     .eq("id", data.user.id)
     .maybeSingle();
   if (row && CUT_OFF_STATES.includes(row.state)) return null;
-  // Review C-2: staff need MFA here too. Same rule as the database (0285), run with the caller's own token; fails closed.
+  // Review C-2: staff need MFA here too. Same rule as the database (0288), run with the caller's own token; fails closed.
   const { data: mfaOk } = await client.rpc("caller_mfa_ok");
   if (mfaOk !== true) return null;
   return data.user;

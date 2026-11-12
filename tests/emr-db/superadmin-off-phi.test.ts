@@ -1,7 +1,7 @@
 /**
- * Review C-3 + H-11 (migration 0287) on the real SQL: the superadmin's standing read of patient data is gone (every
+ * Review C-3 + H-11 (migration 0289) on the real SQL: the superadmin's standing read of patient data is gone (every
  * other arm stays), and the avatars bucket shows a person their own photo and clinicians' photos, nobody else's.
- * Every actor carries an aal2 token, so the 0285 MFA gate cannot be what hides a row.
+ * Every actor carries an aal2 token, so the 0288 MFA gate cannot be what hides a row.
  */
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
@@ -34,7 +34,7 @@ async function rows(pg: Pg, userId: string, sql: string, params: unknown[] = [])
   });
 }
 
-describe.skipIf(!laneOn)("0287: superadmin off PHI, avatars", () => {
+describe.skipIf(!laneOn)("0289: superadmin off PHI, avatars", () => {
   let pg: Pg;
   beforeAll(async () => {
     pg = (await bootLane()).pg;
@@ -45,7 +45,7 @@ describe.skipIf(!laneOn)("0287: superadmin off PHI, avatars", () => {
   }, 600_000);
 
   it("leaves no superadmin arm on the patient tables or audit_log", async () => {
-    const sql = readFileSync(join(MIGRATIONS_DIR, "0287_superadmin_off_phi.sql"), "utf8");
+    const sql = readFileSync(join(MIGRATIONS_DIR, "0289_superadmin_off_phi.sql"), "utf8");
     const phi = [...sql.match(/ARRAY\[([\s\S]*?)\];/)![1]!.matchAll(/'(\w+)'/g)].map((m) => m[1]);
     expect(phi.length).toBeGreaterThan(40);
     const left = await pg.query(
