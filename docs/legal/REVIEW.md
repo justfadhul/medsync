@@ -18,7 +18,8 @@ the sitemap entries appear only then. Nothing here is legal advice; a Ugandan la
    right to erasure should be described.
 6. **Children.** Booking for household members exists; the guardian model is not built (PRD Part 8 #12). Decide what
    the notice says about minors.
-7. **Processors.** Named by company since the senior review (H-7): Supabase, Vercel, Africa's Talking, Expo, Sentry.
+7. **Processors.** Named by company since the senior review (H-7): Supabase, Vercel, Africa's Talking, Expo, Sentry
+   (wording approved by the owner, 12 Nov 2026).
    Not yet named: Anthropic (reading meter and food-label photos in the app), Google Maps and OpenStreetMap (maps),
    Open Food Facts. They come with the per-feature AI consent work. Confirm whether countries must be named.
 
