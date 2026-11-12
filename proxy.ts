@@ -25,6 +25,9 @@ import { updateSession } from "@/lib/supabase/proxy";
 const PUBLIC_PREFIXES = [
   "/sign-up",
   "/sign-in", // includes /sign-in/mfa
+  // Password reset: ask for a link, the link's page, choose the password. The last needs the link's
+  // session and checks it (and aal2 where the account has an authenticator) on the page itself.
+  "/forgot-password",
   "/styleguide",
   "/api/health",
   // Phase 1 onboarding — intent selector + the three role-specific

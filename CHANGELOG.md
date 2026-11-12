@@ -16,6 +16,14 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); version
 - GATED migration 0291; deploy the new Edge Function `ha-register-patient` after it. Taking the record over at a
   later sign-up is designed in the ADR, not built.
 
+### Added — Reset your own password — 12 Nov 2026
+
+- Sign-in's "Forgot password?" now leads to `/forgot-password`: an emailed link, a page to choose a new password,
+  then sign in again ([ADR 0474](docs/adr/0474-password-reset.md)). The page answers the same whether or not the
+  email has an account. Staff with an authenticator enter their code before choosing the password.
+- No migration. Go-live needs custom SMTP, the confirm URL in Supabase's redirect list, and the recovery email
+  template pointed at `/forgot-password/confirm`.
+
 ### Changed — Four signed-in accounts per browser, and no "Something is wrong" door while it leads nowhere — 12 Nov 2026
 
 - One browser holds four signed-in accounts, not five: five sessions of cookies passed Node's 16 KB header limit and
