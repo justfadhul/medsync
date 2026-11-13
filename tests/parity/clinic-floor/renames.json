@@ -1,0 +1,53 @@
+{
+  "status": "unsigned — Fadhul signs (prompt §7); from the Step 0 static crawl (docs/clinic-floor/step-0-discovery.md Q5); old pages stay until signed",
+  "routes": {
+    "/nurse/triage": {
+      "floor": "/clinic, Triage view: Waiting / Re-checks / Triaged today tabs, Next up card, Start triage (1, then Enter)",
+      "lost": []
+    },
+    "/nurse/triage/[intakeId]": {
+      "floor": "/clinic, Triage view, side panel (Steps 1–4)",
+      "controls": {
+        "Rapid red": "Step 1 danger signs (the engine's six Step 0 signs) + None of these",
+        "Vitals ×9": "Step 2: BP, pulse, breathing, SpO₂, temperature, ACVPU chips, oxygen toggle, + Blood sugar",
+        "Level chips": "Step 3 level segment L2–L5 (L1 only from a Step 1 sign)",
+        "Override reason": "Step 3 why chips, required on any change",
+        "Open resus": "Step 1 danger box, Open resus",
+        "Assign doctor + confirm": "Step 4 clinic and doctor chips, Send",
+        "Submit": "Send (blocked until the still-needed list is empty)",
+        "Back": "Esc or close"
+      },
+      "lost": [
+        {
+          "control": "SpO₂ scale 2",
+          "reason": "panel sends spo2_scale2_enabled=false; needs a toggle before cut-over (engine input)"
+        },
+        {
+          "control": "Pregnancy",
+          "reason": "panel sends pregnancy=unknown; needs the question before cut-over (engine input)"
+        },
+        {
+          "control": "Reproductive-age female",
+          "reason": "derived from sex and age 12–49, not asked"
+        },
+        {
+          "control": "Other discriminators",
+          "reason": "only the six Step 0 signs are on the floor; the rest stay on the old page"
+        },
+        {
+          "control": "Recommendation accept / dismiss + note",
+          "reason": "recommendations shown read-only; accept/dismiss stays on the old page"
+        }
+      ]
+    },
+    "/doctor/triage": { "floor": "/clinic, Clinic line view", "lost": [] },
+    "/doctor/triage/[intakeId]": {
+      "floor": "/clinic, Clinic line, With you card (triage + vitals, Trends, Before today)",
+      "lost": []
+    },
+    "Doctor Workspace triage sheet": {
+      "floor": "With you card: Open record, Open resus from the Emergency button",
+      "lost": []
+    }
+  }
+}

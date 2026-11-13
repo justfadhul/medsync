@@ -49,21 +49,22 @@ async function key() {
   return n;
 }
 
-export async function readQueue(): Promise<Item[]> {
-  const b = await get<{ iv: Uint8Array<ArrayBuffer>; data: ArrayBuffer }>("q");
+/** `slot` lets the clinic floor keep its own sealed queue in the same store (ADR 0497). */
+export async function readQueue<T = Item>(slot = "q"): Promise<T[]> {
+  const b = await get<{ iv: Uint8Array<ArrayBuffer>; data: ArrayBuffer }>(slot);
   if (!b) return [];
   const pt = await crypto.subtle.decrypt({ name: "AES-GCM", iv: b.iv }, await key(), b.data);
-  return JSON.parse(new TextDecoder().decode(pt)) as Item[];
+  return JSON.parse(new TextDecoder().decode(pt)) as T[];
 }
 
-async function writeQueue(items: Item[]) {
+export async function writeQueue(items: unknown[], slot = "q") {
   const iv = crypto.getRandomValues(new Uint8Array(12));
   const data = await crypto.subtle.encrypt(
     { name: "AES-GCM", iv },
     await key(),
     new TextEncoder().encode(JSON.stringify(items)),
   );
-  await put("q", { iv, data });
+  await put(slot, { iv, data });
 }
 
 /**
