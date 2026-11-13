@@ -40,6 +40,8 @@ export interface FloorEvent {
   departmentId: string | null;
   room: string | null;
   at: number;
+  /** Running late ("30 min"), handover note; never clinical. */
+  note?: string | null;
 }
 
 /** A visit as the loader reads it (an open or today's `patient_intakes` row and its latest triage record). */

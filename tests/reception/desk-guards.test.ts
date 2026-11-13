@@ -37,6 +37,10 @@ const RED_OK = new Set([
   ".rail .navEm .dot",
   ".redText",
   ".stp.red",
+  // Clinic floor (ADR 0491): L1 and the Step 0 life-threat signs are the emergencies.
+  ".pri.l1, .pri.emerg",
+  ".wk-safe .chip.on:not(.wk-none)",
+  ".wk-safe.hot",
   ".tgr.em",
   ".tgr.em em",
   ".tile.red",

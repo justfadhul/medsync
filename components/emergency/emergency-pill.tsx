@@ -40,6 +40,9 @@ const HEADER_EMERGENCY = [
   "/sign-up",
   "/forgot-password",
   "/onboarding/mfa-setup",
+  // The clinic floor's shell carries Emergency at every width (ADR 0491, CF8).
+  "/clinic",
+  "/styleguide/clinic-floor",
 ];
 
 /** Staff workspaces keep "Emergency"; under Tide every other route says "Help" (D-TW-04). */
