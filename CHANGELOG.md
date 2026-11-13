@@ -18,6 +18,8 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); version
   ([ADR 0490](docs/adr/0490-one-ticket-component.md)).
 - The live desk: `/reception` reads the hospital's own day and writes through the existing server actions,
   only behind `RECEPTION_DESK`.
+- Offline, check-ins wait encrypted on the computer and send when back online; the identity answer is checked
+  by the server then ([ADR 0488](docs/adr/0488-offline-check-in-queue.md)).
 
 ### Added — Reception cancels and moves bookings — 12 Nov 2026
 

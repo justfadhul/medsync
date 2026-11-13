@@ -61,3 +61,13 @@ GATE A: signed in chat by Fadhul (CSO), 13 Nov 2026, via the main chat. Copy sta
 | Tests  | `desk-map` 3/3, `desk-model` 9/9                                                                                                           |
 | Safest | no fee model → fee 0; unknown sex/age stay unknown; walk-in with no record → unknown-patient label; booking reason → `other` + their words |
 | Limits | one session per clinic per day; desk users = the signed-in user; book search = today's board                                               |
+
+## STOP 7 — offline check-in queue
+
+| Item   | Result                                                                                                              |
+| ------ | ------------------------------------------------------------------------------------------------------------------- |
+| Queue  | `lib/reception/desk/queue.ts`: AES-GCM in IndexedDB, check-ins only (ADR 0488)                                      |
+| Rule   | D-RD-28: offline the identity answer is kept, not judged; at sync the server checks identity, then the check-in     |
+| Replay | idempotent by client id; network failure keeps the item; a refused identity is not checked in and the desk says who |
+| Tests  | `desk-queue` 3/3 (fake IndexedDB)                                                                                   |
+| Limit  | key is a non-extractable CryptoKey in the same IndexedDB so the queue survives a reload (ponytail note in the file) |

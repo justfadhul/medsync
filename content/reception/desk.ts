@@ -67,6 +67,10 @@ export const DESK = {
     title: "No internet.",
     line: "Keep checking people in. They are saved on this computer ({n} waiting) and send when you are back online. Booking needs a connection.",
     print: "Print today's list",
+    needAnswer: "Ask their year of birth first.",
+    refused:
+      "Not checked in when the desk came back online: {names}. Their answer did not match. Check them again at the desk.",
+    dismiss: "Close",
   },
 
   arrivals: {
