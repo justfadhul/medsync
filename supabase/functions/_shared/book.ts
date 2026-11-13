@@ -530,17 +530,17 @@ export async function bookAppointment(ctx: BookContext, input: BookInput): Promi
     });
     if (notOfferable) return fail(badRequest(notOfferable, init));
 
-    // Virtual is refused unless something GRANTS it — ADR 0029 §2's chain.
-    if (
-      slot.type === "virtual" &&
-      !resolveSchedulingSettings(clinicianSettings, departmentPolicy).allowVirtual
-    ) {
+    // ADR 0029 §2's chain: the clinician's row, else the department's policy,
+    // else the safe default. Virtual is refused unless something GRANTS it.
+    const effective = resolveSchedulingSettings(clinicianSettings, departmentPolicy);
+    if (slot.type === "virtual" && !effective.allowVirtual) {
       return fail(badRequest("This clinician doesn't accept virtual appointments.", init));
     }
 
-    // The clinician's own row alone, NOT the resolved chain — reading the
-    // department's default here would start auto-confirming at clinicians
-    // who never configured it, a product decision ADR 0084 does not make.
+    // Auto-confirm follows the same chain the doctor's page shows (ADR 0476).
+    // Reading the clinician's row alone left a doctor with no row of their
+    // own looking at "Auto-confirm on" (the department's default) with the
+    // Pending rail hidden while their requests sat in pending_approval.
     startsAtIso = slot.starts_at;
     row = {
       hospital_id: input.hospitalId,
@@ -555,7 +555,7 @@ export async function bookAppointment(ctx: BookContext, input: BookInput): Promi
       symptom_tier: input.symptomTier ?? null,
       symptom_submission_id: input.symptomSubmissionId ?? null,
       origin: input.origin,
-      status: settings?.auto_confirm ? "confirmed" : "pending_approval",
+      status: effective.autoConfirm ? "confirmed" : "pending_approval",
       priority: input.priority ?? "routine",
       type: slot.type,
       created_by_user_id: input.actorId,

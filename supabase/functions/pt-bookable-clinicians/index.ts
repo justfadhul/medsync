@@ -50,6 +50,7 @@ import {
   DEFAULT_TIME_ZONE,
   LIVE_APPOINTMENT_STATUSES,
   localDateKey,
+  resolveSchedulingSettings,
 } from "../_shared/slots.ts";
 
 const log = makeLogger("pt-bookable-clinicians");
@@ -406,11 +407,9 @@ Deno.serve(async (request: Request) => {
       departmentName: a.hospital_departments?.name ?? "Outpatients",
       photoUrl: (user?.avatar_path && photoUrlByPath.get(user.avatar_path)) || null,
       rating: ratingByClinician.get(a.user_id) ?? null,
-      // The clinician's own row alone, NOT the resolved chain — the way
-      // `pt-request-appointment` picks the initial status. A department
-      // default the write path does not honour must not become "this day is
-      // yours as soon as you ask". Reading it this way can only under-promise.
-      autoConfirm: clinicianSettings?.autoConfirm ?? false,
+      // The resolved chain, exactly as `_shared/book.ts` picks the initial
+      // status (ADR 0476): promise "confirmed" only where the write confirms.
+      autoConfirm: resolveSchedulingSettings(clinicianSettings, departmentPolicy).autoConfirm,
       // A video visit is a real affordance only where it is allowed — the
       // clinician's own row, else the department's policy, else no.
       allowVirtual: clinicianSettings?.allowVirtual ?? departmentPolicy?.allowVirtual ?? false,

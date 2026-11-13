@@ -290,15 +290,15 @@ async function fetchBookableClinicians(
       });
     }
 
+    // The resolved chain, exactly as the write path picks the initial status
+    // (ADR 0476), so the check step promises only what the booking gets.
+    const effective = resolveSchedulingSettings(clinicianSettings, departmentPolicy);
     const list = out.get(a.departmentId) ?? [];
     list.push({
       userId: a.userId,
       fullName: a.fullName ?? "Your clinician",
-      // The clinician's OWN row, not the resolved chain — the write path
-      // reads `settings?.auto_confirm` alone, and this flag becomes a
-      // promise on the check step. Under-promising is the safe direction.
-      autoConfirm: clinicianSettings?.autoConfirm ?? false,
-      allowVirtual: resolveSchedulingSettings(clinicianSettings, departmentPolicy).allowVirtual,
+      autoConfirm: effective.autoConfirm,
+      allowVirtual: effective.allowVirtual,
       seenBefore: lastSeenByDepartment.get(a.departmentId) === a.userId,
       slotsByDate,
     });

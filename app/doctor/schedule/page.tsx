@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 
+import { AutoRefresh } from "@/app/reception/_components/auto-refresh";
 import { SectionRule } from "@/components/medsync/panel";
 import { Pill } from "@/components/ui/data-table";
 import { requireDoctorScope } from "@/lib/doctor/scope";
@@ -95,6 +96,8 @@ export default async function DoctorSchedulePage() {
           <Pill tone={settings.autoConfirm ? "stable" : "neutral"}>
             {settings.autoConfirm ? "Auto-confirm on" : "Manual approval"}
           </Pill>
+          {/* Check-ins and calls show without a reload (ADR 0476): the reception boards' poll. */}
+          <AutoRefresh everyMs={15_000} />
         </div>
         <SectionRule
           title="Your week"
