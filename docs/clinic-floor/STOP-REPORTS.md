@@ -38,3 +38,45 @@ Owner said "go through all gates" (13 Nov 2026): steps run back to back; each ST
 | G1                                | `tests/triage/recheck-band.test.ts` 2/2 (3,000 random inputs, all 5 bands)                                                                                                                                             |
 | Checks                            | typecheck 0 · eslint (changed files) 0 · vitest: no new failures (92 base files, env)                                                                                                                                  |
 | Open                              | untriaged patients sit with L4 in the line (ADR 0493 reading) — confirm                                                                                                                                                |
+
+## STOP 3 — shell and triage station
+
+| Item   | Result                                                                                                            |
+| ------ | ----------------------------------------------------------------------------------------------------------------- |
+| UI     | `components/clinic-floor/{floor,shared,triage,fixture,port}.tsx`, `components/reception/shell.tsx` (shared shell) |
+| Engine | panel calls `runTriage` / `interpretVitals` / `recommend` only; Send through the engine action                    |
+| Tests  | `tests/clinic-floor/triage-parity.test.ts` — T10 200 sets 100 %, each Step 0 sign → L1, comma decimal             |
+
+## STOP 4 — clinic line
+
+| Item  | Result                                                                                                 |
+| ----- | ------------------------------------------------------------------------------------------------------ |
+| UI    | `line.tsx` — status, call / here / again / didn't come, With you, finish + follow-up Ticket, late, end |
+| Rules | calls blocked unless In room (client `canCall` + server)                                               |
+
+## STOP 5 — trends
+
+| Item | Result                                                                                       |
+| ---- | -------------------------------------------------------------------------------------------- |
+| UI   | `trends.tsx`, `lib/clinic-floor/trends.ts`, bands in `content/clinic-floor/bands.ts` (draft) |
+| ADR  | 0496                                                                                         |
+
+## STOP 6 / 7 — floor board and screen
+
+| Item | Result                                                                                         |
+| ---- | ---------------------------------------------------------------------------------------------- |
+| UI   | `board.tsx` (flow, matrix, list, Needs a hand), `/clinic/screen` (codes + rooms, 10 s refresh) |
+| S3   | screen feed keys = `calledAt, code, room`; no name (guard)                                     |
+| S26  | 8 h memory run not done (no long browser run)                                                  |
+
+## STOP 8 — offline, parity, harden
+
+| Item     | Result                                                                   |
+| -------- | ------------------------------------------------------------------------ |
+| Offline  | `lib/clinic-floor/queue.ts`, S27 test (fake-indexeddb); ADR 0497         |
+| Live     | `/clinic`, `lib/clinic-floor/load.ts`, `live.tsx`                        |
+| Guards   | `tests/clinic-floor/guards.test.ts` — S10, S3, S5, copy, red             |
+| Parity   | `tests/parity/clinic-floor/renames.json` — 5 lost, unsigned              |
+| Screens  | `docs/clinic-floor/screens/`                                             |
+| Not done | pilot, cut-over, delete old pages (owner); axe / budgets (signed-in run) |
+| Report   | `docs/clinic-floor/REPORT.md`                                            |

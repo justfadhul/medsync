@@ -13,6 +13,8 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); version
   ([ADR 0493](docs/adr/0493-line-order-rule.md)); screen feed under ADR 0084
   ([ADR 0494](docs/adr/0494-waiting-room-screen-feed.md)); doctor status
   ([ADR 0495](docs/adr/0495-doctor-session-status.md)). Migration 0295 (GATED). Flag off: today's pages.
+- Trends across visits with draft bands ([ADR 0496](docs/adr/0496-clinic-floor-trends.md)); offline triage queue
+  ([ADR 0497](docs/adr/0497-clinic-floor-offline-triage.md)). Routes `/clinic`, `/clinic/screen`, fixture `/styleguide/clinic-floor`.
 
 ### Added — Reception desk (behind `RECEPTION_DESK`) — 13 Nov 2026
 
