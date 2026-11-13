@@ -1,0 +1,86 @@
+{
+ "v": 3,
+ "createdOnFiles": {
+  "v": 1,
+  "at": "2026-11-13T08:40:00Z"
+ },
+ "title": "Tether Clinic Floor · Prototype",
+ "launch": {
+  "view": "canvas"
+ },
+ "pages": [],
+ "boards": {
+  "Main.dc.html": {
+   "x": 0,
+   "y": 0,
+   "w": 1440,
+   "h": 960,
+   "title": "Floor · computer (doctor)",
+   "expand": "fill",
+   "is_interactive": true
+  },
+  "Tablet.dc.html": {
+   "x": 1520,
+   "y": 0,
+   "w": 834,
+   "h": 1112,
+   "title": "Floor · tablet (triage nurse)",
+   "is_interactive": true
+  },
+  "Phone.dc.html": {
+   "x": 2434,
+   "y": 0,
+   "w": 390,
+   "h": 844,
+   "title": "Floor · phone (doctor)",
+   "is_interactive": true
+  }
+ },
+ "order": [
+  "Main.dc.html",
+  "Tablet.dc.html",
+  "Phone.dc.html"
+ ],
+ "notes": {
+  "t1": {
+   "x": 0,
+   "y": -300,
+   "text": "Clinic floor · triage and clinic line",
+   "kind": "title1",
+   "maxW": 2824
+  },
+  "s1": {
+   "x": -520,
+   "y": 0,
+   "w": 440,
+   "size": "m",
+   "fill": "teal",
+   "text": "Try this (press Play)\n\n1. Clinic line (doctor): Godfrey is with you, the timer runs. Finish visit (F): choose Pharmacy, then home, a follow-up in a month, a day. The follow-up ticket fills in on the side.\n2. Press N, or Call next: Mercy (L2 · Orange) is called. Text sent, code on the waiting-room screen. He's here, or Call again, or Didn't come.\n3. Screen: what the waiting room sees (codes and rooms only).\n4. Triage (1, or switch user to the nurse): Start triage, tick None of these, type the observations, consciousness and mobility. Tether's triage engine gives the level (L1 to L4) with its reasons and NEWS2/TEWS; changing it asks why. L1 opens resus. Send to a line.\n5. Floor (3): everyone on the floor by stage.\n6. Running late, End session (move, hand over, didn't wait).\n7. New: In room / Short break / Called away pauses calls and tells the desk and screen. Triage › Re-checks: Joseph is due (hourly obs); re-check him and watch him move up. Wait ~15 s: Fatuma's lab result returns her to the line. Calling Joseph or Hassan shows their needs. Switch to Diabetes Clinic to see trends.\n\nTweaks: role Doctor / Nurse, First run, Offline, Dark."
+  },
+  "s2": {
+   "x": -520,
+   "y": 640,
+   "w": 440,
+   "size": "m",
+   "fill": "orange",
+   "text": "Assumed (your decisions pending)\n\n• Per-sign amber/red tags on observations are draft display limits; the level always comes from the engine\n• Triage uses Tether's existing triage engine v2 (NEWS2 + SATS/TEWS, Step 0 life threats, overridable with a reason). The prototype mimics it; the build calls the engine\n• Line order: L2, L3, back from tests, then L4 by arrival; never shown to patients\n• Waiting-room screen shows booking codes only\n• Didn't come: first time moves to the end, second time ends the visit\n• Follow-up booking from the doctor uses the same booking engine and ticket\n• The visit record (clerking, prescribing, orders) stays in the clinician workspace"
+  },
+  "s3": {
+   "x": -520,
+   "y": 1180,
+   "w": 440,
+   "size": "m",
+   "fill": "gray",
+   "text": "Look: MedSync Tide, same as the reception desk\n\nSame sidebar (today card, rail), same table and side-panel patterns, same ticket. New here: amber for vital signs needing attention, which is a clinical signal, so allowed. Red only for danger signs and emergency."
+  }
+ },
+ "designSystems": [
+  {
+   "title": "MedSync Tide",
+   "namespace": "medsync-tide",
+   "artifact": "https://claude.ai/artifact/5vvCpkVoYk8G11PtLaSRuk",
+   "version": null,
+   "copiedAt": "2026-11-13T08:40:00Z"
+  }
+ ]
+}
