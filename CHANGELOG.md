@@ -5,6 +5,16 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); version
 
 ## [Unreleased]
 
+### Added — Reception desk (behind `RECEPTION_DESK`) — 13 Nov 2026
+
+- One desk for reception: Arrivals, Calendar (day, week, month), walk-in, book, move or cancel, close the day,
+  running late, emergencies first, shortcuts, shared-desk PIN switch
+  ([ADR 0485](docs/adr/0485-reception-desk-replaces-the-workspace.md)). Flag off: today's pages, unchanged.
+- A desk check-in needs the patient's identity checked first: year of birth, then the last 3 phone digits, then stop
+  ([ADR 0486](docs/adr/0486-identity-before-check-in.md)). Waits are staff-only ([ADR 0487](docs/adr/0487-staff-only-waits.md)).
+- GATED migration 0294 and the new Edge Function `ha-reception-desk`; redeploy `ha-check-in-patient`,
+  `ha-set-session-delay`, `ha-pre-arrival-arrived` and `ha-register-patient` after it. Wording is draft.
+
 ### Added — Reception cancels and moves bookings — 12 Nov 2026
 
 - Reception › Bookings finds a booking by booking code or patient code and cancels it with a reason, or moves it to
