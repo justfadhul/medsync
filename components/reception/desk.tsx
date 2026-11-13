@@ -472,7 +472,7 @@ export function Desk({ data, port }: { data: DeskData; port: DeskPort }) {
               {fill(DESK.deskHours, {
                 open: "07:00",
                 close: "17:00",
-                now: `${todaySess.length} of your clinics running`,
+                now: fill(DESK.ui.running, { n: todaySess.length }),
               })}
             </span>
           </button>
@@ -551,7 +551,7 @@ export function Desk({ data, port }: { data: DeskData; port: DeskPort }) {
                 type="button"
                 className={c("cx")}
                 onClick={() => setClQ("")}
-                aria-label="Clear"
+                aria-label={DESK.ui.clear}
               >
                 ×
               </button>
@@ -941,7 +941,7 @@ export function Desk({ data, port }: { data: DeskData; port: DeskPort }) {
                           say(priv ? A.privacyToast.off : A.privacyToast.on);
                         }}
                         aria-pressed={priv}
-                        title="Hide reasons, photos and distances (H)"
+                        title={DESK.ui.privacy}
                       >
                         <Icon n="eye" size={16} />
                         <span className={c("hrT")}>{priv ? A.privacy.on : A.privacy.off}</span>
@@ -1452,7 +1452,7 @@ function SelPanel({
             {k.name}
           </span>,
         )}
-        {fr("clock", P.time, r.time || (r.arr ? `Arrived ${r.arr}` : "—"))}
+        {fr("clock", P.time, r.time || (r.arr ? fill(DESK.ui.arrivedAt, { t: r.arr }) : "—"))}
         {fr("person", P.doctor, r.doc)}
         {fr(
           "chat",

@@ -13,7 +13,9 @@ import { offlineQueue, readQueue } from "@/lib/reception/desk/queue";
 const row = (id: string, name: string) => ({ id, name, appointmentId: id }) as DeskRow;
 
 function server(match: Record<string, string>) {
-  const checkIn = vi.fn(async () => ({ ok: true as const }));
+  const checkIn = vi.fn(async (_r: DeskRow, _route: string, _id: string) => ({
+    ok: true as const,
+  }));
   const port = {
     identityCheck: vi.fn(async (r: DeskRow, _m: string, a: string) => ({
       ok: true as const,
@@ -56,6 +58,23 @@ describe("offline check-in queue", () => {
     await q.checkIn(row("c", "Cato Test"), "clinic", "c-c");
     expect(await q.drain()).toEqual({ sent: 0, refused: [] });
     expect(await readQueue()).toHaveLength(1);
+  });
+
+  it("S22: three check-ins queue, survive a reload, sync once, no duplicates", async () => {
+    await offlineQueue(server({}).port, () => false).drain(); // empty what earlier tests left
+    const before = offlineQueue(server({}).port, () => true);
+    for (const id of ["e", "f", "g"]) {
+      await before.identityCheck(row(id, `${id} Test`), "yob", "1985");
+      await before.checkIn(row(id, `${id} Test`), "triage", `c-${id}`);
+    }
+    // A reload: a new page, a new wrapper, the same IndexedDB.
+    const { port, checkIn } = server({ e: "1985", f: "1985", g: "1985" });
+    const after = offlineQueue(port, () => false);
+    const [a, b] = await Promise.all([after.drain(), after.drain()]);
+    expect(a).toEqual({ sent: 3, refused: [] });
+    expect(b).toBe(a); // one drain at a time: the second call shares the first
+    expect(await after.drain()).toEqual({ sent: 0, refused: [] });
+    expect(checkIn.mock.calls.map((c) => c[2])).toEqual(["c-e", "c-f", "c-g"]);
   });
 
   it("refuses an offline check-in with no identity answer", async () => {

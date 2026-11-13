@@ -34,6 +34,7 @@ export interface SlipData {
 type Person = DeskCtx["data"]["directory"][number];
 const ugx = (n: number) => `UGX ${n.toLocaleString("en-US")}`;
 const AG = DESK.age;
+const U = DESK.ui;
 
 /* ─── shared fields ─── */
 function AgeField({ v, set }: { v: AgeInput; set: (p: Partial<AgeInput>) => void }) {
@@ -58,7 +59,7 @@ function AgeField({ v, set }: { v: AgeInput; set: (p: Partial<AgeInput>) => void
           type="text"
           inputMode="numeric"
           maxLength={4}
-          placeholder="Year of birth, e.g. 1990"
+          placeholder={U.yob}
           value={v.yob ?? ""}
           onChange={num("yob")}
           aria-label={AG.modes.year}
@@ -73,7 +74,7 @@ function AgeField({ v, set }: { v: AgeInput; set: (p: Partial<AgeInput>) => void
             placeholder={AG.day}
             value={v.dd ?? ""}
             onChange={num("dd")}
-            aria-label="Day"
+            aria-label={U.day}
           />
           <input
             className={c("fin")}
@@ -83,7 +84,7 @@ function AgeField({ v, set }: { v: AgeInput; set: (p: Partial<AgeInput>) => void
             placeholder={AG.monthPh}
             value={v.mm ?? ""}
             onChange={num("mm")}
-            aria-label="Month"
+            aria-label={U.month}
           />
           <input
             className={c("fin")}
@@ -93,7 +94,7 @@ function AgeField({ v, set }: { v: AgeInput; set: (p: Partial<AgeInput>) => void
             placeholder={AG.yearPh}
             value={v.yy ?? ""}
             onChange={num("yy")}
-            aria-label="Year"
+            aria-label={U.year}
           />
         </div>
       ) : (
@@ -102,7 +103,7 @@ function AgeField({ v, set }: { v: AgeInput; set: (p: Partial<AgeInput>) => void
           type="text"
           inputMode="numeric"
           maxLength={3}
-          placeholder="Age in years"
+          placeholder={U.ageYears}
           value={v.ag ?? ""}
           onChange={num("ag")}
           aria-label={AG.modes.age}
@@ -150,8 +151,8 @@ function Phone({
         type="button"
         className={c("ccode")}
         onClick={() => setCc(DESK.countries[(i + 1) % DESK.countries.length]![1])}
-        aria-label={`Country code ${code}, tap to change`}
-        title="Tap to change country"
+        aria-label={fill(U.country, { code })}
+        title={U.countryTitle}
       >
         <small>{iso}</small>
         {code}
@@ -310,7 +311,7 @@ export function WalkInDialog({
       pno: v.pick ? v.pick.pno : res.pno,
       code: res.code,
       time: "",
-      doc: se?.docs[0] ?? "Clinic team",
+      doc: se?.docs[0] ?? U.clinicTeam,
       stage: "here",
       route: em ? "emergency" : v.route === "clinic" && direct ? "clinic" : "triage",
       arr: now,
@@ -479,7 +480,7 @@ export function WalkInDialog({
                       id="desk-wid"
                       className={c("fin")}
                       type="text"
-                      placeholder="National ID or any card"
+                      placeholder={U.anyCard}
                       value={v.idNo}
                       onChange={(e) => set({ idNo: e.target.value })}
                     />
@@ -564,7 +565,7 @@ export function WalkInDialog({
                           {x.docs.join(", ") || DESK.calendar.noDoctorYet} · until {hhmm(x.en)}
                         </span>
                         <span className={c("wkCc", !left && "full")}>
-                          {left ? `${left} places left` : W.full}
+                          {left ? fill(U.left, { n: left }) : W.full}
                         </span>
                       </button>
                     );
@@ -591,10 +592,10 @@ export function WalkInDialog({
                 <input
                   className={c("fin")}
                   type="text"
-                  placeholder="In their words (optional)"
+                  placeholder={U.ownWords}
                   value={v.note}
                   onChange={(e) => set({ note: e.target.value })}
-                  aria-label="Reason in their words"
+                  aria-label={U.ownWordsLabel}
                 />
                 <p className={c("sublbl")}>{W.sendTo}</p>
                 <div className={c("wkRt")}>
@@ -832,27 +833,30 @@ export function BookDialog({
         reason: reasonShort,
         day: fmtDay(se!.date),
         time: needSlot ? v.slot : hhmm(se!.st),
-      }) + (fee ? ` The fee is ${ugx(fee)}, paid at the clinic.` : " There is no fee.")
+      }) + (fee ? fill(U.feeLine, { fee: ugx(fee) }) : U.noFeeLine)
     : "";
   const sum: [string, string][] = [
     [
-      "Patient",
-      hasPerson ? `${personName} · ${v.person?.phone ?? v.newPerson?.phone}` : "Not chosen",
+      U.sum.patient,
+      hasPerson ? `${personName} · ${v.person?.phone ?? v.newPerson?.phone}` : U.notChosen,
     ],
     [
       DESK.ticket.bookedBy,
       v.forWho === "other"
-        ? `${v.callerName || "Caller name missing"}${v.rel ? ` · ${v.rel.toLowerCase()}` : ""}`
+        ? `${v.callerName || U.callerMissing}${v.rel ? ` · ${v.rel.toLowerCase()}` : ""}`
         : DESK.ticket.byPhone,
     ],
-    ["Why", v.reason ? v.reason + (v.note ? ` · "${v.note}"` : "") : "Not chosen"],
-    ["Clinic", v.clinic ? ctx.clinic(v.clinic).name : "Not chosen"],
-    ["Day", se ? fmtDay(se.date) : "Not chosen"],
-    ["Time", se ? (needSlot ? v.slot || "Not chosen" : `Doors ${hhmm(se.st)}, line order`) : "—"],
-    ["Doctor", se ? (v.doc === "any" ? B.anyDoctor : v.doc) : "—"],
-    ["Fee", v.clinic ? (fee ? `${ugx(fee)} · at the clinic` : DESK.row.fee.none) : "—"],
-    ["Messages", v.rem ? `Code now + reminder · ${DESK.smsLanguages[0]}` : B.noTexts],
-    ["Needs", v.needs.join(", ") || "None"],
+    [U.sum.why, v.reason ? v.reason + (v.note ? ` · "${v.note}"` : "") : U.notChosen],
+    [U.sum.clinic, v.clinic ? ctx.clinic(v.clinic).name : U.notChosen],
+    [U.sum.day, se ? fmtDay(se.date) : U.notChosen],
+    [U.sum.time, se ? (needSlot ? v.slot || U.notChosen : fill(U.doors, { t: hhmm(se.st) })) : "—"],
+    [U.sum.doctor, se ? (v.doc === "any" ? B.anyDoctor : v.doc) : "—"],
+    [
+      U.sum.fee,
+      v.clinic ? (fee ? fill(U.feeAtClinic, { fee: ugx(fee) }) : DESK.row.fee.none) : "—",
+    ],
+    [U.sum.messages, v.rem ? fill(U.codeAndReminder, { lang: DESK.smsLanguages[0] }) : B.noTexts],
+    [U.sum.needs, v.needs.join(", ") || U.none],
   ];
 
   const save = async () => {
@@ -910,16 +914,19 @@ export function BookDialog({
                 .slice(0, 1)
                 .concat([
                   [
-                    "When",
+                    U.sum.when,
                     se
-                      ? fmtDay(se.date) + (needSlot ? ` at ${v.slot}` : `, doors ${hhmm(se.st)}`)
+                      ? fmtDay(se.date) +
+                        (needSlot
+                          ? fill(U.atSlot, { t: v.slot })
+                          : fill(U.doorsAt, { t: hhmm(se.st) }))
                       : "",
                   ],
-                  ["Payment", fee ? B.payAtClinic : DESK.row.fee.none],
+                  [U.sum.payment, fee ? B.payAtClinic : DESK.row.fee.none],
                   [
-                    "Texts",
+                    U.sum.texts,
                     v.rem
-                      ? `${fill(B.codeSent, { lang: DESK.smsLanguages[0] })}, reminder the day before`
+                      ? fill(B.codeSent, { lang: DESK.smsLanguages[0] }) + U.reminderBefore
                       : B.noTexts,
                   ],
                 ])
@@ -951,7 +958,7 @@ export function BookDialog({
               time={se ? (needSlot ? v.slot : hhmm(se.st)) : ""}
               note={B.sameTicket}
               fields={[{ label: TICKET.clinic, value: ctx.clinic(v.clinic).name }]}
-              doctor={{ label: "Doctor", value: v.doc === "any" ? B.anyDoctor : v.doc }}
+              doctor={{ label: U.sum.doctor, value: v.doc === "any" ? B.anyDoctor : v.doc }}
               visit={{
                 patient: personName,
                 initials: initials(personName),
@@ -1011,7 +1018,7 @@ export function BookDialog({
                     setCc={(callerCc) => set({ callerCc })}
                     value={v.callerPhone}
                     set={(callerPhone) => set({ callerPhone })}
-                    placeholder="Caller's phone"
+                    placeholder={U.callerPhone}
                   />
                 </div>
                 <Chips items={B.relations} value={v.rel} onPick={(rel) => set({ rel })} />
@@ -1098,7 +1105,7 @@ export function BookDialog({
                       if (!n.name.trim() || !n.phone.trim())
                         return set({ ncErr: B.missing.nameAndPhone });
                       if (!ar.ok) return set({ ncErr: ar.err ? ar.txt : B.missing.age });
-                      const ageTx = ar.exact ? `${ar.show} years` : `Age ${ar.show}`;
+                      const ageTx = fill(ar.exact ? U.years : U.ageN, { n: ar.show ?? "" });
                       set({
                         newPerson: {
                           name: n.name.trim(),
@@ -1169,10 +1176,10 @@ export function BookDialog({
             <input
               className={c("fin")}
               type="text"
-              placeholder="In their words (optional)"
+              placeholder={U.ownWords}
               value={v.note}
               onChange={(e) => set({ note: e.target.value })}
-              aria-label="Reason in their words"
+              aria-label={U.ownWordsLabel}
             />
             {newProb ? (
               <div className={c("dangerq")}>
@@ -1336,7 +1343,10 @@ export function BookDialog({
             {sum.map(([k, val]) => (
               <div
                 key={k}
-                className={c("sr2", /^(Not chosen|—|Caller name missing)/.test(val) && "miss")}
+                className={c(
+                  "sr2",
+                  (val === U.notChosen || val === "—" || val.startsWith(U.callerMissing)) && "miss",
+                )}
               >
                 <span>{k}</span>
                 <b>{val}</b>

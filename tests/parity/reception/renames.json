@@ -1,0 +1,52 @@
+{
+  "status": "unsigned — Fadhul signs (prompt §7); built from the Step 0 static inventory, the live crawl needs a signed-in reception user",
+  "routes": {
+    "/reception": {
+      "desk": "Arrivals (today counts in the sidebar Today card; coming days in Month)",
+      "lost": []
+    },
+    "/reception/incoming": {
+      "desk": "Pre-alert card and pill; Arrivals pinned emergency group",
+      "controls": { "Acknowledge": "Show in Arrivals", "Arrived": "They've arrived" },
+      "lost": []
+    },
+    "/reception/expected": {
+      "desk": "Arrivals (Expected tab), side panel, Check in by code, Close the day",
+      "controls": {
+        "Check in": "To triage / Straight to clinic (after identity)",
+        "No-show": "Close the day, or side panel No-show",
+        "Reconcile identity": "kept on /reception/expected until Step 8 cut-over"
+      },
+      "lost": []
+    },
+    "/reception/intake": {
+      "desk": "Walk-in, Emergency",
+      "controls": {
+        "Register intake": "Walk-in › Register",
+        "Referral fields": "kept on /reception/intake until Step 8 cut-over"
+      },
+      "lost": []
+    },
+    "/reception/book": { "desk": "Book for a caller", "lost": [] },
+    "/reception/bookings": { "desk": "Calendar popover and side panel: Move, Cancel", "lost": [] },
+    "/reception/find": { "desk": "Top bar search", "lost": [] },
+    "/reception/flow": {
+      "desk": "Arrivals stage tabs (Here, With nurse, With doctor, Done, Not seen)",
+      "lost": []
+    },
+    "/reception/lab-payments": {
+      "desk": "not part of the desk: stays its own page behind labPayment",
+      "lost": []
+    }
+  },
+  "renames": [
+    {
+      "from": "Expected",
+      "to": "Arrivals",
+      "reason": "One list for everyone due today (ADR 0485)"
+    },
+    { "from": "Incoming", "to": "Pre-alert", "reason": "Canvas wording" },
+    { "from": "Register intake", "to": "Walk-in", "reason": "Plain words (RD12)" },
+    { "from": "Book on behalf", "to": "Book for a caller", "reason": "Canvas wording" }
+  ]
+}

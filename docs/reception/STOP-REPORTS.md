@@ -71,3 +71,16 @@ GATE A: signed in chat by Fadhul (CSO), 13 Nov 2026, via the main chat. Copy sta
 | Replay | idempotent by client id; network failure keeps the item; a refused identity is not checked in and the desk says who |
 | Tests  | `desk-queue` 3/3 (fake IndexedDB)                                                                                   |
 | Limit  | key is a non-extractable CryptoKey in the same IndexedDB so the queue survives a reload (ponytail note in the file) |
+
+## STOP 8 — harden (stopped before cut-over)
+
+| Item    | Result                                                                                                    |
+| ------- | --------------------------------------------------------------------------------------------------------- |
+| S22     | 3 check-ins queue, survive a reload, sync once, no duplicates (`desk-queue`)                              |
+| Guards  | red reserved, queue honesty, no dose, raw colour, no left-edge bars: 5/5 (`desk-guards`)                  |
+| RD3 fix | "code not found", "identity to confirm" and no-show no longer red                                         |
+| Strings | visible labels moved to `DESK.ui`; 0 left in components                                                   |
+| Parity  | `tests/parity/reception/renames.json` (unsigned), 0 lost (`desk-parity`)                                  |
+| Build   | passes; first-load JS 345 KB gz (shared root 229 KB already over the 160 KB budget)                       |
+| Report  | `docs/reception/REPORT.md`                                                                                |
+| Stopped | flag on for a pilot clinic, deleting old pages and flag, 308s: owner's call after migration and sign-offs |

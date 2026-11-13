@@ -32,8 +32,9 @@ const TONE: Record<Tone, string> = {
   sel: "tSel",
 };
 const ci = (v: string) => ({ "--ci": v }) as React.CSSProperties;
-const DSH = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-const DLONG = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+const U = DESK.ui;
+const DSH = U.days;
+const DLONG = U.daysLong;
 
 /** "Doctor's times": 20-minute slots from start to end. */
 const slotTimes = (se: DeskSession) => {
@@ -378,10 +379,10 @@ export function DeskCalendar({
         const full = !past && left === 0;
         const name = clinic(se.id).name;
         if (inM && !past) {
-          if (prob) att.push({ k, what: `${name} has no doctor yet`, bad: true, ord: 0 });
+          if (prob) att.push({ k, what: fill(U.attNoDoctor, { name }), bad: true, ord: 0 });
           else if (left === 0) att.push({ k, what: `${name} is full`, bad: false, ord: 1 });
           else if (se.late)
-            att.push({ k, what: `${name} running ${se.late} min late`, bad: false, ord: 1 });
+            att.push({ k, what: fill(U.attLate, { name, n: se.late }), bad: false, ord: 1 });
         }
         const fillTxt = prob
           ? K.noDoctor.toLowerCase()
@@ -442,8 +443,8 @@ export function DeskCalendar({
           : past
             ? `${dSeen} seen · ${dNs} no-shows`
             : df === 0
-              ? `${hereN} here now · ${Math.max(0, dc - db)} places left`
-              : `${Math.max(0, dc - db)} places left`;
+              ? fill(U.hereLeft, { here: hereN, left: Math.max(0, dc - db) })
+              : fill(U.left, { n: Math.max(0, dc - db) });
       return {
         k,
         inM,
@@ -464,25 +465,25 @@ export function DeskCalendar({
       {
         l: DESK.month.bookedAhead,
         v: bk.toLocaleString("en-US"),
-        s: `of ${cap.toLocaleString("en-US")} places from today to month end`,
+        s: fill(U.monthCap, { n: cap.toLocaleString("en-US") }),
         pct: cap ? Math.round((bk / cap) * 100) : null,
       },
       {
         l: DESK.month.seenSoFar,
         v: seen.toLocaleString("en-US"),
-        s: `on ${pastDays} clinic days this month`,
+        s: fill(U.monthDays, { n: pastDays }),
         pct: null,
       },
       {
         l: DESK.month.noShows,
         v: `${pastBk ? Math.round((ns / pastBk) * 100) : 0}%`,
-        s: `${ns.toLocaleString("en-US")} people booked but did not come`,
+        s: fill(U.monthNoShow, { n: ns.toLocaleString("en-US") }),
         pct: null,
       },
       {
         l: DESK.month.busiest,
         v: b ? `${DSH[parseKey(b.k).getUTCDay()]} ${parseKey(b.k).getUTCDate()}` : "—",
-        s: b ? `${Math.round(b.r * 100)}% of places booked` : DESK.month.nothingBooked,
+        s: b ? fill(U.monthPct, { n: Math.round(b.r * 100) }) : DESK.month.nothingBooked,
         pct: b ? Math.round(b.r * 100) : null,
       },
     ];
@@ -556,7 +557,7 @@ export function DeskCalendar({
                 type="button"
                 className={c("mcell", !d.inM && "o", d.df === 0 && "t", d.past && "past")}
                 onClick={() => pick(d.k, "day")}
-                aria-label={`${fmtDay(d.k)}, ${d.n} clinic days, ${d.pct} percent booked`}
+                aria-label={fill(U.monthDayLabel, { day: fmtDay(d.k), n: d.n, pct: d.pct })}
               >
                 <span className={c("moTop")}>
                   <span className={c("n")}>{parseKey(d.k).getUTCDate()}</span>
@@ -698,11 +699,11 @@ export function DeskCalendar({
           <div className={c("lth")} aria-hidden="true">
             <span />
             <span />
-            <span>Patient</span>
-            <span>Why they came</span>
-            <span>Doctor</span>
-            <span>Arrived</span>
-            <span>Fee</span>
+            <span>{U.cols.patient}</span>
+            <span>{U.cols.whyCame}</span>
+            <span>{U.cols.doctor}</span>
+            <span>{U.cols.arrived}</span>
+            <span>{U.cols.fee}</span>
           </div>
           <div className={c("lline")}>
             {groups.map(([st, label]) => {

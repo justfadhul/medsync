@@ -1542,7 +1542,8 @@
   color: var(--ink);
 }
 .fl.red {
-  color: var(--critfg);
+  color: var(--ink);
+  font-weight: 600;
 }
 .rsn {
   font-size: 14px;
@@ -3778,7 +3779,7 @@
   background: var(--tint);
 }
 .cbstage.bad {
-  border-color: var(--critfg);
+  border-color: var(--ink2);
 }
 .cbtop {
   display: flex;
@@ -3837,7 +3838,7 @@
   border-color: var(--acc);
 }
 .cbstage.bad .cbs span {
-  border-color: var(--critfg);
+  border-color: var(--ink2);
 }
 .cbs span.cur {
   border-color: var(--focus);
@@ -3863,7 +3864,7 @@
   min-height: 19px;
 }
 .cbh.bad {
-  color: var(--critfg);
+  color: var(--ink);
   font-weight: 600;
 }
 .cbh.ok {
@@ -3932,11 +3933,6 @@
   font-size: 12px;
   color: var(--ink3);
 }
-.warn {
-  color: var(--critfg);
-  font-weight: 600;
-}
-
 /* walk-in */
 .wkSafe.hot {
   border-color: var(--red);
@@ -4091,7 +4087,7 @@
   align-self: center;
   width: 280px;
   max-width: 100%;
-  background: var(--ink-0, #fff);
+  background: var(--ink-0);
   color: var(--tide-navy-950);
   border-radius: 6px;
   padding: 16px 16px 10px;

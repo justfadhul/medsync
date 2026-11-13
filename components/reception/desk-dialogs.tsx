@@ -40,7 +40,7 @@ const LATE: [string, number][] = [
   ["30 min", 30],
   ["45 min", 45],
   ["1 hour", 60],
-  ["Over an hour", 90],
+  [DESK.ui.overHour, 90],
 ];
 
 export function DeskDialogs({
@@ -451,7 +451,7 @@ function CloseDayDialog({
       label={DESK.closeDay.title}
       tile="calendar"
       title={DESK.closeDay.title}
-      lead={`${fmtDay(ctx.today)} · all clinics`}
+      lead={fill(DESK.ui.allClinics, { day: fmtDay(ctx.today) })}
     >
       <span className={c("cap")}>{fill(DESK.closeDay.neverArrived, { n: notArr.length })}</span>
       {notArr.map((r) => (
@@ -533,7 +533,7 @@ function LateDialog({
       onClose={close}
       label={DESK.late.title}
       tile="clock"
-      title={`${name} is running late`}
+      title={fill(DESK.ui.lateTitle, { name })}
       lead="Today"
     >
       <Chips
@@ -542,11 +542,7 @@ function LateDialog({
         onPick={(v) => setM(Number(v))}
         label={DESK.late.title}
       />
-      <p className={c("note")}>
-        {m >= 30
-          ? "Patients booked are texted the new time."
-          : "Under 30 minutes: no text is sent."}
-      </p>
+      <p className={c("note")}>{m >= 30 ? DESK.ui.lateTexted : DESK.ui.lateNoText}</p>
       <div className={c("mf")}>
         <span className={c("grow")} />
         <button type="button" className={c("btn")} onClick={close}>
@@ -837,13 +833,13 @@ function UserDialog({
               const u = ctx.data.deskUsers.find((x) => x.id === pick)!;
               switched(u);
               close();
-              ctx.say(`${u.name.split(" ")[0]} is at the desk`);
+              ctx.say(fill(DESK.ui.atDesk, { name: u.name.split(" ")[0] ?? u.name }));
             } else
               setErr(
                 res.result === "locked"
                   ? DESK.user.locked
                   : res.result === "no_pin"
-                    ? "No PIN set for this desk yet."
+                    ? DESK.ui.noPin
                     : fill(DESK.user.wrong, { n: "a few" }),
               );
           }}
