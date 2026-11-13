@@ -1554,7 +1554,6 @@ select:not([multiple]):not([size]):not(.appearance-none) {
 }
 
 /* pw-tokens:start */
-
 /* ─── Patient web · Tide (PROMPT-PATIENT-WEB-TIDE §4–5, ADRs 0415–0421) ───────────────────────────────
    Generated from the phone's mobile/src/theme/tide.ts by scripts/patient-web/gen-tokens.mjs; change values
    there, not here. Scoped to pages that render `data-pw` (dialogs portal to <body> and still inherit them).
@@ -1591,6 +1590,7 @@ select:not([multiple]):not([size]):not(.appearance-none) {
   --color-pw-cascade-1: var(--pw-cascade-1);
   --color-pw-cascade-2: var(--pw-cascade-2);
   --color-pw-cascade-3: var(--pw-cascade-3);
+  --color-pw-cascade-4: var(--pw-cascade-4);
   --color-pw-area-readings: var(--pw-area-readings);
   --color-pw-area-medicines: var(--pw-area-medicines);
   --color-pw-area-visits: var(--pw-area-visits);
@@ -1656,6 +1656,7 @@ select:not([multiple]):not([size]):not(.appearance-none) {
   --pw-cascade-1: #1b2540;
   --pw-cascade-2: #2f4a6d;
   --pw-cascade-3: #296a89;
+  --pw-cascade-4: #1f9a9c;
   --pw-area-readings: #0284c7;
   --pw-area-medicines: #7c3aed;
   --pw-area-visits: #a21caf;
@@ -1713,6 +1714,7 @@ select:not([multiple]):not([size]):not(.appearance-none) {
   --pw-cascade-1: #24314f;
   --pw-cascade-2: #2f4a6d;
   --pw-cascade-3: #296a89;
+  --pw-cascade-4: #1f9a9c;
   --pw-area-readings: #7dd3fc;
   --pw-area-medicines: #a78bfa;
   --pw-area-visits: #e879f9;

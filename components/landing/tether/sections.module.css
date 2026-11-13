@@ -1,0 +1,89 @@
+/* Scroll-led sections (§5.4). Progress `--p` (0 to 1) comes from a CSS view timeline, not a script; where the
+   browser has no view timelines, or the visitor asked for reduced motion, `--p` stays 1 and all is shown. */
+@property --p {
+  syntax: "<number>";
+  inherits: true;
+  initial-value: 1;
+}
+@keyframes progress {
+  from {
+    --p: 0;
+  }
+  to {
+    --p: 1;
+  }
+}
+@supports (animation-timeline: view()) {
+  @media (prefers-reduced-motion: no-preference) {
+    .say {
+      animation: progress linear both;
+      animation-timeline: view();
+      animation-range: entry 10% cover 55%;
+    }
+    .wave {
+      animation: progress linear both;
+      animation-timeline: view();
+      animation-range: entry 20% cover 60%;
+    }
+  }
+}
+
+/* Statement: each word's opacity follows the section's progress; its index comes from its own style. */
+.say span {
+  opacity: clamp(0.14, calc(var(--p) * var(--n) - var(--i)), 1);
+}
+
+/* How it works, desktop: five arcs drawn in turn, dashed links, then each step. */
+.arc {
+  stroke-dasharray: 1;
+  stroke-dashoffset: calc(1 - clamp(0, var(--p) * 5.6 - var(--k), 1));
+}
+.link {
+  opacity: clamp(0, var(--p) * 5.6 - var(--k) - 0.9, 1);
+}
+.step {
+  opacity: clamp(0.3, var(--p) * 5.6 - var(--k) + 0.2, 1);
+}
+
+/* Phone carousels: snap, no scrollbar. */
+.snap {
+  scroll-snap-type: x mandatory;
+  scrollbar-width: none;
+}
+.snap::-webkit-scrollbar {
+  display: none;
+}
+.snap > * {
+  scroll-snap-align: start;
+}
+
+/* A panel that changes with a control rises in. */
+.rise {
+  animation: rise 400ms var(--ease-expo-out) both;
+}
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .rise {
+    animation-name: fade;
+  }
+  @keyframes fade {
+    from {
+      opacity: 0;
+    }
+  }
+}
+
+/* A reception row that just changed flashes lagoon once. */
+.flash {
+  animation: flash 1400ms ease-out;
+}
+@keyframes flash {
+  from {
+    background: var(--pw-accent-tint);
+  }
+}

@@ -1,0 +1,346 @@
+{
+  "lcp": 2472,
+  "fcp": 2472,
+  "cls": 0,
+  "inp": 32,
+  "lcpEl": "H1 A digital hospital that doesn’t stop at the gate.",
+  "inpOn": "Open menu",
+  "bytes": {
+    "Document": {
+      "n": 1,
+      "enc": 33837,
+      "raw": 213085
+    },
+    "Stylesheet": {
+      "n": 3,
+      "enc": 61057,
+      "raw": 378269
+    },
+    "Font": {
+      "n": 3,
+      "enc": 130165,
+      "raw": 129264
+    },
+    "Manifest": {
+      "n": 1,
+      "enc": 716,
+      "raw": 373
+    },
+    "Script": {
+      "n": 12,
+      "enc": 272360,
+      "raw": 892263
+    },
+    "Image": {
+      "n": 5,
+      "enc": 0,
+      "raw": 3088
+    },
+    "Fetch": {
+      "n": 14,
+      "enc": 30038,
+      "raw": 118802
+    },
+    "Other": {
+      "n": 2,
+      "enc": 69973,
+      "raw": 69361
+    }
+  },
+  "runs": [
+    {
+      "lcp": 2472,
+      "lcpEl": "H1 A digital hospital that doesn’t stop at the gate.",
+      "fcp": 2472,
+      "cls": 0,
+      "inp": 64,
+      "inpOn": "Open menu",
+      "bytes": {
+        "Document": {
+          "n": 1,
+          "enc": 33837,
+          "raw": 213085
+        },
+        "Stylesheet": {
+          "n": 3,
+          "enc": 61057,
+          "raw": 378269
+        },
+        "Font": {
+          "n": 3,
+          "enc": 130165,
+          "raw": 129264
+        },
+        "Manifest": {
+          "n": 1,
+          "enc": 716,
+          "raw": 373
+        },
+        "Script": {
+          "n": 12,
+          "enc": 272360,
+          "raw": 892263
+        },
+        "Image": {
+          "n": 5,
+          "enc": 0,
+          "raw": 3088
+        },
+        "Fetch": {
+          "n": 14,
+          "enc": 30038,
+          "raw": 118802
+        },
+        "Other": {
+          "n": 2,
+          "enc": 69973,
+          "raw": 69361
+        }
+      },
+      "urls": [
+        "Document 33837 /",
+        "Stylesheet 1672 /_next/static/chunks/0s84h57aypa1m.css",
+        "Stylesheet 58182 /_next/static/chunks/0s3mwbd4fyu.n.css",
+        "Stylesheet 1203 /_next/static/chunks/0lql8._dmor53.css",
+        "Font 23408 /_next/static/media/797e433ab948586e-s.p.08e28id.o-okb.woff2",
+        "Font 29588 /_next/static/media/caa3a2e1cccd8315-s.p.09~u27dqhyhd6.woff2",
+        "Manifest 716 /manifest.webmanifest",
+        "Script 3281 /_next/static/chunks/0emzpw-gawpu4.js",
+        "Image 0 data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' %3E%3Cfilter id='b' color-interpolation-filters='sRGB'%3E%3CfeGaussianBlur stdDeviation='20'/%3E%3CfeColorMatrix values='1 0 0 0 0 0 1 0 0 0 0 0 1 0 0 0 0 0 100 -1' result='s'/%3E%3CfeFlood x='0' y='0' width='100%25' height='100%25'/%3E%3CfeComposite operator='out' in='s'/%3E%3CfeComposite in2='SourceGraphic'/%3E%3CfeGaussianBlur stdDeviation='20'/%3E%3C/filter%3E%3Cimage width='100%25' height='100%25' x='0' y='0' preserveAspectRatio='none' style='filter: url(%23b);' href='data:image/webp;base64,UklGRkIAAABXRUJQVlA4IDYAAACwAQCdASoIAAoAA4BaJZwAAlxYg7sAAP6ZIqZz0nfjwS3Qy08fchag4fx6Uv2io6+dDNCAAAA='/%3E%3C/svg%3E",
+        "Image 0 data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' %3E%3Cfilter id='b' color-interpolation-filters='sRGB'%3E%3CfeGaussianBlur stdDeviation='20'/%3E%3CfeColorMatrix values='1 0 0 0 0 0 1 0 0 0 0 0 1 0 0 0 0 0 100 -1' result='s'/%3E%3CfeFlood x='0' y='0' width='100%25' height='100%25'/%3E%3CfeComposite operator='out' in='s'/%3E%3CfeComposite in2='SourceGraphic'/%3E%3CfeGaussianBlur stdDeviation='20'/%3E%3C/filter%3E%3Cimage width='100%25' height='100%25' x='0' y='0' preserveAspectRatio='none' style='filter: url(%23b);' href='data:image/webp;base64,UklGRlIAAABXRUJQVlA4IEYAAACwAQCdASoIAAoAA4BaJYwC7ADzVK9gAP7kaqX5PvAfcXjt/FdrvO0hFytD2ec2hu3hi1k8RChS65UnSSsAZSRFNNOM/4gA'/%3E%3C/svg%3E",
+        "Image 0 data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' %3E%3Cfilter id='b' color-interpolation-filters='sRGB'%3E%3CfeGaussianBlur stdDeviation='20'/%3E%3CfeColorMatrix values='1 0 0 0 0 0 1 0 0 0 0 0 1 0 0 0 0 0 100 -1' result='s'/%3E%3CfeFlood x='0' y='0' width='100%25' height='100%25'/%3E%3CfeComposite operator='out' in='s'/%3E%3CfeComposite in2='SourceGraphic'/%3E%3CfeGaussianBlur stdDeviation='20'/%3E%3C/filter%3E%3Cimage width='100%25' height='100%25' x='0' y='0' preserveAspectRatio='none' style='filter: url(%23b);' href='data:image/webp;base64,UklGRkwAAABXRUJQVlA4IEAAAADwAQCdASoIAAoAA4BaJZQCdAEegjtR7AAA/tXri4d9YVN9qOqX/qaz0WzHb7SqcJ2xqB24XOBlZiGKSAiAfwAA'/%3E%3C/svg%3E",
+        "Image 0 data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' %3E%3Cfilter id='b' color-interpolation-filters='sRGB'%3E%3CfeGaussianBlur stdDeviation='20'/%3E%3CfeColorMatrix values='1 0 0 0 0 0 1 0 0 0 0 0 1 0 0 0 0 0 100 -1' result='s'/%3E%3CfeFlood x='0' y='0' width='100%25' height='100%25'/%3E%3CfeComposite operator='out' in='s'/%3E%3CfeComposite in2='SourceGraphic'/%3E%3CfeGaussianBlur stdDeviation='20'/%3E%3C/filter%3E%3Cimage width='100%25' height='100%25' x='0' y='0' preserveAspectRatio='none' style='filter: url(%23b);' href='data:image/webp;base64,UklGRk4AAABXRUJQVlA4IEIAAACwAQCdASoIAAoAA4BaJZwAAlxcOZAAAP5rM90rGaTTtsLcaq5bnp6E0okOGrgHZD67iaADajgxT5BSHEk+KIOAAAA='/%3E%3C/svg%3E",
+        "Image 0 data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' %3E%3Cfilter id='b' color-interpolation-filters='sRGB'%3E%3CfeGaussianBlur stdDeviation='20'/%3E%3CfeColorMatrix values='1 0 0 0 0 0 1 0 0 0 0 0 1 0 0 0 0 0 100 -1' result='s'/%3E%3CfeFlood x='0' y='0' width='100%25' height='100%25'/%3E%3CfeComposite operator='out' in='s'/%3E%3CfeComposite in2='SourceGraphic'/%3E%3CfeGaussianBlur stdDeviation='20'/%3E%3C/filter%3E%3Cimage width='100%25' height='100%25' x='0' y='0' preserveAspectRatio='none' style='filter: url(%23b);' href='data:image/webp;base64,UklGRlAAAABXRUJQVlA4IEQAAADwAQCdASoIAAoAA4BaJQBOgBuTPonn6AAA/uTXGzQmsqS/3V6o1ACRIk4VEdamiZifrndrAoolB0yuF+H+B/hf8X74AA=='/%3E%3C/svg%3E",
+        "Font 77169 /_next/static/media/2aa781f449db21e3-s.p.0jjtl0l8vf29i.woff2",
+        "Script 9348 /_next/static/chunks/0j54wr06~mego.js",
+        "Script 10158 /_next/static/chunks/0m_9loni5-1gw.js",
+        "Script 9782 /_next/static/chunks/0haxr-zv24fez.js",
+        "Script 4720 /_next/static/chunks/turbopack-0ke9yka0f0jk1.js",
+        "Script 12022 /_next/static/chunks/0y4~er8q7khv6.js",
+        "Script 30796 /_next/static/chunks/0hyonb8b~2xfx.js",
+        "Script 9444 /_next/static/chunks/168x3mp2iaghv.js",
+        "Script 12877 /_next/static/chunks/0bdczg4znunf-.js",
+        "Script 21740 /_next/static/chunks/11an~955ee-_5.js",
+        "Script 148192 /_next/static/chunks/01xth0_0bnusi.js",
+        "Fetch 540 /monitoring?o=4511431915995136&p=4511431916978256&r=de",
+        "Other 26262 /favicon.ico?favicon.0x3dzn~oxb6tn.ico",
+        "Other 43711 /icon-192.png",
+        "Fetch 540 /monitoring?o=4511431915995136&p=4511431916978256&r=de",
+        "Fetch 540 /monitoring?o=4511431915995136&p=4511431916978256&r=de",
+        "Script 0 /_vercel/insights/script.js",
+        "Fetch 539 /signup/patient?_rsc=5CB68i4pnAekjehf",
+        "Fetch 540 /signup/clinical?_rsc=5CB68i4pnAekjehf",
+        "Fetch 540 /signup/hospital?_rsc=5CB68i4pnAekjehf",
+        "Fetch 535 /emergency?_rsc=5CB68i4pnAekjehf",
+        "Fetch 1789 /signup/patient?_rsc=tXyZJ52UQVBCVsD3",
+        "Fetch 1795 /signup/clinical?_rsc=tXyZJ52UQVBCVsD3",
+        "Fetch 1787 /signup/hospital?_rsc=tXyZJ52UQVBCVsD3",
+        "Fetch 1793 /emergency?_rsc=tXyZJ52UQVBCVsD3",
+        "Fetch 1600 /?_rsc=7h4NYy5eoyMcNlUN",
+        "Fetch 3413 /?_rsc=yIp22O3xgPPxC28X",
+        "Fetch 14087 /?_rsc=8nTjltbQWvg6NcbE",
+        "Fetch 754 /sign-in?_rsc=5CB68i4pnAekjehf",
+        "Fetch 1586 /sign-in?_rsc=7h4NYy5eoyMcNlUN",
+        "Fetch 3422 /sign-in?_rsc=fGJn87jYv0bW619I",
+        "Fetch 671 /sign-in?_rsc=TE3gy4b_ZsYS-VJy",
+        "Fetch 824 /sign-in?_rsc=0JPeHfmoxTFArknH"
+      ]
+    },
+    {
+      "lcp": 2472,
+      "lcpEl": "H1 A digital hospital that doesn’t stop at the gate.",
+      "fcp": 2472,
+      "cls": 0,
+      "inp": 24,
+      "inpOn": "Open menu",
+      "bytes": {
+        "Document": {
+          "n": 1,
+          "enc": 33837,
+          "raw": 213085
+        },
+        "Stylesheet": {
+          "n": 3,
+          "enc": 61057,
+          "raw": 378269
+        },
+        "Font": {
+          "n": 3,
+          "enc": 130165,
+          "raw": 129264
+        },
+        "Manifest": {
+          "n": 1,
+          "enc": 716,
+          "raw": 373
+        },
+        "Script": {
+          "n": 12,
+          "enc": 272360,
+          "raw": 892263
+        },
+        "Image": {
+          "n": 5,
+          "enc": 0,
+          "raw": 3088
+        },
+        "Fetch": {
+          "n": 14,
+          "enc": 29985,
+          "raw": 118802
+        },
+        "Other": {
+          "n": 2,
+          "enc": 69973,
+          "raw": 69361
+        }
+      },
+      "urls": [
+        "Document 33837 /",
+        "Stylesheet 1672 /_next/static/chunks/0s84h57aypa1m.css",
+        "Stylesheet 58182 /_next/static/chunks/0s3mwbd4fyu.n.css",
+        "Stylesheet 1203 /_next/static/chunks/0lql8._dmor53.css",
+        "Font 23408 /_next/static/media/797e433ab948586e-s.p.08e28id.o-okb.woff2",
+        "Font 29588 /_next/static/media/caa3a2e1cccd8315-s.p.09~u27dqhyhd6.woff2",
+        "Manifest 716 /manifest.webmanifest",
+        "Script 3281 /_next/static/chunks/0emzpw-gawpu4.js",
+        "Image 0 data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' %3E%3Cfilter id='b' color-interpolation-filters='sRGB'%3E%3CfeGaussianBlur stdDeviation='20'/%3E%3CfeColorMatrix values='1 0 0 0 0 0 1 0 0 0 0 0 1 0 0 0 0 0 100 -1' result='s'/%3E%3CfeFlood x='0' y='0' width='100%25' height='100%25'/%3E%3CfeComposite operator='out' in='s'/%3E%3CfeComposite in2='SourceGraphic'/%3E%3CfeGaussianBlur stdDeviation='20'/%3E%3C/filter%3E%3Cimage width='100%25' height='100%25' x='0' y='0' preserveAspectRatio='none' style='filter: url(%23b);' href='data:image/webp;base64,UklGRkIAAABXRUJQVlA4IDYAAACwAQCdASoIAAoAA4BaJZwAAlxYg7sAAP6ZIqZz0nfjwS3Qy08fchag4fx6Uv2io6+dDNCAAAA='/%3E%3C/svg%3E",
+        "Image 0 data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' %3E%3Cfilter id='b' color-interpolation-filters='sRGB'%3E%3CfeGaussianBlur stdDeviation='20'/%3E%3CfeColorMatrix values='1 0 0 0 0 0 1 0 0 0 0 0 1 0 0 0 0 0 100 -1' result='s'/%3E%3CfeFlood x='0' y='0' width='100%25' height='100%25'/%3E%3CfeComposite operator='out' in='s'/%3E%3CfeComposite in2='SourceGraphic'/%3E%3CfeGaussianBlur stdDeviation='20'/%3E%3C/filter%3E%3Cimage width='100%25' height='100%25' x='0' y='0' preserveAspectRatio='none' style='filter: url(%23b);' href='data:image/webp;base64,UklGRlIAAABXRUJQVlA4IEYAAACwAQCdASoIAAoAA4BaJYwC7ADzVK9gAP7kaqX5PvAfcXjt/FdrvO0hFytD2ec2hu3hi1k8RChS65UnSSsAZSRFNNOM/4gA'/%3E%3C/svg%3E",
+        "Image 0 data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' %3E%3Cfilter id='b' color-interpolation-filters='sRGB'%3E%3CfeGaussianBlur stdDeviation='20'/%3E%3CfeColorMatrix values='1 0 0 0 0 0 1 0 0 0 0 0 1 0 0 0 0 0 100 -1' result='s'/%3E%3CfeFlood x='0' y='0' width='100%25' height='100%25'/%3E%3CfeComposite operator='out' in='s'/%3E%3CfeComposite in2='SourceGraphic'/%3E%3CfeGaussianBlur stdDeviation='20'/%3E%3C/filter%3E%3Cimage width='100%25' height='100%25' x='0' y='0' preserveAspectRatio='none' style='filter: url(%23b);' href='data:image/webp;base64,UklGRkwAAABXRUJQVlA4IEAAAADwAQCdASoIAAoAA4BaJZQCdAEegjtR7AAA/tXri4d9YVN9qOqX/qaz0WzHb7SqcJ2xqB24XOBlZiGKSAiAfwAA'/%3E%3C/svg%3E",
+        "Image 0 data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' %3E%3Cfilter id='b' color-interpolation-filters='sRGB'%3E%3CfeGaussianBlur stdDeviation='20'/%3E%3CfeColorMatrix values='1 0 0 0 0 0 1 0 0 0 0 0 1 0 0 0 0 0 100 -1' result='s'/%3E%3CfeFlood x='0' y='0' width='100%25' height='100%25'/%3E%3CfeComposite operator='out' in='s'/%3E%3CfeComposite in2='SourceGraphic'/%3E%3CfeGaussianBlur stdDeviation='20'/%3E%3C/filter%3E%3Cimage width='100%25' height='100%25' x='0' y='0' preserveAspectRatio='none' style='filter: url(%23b);' href='data:image/webp;base64,UklGRk4AAABXRUJQVlA4IEIAAACwAQCdASoIAAoAA4BaJZwAAlxcOZAAAP5rM90rGaTTtsLcaq5bnp6E0okOGrgHZD67iaADajgxT5BSHEk+KIOAAAA='/%3E%3C/svg%3E",
+        "Image 0 data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' %3E%3Cfilter id='b' color-interpolation-filters='sRGB'%3E%3CfeGaussianBlur stdDeviation='20'/%3E%3CfeColorMatrix values='1 0 0 0 0 0 1 0 0 0 0 0 1 0 0 0 0 0 100 -1' result='s'/%3E%3CfeFlood x='0' y='0' width='100%25' height='100%25'/%3E%3CfeComposite operator='out' in='s'/%3E%3CfeComposite in2='SourceGraphic'/%3E%3CfeGaussianBlur stdDeviation='20'/%3E%3C/filter%3E%3Cimage width='100%25' height='100%25' x='0' y='0' preserveAspectRatio='none' style='filter: url(%23b);' href='data:image/webp;base64,UklGRlAAAABXRUJQVlA4IEQAAADwAQCdASoIAAoAA4BaJQBOgBuTPonn6AAA/uTXGzQmsqS/3V6o1ACRIk4VEdamiZifrndrAoolB0yuF+H+B/hf8X74AA=='/%3E%3C/svg%3E",
+        "Font 77169 /_next/static/media/2aa781f449db21e3-s.p.0jjtl0l8vf29i.woff2",
+        "Script 9348 /_next/static/chunks/0j54wr06~mego.js",
+        "Script 10158 /_next/static/chunks/0m_9loni5-1gw.js",
+        "Script 9782 /_next/static/chunks/0haxr-zv24fez.js",
+        "Script 4720 /_next/static/chunks/turbopack-0ke9yka0f0jk1.js",
+        "Script 12022 /_next/static/chunks/0y4~er8q7khv6.js",
+        "Script 9444 /_next/static/chunks/168x3mp2iaghv.js",
+        "Script 30796 /_next/static/chunks/0hyonb8b~2xfx.js",
+        "Script 12877 /_next/static/chunks/0bdczg4znunf-.js",
+        "Script 21740 /_next/static/chunks/11an~955ee-_5.js",
+        "Script 148192 /_next/static/chunks/01xth0_0bnusi.js",
+        "Fetch 515 /monitoring?o=4511431915995136&p=4511431916978256&r=de",
+        "Other 26262 /favicon.ico?favicon.0x3dzn~oxb6tn.ico",
+        "Other 43711 /icon-192.png",
+        "Fetch 515 /monitoring?o=4511431915995136&p=4511431916978256&r=de",
+        "Fetch 540 /monitoring?o=4511431915995136&p=4511431916978256&r=de",
+        "Script 0 /_vercel/insights/script.js",
+        "Fetch 539 /signup/patient?_rsc=5CB68i4pnAekjehf",
+        "Fetch 540 /signup/clinical?_rsc=5CB68i4pnAekjehf",
+        "Fetch 540 /signup/hospital?_rsc=5CB68i4pnAekjehf",
+        "Fetch 535 /emergency?_rsc=5CB68i4pnAekjehf",
+        "Fetch 1788 /signup/patient?_rsc=tXyZJ52UQVBCVsD3",
+        "Fetch 1793 /signup/clinical?_rsc=tXyZJ52UQVBCVsD3",
+        "Fetch 1787 /signup/hospital?_rsc=tXyZJ52UQVBCVsD3",
+        "Fetch 1793 /emergency?_rsc=tXyZJ52UQVBCVsD3",
+        "Fetch 1600 /?_rsc=7h4NYy5eoyMcNlUN",
+        "Fetch 3413 /?_rsc=yIp22O3xgPPxC28X",
+        "Fetch 14087 /?_rsc=8nTjltbQWvg6NcbE",
+        "Fetch 754 /sign-in?_rsc=5CB68i4pnAekjehf",
+        "Fetch 1586 /sign-in?_rsc=7h4NYy5eoyMcNlUN",
+        "Fetch 3422 /sign-in?_rsc=fGJn87jYv0bW619I",
+        "Fetch 671 /sign-in?_rsc=TE3gy4b_ZsYS-VJy",
+        "Fetch 824 /sign-in?_rsc=0JPeHfmoxTFArknH"
+      ]
+    },
+    {
+      "lcp": 2432,
+      "lcpEl": "H1 A digital hospital that doesn’t stop at the gate.",
+      "fcp": 2432,
+      "cls": 0,
+      "inp": 32,
+      "inpOn": "Open menu",
+      "bytes": {
+        "Document": {
+          "n": 1,
+          "enc": 33837,
+          "raw": 213085
+        },
+        "Stylesheet": {
+          "n": 3,
+          "enc": 61057,
+          "raw": 378269
+        },
+        "Font": {
+          "n": 3,
+          "enc": 130165,
+          "raw": 129264
+        },
+        "Manifest": {
+          "n": 1,
+          "enc": 716,
+          "raw": 373
+        },
+        "Script": {
+          "n": 12,
+          "enc": 272360,
+          "raw": 892263
+        },
+        "Image": {
+          "n": 5,
+          "enc": 0,
+          "raw": 3088
+        },
+        "Fetch": {
+          "n": 14,
+          "enc": 30036,
+          "raw": 118802
+        },
+        "Other": {
+          "n": 2,
+          "enc": 69973,
+          "raw": 69361
+        }
+      },
+      "urls": [
+        "Document 33837 /",
+        "Stylesheet 1672 /_next/static/chunks/0s84h57aypa1m.css",
+        "Stylesheet 58182 /_next/static/chunks/0s3mwbd4fyu.n.css",
+        "Stylesheet 1203 /_next/static/chunks/0lql8._dmor53.css",
+        "Font 23408 /_next/static/media/797e433ab948586e-s.p.08e28id.o-okb.woff2",
+        "Manifest 716 /manifest.webmanifest",
+        "Font 29588 /_next/static/media/caa3a2e1cccd8315-s.p.09~u27dqhyhd6.woff2",
+        "Script 3281 /_next/static/chunks/0emzpw-gawpu4.js",
+        "Image 0 data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' %3E%3Cfilter id='b' color-interpolation-filters='sRGB'%3E%3CfeGaussianBlur stdDeviation='20'/%3E%3CfeColorMatrix values='1 0 0 0 0 0 1 0 0 0 0 0 1 0 0 0 0 0 100 -1' result='s'/%3E%3CfeFlood x='0' y='0' width='100%25' height='100%25'/%3E%3CfeComposite operator='out' in='s'/%3E%3CfeComposite in2='SourceGraphic'/%3E%3CfeGaussianBlur stdDeviation='20'/%3E%3C/filter%3E%3Cimage width='100%25' height='100%25' x='0' y='0' preserveAspectRatio='none' style='filter: url(%23b);' href='data:image/webp;base64,UklGRkIAAABXRUJQVlA4IDYAAACwAQCdASoIAAoAA4BaJZwAAlxYg7sAAP6ZIqZz0nfjwS3Qy08fchag4fx6Uv2io6+dDNCAAAA='/%3E%3C/svg%3E",
+        "Image 0 data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' %3E%3Cfilter id='b' color-interpolation-filters='sRGB'%3E%3CfeGaussianBlur stdDeviation='20'/%3E%3CfeColorMatrix values='1 0 0 0 0 0 1 0 0 0 0 0 1 0 0 0 0 0 100 -1' result='s'/%3E%3CfeFlood x='0' y='0' width='100%25' height='100%25'/%3E%3CfeComposite operator='out' in='s'/%3E%3CfeComposite in2='SourceGraphic'/%3E%3CfeGaussianBlur stdDeviation='20'/%3E%3C/filter%3E%3Cimage width='100%25' height='100%25' x='0' y='0' preserveAspectRatio='none' style='filter: url(%23b);' href='data:image/webp;base64,UklGRlIAAABXRUJQVlA4IEYAAACwAQCdASoIAAoAA4BaJYwC7ADzVK9gAP7kaqX5PvAfcXjt/FdrvO0hFytD2ec2hu3hi1k8RChS65UnSSsAZSRFNNOM/4gA'/%3E%3C/svg%3E",
+        "Image 0 data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' %3E%3Cfilter id='b' color-interpolation-filters='sRGB'%3E%3CfeGaussianBlur stdDeviation='20'/%3E%3CfeColorMatrix values='1 0 0 0 0 0 1 0 0 0 0 0 1 0 0 0 0 0 100 -1' result='s'/%3E%3CfeFlood x='0' y='0' width='100%25' height='100%25'/%3E%3CfeComposite operator='out' in='s'/%3E%3CfeComposite in2='SourceGraphic'/%3E%3CfeGaussianBlur stdDeviation='20'/%3E%3C/filter%3E%3Cimage width='100%25' height='100%25' x='0' y='0' preserveAspectRatio='none' style='filter: url(%23b);' href='data:image/webp;base64,UklGRkwAAABXRUJQVlA4IEAAAADwAQCdASoIAAoAA4BaJZQCdAEegjtR7AAA/tXri4d9YVN9qOqX/qaz0WzHb7SqcJ2xqB24XOBlZiGKSAiAfwAA'/%3E%3C/svg%3E",
+        "Image 0 data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' %3E%3Cfilter id='b' color-interpolation-filters='sRGB'%3E%3CfeGaussianBlur stdDeviation='20'/%3E%3CfeColorMatrix values='1 0 0 0 0 0 1 0 0 0 0 0 1 0 0 0 0 0 100 -1' result='s'/%3E%3CfeFlood x='0' y='0' width='100%25' height='100%25'/%3E%3CfeComposite operator='out' in='s'/%3E%3CfeComposite in2='SourceGraphic'/%3E%3CfeGaussianBlur stdDeviation='20'/%3E%3C/filter%3E%3Cimage width='100%25' height='100%25' x='0' y='0' preserveAspectRatio='none' style='filter: url(%23b);' href='data:image/webp;base64,UklGRk4AAABXRUJQVlA4IEIAAACwAQCdASoIAAoAA4BaJZwAAlxcOZAAAP5rM90rGaTTtsLcaq5bnp6E0okOGrgHZD67iaADajgxT5BSHEk+KIOAAAA='/%3E%3C/svg%3E",
+        "Image 0 data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' %3E%3Cfilter id='b' color-interpolation-filters='sRGB'%3E%3CfeGaussianBlur stdDeviation='20'/%3E%3CfeColorMatrix values='1 0 0 0 0 0 1 0 0 0 0 0 1 0 0 0 0 0 100 -1' result='s'/%3E%3CfeFlood x='0' y='0' width='100%25' height='100%25'/%3E%3CfeComposite operator='out' in='s'/%3E%3CfeComposite in2='SourceGraphic'/%3E%3CfeGaussianBlur stdDeviation='20'/%3E%3C/filter%3E%3Cimage width='100%25' height='100%25' x='0' y='0' preserveAspectRatio='none' style='filter: url(%23b);' href='data:image/webp;base64,UklGRlAAAABXRUJQVlA4IEQAAADwAQCdASoIAAoAA4BaJQBOgBuTPonn6AAA/uTXGzQmsqS/3V6o1ACRIk4VEdamiZifrndrAoolB0yuF+H+B/hf8X74AA=='/%3E%3C/svg%3E",
+        "Font 77169 /_next/static/media/2aa781f449db21e3-s.p.0jjtl0l8vf29i.woff2",
+        "Script 9348 /_next/static/chunks/0j54wr06~mego.js",
+        "Script 10158 /_next/static/chunks/0m_9loni5-1gw.js",
+        "Script 9782 /_next/static/chunks/0haxr-zv24fez.js",
+        "Script 4720 /_next/static/chunks/turbopack-0ke9yka0f0jk1.js",
+        "Script 12022 /_next/static/chunks/0y4~er8q7khv6.js",
+        "Script 30796 /_next/static/chunks/0hyonb8b~2xfx.js",
+        "Script 9444 /_next/static/chunks/168x3mp2iaghv.js",
+        "Script 12877 /_next/static/chunks/0bdczg4znunf-.js",
+        "Script 21740 /_next/static/chunks/11an~955ee-_5.js",
+        "Script 148192 /_next/static/chunks/01xth0_0bnusi.js",
+        "Fetch 540 /monitoring?o=4511431915995136&p=4511431916978256&r=de",
+        "Other 26262 /favicon.ico?favicon.0x3dzn~oxb6tn.ico",
+        "Other 43711 /icon-192.png",
+        "Fetch 540 /monitoring?o=4511431915995136&p=4511431916978256&r=de",
+        "Fetch 540 /monitoring?o=4511431915995136&p=4511431916978256&r=de",
+        "Script 0 /_vercel/insights/script.js",
+        "Fetch 539 /signup/patient?_rsc=5CB68i4pnAekjehf",
+        "Fetch 540 /signup/clinical?_rsc=5CB68i4pnAekjehf",
+        "Fetch 540 /signup/hospital?_rsc=5CB68i4pnAekjehf",
+        "Fetch 535 /emergency?_rsc=5CB68i4pnAekjehf",
+        "Fetch 1790 /signup/patient?_rsc=tXyZJ52UQVBCVsD3",
+        "Fetch 1794 /signup/clinical?_rsc=tXyZJ52UQVBCVsD3",
+        "Fetch 1785 /signup/hospital?_rsc=tXyZJ52UQVBCVsD3",
+        "Fetch 1793 /emergency?_rsc=tXyZJ52UQVBCVsD3",
+        "Fetch 1600 /?_rsc=7h4NYy5eoyMcNlUN",
+        "Fetch 3413 /?_rsc=yIp22O3xgPPxC28X",
+        "Fetch 14087 /?_rsc=8nTjltbQWvg6NcbE",
+        "Fetch 754 /sign-in?_rsc=5CB68i4pnAekjehf",
+        "Fetch 1586 /sign-in?_rsc=7h4NYy5eoyMcNlUN",
+        "Fetch 3422 /sign-in?_rsc=fGJn87jYv0bW619I",
+        "Fetch 671 /sign-in?_rsc=TE3gy4b_ZsYS-VJy",
+        "Fetch 824 /sign-in?_rsc=0JPeHfmoxTFArknH"
+      ]
+    }
+  ]
+}

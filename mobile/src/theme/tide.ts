@@ -83,8 +83,9 @@ export interface Tide {
   accentSoft: string;
   focus: string;
 
-  /** The day cascade, earliest first. Flat tones, white text. */
-  cascade: readonly [string, string, string];
+  /** The day cascade, earliest first. Flat tones, white text. The fourth tone is the web landing page's last
+   *  step before lagoon (D-LP-14); the phone's cascade uses the first three. */
+  cascade: readonly [string, string, string, string];
 
   /** Place dots and icons. Never a fill behind text, never a button. */
   area: TideAreas;
@@ -157,7 +158,7 @@ export const tideLight: Tide = {
   accentTint: "#ccfbf1",
   accentSoft: "#a7f3e4",
   focus: "#0d9488",
-  cascade: ["#1b2540", "#2f4a6d", "#296a89"],
+  cascade: ["#1b2540", "#2f4a6d", "#296a89", "#1f9a9c"],
   area: {
     readings: "#0284c7",
     medicines: "#7c3aed",
@@ -223,7 +224,7 @@ export const tideDark: Tide = {
   accentTint: "rgba(45, 212, 191, 0.16)",
   accentSoft: "#a7f3e4",
   focus: "#5eead4",
-  cascade: ["#24314f", "#2f4a6d", "#296a89"],
+  cascade: ["#24314f", "#2f4a6d", "#296a89", "#1f9a9c"],
   area: {
     readings: "#7dd3fc",
     medicines: "#a78bfa",

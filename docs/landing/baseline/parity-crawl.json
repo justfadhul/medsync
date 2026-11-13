@@ -1,0 +1,721 @@
+{
+  "390": [
+    {
+      "role": "link",
+      "name": "MedSync",
+      "url": "http://127.0.0.1:3999/"
+    },
+    {
+      "role": "link",
+      "name": "Emergency",
+      "url": "http://127.0.0.1:3999/emergency"
+    },
+    {
+      "role": "link",
+      "name": "MedSync",
+      "url": "http://127.0.0.1:3999/"
+    },
+    {
+      "role": "link",
+      "name": "hello@medsync.health",
+      "url": "mailto:hello@medsync.health"
+    },
+    {
+      "role": "switch",
+      "name": "Toggle light / dark theme",
+      "url": null
+    },
+    {
+      "role": "button",
+      "name": "Open menu",
+      "url": null,
+      "expanded": false
+    },
+    {
+      "role": "link",
+      "name": "Apply for a hospital pilot",
+      "url": "http://127.0.0.1:3999/signup/hospital"
+    },
+    {
+      "role": "link",
+      "name": "Join as a clinician",
+      "url": "http://127.0.0.1:3999/signup/clinical"
+    },
+    {
+      "role": "link",
+      "name": "I’m a patient",
+      "url": "http://127.0.0.1:3999/signup/patient"
+    },
+    {
+      "role": "link",
+      "name": "Book the engineering walkthrough",
+      "url": "http://127.0.0.1:3999/signup/hospital?topic=security"
+    },
+    {
+      "role": "link",
+      "name": "Email hello@medsync.health",
+      "url": "mailto:hello@medsync.health"
+    },
+    {
+      "role": "link",
+      "name": "Apply for a hospital pilot",
+      "url": "http://127.0.0.1:3999/signup/hospital"
+    },
+    {
+      "role": "link",
+      "name": "Join as a clinician",
+      "url": "http://127.0.0.1:3999/signup/clinical"
+    },
+    {
+      "role": "link",
+      "name": "I’m a patient",
+      "url": "http://127.0.0.1:3999/signup/patient"
+    },
+    {
+      "role": "link",
+      "name": "Read all five stories",
+      "url": "http://127.0.0.1:3999/about"
+    },
+    {
+      "role": "link",
+      "name": "Read Usama’s story",
+      "url": "http://127.0.0.1:3999/about#usama-fadhul"
+    },
+    {
+      "role": "link",
+      "name": "Patients",
+      "url": "http://127.0.0.1:3999/#patients"
+    },
+    {
+      "role": "link",
+      "name": "Hospitals",
+      "url": "http://127.0.0.1:3999/#hospitals"
+    },
+    {
+      "role": "link",
+      "name": "Trust",
+      "url": "http://127.0.0.1:3999/#trust"
+    },
+    {
+      "role": "link",
+      "name": "About",
+      "url": "http://127.0.0.1:3999/#about"
+    },
+    {
+      "role": "link",
+      "name": "Founders’ stories",
+      "url": "http://127.0.0.1:3999/about"
+    },
+    {
+      "role": "link",
+      "name": "FAQ",
+      "url": "http://127.0.0.1:3999/#faq"
+    },
+    {
+      "role": "link",
+      "name": "Sign in",
+      "url": "http://127.0.0.1:3999/sign-in"
+    },
+    {
+      "role": "link",
+      "name": "Get started",
+      "url": "http://127.0.0.1:3999/get-started"
+    }
+  ],
+  "834": [
+    {
+      "role": "link",
+      "name": "MedSync",
+      "url": "http://127.0.0.1:3999/"
+    },
+    {
+      "role": "link",
+      "name": "Sign in",
+      "url": "http://127.0.0.1:3999/sign-in"
+    },
+    {
+      "role": "link",
+      "name": "Apply for a pilot",
+      "url": "http://127.0.0.1:3999/signup/hospital"
+    },
+    {
+      "role": "link",
+      "name": "Emergency",
+      "url": "http://127.0.0.1:3999/emergency"
+    },
+    {
+      "role": "link",
+      "name": "MedSync",
+      "url": "http://127.0.0.1:3999/"
+    },
+    {
+      "role": "link",
+      "name": "hello@medsync.health",
+      "url": "mailto:hello@medsync.health"
+    },
+    {
+      "role": "switch",
+      "name": "Toggle light / dark theme",
+      "url": null
+    },
+    {
+      "role": "button",
+      "name": "Open menu",
+      "url": null,
+      "expanded": false
+    },
+    {
+      "role": "link",
+      "name": "Apply for a hospital pilot",
+      "url": "http://127.0.0.1:3999/signup/hospital"
+    },
+    {
+      "role": "link",
+      "name": "Join as a clinician",
+      "url": "http://127.0.0.1:3999/signup/clinical"
+    },
+    {
+      "role": "link",
+      "name": "I’m a patient",
+      "url": "http://127.0.0.1:3999/signup/patient"
+    },
+    {
+      "role": "link",
+      "name": "Book the engineering walkthrough",
+      "url": "http://127.0.0.1:3999/signup/hospital?topic=security"
+    },
+    {
+      "role": "link",
+      "name": "Email hello@medsync.health",
+      "url": "mailto:hello@medsync.health"
+    },
+    {
+      "role": "link",
+      "name": "Apply for a hospital pilot",
+      "url": "http://127.0.0.1:3999/signup/hospital"
+    },
+    {
+      "role": "link",
+      "name": "Join as a clinician",
+      "url": "http://127.0.0.1:3999/signup/clinical"
+    },
+    {
+      "role": "link",
+      "name": "I’m a patient",
+      "url": "http://127.0.0.1:3999/signup/patient"
+    },
+    {
+      "role": "link",
+      "name": "Read all five stories",
+      "url": "http://127.0.0.1:3999/about"
+    },
+    {
+      "role": "link",
+      "name": "Read Usama’s story",
+      "url": "http://127.0.0.1:3999/about#usama-fadhul"
+    },
+    {
+      "role": "link",
+      "name": "Patients",
+      "url": "http://127.0.0.1:3999/#patients"
+    },
+    {
+      "role": "link",
+      "name": "Hospitals",
+      "url": "http://127.0.0.1:3999/#hospitals"
+    },
+    {
+      "role": "link",
+      "name": "Trust",
+      "url": "http://127.0.0.1:3999/#trust"
+    },
+    {
+      "role": "link",
+      "name": "About",
+      "url": "http://127.0.0.1:3999/#about"
+    },
+    {
+      "role": "link",
+      "name": "Founders’ stories",
+      "url": "http://127.0.0.1:3999/about"
+    },
+    {
+      "role": "link",
+      "name": "FAQ",
+      "url": "http://127.0.0.1:3999/#faq"
+    },
+    {
+      "role": "link",
+      "name": "Sign in",
+      "url": "http://127.0.0.1:3999/sign-in"
+    },
+    {
+      "role": "link",
+      "name": "Get started",
+      "url": "http://127.0.0.1:3999/get-started"
+    }
+  ],
+  "1440": [
+    {
+      "role": "link",
+      "name": "MedSync",
+      "url": "http://127.0.0.1:3999/"
+    },
+    {
+      "role": "link",
+      "name": "Sign in",
+      "url": "http://127.0.0.1:3999/sign-in"
+    },
+    {
+      "role": "link",
+      "name": "Apply for a pilot",
+      "url": "http://127.0.0.1:3999/signup/hospital"
+    },
+    {
+      "role": "link",
+      "name": "Emergency",
+      "url": "http://127.0.0.1:3999/emergency"
+    },
+    {
+      "role": "link",
+      "name": "MedSync",
+      "url": "http://127.0.0.1:3999/"
+    },
+    {
+      "role": "link",
+      "name": "hello@medsync.health",
+      "url": "mailto:hello@medsync.health"
+    },
+    {
+      "role": "switch",
+      "name": "Toggle light / dark theme",
+      "url": null
+    },
+    {
+      "role": "link",
+      "name": "Apply for a hospital pilot",
+      "url": "http://127.0.0.1:3999/signup/hospital"
+    },
+    {
+      "role": "link",
+      "name": "Join as a clinician",
+      "url": "http://127.0.0.1:3999/signup/clinical"
+    },
+    {
+      "role": "link",
+      "name": "I’m a patient",
+      "url": "http://127.0.0.1:3999/signup/patient"
+    },
+    {
+      "role": "link",
+      "name": "Book the engineering walkthrough",
+      "url": "http://127.0.0.1:3999/signup/hospital?topic=security"
+    },
+    {
+      "role": "link",
+      "name": "Email hello@medsync.health",
+      "url": "mailto:hello@medsync.health"
+    },
+    {
+      "role": "link",
+      "name": "Apply for a hospital pilot",
+      "url": "http://127.0.0.1:3999/signup/hospital"
+    },
+    {
+      "role": "link",
+      "name": "Join as a clinician",
+      "url": "http://127.0.0.1:3999/signup/clinical"
+    },
+    {
+      "role": "link",
+      "name": "I’m a patient",
+      "url": "http://127.0.0.1:3999/signup/patient"
+    },
+    {
+      "role": "link",
+      "name": "Read all five stories",
+      "url": "http://127.0.0.1:3999/about"
+    },
+    {
+      "role": "link",
+      "name": "Read Usama’s story",
+      "url": "http://127.0.0.1:3999/about#usama-fadhul"
+    },
+    {
+      "role": "link",
+      "name": "Patients",
+      "url": "http://127.0.0.1:3999/#patients"
+    },
+    {
+      "role": "link",
+      "name": "Hospitals",
+      "url": "http://127.0.0.1:3999/#hospitals"
+    },
+    {
+      "role": "link",
+      "name": "Trust",
+      "url": "http://127.0.0.1:3999/#trust"
+    },
+    {
+      "role": "link",
+      "name": "About",
+      "url": "http://127.0.0.1:3999/#about"
+    },
+    {
+      "role": "link",
+      "name": "Patients",
+      "url": "http://127.0.0.1:3999/#patients"
+    },
+    {
+      "role": "link",
+      "name": "Hospitals",
+      "url": "http://127.0.0.1:3999/#hospitals"
+    },
+    {
+      "role": "link",
+      "name": "Trust",
+      "url": "http://127.0.0.1:3999/#trust"
+    },
+    {
+      "role": "link",
+      "name": "About",
+      "url": "http://127.0.0.1:3999/#about"
+    },
+    {
+      "role": "link",
+      "name": "Founders’ stories",
+      "url": "http://127.0.0.1:3999/about"
+    },
+    {
+      "role": "link",
+      "name": "FAQ",
+      "url": "http://127.0.0.1:3999/#faq"
+    },
+    {
+      "role": "link",
+      "name": "Sign in",
+      "url": "http://127.0.0.1:3999/sign-in"
+    },
+    {
+      "role": "link",
+      "name": "Get started",
+      "url": "http://127.0.0.1:3999/get-started"
+    }
+  ],
+  "834-menu-open": [
+    {
+      "role": "link",
+      "name": "MedSync",
+      "url": "http://127.0.0.1:3999/"
+    },
+    {
+      "role": "link",
+      "name": "Sign in",
+      "url": "http://127.0.0.1:3999/sign-in"
+    },
+    {
+      "role": "link",
+      "name": "Apply for a pilot",
+      "url": "http://127.0.0.1:3999/signup/hospital"
+    },
+    {
+      "role": "link",
+      "name": "Emergency",
+      "url": "http://127.0.0.1:3999/emergency"
+    },
+    {
+      "role": "link",
+      "name": "MedSync",
+      "url": "http://127.0.0.1:3999/"
+    },
+    {
+      "role": "link",
+      "name": "hello@medsync.health",
+      "url": "mailto:hello@medsync.health"
+    },
+    {
+      "role": "switch",
+      "name": "Toggle light / dark theme",
+      "url": null
+    },
+    {
+      "role": "button",
+      "name": "Close menu",
+      "url": null,
+      "expanded": true
+    },
+    {
+      "role": "link",
+      "name": "Apply for a hospital pilot",
+      "url": "http://127.0.0.1:3999/signup/hospital"
+    },
+    {
+      "role": "link",
+      "name": "Join as a clinician",
+      "url": "http://127.0.0.1:3999/signup/clinical"
+    },
+    {
+      "role": "link",
+      "name": "I’m a patient",
+      "url": "http://127.0.0.1:3999/signup/patient"
+    },
+    {
+      "role": "link",
+      "name": "Book the engineering walkthrough",
+      "url": "http://127.0.0.1:3999/signup/hospital?topic=security"
+    },
+    {
+      "role": "link",
+      "name": "Email hello@medsync.health",
+      "url": "mailto:hello@medsync.health"
+    },
+    {
+      "role": "link",
+      "name": "Apply for a hospital pilot",
+      "url": "http://127.0.0.1:3999/signup/hospital"
+    },
+    {
+      "role": "link",
+      "name": "Join as a clinician",
+      "url": "http://127.0.0.1:3999/signup/clinical"
+    },
+    {
+      "role": "link",
+      "name": "I’m a patient",
+      "url": "http://127.0.0.1:3999/signup/patient"
+    },
+    {
+      "role": "link",
+      "name": "Read all five stories",
+      "url": "http://127.0.0.1:3999/about"
+    },
+    {
+      "role": "link",
+      "name": "Read Usama’s story",
+      "url": "http://127.0.0.1:3999/about#usama-fadhul"
+    },
+    {
+      "role": "link",
+      "name": "Sign in",
+      "url": "http://127.0.0.1:3999/sign-in"
+    },
+    {
+      "role": "link",
+      "name": "Apply for a pilot",
+      "url": "http://127.0.0.1:3999/signup/hospital"
+    },
+    {
+      "role": "link",
+      "name": "Patients",
+      "url": "http://127.0.0.1:3999/#patients"
+    },
+    {
+      "role": "link",
+      "name": "Hospitals",
+      "url": "http://127.0.0.1:3999/#hospitals"
+    },
+    {
+      "role": "link",
+      "name": "Trust",
+      "url": "http://127.0.0.1:3999/#trust"
+    },
+    {
+      "role": "link",
+      "name": "About",
+      "url": "http://127.0.0.1:3999/#about"
+    },
+    {
+      "role": "link",
+      "name": "Founders’ stories",
+      "url": "http://127.0.0.1:3999/about"
+    },
+    {
+      "role": "link",
+      "name": "FAQ",
+      "url": "http://127.0.0.1:3999/#faq"
+    },
+    {
+      "role": "link",
+      "name": "Sign in",
+      "url": "http://127.0.0.1:3999/sign-in"
+    },
+    {
+      "role": "link",
+      "name": "Get started",
+      "url": "http://127.0.0.1:3999/get-started"
+    },
+    {
+      "role": "link",
+      "name": "Patients",
+      "url": "http://127.0.0.1:3999/#patients"
+    },
+    {
+      "role": "link",
+      "name": "Hospitals",
+      "url": "http://127.0.0.1:3999/#hospitals"
+    },
+    {
+      "role": "link",
+      "name": "Trust",
+      "url": "http://127.0.0.1:3999/#trust"
+    },
+    {
+      "role": "link",
+      "name": "About",
+      "url": "http://127.0.0.1:3999/#about"
+    }
+  ],
+  "390-menu-open": [
+    {
+      "role": "link",
+      "name": "MedSync",
+      "url": "http://127.0.0.1:3999/"
+    },
+    {
+      "role": "link",
+      "name": "Emergency",
+      "url": "http://127.0.0.1:3999/emergency"
+    },
+    {
+      "role": "link",
+      "name": "MedSync",
+      "url": "http://127.0.0.1:3999/"
+    },
+    {
+      "role": "link",
+      "name": "hello@medsync.health",
+      "url": "mailto:hello@medsync.health"
+    },
+    {
+      "role": "switch",
+      "name": "Toggle light / dark theme",
+      "url": null
+    },
+    {
+      "role": "button",
+      "name": "Close menu",
+      "url": null,
+      "expanded": true
+    },
+    {
+      "role": "link",
+      "name": "Apply for a hospital pilot",
+      "url": "http://127.0.0.1:3999/signup/hospital"
+    },
+    {
+      "role": "link",
+      "name": "Join as a clinician",
+      "url": "http://127.0.0.1:3999/signup/clinical"
+    },
+    {
+      "role": "link",
+      "name": "I’m a patient",
+      "url": "http://127.0.0.1:3999/signup/patient"
+    },
+    {
+      "role": "link",
+      "name": "Book the engineering walkthrough",
+      "url": "http://127.0.0.1:3999/signup/hospital?topic=security"
+    },
+    {
+      "role": "link",
+      "name": "Email hello@medsync.health",
+      "url": "mailto:hello@medsync.health"
+    },
+    {
+      "role": "link",
+      "name": "Apply for a hospital pilot",
+      "url": "http://127.0.0.1:3999/signup/hospital"
+    },
+    {
+      "role": "link",
+      "name": "Join as a clinician",
+      "url": "http://127.0.0.1:3999/signup/clinical"
+    },
+    {
+      "role": "link",
+      "name": "I’m a patient",
+      "url": "http://127.0.0.1:3999/signup/patient"
+    },
+    {
+      "role": "link",
+      "name": "Read all five stories",
+      "url": "http://127.0.0.1:3999/about"
+    },
+    {
+      "role": "link",
+      "name": "Read Usama’s story",
+      "url": "http://127.0.0.1:3999/about#usama-fadhul"
+    },
+    {
+      "role": "link",
+      "name": "Sign in",
+      "url": "http://127.0.0.1:3999/sign-in"
+    },
+    {
+      "role": "link",
+      "name": "Apply for a pilot",
+      "url": "http://127.0.0.1:3999/signup/hospital"
+    },
+    {
+      "role": "link",
+      "name": "Patients",
+      "url": "http://127.0.0.1:3999/#patients"
+    },
+    {
+      "role": "link",
+      "name": "Hospitals",
+      "url": "http://127.0.0.1:3999/#hospitals"
+    },
+    {
+      "role": "link",
+      "name": "Trust",
+      "url": "http://127.0.0.1:3999/#trust"
+    },
+    {
+      "role": "link",
+      "name": "About",
+      "url": "http://127.0.0.1:3999/#about"
+    },
+    {
+      "role": "link",
+      "name": "Founders’ stories",
+      "url": "http://127.0.0.1:3999/about"
+    },
+    {
+      "role": "link",
+      "name": "FAQ",
+      "url": "http://127.0.0.1:3999/#faq"
+    },
+    {
+      "role": "link",
+      "name": "Sign in",
+      "url": "http://127.0.0.1:3999/sign-in"
+    },
+    {
+      "role": "link",
+      "name": "Get started",
+      "url": "http://127.0.0.1:3999/get-started"
+    },
+    {
+      "role": "link",
+      "name": "Patients",
+      "url": "http://127.0.0.1:3999/#patients"
+    },
+    {
+      "role": "link",
+      "name": "Hospitals",
+      "url": "http://127.0.0.1:3999/#hospitals"
+    },
+    {
+      "role": "link",
+      "name": "Trust",
+      "url": "http://127.0.0.1:3999/#trust"
+    },
+    {
+      "role": "link",
+      "name": "About",
+      "url": "http://127.0.0.1:3999/#about"
+    }
+  ]
+}

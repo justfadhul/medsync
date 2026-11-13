@@ -163,3 +163,6 @@ export * from "./pharmacy-rework-records";
 export * from "./pharmacy-store";
 export * from "./pharmacy-imports";
 export * from "./pharmacy-distribution";
+
+// ─── Clinic leads (Tether landing "Register your clinic", migration 0293) ───
+export * from "./clinic-leads";

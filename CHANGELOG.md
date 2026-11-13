@@ -73,6 +73,17 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); version
   "Something is wrong" door led to a page saying it was not available. It comes back by itself once the catalogue is
   signed and `FEATURE_SYMPTOM_CATALOG=1`.
 
+### Added — Tether landing page, foundation and shell (off) — 13 Nov 2026
+
+- A booking-first landing page for Tether is being built at `/tether` and served at `/` only while
+  `LANDING_TETHER=1`; production keeps it off while its copy is draft
+  ([ADR 0477](docs/adr/0477-tether-landing-is-booking-first.md)). GATE A signed 13 Nov 2026.
+- The shell: desktop nav with Help and its scrolled dock; phone app bar, menu, bottom bar and a centred Help
+  dialog ([ADR 0478](docs/adr/0478-landing-phone-layout-in-one-route.md)); Figtree on this route only; one new
+  Tide token, `cascade-4`. Example content, rotation and the clinic form store are decided in ADRs
+  [0479](docs/adr/0479-example-content-on-public-pages.md), [0480](docs/adr/0480-auto-rotating-content-stops.md) and
+  [0481](docs/adr/0481-clinic-leads.md).
+
 ### Changed — One medicine master in Set-up › Medicines — 3 Nov 2026
 
 - Set-up › Medicines is now the grid from the Medicines kit: filters and saved views, per-place top-up levels and

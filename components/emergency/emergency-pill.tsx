@@ -62,6 +62,8 @@ export function EmergencyPill({ tide }: { tide?: string }) {
   const pathname = usePathname();
   if (pathname === "/emergency" || pathname.startsWith("/emergency/")) return null;
   if (pathname === "/" || pathname === "/about") return null; // ADR 0099: the landing header carries Emergency
+  // ADR 0478: the Tether landing page (served at `/` from `/tether`) carries its own Help on every screen.
+  if (pathname === "/tether" || pathname.startsWith("/tether/")) return null;
   if (HEADER_EMERGENCY.some((p) => pathname === p || pathname.startsWith(`${p}/`))) return null;
   const help =
     !STAFF.some((p) => pathname === p || pathname.startsWith(`${p}/`)) &&

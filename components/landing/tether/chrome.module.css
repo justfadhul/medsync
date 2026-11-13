@@ -1,0 +1,80 @@
+/* Tether landing chrome (ADR 0478): only what utilities cannot say. Tokens only; durations and the curve are the
+   design system's (DESIGN-medsync.md, AGENTS.md: 150/250/400 ms, expo-out). */
+
+:global(:root:has([data-tether])) {
+  scroll-behavior: smooth;
+}
+@media (prefers-reduced-motion: reduce) {
+  :global(:root:has([data-tether])) {
+    scroll-behavior: auto;
+  }
+}
+
+/* Frosted glass: the nav once scrolled, the app bar once scrolled, the menu and the bottom bar. */
+.glass {
+  background: color-mix(in srgb, var(--pw-surface) 52%, transparent);
+  backdrop-filter: blur(22px) saturate(180%);
+  -webkit-backdrop-filter: blur(22px) saturate(180%);
+}
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .glass {
+    background: color-mix(in srgb, var(--pw-surface) 90%, transparent);
+  }
+}
+
+/* The phone menu: a modal <dialog> that drops from the app bar (the one edge-anchored panel, ADR 0161). */
+.drop {
+  position: fixed;
+  inset: 0 0 auto;
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  max-width: none;
+  max-height: 100svh;
+  border: 0;
+  background: transparent;
+  color: inherit;
+}
+.drop::backdrop {
+  background: color-mix(in srgb, var(--pw-scrim) 65%, transparent);
+}
+.drop[open] .panel {
+  animation: drop var(--duration-reveal) var(--ease-expo-out) both;
+}
+.drop[open] .row {
+  animation: row var(--duration-reveal) var(--ease-expo-out) both;
+  animation-delay: calc(80ms + var(--k) * 40ms);
+}
+@keyframes drop {
+  from {
+    clip-path: inset(0 0 calc(100% - 60px) 0 round 0 0 28px 28px);
+  }
+  to {
+    clip-path: inset(0 0 0 0 round 0 0 28px 28px);
+  }
+}
+@keyframes row {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+}
+
+/* The toast rises in. */
+.rise {
+  animation: rise var(--duration-slow) var(--ease-expo-out) both;
+}
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .drop[open] .panel,
+  .drop[open] .row,
+  .rise {
+    animation: none;
+  }
+}

@@ -50,6 +50,7 @@ const map = {
   "cascade-1": "cascade.0",
   "cascade-2": "cascade.1",
   "cascade-3": "cascade.2",
+  "cascade-4": "cascade.3",
   "area-readings": "area.readings",
   "area-medicines": "area.medicines",
   "area-visits": "area.visits",

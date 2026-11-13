@@ -207,20 +207,28 @@ export function Toast({
   message,
   onUndo,
   onClose,
+  ms = 4000,
+  className,
 }: {
   message: string;
   onUndo?: () => void;
   onClose: () => void;
+  /** How long it stays (the landing page's toasts leave after 2.4 s). */
+  ms?: number;
+  className?: string;
 }) {
   const close = useEffectEvent(onClose);
   useEffect(() => {
-    const t = setTimeout(() => close(), 4000);
+    const t = setTimeout(() => close(), ms);
     return () => clearTimeout(t);
-  }, [message]);
+  }, [message, ms]);
   return (
     <div
       role="status"
-      className="bg-pw-band text-pw-on-band shadow-pw-float fixed inset-x-4 bottom-[112px] z-40 mx-auto flex max-w-md items-center gap-3 rounded-full px-5 py-3 text-[15px] font-semibold min-[761px]:bottom-8"
+      className={cn(
+        "bg-pw-band text-pw-on-band shadow-pw-float fixed inset-x-4 bottom-[112px] z-40 mx-auto flex max-w-md items-center gap-3 rounded-full px-5 py-3 text-[15px] font-semibold min-[761px]:bottom-8",
+        className,
+      )}
     >
       <span className="flex-1">{message}</span>
       {onUndo ? (

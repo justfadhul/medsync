@@ -1,0 +1,173 @@
+/* The example ticket (§5.3): a ticket shape with notches, a 3D turn, a tear-off stub. Tokens only. */
+.wrap {
+  width: min(380px, 100%);
+  perspective: 1300px;
+  transition: margin-bottom 400ms var(--ease-expo-out);
+}
+.wrap[data-torn] {
+  margin-bottom: 40px;
+}
+.tilt {
+  transform: rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg));
+  transition: transform 400ms var(--ease-expo-out);
+  transform-style: preserve-3d;
+}
+.turn {
+  display: grid;
+  transform-style: preserve-3d;
+  transition: transform 800ms var(--ease-expo-out);
+}
+.turn[data-flipped] {
+  transform: rotateY(180deg);
+}
+.face {
+  grid-area: 1 / 1;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  filter: drop-shadow(0 28px 34px color-mix(in srgb, var(--pw-band) 28%, transparent))
+    drop-shadow(0 2px 4px color-mix(in srgb, var(--pw-band) 12%, transparent));
+}
+.back {
+  transform: rotateY(180deg);
+  transition: visibility 0s 400ms;
+}
+/* The back is not painted until it turns round, so it is never the page's largest paint (LCP). */
+.turn:not([data-flipped]) .back {
+  visibility: hidden;
+}
+.turn[data-flipped] .back {
+  transition-delay: 0s;
+}
+.shape {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+.main {
+  border-radius: 26px 26px 0 0;
+  mask:
+    radial-gradient(circle 13px at 0 100%, transparent 97%, black),
+    radial-gradient(circle 13px at 100% 100%, transparent 97%, black);
+  mask-composite: intersect;
+}
+.stub {
+  --dy: 0px;
+  --dr: 0deg;
+  border-radius: 0 0 26px 26px;
+  transform: translateY(var(--dy)) rotate(var(--dr));
+  transform-origin: 14% 0;
+  transition: transform 400ms var(--ease-expo-out);
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  mask:
+    radial-gradient(circle 13px at 0 0, transparent 97%, black),
+    radial-gradient(circle 13px at 100% 0, transparent 97%, black);
+  mask-composite: intersect;
+}
+@media (hover: hover) {
+  .stub:hover {
+    --dy: 4px;
+    --dr: 0.4deg;
+  }
+}
+.stub[data-drag] {
+  transition: none;
+  cursor: grabbing;
+}
+.wrap[data-torn] .stub {
+  --dy: 34px;
+  --dr: 3.5deg;
+}
+/* A cancelled ticket fades everything but its stamp. */
+.shape[data-x] .main > :not(.stamp) {
+  opacity: 0.4;
+}
+.main > * {
+  transition: opacity 250ms ease-out;
+}
+.stamp {
+  transform: rotate(-9deg);
+  animation: stamp 400ms var(--ease-expo-out) both;
+}
+@keyframes stamp {
+  from {
+    opacity: 0;
+    transform: rotate(-9deg) scale(1.9);
+  }
+}
+.char {
+  animation: pop 400ms var(--ease-expo-out) both;
+  animation-delay: calc(350ms + var(--k) * 40ms);
+  transition:
+    translate 250ms var(--ease-expo-out),
+    border-color 150ms ease-out;
+}
+@media (hover: hover) {
+  .code:hover .char {
+    translate: 0 -4px;
+    transition-delay: calc(var(--k) * 30ms);
+  }
+}
+@keyframes pop {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.9);
+  }
+}
+/* The headline swap and the phone notification drop. */
+.swap {
+  animation: swap 400ms var(--ease-expo-out) both;
+}
+@keyframes swap {
+  from {
+    opacity: 0;
+    transform: translateY(0.28em);
+  }
+}
+.drop {
+  animation: drop 400ms 900ms var(--ease-expo-out) both;
+}
+@keyframes drop {
+  from {
+    opacity: 0;
+    transform: translateY(-14px) scale(0.98);
+  }
+}
+
+/* Reduced motion: the turn is a cross-fade; nothing moves. */
+@media (prefers-reduced-motion: reduce) {
+  .tilt,
+  .turn,
+  .turn[data-flipped],
+  .back {
+    transform: none;
+    transition: none;
+  }
+  .face {
+    transition: opacity 250ms ease-out;
+  }
+  .back,
+  .turn[data-flipped] .front {
+    opacity: 0;
+  }
+  .turn[data-flipped] .back {
+    opacity: 1;
+  }
+  .stub,
+  .wrap {
+    transition: none;
+  }
+  .stamp,
+  .char,
+  .swap,
+  .drop {
+    animation-name: fade;
+  }
+  @keyframes fade {
+    from {
+      opacity: 0;
+    }
+  }
+}
