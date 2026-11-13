@@ -5,6 +5,15 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); version
 
 ## [Unreleased]
 
+### Changed — Four signed-in accounts per browser, and no "Something is wrong" door while it leads nowhere — 12 Nov 2026
+
+- One browser holds four signed-in accounts, not five: five sessions of cookies passed Node's 16 KB header limit and
+  every page answered HTTP 431 ([ADR 0472](docs/adr/0472-four-accounts-per-browser.md), superseding the limit in
+  ADR 0280).
+- Book a visit and Ask for a day show only Planned care while the symptom catalogue is off (Gate CS unsigned): the
+  "Something is wrong" door led to a page saying it was not available. It comes back by itself once the catalogue is
+  signed and `FEATURE_SYMPTOM_CATALOG=1`.
+
 ### Changed — One medicine master in Set-up › Medicines — 3 Nov 2026
 
 - Set-up › Medicines is now the grid from the Medicines kit: filters and saved views, per-place top-up levels and
