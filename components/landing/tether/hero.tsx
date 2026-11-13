@@ -10,7 +10,7 @@ import { EXAMPLE, HERO, SMS, TICKET } from "@/content/tether-landing/copy";
 import { exampleVisit } from "@/lib/landing/example-visit";
 import { cn } from "@/lib/utils";
 import { LandingToast } from "./chrome";
-import { ExampleTicket } from "./ticket";
+import { Ticket } from "./ticket";
 import styles from "./ticket.module.css";
 import { reducedMotion, useTick } from "./use-tick";
 
@@ -115,7 +115,8 @@ export function Hero({ preAlert, now: serverNow }: { preAlert: boolean; now: num
         className="bg-pw-surface-2 dark:bg-pw-surface flex flex-col items-center rounded-[36px] px-9 pt-11 pb-10 max-[760px]:mt-6 max-[760px]:bg-transparent max-[760px]:p-0 dark:max-[760px]:bg-transparent"
       >
         <Message text={sms} phone />
-        <ExampleTicket
+        <Ticket
+          mode="example"
           name={TICKET.frontName(`${v.long} at ${v.time}`)}
           status={status}
           date={v.short}

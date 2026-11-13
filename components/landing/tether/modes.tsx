@@ -10,7 +10,7 @@ import { cn } from "@/lib/utils";
 import sections from "./sections.module.css";
 import { H2, Kicker } from "./statement";
 import { Dots } from "./steps";
-import { ExampleTicket } from "./ticket";
+import { Ticket } from "./ticket";
 
 /**
  * Ways to book (Step 4): a segmented control, the mode's facts and its example ticket. On the phone the
@@ -104,7 +104,8 @@ export function Modes({ now }: { now: number }) {
           style={{ touchAction: "pan-y" }}
           onPointerDown={swipeDown}
         >
-          <ExampleTicket
+          <Ticket
+            mode="example"
             name={TICKET.modeName}
             status="ok"
             statusWord={m.status}

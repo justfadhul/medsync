@@ -4,8 +4,10 @@ import type { DeskCtx } from "./desk";
 import type { AgeInput, AgeMode, DeskRow, DeskSession } from "@/lib/reception/desk/model";
 import { useState } from "react";
 
+import { Ticket } from "@/components/landing/tether/ticket";
 import { fill } from "@/content/lab-workspace-v2";
 import { DESK } from "@/content/reception/desk";
+import { TICKET } from "@/content/tether-landing/copy";
 import {
   addDays,
   ageOf,
@@ -14,6 +16,7 @@ import {
   fmtDay,
   hhmm,
   initials,
+  whoOf,
 } from "@/lib/reception/desk/model";
 import { SlipCard } from "./desk-dialogs";
 import { c, Chips, DeskDialog, Icon } from "./ui";
@@ -763,6 +766,7 @@ export function BookDialog({
     slot: preset?.slot ?? "",
   }));
   const set = (p: Partial<typeof blank>) => setV((x) => ({ ...x, ...p }));
+  const [flip, setFlip] = useState(false);
 
   if (ctx.offline && !v.code)
     return (
@@ -938,7 +942,29 @@ export function BookDialog({
           </div>
           <aside className={c("bksum")}>
             <p className={c("cap")}>{B.ticket}</p>
-            <p className={c("why")}>{B.sameTicket}</p>
+            {/* ADR 0490: the same Ticket as the landing, in real mode, from this booking. */}
+            <Ticket
+              mode="real"
+              name={`${B.ticket}: ${personName}`}
+              status="ok"
+              date={se ? fmtDay(se.date) : ""}
+              time={se ? (needSlot ? v.slot : hhmm(se.st)) : ""}
+              note={B.sameTicket}
+              fields={[{ label: TICKET.clinic, value: ctx.clinic(v.clinic).name }]}
+              doctor={{ label: "Doctor", value: v.doc === "any" ? B.anyDoctor : v.doc }}
+              visit={{
+                patient: personName,
+                initials: initials(personName),
+                sexAge: v.person ? whoOf(v.person) : (v.newPerson?.who ?? ""),
+                clinic: ctx.clinic(v.clinic).name,
+                code: v.code,
+                fee: fee ? ugx(fee) : DESK.row.fee.none,
+                doctorInitials: [],
+                bring: [],
+              }}
+              flipped={flip}
+              onTurn={() => setFlip(!flip)}
+            />
           </aside>
         </div>
       </DeskDialog>

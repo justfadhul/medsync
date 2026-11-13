@@ -131,7 +131,7 @@ export const TICKET = {
   },
   stub: {
     hint: "Your code · tap to copy",
-    copyName: "Copy the code K 7 M 4 2 Q",
+    copyName: (code: string) => `Copy the code ${[...code].join(" ")}`,
     copied: "Copied",
     yourCode: "Your code",
     offline: "Works with no internet",

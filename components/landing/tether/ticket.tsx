@@ -10,6 +10,20 @@ import styles from "./ticket.module.css";
 
 export type TicketStatus = "ok" | "coming" | "cancelled";
 
+/** What one ticket shows. Example mode uses the invented example; real mode, the booking (ADR 0490). */
+export interface TicketVisit {
+  patient: string;
+  initials: string;
+  sexAge: string;
+  clinic: string;
+  code: string;
+  fee: string;
+  doctorInitials: readonly string[];
+  bring: readonly string[];
+}
+
+const EXAMPLE_VISIT: TicketVisit = { ...EXAMPLE, bring: TICKET.back.bringItems };
+
 const CAP = "block text-[12px] leading-4 font-semibold tracking-[0.06em] uppercase";
 const VAL = "mt-0.5 block text-[18px] leading-6 font-semibold";
 const BIG = "mt-0.5 block text-[32px] leading-9 font-medium tracking-[-0.03em]";
@@ -27,10 +41,13 @@ const STAMP: Record<TicketStatus, string> = {
 const STUB_HALF = 57; // half the stub's 114 px: drag further than this to tear it (§5.3)
 
 /**
- * The example ticket (§5.3, ADR 0479). Both instances use it: the hero ticket and the Ways to book ticket.
+ * The ticket (§5.3, ADR 0479, ADR 0490). Example mode: the hero and Ways to book tickets, invented data and the
+ * example label. Real mode: the desk's booked ticket, from the booking.
  * The parent owns the turn (its own Turn button needs it) and the clock; the stub's tear and copy live here.
  */
-export function ExampleTicket({
+export function Ticket({
+  mode,
+  visit = EXAMPLE_VISIT,
   name,
   status,
   date,
@@ -46,7 +63,9 @@ export function ExampleTicket({
   onTurn,
   tiltRef,
 }: {
-  /** The front's accessible name; starts with "Example" (LP1). */
+  mode: "example" | "real";
+  visit?: TicketVisit;
+  /** The front's accessible name; in example mode it starts with "Example" (LP1). */
   name: string;
   status: TicketStatus;
   date: string;
@@ -84,7 +103,7 @@ export function ExampleTicket({
 
   const copy = () => {
     if (Date.now() - skipCopy.current < 450) return;
-    navigator.clipboard?.writeText(EXAMPLE.code).catch(() => {});
+    navigator.clipboard?.writeText(visit.code).catch(() => {});
     setCopied(true);
     window.clearTimeout(copyTimer.current);
     copyTimer.current = window.setTimeout(() => setCopied(false), 1600);
@@ -124,7 +143,7 @@ export function ExampleTicket({
   };
 
   return (
-    <div className={styles.wrap} data-torn={torn || undefined} data-ticket>
+    <div className={styles.wrap} data-torn={torn || undefined} data-ticket data-pw>
       <div className={styles.tilt} ref={tiltRef}>
         <div className={styles.turn} data-flipped={flipped || undefined}>
           <div className={cn(styles.face, styles.front)} inert={flipped}>
@@ -142,9 +161,11 @@ export function ExampleTicket({
                 <Row className="items-center">
                   <b className="text-[20px] font-bold tracking-[-0.03em]">
                     {TICKET.brand}
-                    <span className="text-pw-on-band-2 ml-2 text-[12px] font-semibold tracking-[0.06em] uppercase">
-                      {TICKET.example}
-                    </span>
+                    {mode === "example" ? (
+                      <span className="text-pw-on-band-2 ml-2 text-[12px] font-semibold tracking-[0.06em] uppercase">
+                        {TICKET.example}
+                      </span>
+                    ) : null}
                   </b>
                   <span
                     className={cn(
@@ -156,13 +177,13 @@ export function ExampleTicket({
                   </span>
                 </Row>
                 <span className="mt-2.5 flex items-center gap-3">
-                  <Avatar>{EXAMPLE.initials}</Avatar>
+                  <Avatar>{visit.initials}</Avatar>
                   <span>
                     <span className="block text-[18px] leading-6 font-semibold">
-                      {EXAMPLE.patient}
+                      {visit.patient}
                     </span>
                     <span className="text-pw-on-band-2 block text-[14px] leading-5">
-                      {EXAMPLE.sexAge}
+                      {visit.sexAge}
                     </span>
                   </span>
                 </span>
@@ -214,8 +235,8 @@ export function ExampleTicket({
                   {doctor.value === "rolling" || doctor.value === "first" ? (
                     <span className="flex flex-none" aria-hidden="true">
                       {(doctor.value === "first"
-                        ? EXAMPLE.doctorInitials.slice(0, 1)
-                        : EXAMPLE.doctorInitials
+                        ? visit.doctorInitials.slice(0, 1)
+                        : visit.doctorInitials
                       ).map((d) => (
                         <Avatar key={d} small>
                           {d}
@@ -256,7 +277,7 @@ export function ExampleTicket({
                 <button
                   type="button"
                   onClick={copy}
-                  aria-label={TICKET.stub.copyName}
+                  aria-label={TICKET.stub.copyName(visit.code)}
                   className={cn(
                     styles.code,
                     "text-pw-ink flex cursor-pointer flex-col items-start gap-1.5 rounded-lg",
@@ -266,7 +287,7 @@ export function ExampleTicket({
                     {copied ? TICKET.stub.copied : TICKET.stub.hint}
                   </span>
                   <span className="flex gap-2 font-mono">
-                    {[...EXAMPLE.code].map((c, k) => (
+                    {[...visit.code].map((c, k) => (
                       <b
                         key={k}
                         style={{ "--k": k } as React.CSSProperties}
@@ -306,32 +327,34 @@ export function ExampleTicket({
                 <span className="grid w-full grid-cols-2 gap-4">
                   <span>
                     <span className={cn(CAP, "text-pw-ink-3")}>{TICKET.back.where}</span>
-                    <span className={VAL}>{EXAMPLE.clinic}</span>
+                    <span className={VAL}>{visit.clinic}</span>
                     <span className="text-pw-ink-2 block text-[14px] leading-5">
                       {TICKET.back.whereValue}
                     </span>
                   </span>
                   <span>
                     <span className={cn(CAP, "text-pw-ink-3")}>{TICKET.back.fee}</span>
-                    <span className={VAL}>{EXAMPLE.fee}</span>
+                    <span className={VAL}>{visit.fee}</span>
                     <span className="text-pw-ink-2 block text-[14px] leading-5">
                       {TICKET.back.feeNote}
                     </span>
                   </span>
                 </span>
-                <span className="block w-full">
-                  <span className={cn(CAP, "text-pw-ink-3")}>{TICKET.back.bring}</span>
-                  <span className="mt-1.5 flex flex-wrap gap-1.5">
-                    {TICKET.back.bringItems.map((b) => (
-                      <span
-                        key={b}
-                        className="bg-pw-surface-2 rounded-full px-3 py-[5px] text-[14px] leading-5 font-medium"
-                      >
-                        {b}
-                      </span>
-                    ))}
+                {visit.bring.length ? (
+                  <span className="block w-full">
+                    <span className={cn(CAP, "text-pw-ink-3")}>{TICKET.back.bring}</span>
+                    <span className="mt-1.5 flex flex-wrap gap-1.5">
+                      {visit.bring.map((b) => (
+                        <span
+                          key={b}
+                          className="bg-pw-surface-2 rounded-full px-3 py-[5px] text-[14px] leading-5 font-medium"
+                        >
+                          {b}
+                        </span>
+                      ))}
+                    </span>
                   </span>
-                </span>
+                ) : null}
                 <Back label={TICKET.back.cantCome}>{TICKET.back.cancel}</Back>
               </button>
               <div
@@ -344,7 +367,7 @@ export function ExampleTicket({
               >
                 <span className={cn(CAP, "text-pw-on-band-2")}>{TICKET.stub.yourCode}</span>
                 <span className="font-mono text-[30px] leading-[34px] font-semibold tracking-[0.1em]">
-                  {EXAMPLE.codeSplit}
+                  {`${visit.code.slice(0, 3)} ${visit.code.slice(3)}`}
                 </span>
                 <span className={cn(CAP, "text-pw-on-band-2")}>{TICKET.stub.offline}</span>
               </div>

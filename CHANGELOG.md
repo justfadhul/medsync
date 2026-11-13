@@ -14,6 +14,8 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); version
   ([ADR 0486](docs/adr/0486-identity-before-check-in.md)). Waits are staff-only ([ADR 0487](docs/adr/0487-staff-only-waits.md)).
 - GATED migration 0294 and the new Edge Function `ha-reception-desk`; redeploy `ha-check-in-patient`,
   `ha-set-session-delay`, `ha-pre-arrival-arrived` and `ha-register-patient` after it. Wording is draft.
+- One `Ticket` (`mode` example or real) for the landing and the desk's booked ticket
+  ([ADR 0490](docs/adr/0490-one-ticket-component.md)).
 
 ### Added — Reception cancels and moves bookings — 12 Nov 2026
 
