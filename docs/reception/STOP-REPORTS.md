@@ -41,3 +41,23 @@ GATE A: signed in chat by Fadhul (CSO), 13 Nov 2026, via the main chat. Copy sta
 | Preview    | `/styleguide/reception-desk` (404 unless `MEDSYNC_FIXTURES=1`)                                  |
 | Pop-ups    | all centred `EditorDialog`s (ADR 0161)                                                          |
 | Tests      | `desk-model` 9/9; typecheck and lint clean on the new files                                     |
+
+## STOP 5 — one Ticket
+
+| Item   | Result                                                                                                     |
+| ------ | ---------------------------------------------------------------------------------------------------------- |
+| Merge  | `feat/landing-tether` (70b6a7fb), CHANGELOG union only                                                     |
+| Ticket | `components/landing/tether/ticket.tsx`: `Ticket` with `mode` (`example`, `real`) and a `visit` prop        |
+| Users  | landing hero and Ways to book (`mode="example"`); the desk's booked view (`mode="real"`, from the booking) |
+| Tests  | landing 52 pass; typecheck and lint clean                                                                  |
+
+## STOP 6 — live data and writes (flag off)
+
+| Item   | Result                                                                                                                                     |
+| ------ | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| Loader | `lib/reception/desk/load.ts` (same audited reads as the old pages), mapping in `map.ts` (pure, tested)                                     |
+| Port   | `components/reception/live-port.ts`: every desk write → an existing server action → its Edge Function                                      |
+| Page   | `/reception` renders `DeskLive` only when `receptionDeskLiveFor(hospital)`; off, unchanged                                                 |
+| Tests  | `desk-map` 3/3, `desk-model` 9/9                                                                                                           |
+| Safest | no fee model → fee 0; unknown sex/age stay unknown; walk-in with no record → unknown-patient label; booking reason → `other` + their words |
+| Limits | one session per clinic per day; desk users = the signed-in user; book search = today's board                                               |

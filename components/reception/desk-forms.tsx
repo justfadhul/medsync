@@ -291,7 +291,7 @@ export function WalkInDialog({
       phone,
       dateOfBirth: v.pick ? null : (age.dob ?? dobOf(v.age)),
       ageOnly: v.pick || v.age.mode !== "age" ? null : (age.age ?? null),
-      sex: v.pick ? v.pick.sex : v.sex || null,
+      sex: v.pick ? (v.pick.sex === "?" ? null : v.pick.sex) : v.sex || null,
       clinic: em ? "em" : v.clinic,
       route: v.route === "clinic" && direct ? "clinic" : "triage",
       reason: v.reason,

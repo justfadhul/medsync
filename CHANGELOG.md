@@ -16,6 +16,8 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); version
   `ha-set-session-delay`, `ha-pre-arrival-arrived` and `ha-register-patient` after it. Wording is draft.
 - One `Ticket` (`mode` example or real) for the landing and the desk's booked ticket
   ([ADR 0490](docs/adr/0490-one-ticket-component.md)).
+- The live desk: `/reception` reads the hospital's own day and writes through the existing server actions,
+  only behind `RECEPTION_DESK`.
 
 ### Added — Reception cancels and moves bookings — 12 Nov 2026
 

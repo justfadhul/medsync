@@ -25,8 +25,8 @@ export interface DeskData {
   directory: {
     id: string;
     name: string;
-    sex: "F" | "M";
-    age: number;
+    sex: "F" | "M" | "?";
+    age: number | null;
     phone: string;
     pno: string;
   }[];

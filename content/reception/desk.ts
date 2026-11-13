@@ -118,6 +118,7 @@ export const DESK = {
     registerWalkIn: "Register a walk-in",
   },
 
+  errors: { generic: "That did not save. Try again, or use the booking page." },
   row: {
     meta: "{sex} · {age} · {code}",
     hidden: "Hidden",
