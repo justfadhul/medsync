@@ -534,6 +534,7 @@ describe("composeDispatchSms — one GSM-7 part, plain, never punitive", () => {
     "session_cancelled",
     "window_shifted",
     "unconfirmed_release",
+    "visit_cancelled",
   ];
 
   it.each(kinds)("%s fits in 160 GSM-7 characters", (kind) => {

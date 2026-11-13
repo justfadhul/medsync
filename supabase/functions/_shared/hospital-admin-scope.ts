@@ -1,4 +1,5 @@
 import { hasRole, serviceClient } from "./auth.ts";
+import { receptionAt } from "./booking-change.ts";
 
 /**
  * Hospital-admin scope check for Edge Functions.
@@ -113,4 +114,26 @@ export async function authoriseAtHospital(
     .limit(1)
     .maybeSingle();
   return aff ? null : "no active affiliation at this hospital";
+}
+
+/**
+ * Reception at THIS hospital (ADR 0473): a RECEPTION-cadre affiliation there,
+ * approved, at a live hospital. Every row of the caller's is read and
+ * `receptionAt` picks, so the hospital match is the tested pure rule.
+ */
+export async function isReceptionAt(callerId: string, hospitalId: string): Promise<boolean> {
+  const { data, error } = await serviceClient()
+    .from("staff_affiliations")
+    .select("hospital_id, state, cadres(code), hospitals(state)")
+    .eq("user_id", callerId);
+  if (error) return false;
+  return receptionAt(
+    (data ?? []).map((r: Record<string, unknown>) => ({
+      hospitalId: r.hospital_id as string,
+      state: r.state as string,
+      cadreCode: (r.cadres as { code?: string } | null)?.code ?? null,
+      hospitalState: (r.hospitals as { state?: string } | null)?.state ?? null,
+    })),
+    hospitalId,
+  );
 }

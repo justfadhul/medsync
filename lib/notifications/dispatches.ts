@@ -177,6 +177,17 @@ const START_BOUND: ReadonlySet<string> = new Set([
   "window_shifted",
 ]);
 
+/**
+ * Kinds that ANNOUNCE the end of a visit: their appointment is cancelled by
+ * design, so rule C must not reap them for it (it did, so a cancelled clinic
+ * day was never told — ADR 0473).
+ */
+const ABOUT_AN_ENDED_VISIT: ReadonlySet<string> = new Set([
+  "session_cancelled",
+  "unconfirmed_release",
+  "visit_cancelled",
+]);
+
 /** Appointment kinds that wait for the clinician's confirmation of a slot request. */
 const NEEDS_CONFIRMED_APPOINTMENT: ReadonlySet<string> = new Set([
   "booking_receipt",
@@ -209,7 +220,8 @@ export function quietHoursEnd(now: Date, quiet: QuietHours, timeZone = DEFAULT_T
  *   A. a SENT push row past `fallback_after` with no ack → the SMS fallback
  *      row (only while the related row is still live).
  *   B. not queued/held — never re-sent; the claim UPDATE is the real guard.
- *   C. related row no longer live → reaped `cancelled`.
+ *   C. related row no longer live → reaped `cancelled` — except a kind that
+ *      announces that very ending (`ABOUT_AN_ENDED_VISIT`).
  *   D. not due → held.
  *   E. visit already started (start-bound kinds) → reaped; stale past the
  *      grace window (start-bound kinds) → reaped. A receipt, an offer and a
@@ -275,7 +287,7 @@ export function planDispatch(args: PlanDispatchArgs): DispatchPlan {
       continue;
     }
     // C.
-    if (!row.related.live) {
+    if (!row.related.live && !ABOUT_AN_ENDED_VISIT.has(row.kind)) {
       reap(row.id, "cancelled", `related_${row.related.status ?? "gone"}`);
       continue;
     }
@@ -482,6 +494,11 @@ export function composeDispatchSms(a: DispatchCopyArgs): string {
         "MedSync: your place at ",
         ` on ${day(a.startsAtIso)} was released because it was not confirmed. If you still need a visit, open MedSync to book again.`,
       );
+    case "visit_cancelled":
+      return fit(
+        "MedSync: ",
+        ` has cancelled your visit on ${day(a.startsAtIso)}.${code} We are sorry. To book another day, open MedSync or call the clinic.`,
+      );
     case "window_shifted":
       return fit(
         "MedSync: ",
@@ -504,6 +521,7 @@ export function composeDispatchPush(a: DispatchCopyArgs): { title: string; body:
     session_cancelled: "Clinic day cancelled",
     window_shifted: "Your arrival window has moved",
     unconfirmed_release: "Your place was released",
+    visit_cancelled: "Visit cancelled",
   };
   return {
     title: titles[a.kind] ?? "MedSync",

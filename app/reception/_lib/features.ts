@@ -11,6 +11,7 @@ export type ReceptionIconKey =
   | "expected"
   | "intake"
   | "book"
+  | "bookings"
   | "find"
   | "flow"
   | "labPayments";
@@ -21,6 +22,7 @@ export type ReceptionFeatureSlug =
   | "expected"
   | "intake"
   | "book"
+  | "bookings"
   | "find"
   | "flow"
   | "lab-payments";
@@ -67,6 +69,13 @@ export const RECEPTION_FEATURE_AREAS: ReadonlyArray<ReceptionFeatureArea> = [
     label: "Book",
     hint: "Book a visit on behalf of a caller",
     iconKey: "book",
+    placeholder: false,
+  },
+  {
+    slug: "bookings",
+    label: "Bookings",
+    hint: "Cancel or move a booking — by booking code or patient code",
+    iconKey: "bookings",
     placeholder: false,
   },
   {

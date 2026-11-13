@@ -5,6 +5,15 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); version
 
 ## [Unreleased]
 
+### Added — Reception cancels and moves bookings — 12 Nov 2026
+
+- Reception › Bookings finds a booking by booking code or patient code and cancels it with a reason, or moves it to
+  another day or time of the same clinic, numbered clinic days included. Same Edge Functions as the patient and the
+  clinician, now allowing reception at the booking's own hospital; a move books through the booking core, so
+  capacity, hours and the clinic-day number hold ([ADR 0473](docs/adr/0473-reception-cancels-and-moves-bookings.md)).
+- A cancel by the clinic now texts the patient (`visit_cancelled`, GATED migration 0290). The "clinic day cancelled"
+  and "place released" messages were being dropped by the dispatcher because their visit was cancelled; they now go.
+
 ### Changed — Four signed-in accounts per browser, and no "Something is wrong" door while it leads nowhere — 12 Nov 2026
 
 - One browser holds four signed-in accounts, not five: five sessions of cookies passed Node's 16 KB header limit and

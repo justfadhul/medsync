@@ -17,6 +17,7 @@
  *   waitlist_offer         push now;      SMS if no ack in 15 min
  *   window_shifted         push now;      SMS if no ack in 15 min
  *   unconfirmed_release    push + SMS, both, now         (a release is never silent)
+ *   visit_cancelled        push + SMS, both, now         (the clinic cancelled one visit, ADR 0473)
  *
  * A PROVISIONAL recipient (no account, a phone ciphertext) has nothing to
  * push to, so every kind collapses to one SMS row for them — their phone
@@ -46,6 +47,8 @@ export type DispatchKind =
   | "payment"
   | "deterioration_flag"
   | "unconfirmed_release"
+  /** ADR 0473 (0290): staff cancelled one booking. */
+  | "visit_cancelled"
   /** Gate F (0062): the one reply to an inbound SMS keyword. */
   | "sms_reply";
 
@@ -121,6 +124,7 @@ export type DispatchEvent =
       shiftMinutes: number;
     })
   | (EventBase & { kind: "unconfirmed_release"; appointmentId: string })
+  | (EventBase & { kind: "visit_cancelled"; appointmentId: string })
   | (EventBase & {
       kind: "sms_reply";
       inboundSmsId: string;
@@ -133,6 +137,7 @@ export const BOTH_CHANNELS_ALWAYS: ReadonlySet<DispatchKind> = new Set([
   "booking_receipt",
   "session_cancelled",
   "unconfirmed_release",
+  "visit_cancelled",
 ]);
 
 /** Kinds the dispatcher HOLDS inside a facility's quiet hours (PRD §3.3.3, §3.6). */
@@ -280,6 +285,7 @@ export function dispatchRows(event: DispatchEvent): DispatchInsert[] {
       }).pushFirst(nowMs, LEADS.waitlist_offer.fallbackAfterMs);
 
     case "unconfirmed_release":
+    case "visit_cancelled":
       return base("appointment", event.appointmentId, {}).both(nowMs);
 
     case "sms_reply":
