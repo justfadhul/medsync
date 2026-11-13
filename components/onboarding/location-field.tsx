@@ -50,12 +50,15 @@ export function LocationField({
   label = LOCATION.label,
   village,
   districtOnly,
+  noLocate,
 }: {
   name?: string;
   label?: string;
   /** Show "Village or cell (optional)" once a place is chosen. */
   village?: string;
   districtOnly?: boolean;
+  /** Search only: at the desk, "my location" is the clinic's, not the patient's home (ADR 0475). */
+  noLocate?: boolean;
 }) {
   const { control } = useFormContext();
   const { field } = useController({ name, control });
@@ -160,22 +163,26 @@ export function LocationField({
           <>
             {!districtOnly ? (
               <div className="flex flex-col gap-1">
-                <button
-                  type="button"
-                  onClick={useLocation}
-                  disabled={locating || !online}
-                  className="tap text-body-m inline-flex min-h-11 items-center justify-center gap-2 self-start rounded-md border border-teal-600 px-4 font-medium text-teal-800 hover:bg-teal-50 disabled:opacity-50 dark:text-teal-300 dark:hover:bg-teal-950/40"
-                >
-                  <LocateFixedIcon aria-hidden className="size-4" />
-                  {locating ? LOCATION.locating : LOCATION.useMyLocation}
-                </button>
-                <p className="text-body-s text-muted-foreground">{LOCATION.useHint}</p>
-                <p
-                  aria-hidden
-                  className="text-body-s text-muted-foreground mt-3 flex items-center gap-3 before:h-px before:w-6 before:bg-gray-200 after:h-px after:flex-1 after:bg-gray-200 dark:before:bg-gray-700 dark:after:bg-gray-700"
-                >
-                  {LOCATION.or}
-                </p>
+                {noLocate ? null : (
+                  <>
+                    <button
+                      type="button"
+                      onClick={useLocation}
+                      disabled={locating || !online}
+                      className="tap text-body-m inline-flex min-h-11 items-center justify-center gap-2 self-start rounded-md border border-teal-600 px-4 font-medium text-teal-800 hover:bg-teal-50 disabled:opacity-50 dark:text-teal-300 dark:hover:bg-teal-950/40"
+                    >
+                      <LocateFixedIcon aria-hidden className="size-4" />
+                      {locating ? LOCATION.locating : LOCATION.useMyLocation}
+                    </button>
+                    <p className="text-body-s text-muted-foreground">{LOCATION.useHint}</p>
+                    <p
+                      aria-hidden
+                      className="text-body-s text-muted-foreground mt-3 flex items-center gap-3 before:h-px before:w-6 before:bg-gray-200 after:h-px after:flex-1 after:bg-gray-200 dark:before:bg-gray-700 dark:after:bg-gray-700"
+                    >
+                      {LOCATION.or}
+                    </p>
+                  </>
+                )}
                 <label htmlFor={id} className="text-body-s text-foreground mt-2 font-medium">
                   {LOCATION.searchLabel}
                 </label>

@@ -1,6 +1,7 @@
 "use client";
 
 import type { PatientInput } from "@/lib/onboarding/schemas";
+import Link from "next/link";
 import { TriangleAlertIcon } from "lucide-react";
 
 import { ConsentBlock } from "@/components/onboarding/consent-block";
@@ -14,6 +15,7 @@ import {
 } from "@/components/onboarding/fields";
 import { LocationField } from "@/components/onboarding/location-field";
 import { FormHeader, Section, SectionedForm } from "@/components/onboarding/sectioned-form";
+import { PATIENT_CLAIM } from "@/content/desk-register";
 import { PATIENT } from "@/content/onboarding";
 import { ADULT_AGE, ageOn, isoFromParts } from "@/lib/onboarding/fields";
 import { patientSchema } from "@/lib/onboarding/schemas";
@@ -71,7 +73,17 @@ export function PatientSignupForm({
       submit={submitPatientSignup}
       submitLabel={PATIENT.submit}
       pendingLabel={PATIENT.pending}
-      header={<FormHeader kicker={PATIENT.kicker} title={PATIENT.title} lead={PATIENT.lead} />}
+      header={
+        <FormHeader kicker={PATIENT.kicker} title={PATIENT.title} lead={PATIENT.lead}>
+          {/* A desk-registered patient takes that record over instead of starting a second one (ADR 0475). */}
+          <Link
+            href="/signup/patient/claim"
+            className="text-body-s self-start font-medium text-teal-700 underline underline-offset-4 dark:text-teal-400"
+          >
+            {PATIENT_CLAIM.signupLink}
+          </Link>
+        </FormHeader>
+      }
       consent={
         <ConsentBlock
           version={notice.version}

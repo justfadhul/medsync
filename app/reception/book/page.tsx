@@ -10,12 +10,14 @@ import { Input } from "@/components/ui/input";
 import { db } from "@/db";
 import { patientProfiles } from "@/db/schema/patient-profiles";
 import { loadBookingSymptoms } from "@/lib/catalog/symptoms";
+import { liveNotice } from "@/lib/onboarding/notice";
 import { findPatientsByPhone, searchPatientsByCode } from "@/lib/reception/queries";
 import { requireReceptionScope } from "@/lib/reception/scope";
 import { fetchLines } from "@/lib/scheduling/booking-options";
 import { cn } from "@/lib/utils";
 import { DEFAULT_TIME_ZONE, localDateKey } from "@/supabase/functions/_shared/slots";
 import { DeskBooking } from "./_components/desk-booking";
+import { RegisterAndBook } from "./_components/register-and-book";
 
 export const metadata: Metadata = { title: "Book · Reception · MedSync" };
 export const dynamic = "force-dynamic";
@@ -75,6 +77,7 @@ export default async function ReceptionBookPage({ searchParams }: PageProps) {
   }
 
   const phone = asPhone(query);
+  const notice = await liveNotice();
   const [byCode, byPhone] =
     query.length >= 3
       ? await Promise.all([
@@ -162,16 +165,19 @@ export default async function ReceptionBookPage({ searchParams }: PageProps) {
       <div className="border-border bg-card flex flex-col gap-3 rounded-lg border p-5">
         <p className="text-foreground text-body-m font-medium">Not registered, or no code?</p>
         <p className="text-muted-foreground text-body-s leading-relaxed">
-          Book with the name, phone and age the caller gives. No record is created; the booking
-          reads &ldquo;Identity to confirm&rdquo; until the desk matches or registers the person on
-          arrival.
+          At the counter: register them, then book. On the phone: book with the name, phone and age
+          the caller gives. No record is created; the booking reads &ldquo;Identity to
+          confirm&rdquo; until the desk matches or registers the person on arrival.
         </p>
-        <Link
-          href="/reception/book?new=1"
-          className={cn(buttonVariants({ variant: "secondary", size: "lg" }), "w-fit")}
-        >
-          New caller
-        </Link>
+        <div className="flex flex-wrap gap-2">
+          {notice ? <RegisterAndBook notice={notice} /> : null}
+          <Link
+            href="/reception/book?new=1"
+            className={cn(buttonVariants({ variant: "secondary", size: "lg" }), "w-fit")}
+          >
+            New caller
+          </Link>
+        </div>
       </div>
     </div>
   );

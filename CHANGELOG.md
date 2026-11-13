@@ -14,6 +14,38 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); version
 - A cancel by the clinic now texts the patient (`visit_cancelled`, GATED migration 0290). The "clinic day cancelled"
   and "place released" messages were being dropped by the dispatcher because their visit was cancelled; they now go.
 
+### Added — A desk-registered patient takes their record over at sign-up — 13 Nov 2026
+
+- **Give a sign-up code** on the front door: for a patient this desk registered, after checking it is them. The code
+  (`ABCD-EFGH`) works once, for 30 days; five wrong tries spend it; only its blind index is stored
+  ([ADR 0475](docs/adr/0475-walk-in-patients-registered-at-the-desk.md)).
+- `/signup/patient/claim` (linked from sign-up): the mobile number the desk took, the code, then an email and
+  password. The desk's record gets the sign-in: same id, so bookings, visits and notes stay in one record. Nothing
+  is deleted; the code, the claim and the person's own consent are audited.
+- A wrong, expired, spent or used code changes nothing and says how to finish later. Ordinary sign-up still works.
+- A desk record can never get a password any other way: a guard on `auth.users` refuses it without an open claim,
+  and password reset refuses a desk record before asking Supabase.
+- GATED migration 0292 (after 0291); redeploy `ha-register-patient` after it. Wording is draft.
+
+### Added — Reception registers a walk-in who has no MedSync account — 12 Nov 2026
+
+- **Register new patient** (a centred dialog) on the front door, on Confirm identity and on Book: sign-up's
+  questions and rules, no email or password. The record gets a patient code and is booked and checked in like any
+  patient; nobody can sign in with it ([ADR 0475](docs/adr/0475-walk-in-patients-registered-at-the-desk.md)).
+- Before creating anything, this hospital's patients with the same phone, or the same name and year of birth, are
+  shown instead; the desk uses one or says it is someone else (audited).
+- The patient's agreement to the data-processing notice is recorded with the receptionist's name. Wording is draft.
+- GATED migration 0291; deploy the new Edge Function `ha-register-patient` after it. Taking the record over at a
+  later sign-up is designed in the ADR, not built.
+
+### Added — Reset your own password — 12 Nov 2026
+
+- Sign-in's "Forgot password?" now leads to `/forgot-password`: an emailed link, a page to choose a new password,
+  then sign in again ([ADR 0474](docs/adr/0474-password-reset.md)). The page answers the same whether or not the
+  email has an account. Staff with an authenticator enter their code before choosing the password.
+- No migration. Go-live needs custom SMTP, the confirm URL in Supabase's redirect list, and the recovery email
+  template pointed at `/forgot-password/confirm`.
+
 ### Changed — Four signed-in accounts per browser, and no "Something is wrong" door while it leads nowhere — 12 Nov 2026
 
 - One browser holds four signed-in accounts, not five: five sessions of cookies passed Node's 16 KB header limit and

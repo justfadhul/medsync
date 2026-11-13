@@ -2,10 +2,13 @@
 
 import type { RegisterIntakeState } from "@/app/hospital-admin/intake/actions";
 import type { DraftSymptom } from "@/app/patient/book/_lib/booking";
+import type { RegisterWalkInResult } from "@/app/reception/actions";
 import type { DeskCatalogValue } from "@/components/intake/desk-catalog";
+import type { DeskNotice } from "@/components/intake/register-patient-dialog";
 import type { PatientIdentity } from "@/components/medsync/patient-identity";
 import type { BookingSymptomOption } from "@/lib/catalog/symptoms";
 import type { CatalogRenderMode } from "@/lib/emergency/feature";
+import type { DeskPatientInput } from "@/lib/onboarding/schemas";
 import type { ReceptionPatientHit } from "@/lib/reception/queries";
 import type { BookingSymptom } from "@/supabase/functions/_shared/symptoms";
 import Link from "next/link";
@@ -15,6 +18,7 @@ import { AlertTriangleIcon, CheckCircle2Icon, UserPlusIcon } from "lucide-react"
 
 import { DURATION_MISSING, SymptomPicker } from "@/app/patient/book/_components/symptom-picker";
 import { DeskCatalog } from "@/components/intake/desk-catalog";
+import { RegisterPatientDialog } from "@/components/intake/register-patient-dialog";
 import { Panel } from "@/components/medsync/panel";
 import { PatientIdentityCard } from "@/components/medsync/patient-identity";
 import { Button, buttonVariants } from "@/components/ui/button";
@@ -144,6 +148,11 @@ interface FrontDoorFormProps {
   todayHref: string;
   /** Gate CS: what the complaint block asks with. Absent = `off` = the descriptive picker. */
   catalogMode?: CatalogRenderMode;
+  /** Reception only: register a walk-in who has no account (ADR 0475). Absent = code search only. */
+  register?: {
+    notice: DeskNotice;
+    action: (input: DeskPatientInput, despite: string[]) => Promise<RegisterWalkInResult>;
+  };
 }
 
 /** "Register another" remounts the form: the success state lives in the client, so a refresh would leave the card up. */
@@ -164,6 +173,7 @@ function Form({
   todayHref,
   onAnother,
   catalogMode = "off",
+  register,
 }: FrontDoorFormProps & { onAnother: () => void }) {
   const router = useRouter();
   const [state, formAction, actionPending] = useActionState<RegisterIntakeState, FormData>(
@@ -443,6 +453,33 @@ function Form({
                   </p>
                 ) : null}
                 <CodeSearch searchAction={searchAction} onPick={pickPatient} autoFocus={byCode} />
+                {register && !booked ? (
+                  <div className="flex flex-wrap items-center gap-3">
+                    <span className="text-muted-foreground text-caption">
+                      No code? They may not be on MedSync yet.
+                    </span>
+                    <RegisterPatientDialog
+                      notice={register.notice}
+                      action={register.action}
+                      onDone={(p) => {
+                        const identity: PatientIdentity = {
+                          patientCode: p.patientCode,
+                          displayName: p.displayName,
+                          photoUrl: null,
+                          ageYears: computeAgeYears(p.dateOfBirth),
+                          sex: p.sex,
+                          complaint: null,
+                        };
+                        pickPatient({
+                          patientUserId: p.patientUserId,
+                          appointmentId: null,
+                          identity,
+                          caption: null,
+                        });
+                      }}
+                    />
+                  </div>
+                ) : null}
               </>
             )}
           </fieldset>

@@ -3,17 +3,20 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { ArrowLeftIcon } from "lucide-react";
 
+import { ClaimCodeDialog } from "@/components/intake/claim-code-dialog";
 import { FrontDoorForm } from "@/components/intake/front-door-form";
 import { loadBookingSymptoms } from "@/lib/catalog/symptoms";
 import { catalogRenderMode } from "@/lib/emergency/feature";
 import { fetchCatalogVersionStatus } from "@/lib/emergency/queries";
 import { listActiveHospitals, listEntryTypes, listHospitalDepartments } from "@/lib/intake/queries";
+import { liveNotice } from "@/lib/onboarding/notice";
 import { fetchExpectedArrivals } from "@/lib/reception/queries";
 import { requireReceptionScope } from "@/lib/reception/scope";
 import {
   CATALOG,
   CATALOG_CHECKSUM,
 } from "@/supabase/functions/_shared/symptom-catalog/catalog.v0.1";
+import { giveClaimCodeAction, registerWalkInAction } from "../actions";
 import { receptionRegisterIntakeAction, receptionSearchPatientsAction } from "./actions";
 
 export const metadata: Metadata = { title: "Register · Reception · MedSync" };
@@ -21,7 +24,7 @@ export const dynamic = "force-dynamic";
 
 export default async function ReceptionIntakePage() {
   const scope = await requireReceptionScope();
-  const [entryTypes, departments, hospitals, symptomOptions, catalogStatus, arrivals] =
+  const [entryTypes, departments, hospitals, symptomOptions, catalogStatus, arrivals, notice] =
     await Promise.all([
       listEntryTypes(),
       listHospitalDepartments(scope.hospitalId),
@@ -40,6 +43,8 @@ export default async function ReceptionIntakePage() {
         surface: "reception_intake_pick",
         statuses: ["confirmed"],
       }),
+      // The sign-up notice, for a walk-in registered here (ADR 0475). None published: no register button.
+      liveNotice(),
     ]);
   const catalogMode = catalogRenderMode(catalogStatus?.signed === true);
   // A provisional booking has no patient to check in until the desk
@@ -82,6 +87,12 @@ export default async function ReceptionIntakePage() {
           Walk-in, booked check-in, referral, emergency, transfer, follow-up. Emergency entries skip
           required fields — capture fast, complete later.
         </p>
+        {/* A walk-in this desk registered takes the record over at sign-up with this code (ADR 0475). */}
+        {notice ? (
+          <div>
+            <ClaimCodeDialog action={giveClaimCodeAction} />
+          </div>
+        ) : null}
       </header>
 
       <FrontDoorForm
@@ -95,6 +106,7 @@ export default async function ReceptionIntakePage() {
         homeHref="/reception"
         todayHref="/reception"
         catalogMode={catalogMode}
+        register={notice ? { notice, action: registerWalkInAction } : undefined}
       />
     </div>
   );

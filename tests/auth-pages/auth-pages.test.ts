@@ -303,20 +303,12 @@ describe("source: shell, forms, copy and schemas", () => {
     expect(src).not.toMatch(/type="tel"|methods\.phone|labels\.phone|>\s*Phone\s*</);
   });
 
-  it("8 forgot password — an inline panel, or a working /forgot-password; never a 404", () => {
+  it("8 forgot password — a link to a working /forgot-password; never a 404", () => {
     const src = signInSource();
-    const trigger = openTags(src).find((t) => t.includes('aria-controls="reset-panel"'));
-    expect(trigger, 'no control with aria-controls="reset-panel"').toBeDefined();
-    expect(trigger).toContain("aria-expanded");
-    expect(
-      openTags(src).some((t) => t.includes('id="reset-panel"')),
-      'no id="reset-panel"',
-    ).toBe(true);
-    expect(src).toContain("resetPanel");
-    const resetRoute = existsSync(join(ROOT, "app/forgot-password/page.tsx"));
-    expect(src.includes('href="/forgot-password"'), "link only to a real /forgot-password").toBe(
-      resetRoute,
-    );
+    expect(src).toContain("SIGN_IN.forgot.href");
+    expect(SIGN_IN.forgot.href).toBe("/forgot-password");
+    for (const page of ["forgot-password", "forgot-password/confirm", "forgot-password/new"])
+      expect(existsSync(join(AUTH, page, "page.tsx")), page).toBe(true);
   });
 
   it("9 get-started — every door leads to a real sign-up route", () => {

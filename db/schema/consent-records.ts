@@ -37,6 +37,10 @@ export const consentRecords = pgTable(
     acceptedUserAgent: text("accepted_user_agent"),
     /** Migration 0061 / ADR 0090: withdrawn at; NULL = in force. The record itself never changes. */
     revokedAt: timestamp("revoked_at", { withTimezone: true }),
+    /** Migration 0291 / ADR 0475: the staff member who recorded an agreement given at the desk; NULL = self. */
+    recordedByUserId: uuid("recorded_by_user_id").references(() => authUsers.id, {
+      onDelete: "set null",
+    }),
   },
   (t) => [
     check(

@@ -6,7 +6,7 @@ import { useSearchParams } from "next/navigation";
 import { startTransition, useActionState, useEffect, useRef, useState } from "react";
 import { CheckIcon, EyeIcon, EyeOffIcon } from "lucide-react";
 
-import { TEXT_LINK, TextLink } from "@/components/landing/primitives";
+import { TextLink } from "@/components/landing/primitives";
 import { AuthCard } from "@/components/medsync/auth-card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -51,13 +51,14 @@ export function SignInForm() {
   const [state, formAction, pending] = useActionState(signInAction, initial);
   const params = useSearchParams();
   const justSignedUp = params.get("signed-up") === "1";
+  // /forgot-password/new lands here with ?reset=1 after the new password is saved.
+  const passwordChanged = params.get("reset") === "1";
   // The patient web's idle sign-out (D-PW-06) lands here with ?idle=1; nothing else sets it.
   const idle = params.get("idle") === "1";
   const redirectTo = params.get("redirect") ?? "";
 
   const [offline, setOffline] = useState(false);
   const [shown, setShown] = useState(false);
-  const [resetOpen, setResetOpen] = useState(false);
   const form = useRef<HTMLFormElement>(null);
   const summary = useRef<HTMLDivElement>(null);
 
@@ -91,10 +92,10 @@ export function SignInForm() {
     <AuthCard
       title={SIGN_IN.title}
       subtitle={
-        justSignedUp ? (
+        justSignedUp || passwordChanged ? (
           <span className="inline-flex items-center gap-1.5 text-teal-700">
             <CheckIcon aria-hidden className="size-4 shrink-0" strokeWidth={2.5} />
-            {SIGN_IN.signedUp}
+            {justSignedUp ? SIGN_IN.signedUp : SIGN_IN.passwordChanged}
           </span>
         ) : idle ? (
           PATIENT_WEB_COPY.idleSignedOut
@@ -143,15 +144,11 @@ export function SignInForm() {
             <Label htmlFor="password" className={AUTH_LABEL}>
               {SIGN_IN.labels.password}
             </Label>
-            <button
-              type="button"
-              aria-expanded={resetOpen}
-              aria-controls="reset-panel"
-              onClick={() => setResetOpen((open) => !open)}
-              className={cn(TEXT_LINK, "text-body-s -my-3 inline-flex min-h-11 items-center")}
-            >
-              {SIGN_IN.forgot}
-            </button>
+            <TextLink
+              href={SIGN_IN.forgot.href}
+              label={SIGN_IN.forgot.label}
+              className="text-body-s -my-3"
+            />
           </div>
           <div className="relative">
             <Input
@@ -180,20 +177,6 @@ export function SignInForm() {
             </button>
           </div>
           <FieldNote id="password-error" message={errors.password} />
-        </div>
-
-        <div
-          id="reset-panel"
-          hidden={!resetOpen}
-          className="border-gray-150 bg-muted text-body-s rounded-md border p-4"
-        >
-          <h2 className="text-foreground font-medium">{SIGN_IN.resetPanel.title}</h2>
-          <p className="text-muted-foreground mt-1">
-            {SIGN_IN.resetPanel.body}{" "}
-            <a href={`mailto:${SIGN_IN.resetPanel.email}`} className={TEXT_LINK}>
-              {SIGN_IN.resetPanel.email}
-            </a>
-          </p>
         </div>
 
         <Button

@@ -1,8 +1,14 @@
 "use server";
 
+import type { DeskMatch } from "@/supabase/functions/_shared/identity-match";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
+import { DESK_REGISTER } from "@/content/desk-register";
+import { getPlace } from "@/lib/geo";
+import { placeIds } from "@/lib/onboarding/account";
+import { isoFromParts, normalizeUgPhone, UNDER_18 } from "@/lib/onboarding/fields";
+import { deskPatientSchema } from "@/lib/onboarding/schemas";
 import { requireReceptionScope } from "@/lib/reception/scope";
 import { callEdge } from "@/lib/supabase/edge";
 
@@ -234,4 +240,97 @@ export async function reconcileIdentityAction(
   revalidatePath("/reception/expected");
   revalidatePath("/reception/flow");
   return { ok: true };
+}
+
+/* ─── Register a walk-in with no account (ADR 0475) ─────────────── */
+
+export type DeskRegistered = Omit<DeskMatch, "basis">;
+export type RegisterWalkInResult =
+  | { outcome: "registered"; patient: DeskRegistered }
+  | { outcome: "matches"; matches: DeskMatch[] }
+  | { outcome: "error"; error?: string; fieldErrors?: Record<string, string> };
+
+const DespiteSchema = z.array(z.string().max(32)).max(20);
+
+/**
+ * Sign-up's own questions and rules (`deskPatientSchema`), then `ha-register-patient`, which runs the duplicate
+ * check at this hospital before it creates anything. `despite` lists the codes of likely matches the desk has
+ * checked with the patient and said are someone else; any other match comes back instead of a new record.
+ */
+export async function registerWalkInAction(
+  input: unknown,
+  despite: unknown = [],
+): Promise<RegisterWalkInResult> {
+  const scope = await requireReceptionScope();
+  const parsed = deskPatientSchema.safeParse(input);
+  const codes = DespiteSchema.safeParse(despite);
+  if (!parsed.success || !codes.success) {
+    const message = parsed.error?.issues[0]?.message;
+    return {
+      outcome: "error",
+      error: message === UNDER_18 ? DESK_REGISTER.under18 : (message ?? "Check the form."),
+    };
+  }
+  const v = parsed.data;
+  const place = getPlace(v.place);
+  const ids =
+    place && (await placeIds(place.district.code, place.level === "subcounty" ? place.code : null));
+  if (!place || !ids)
+    return {
+      outcome: "error",
+      fieldErrors: { place: "Choose where they live from the list again." },
+    };
+
+  const result = await callEdge<{
+    data?:
+      | { outcome: "registered"; patient: DeskRegistered }
+      | { outcome: "matches"; matches: DeskMatch[] };
+  }>(
+    "ha-register-patient",
+    {
+      hospital_id: scope.hospitalId,
+      first_name: v.firstName.trim(),
+      surname: v.surname.trim(),
+      sex: v.sex,
+      date_of_birth: isoFromParts(v.dobDay!, v.dobMonth!, v.dobYear!), // the schema refused anything else
+      phone_e164: normalizeUgPhone(v.phone),
+      district_id: ids.districtId,
+      subcounty_id: ids.subcountyId,
+      village: v.village?.trim() || null,
+      consent_version: v.consentVersion,
+      consent_sha: v.consentSha,
+      consent_given: v.consent,
+      register_despite: codes.data,
+    },
+    "reception.register",
+  );
+  if (!result.ok) return { outcome: "error", error: result.error };
+  const data = result.data.data;
+  if (!data) return { outcome: "error", error: "No answer from the register. Try again." };
+  if (data.outcome === "registered") {
+    revalidatePath("/reception/expected");
+    revalidatePath("/reception/book");
+  }
+  return data;
+}
+
+/* ─── A sign-up code for a record this desk registered (ADR 0475, migration 0292) ─── */
+
+export type ClaimCodeResult =
+  | { ok: true; code: string; expiresAt: string }
+  | { ok: false; error: string };
+
+/** The desk has checked the person in front of it. `ha-register-patient` refuses another hospital's record. */
+export async function giveClaimCodeAction(patientCode: unknown): Promise<ClaimCodeResult> {
+  const scope = await requireReceptionScope();
+  const parsed = z.string().trim().min(1).max(32).safeParse(patientCode);
+  if (!parsed.success) return { ok: false, error: "Enter the patient code." };
+  const result = await callEdge<{ data?: { code: string; expiresAt: string } }>(
+    "ha-register-patient",
+    { action: "claim_code", hospital_id: scope.hospitalId, patient_code: parsed.data },
+    "reception.claim-code",
+  );
+  if (!result.ok) return { ok: false, error: result.error };
+  const data = result.data.data;
+  return data ? { ok: true, ...data } : { ok: false, error: "No answer. Try again." };
 }

@@ -34,12 +34,13 @@ export const SIGN_IN = {
   },
   showPassword: "Show password",
   hidePassword: "Hide password",
-  forgot: "Forgot password?",
+  forgot: { label: "Forgot password?", href: "/forgot-password" },
   submit: "Sign in",
   submitting: "Signing in…",
   helper: "Staff use two-step verification. On a shared ward computer, sign out when you finish.",
   create: { lead: "New to MedSync?", label: "Create an account →", href: "/get-started" },
   signedUp: "Account created. Sign in to continue.",
+  passwordChanged: "Password changed. Sign in with your new password.",
   errors: {
     /** One message for an unknown account and a wrong password: no enumeration. */
     mismatch: "That sign-in didn't match an account. Check your details and try again.",
@@ -48,16 +49,51 @@ export const SIGN_IN = {
     email: "Enter a valid email.",
     required: "Required.",
   },
-  /**
-   * Gate 0: no password reset exists yet — no reset request, no callback route,
-   * no mail sender, and admins can reset MFA but not passwords. So "Forgot
-   * password?" opens this panel (never a 404). The brief's "Staff: ask your
-   * hospital admin" line was untrue and is replaced; reset needs a backend prompt.
-   */
-  resetPanel: {
-    title: "Forgot password?",
-    body: "You can’t reset a password yourself yet. Email us from the address you signed up with and we’ll help you back in:",
-    email: "hello@medsync.health",
+} as const;
+
+/**
+ * Password reset (/forgot-password). The "sent" words show for every request, whether or not an
+ * account uses the email, so the page never says which emails have accounts. "One hour" is
+ * Supabase's default email-link lifetime (Auth › Email OTP expiration, 3600 s).
+ */
+export const RESET = {
+  title: "Reset your password",
+  subtitle: "Enter the email you sign in with. We’ll send you a link to choose a new password.",
+  labels: { email: "Email" },
+  submit: "Send reset link",
+  submitting: "Sending…",
+  helper: "Staff still enter their authentication code before choosing a new password.",
+  sentTitle: "Check your email",
+  sent: (email: string) =>
+    `If an account uses ${email}, we’ve sent it a link. The link works once, for one hour.`,
+  sentHelp: "Nothing after a few minutes? Check spam, then ask again.",
+  /** /forgot-password/confirm — the email link's page. A button, so a mail scanner can't use the link up. */
+  confirm: {
+    subtitle: "Continue to choose a new password.",
+    submit: "Continue",
+    submitting: "Opening…",
+  },
+  /** /forgot-password?link=expired — the confirm step could not verify the link. */
+  expired: "That link has expired or was already used. Ask for a new one.",
+  back: { lead: "Remembered it?", label: "Sign in →", href: "/sign-in" },
+  errors: { email: "Enter a valid email.", offline: "You’re offline. Connect and try again." },
+} as const;
+
+/** /forgot-password/new — reached only with the session the email link opened. */
+export const NEW_PASSWORD = {
+  title: "Choose a new password",
+  /** Names the account the link opened, so no one resets the wrong one. */
+  subtitle: (email: string) => `For ${email}.`,
+  labels: { password: "New password", confirm: "Type it again" },
+  hint: "12 or more characters. A short sentence works well.",
+  submit: "Save new password",
+  submitting: "Saving…",
+  errors: {
+    mismatch: "The two passwords don’t match.",
+    same: "That is your current password. Choose a new one.",
+    weak: "Choose a stronger password.",
+    failed: "We couldn’t save your password. Try again.",
+    offline: "You’re offline. Connect and try again.",
   },
 } as const;
 
