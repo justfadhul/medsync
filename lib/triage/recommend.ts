@@ -47,7 +47,24 @@ export interface Recommendation {
   source: string;
   seam: RecommendationSeam;
   confidence: RecommendationConfidence;
+  /**
+   * Only on `monitor_interval`: the band the sentence above already names, typed (GATE A D-CF-20, a
+   * projection of the same branches, no rule change). The clinic floor reads it for the re-check list.
+   */
+  recheck?: RecheckBand;
 }
+
+/** The monitoring bands `monitoringRec` already chooses between, by name. */
+export type RecheckBand = "continuous" | "hourly" | "4-6h" | "12h" | "short";
+
+/**
+ * When a re-check falls due on an outpatient floor, in minutes after the last check (GATE A D-CF-20): the
+ * bands that say "at minimum hourly". Longer bands outlast a clinic visit and are not listed.
+ */
+export const RECHECK_DUE_MINUTES: Partial<Record<RecheckBand, number>> = {
+  continuous: 60,
+  hourly: 60,
+};
 
 const CAT_ORDER: RecommendationCategory[] = [
   "disposition",
@@ -417,20 +434,26 @@ function monitoringRec(
   const total = result.news2?.total ?? null;
   let band: string;
   let why: string;
+  let recheck: RecheckBand;
   if (level <= 2 || (total != null && total >= 7) || result.dangerVitals.length > 0) {
     band = "continuous monitoring (or at minimum hourly until stabilised)";
+    recheck = "continuous";
     why = "High acuity / NEWS2 ≥7 / a danger-zone vital — risk of rapid deterioration is high.";
   } else if (total != null && (total >= 5 || result.news2?.hasSingleParameterThree)) {
     band = "re-vitals at minimum hourly";
+    recheck = "hourly";
     why = "NEWS2 5–6, or a single parameter scoring 3, needs hourly observation.";
   } else if (total != null && total >= 1) {
     band = "re-vitals at minimum 4–6 hourly";
+    recheck = "4-6h";
     why = "Low NEWS2 aggregate — routine cadence with nurse-led step-up.";
   } else if (total === 0) {
     band = "re-vitals at minimum 12 hourly (routine baseline)";
+    recheck = "12h";
     why = "NEWS2 0 — routine baseline cadence, still scheduled.";
   } else {
     band = "set a short re-vitals interval and complete the picture";
+    recheck = "short";
     why = "Score is provisional / not auto-computed — bias to a tighter interval until complete.";
   }
   // Provisional / incomplete biases tighter.
@@ -446,6 +469,7 @@ function monitoringRec(
       "RCP NEWS2 2017 Chart 4 response thresholds; ESI v5 danger-zone (hourly until stabilised).",
     seam: "pending_intent",
     confidence: provisionalPop ? "needs_cso_input" : "high",
+    recheck,
   };
 }
 

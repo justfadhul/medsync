@@ -1,6 +1,7 @@
 "use server";
 
 import type { AssignableDoctor } from "@/lib/encounter/assignment";
+import type { RecheckBand } from "@/lib/triage/recommend";
 import type { AcuityLevel, PregnancyStatus, TriageInput } from "@/lib/triage/types";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
@@ -12,6 +13,7 @@ import { logger } from "@/lib/logger";
 import { createServiceClient } from "@/lib/supabase/service";
 import { runTriage } from "@/lib/triage/engine";
 import { notifyTriageOutcome } from "@/lib/triage/notify";
+import { recommend } from "@/lib/triage/recommend";
 import { requireTriageScope } from "@/lib/triage/scope";
 
 /**
@@ -82,6 +84,8 @@ export type TriageSubmitState = {
   why?: string | null;
   /** A Step-0 life threat: the sheet offers Open resus first. */
   lifeThreat?: boolean;
+  /** The engine's re-check band for the assigned level (the clinic floor's re-check list, D-CF-20). */
+  recheck?: RecheckBand | null;
 };
 
 export async function submitTriageAction(
@@ -280,6 +284,8 @@ export async function submitTriageAction(
     assignedLevel,
     why: result.reasoning[0] ?? null,
     lifeThreat: result.lifeThreat,
+    recheck:
+      recommend(result, assignedLevel).find((r) => r.code === "monitor_interval")?.recheck ?? null,
   };
 }
 

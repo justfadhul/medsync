@@ -5,6 +5,15 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); version
 
 ## [Unreleased]
 
+### Added — Clinic floor (behind `CLINIC_FLOOR`) — 13 Nov 2026
+
+- Triage station, clinic line, floor board and waiting-room screen after the reception desk hands off
+  ([ADR 0491](docs/adr/0491-clinic-floor-views.md)); the triage UI only calls the engine
+  ([ADR 0492](docs/adr/0492-triage-ui-pure-engine-consumer.md)); line order
+  ([ADR 0493](docs/adr/0493-line-order-rule.md)); screen feed under ADR 0084
+  ([ADR 0494](docs/adr/0494-waiting-room-screen-feed.md)); doctor status
+  ([ADR 0495](docs/adr/0495-doctor-session-status.md)). Migration 0295 (GATED). Flag off: today's pages.
+
 ### Added — Reception desk (behind `RECEPTION_DESK`) — 13 Nov 2026
 
 - One desk for reception: Arrivals, Calendar (day, week, month), walk-in, book, move or cancel, close the day,
