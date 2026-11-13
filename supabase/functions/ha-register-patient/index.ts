@@ -72,6 +72,8 @@ const InputSchema = z.object({
   consent_sha: z.string().regex(/^[a-f0-9]{64}$/i),
   consent_given: z.literal(true),
   register_despite: z.array(z.string().max(32)).max(20).default([]),
+  /** Migration 0294 / ADR 0486: a phone booking, or a booked check-in whose identity did not match. */
+  identity_to_confirm: z.boolean().default(false),
 });
 
 const ClaimSchema = z.object({
@@ -211,6 +213,13 @@ Deno.serve(async (request: Request) => {
     if (reason.includes("consent_mismatch"))
       return conflict("The notice has changed. Close the form and open it again.", init);
     return serverError("Couldn't create the record. Nothing was kept.", init);
+  }
+  if (input.identity_to_confirm) {
+    const { error: flagError } = await sb
+      .from("patient_profiles")
+      .update({ identity_to_confirm: true })
+      .eq("id", userId);
+    if (flagError) log.error("identity flag not set", { requestId, reason: flagError.message });
   }
 
   return ok(

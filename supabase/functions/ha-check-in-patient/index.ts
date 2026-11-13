@@ -61,6 +61,9 @@ const InputSchema = z
       .string()
       .min(8, "Reason ≥ 8 chars required (audited).")
       .default("Patient checked in at front desk."),
+    /** ADR 0488: the desk's id for this check-in. A replay (offline queue, double press) returns the first result. */
+    client_id: z.string().uuid().optional(),
+    device_label: z.string().trim().min(1).max(60).optional(),
   })
   .refine((v) => !!v.appointment_id !== !!v.intake_id, {
     message: "Provide exactly one of appointment_id or intake_id.",
@@ -89,6 +92,30 @@ Deno.serve(async (request: Request) => {
 
   const sb = serviceClient();
   const { ipAddress, userAgent } = networkContext(request);
+
+  // ADR 0488: a replayed client id finds its intake and answers as the first call did. Hospital-scoped below.
+  if (input.client_id) {
+    const { data: done, error: doneErr } = await sb
+      .from("patient_intakes")
+      .select("id, hospital_id, appointment_id, routed_to")
+      .eq("client_id", input.client_id)
+      .limit(1)
+      .maybeSingle();
+    if (doneErr) return serverError(doneErr.message, init);
+    if (done) {
+      const authError = await authoriseAtHospital(caller.id, done.hospital_id as string);
+      if (authError) return forbidden(init, authError);
+      return ok(
+        {
+          appointment_id: done.appointment_id,
+          intake_id: done.id,
+          route: done.routed_to ?? "triage",
+          replayed: true,
+        },
+        init,
+      );
+    }
+  }
 
   /* ─── Mode A: appointment_id (booked-arrival path) ───────────── */
   if (input.appointment_id) {
@@ -137,6 +164,22 @@ Deno.serve(async (request: Request) => {
     // queue_entries needs a patient, and the intake row would name nobody.
     if (!appt.patient_user_id) {
       return conflict("Confirm who this booking is for before checking in.", init);
+    }
+
+    // ADR 0486: the reception desk (it always sends a client id) checks in only after a matching second
+    // identifier for this booking in the last 30 minutes (ha-reception-desk op identity_check).
+    if (input.client_id) {
+      const since = new Date(Date.now() - 30 * 60_000).toISOString();
+      const { data: idOk, error: idErr } = await sb
+        .from("desk_identity_attempts")
+        .select("id")
+        .eq("appointment_id", appt.id)
+        .eq("matched", true)
+        .gte("created_at", since)
+        .limit(1)
+        .maybeSingle();
+      if (idErr) return serverError(idErr.message, init);
+      if (!idOk) return conflict("Check it is them before checking in.", init);
     }
 
     // A booking is never an emergency entry; an urgent one is still triaged.
@@ -216,6 +259,8 @@ Deno.serve(async (request: Request) => {
         status: intakeStatusFor(route),
         routed_to: route,
         registered_by_user_id: caller.id,
+        client_id: input.client_id ?? null,
+        device_label: input.device_label ?? null,
       })
       .select("id")
       .single();
@@ -310,6 +355,9 @@ Deno.serve(async (request: Request) => {
       routed_to: route,
       checked_in_at: checkedInAt,
       receiving_department_id: departmentId,
+      ...(input.client_id
+        ? { client_id: input.client_id, device_label: input.device_label ?? null }
+        : {}),
     })
     .eq("id", intake.id)
     .eq("status", "declared")

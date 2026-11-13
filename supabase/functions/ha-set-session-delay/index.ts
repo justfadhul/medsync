@@ -5,7 +5,8 @@
  *
  * Inputs: session_id, delay_minutes (0..480; 0 clears a delay).
  *
- * Callable by a superadmin, a hospital_admin of the session's hospital, or
+ * Callable by reception at the session's hospital (D-RD-11, lateness only), a superadmin, a hospital_admin of the
+ * session's hospital, or
  * the clinician the session names. The stored arrival windows of every
  * un-arrived position (status 'confirmed') move by the DIFFERENCE between
  * the old delay and the new one, so the window the patient was last told
@@ -29,7 +30,7 @@ import {
   serverError,
   unauthorized,
 } from "../_shared/errors.ts";
-import { requireHospitalAdminScope } from "../_shared/hospital-admin-scope.ts";
+import { isReceptionAt, requireHospitalAdminScope } from "../_shared/hospital-admin-scope.ts";
 import { makeLogger } from "../_shared/logger.ts";
 import { networkContext, recordSaAudit } from "../_shared/sa-audit.ts";
 
@@ -72,7 +73,10 @@ Deno.serve(async (request: Request) => {
 
   const isSuperadmin = await hasRole(caller.id, "superadmin");
   const isSessionClinician = !!session.clinician_user_id && caller.id === session.clinician_user_id;
-  if (!isSuperadmin && !isSessionClinician) {
+  // D-RD-11 (ADR 0485): the desk may mark its own hospital's clinic day as running late; only lateness.
+  const isDesk =
+    !isSuperadmin && !isSessionClinician && (await isReceptionAt(caller.id, session.hospital_id));
+  if (!isSuperadmin && !isSessionClinician && !isDesk) {
     if (!(await hasRole(caller.id, "hospital_admin", session.hospital_id))) {
       return forbidden(
         init,

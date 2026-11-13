@@ -130,6 +130,9 @@ export const patientIntakes = pgTable(
       onDelete: "set null",
     }),
     notes: text("notes"),
+    /** Migration 0294 / ADR 0488: the desk's client id (unique per hospital) makes a replayed check-in a no-op. */
+    clientId: uuid("client_id"),
+    deviceLabel: text("device_label"),
     /** Migration 0066 / ADR 0098: the pre-alert this arrival came from, and what was reported. */
     /** FK in migration 0066 (→ emergency_pre_arrivals); see symptomSubmissionId. */
     preArrivalId: uuid("pre_arrival_id"),

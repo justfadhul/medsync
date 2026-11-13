@@ -852,11 +852,19 @@ function toIntervals(rows: ReadonlyArray<BookedAppointmentRow>): Interval[] {
 /* ─── session bookings: code and arrival window (Gate C, ADR 0088) ── */
 
 /**
- * The booking-code alphabet: 32 characters, no 0/O/1/I — the code is read
- * aloud to a relative and typed by a receptionist (proposal §5.6).
+ * The booking-code alphabet a code may contain: 32 characters, no 0/O/1/I — the code is read
+ * aloud to a relative and typed by a receptionist (proposal §5.6). Codes made before the reception
+ * desk (ADR 0485, D-RD-10/25) may contain L and stay valid.
  */
 export const BOOKING_CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+/** New codes also drop L (D-RD-10): 31 characters, hard to mishear as 1 or I. */
+export const BOOKING_CODE_NEW_ALPHABET = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
 export const BOOKING_CODE_LENGTH = 6;
+
+/** A typed or scanned code as stored: upper case, spaces and dashes gone. */
+export function normalizeBookingCode(raw: string): string {
+  return raw.toUpperCase().replace(/[\s-]/g, "");
+}
 
 /**
  * A 6-character booking code. `random` is injected (a `[0, 1)` source) so a
@@ -867,10 +875,10 @@ export function bookingCode(random: () => number): string {
   let out = "";
   for (let i = 0; i < BOOKING_CODE_LENGTH; i++) {
     const idx = Math.min(
-      BOOKING_CODE_ALPHABET.length - 1,
-      Math.max(0, Math.floor(random() * BOOKING_CODE_ALPHABET.length)),
+      BOOKING_CODE_NEW_ALPHABET.length - 1,
+      Math.max(0, Math.floor(random() * BOOKING_CODE_NEW_ALPHABET.length)),
     );
-    out += BOOKING_CODE_ALPHABET[idx];
+    out += BOOKING_CODE_NEW_ALPHABET[idx];
   }
   return out;
 }

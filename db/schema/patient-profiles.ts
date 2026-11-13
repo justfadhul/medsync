@@ -1,5 +1,6 @@
 import { sql } from "drizzle-orm";
 import {
+  boolean,
   check,
   date,
   index,
@@ -74,6 +75,8 @@ export const patientProfiles = pgTable(
 
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+    /** Migration 0294 / ADR 0486: registered without an in-person identity check; cleared by the first match. */
+    identityToConfirm: boolean("identity_to_confirm").notNull().default(false),
   },
   (t) => [
     check(

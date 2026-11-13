@@ -179,7 +179,14 @@ export type SaAuditAction =
   | "register_patient"
   // 0292: the desk's claim code, and the patient taking the record over (written in SQL, ADR 0475)
   | "issue_claim_code"
-  | "claim_desk_record";
+  | "claim_desk_record"
+  // 0294: the reception desk (ADRs 0486, 0489; D-RD-12)
+  | "desk_identity_check"
+  | "close_day"
+  | "undo_close_day"
+  | "desk_switch_user"
+  | "desk_set_pin"
+  | "desk_pin_locked";
 
 export type SaAuditTargetKind =
   | "staff_affiliation"

@@ -66,6 +66,7 @@ interface PreArrivalRow {
   red_flags: string[];
   isolation_flag: boolean;
   status: PreArrivalStatus;
+  acknowledged_at: string | null;
 }
 
 /** The board's lay labels, joined; unknown keys print as themselves rather than dropping a sign. */
@@ -104,7 +105,9 @@ Deno.serve(async (request: Request) => {
   const sb = serviceClient();
   const { data: row, error: rowError } = await sb
     .from("emergency_pre_arrivals")
-    .select("id, facility_id, submission_id, patient_user_id, red_flags, isolation_flag, status")
+    .select(
+      "id, facility_id, submission_id, patient_user_id, red_flags, isolation_flag, status, acknowledged_at",
+    )
     .eq("id", input.pre_arrival_id)
     .maybeSingle();
   if (rowError) return serverError(rowError.message, init);
@@ -223,6 +226,10 @@ Deno.serve(async (request: Request) => {
       arrived_at: nowIso,
       arrived_intake_id: intakeId,
       closed_at: nowIso,
+      // Migration 0294 (D-RD-19): an arrival is never unacknowledged; whoever registers it has seen it.
+      ...(pa.acknowledged_at
+        ? {}
+        : { acknowledged_by_user_id: caller.id, acknowledged_at: nowIso }),
       ...(patientUserId && !pa.patient_user_id ? { patient_user_id: patientUserId } : {}),
     })
     .eq("id", pa.id)

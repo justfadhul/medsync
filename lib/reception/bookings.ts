@@ -9,7 +9,11 @@ import { patientProfiles } from "@/db/schema/patient-profiles";
 import { appointments } from "@/db/schema/scheduling";
 import { serviceLines } from "@/db/schema/service-lines";
 import { users } from "@/db/schema/users";
-import { DEFAULT_TIME_ZONE, startOfLocalDay } from "@/supabase/functions/_shared/slots";
+import {
+  DEFAULT_TIME_ZONE,
+  normalizeBookingCode,
+  startOfLocalDay,
+} from "@/supabase/functions/_shared/slots";
 
 /** What the desk may still cancel (`cancel-appointment`'s CANCELLABLE_STATES). Move is narrower: no `arrived`. */
 const CHANGEABLE = ["requested", "pending_approval", "confirmed", "arrived"];
@@ -76,7 +80,7 @@ export async function findDeskBookings(args: {
         inArray(appointments.status, CHANGEABLE),
         gte(appointments.startsAt, startOfLocalDay(new Date(), DEFAULT_TIME_ZONE)),
         or(
-          sql`upper(${appointments.bookingCode}) = ${q.toUpperCase()}`,
+          sql`upper(${appointments.bookingCode}) = ${normalizeBookingCode(q)}`,
           ilike(patientProfiles.patientCode, `${q}%`),
         ),
       ),

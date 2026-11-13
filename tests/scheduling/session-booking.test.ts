@@ -3,7 +3,9 @@ import { describe, expect, it } from "vitest";
 import {
   arrivalWindow,
   BOOKING_CODE_ALPHABET,
+  BOOKING_CODE_NEW_ALPHABET,
   bookingCode,
+  normalizeBookingCode,
 } from "@/supabase/functions/_shared/slots";
 
 /** Gate C helpers (ADR 0088). Pure, so no DB. */
@@ -17,13 +19,25 @@ describe("bookingCode", () => {
     for (const c of code) expect(BOOKING_CODE_ALPHABET).toContain(c);
   });
 
+  it("makes new codes without L (D-RD-10); old codes with L stay accepted", () => {
+    expect(BOOKING_CODE_NEW_ALPHABET).toHaveLength(31);
+    for (const c of "0O1IL") expect(BOOKING_CODE_NEW_ALPHABET).not.toContain(c);
+    for (let i = 0; i < 200; i++) expect(bookingCode(Math.random)).not.toMatch(/[0O1IL]/);
+    expect(BOOKING_CODE_ALPHABET).toContain("L");
+  });
+
+  it("looks a code up ignoring case, spaces and dashes", () => {
+    expect(normalizeBookingCode(" k7m-42q ")).toBe("K7M42Q");
+    expect(normalizeBookingCode("K7M 42Q")).toBe("K7M42Q");
+  });
+
   it("is a pure function of the injected random source", () => {
-    const seq = [0, 0.5, 0.999, 1 / 32, 31 / 32, 0.25];
+    const seq = [0, 0.5, 0.999, 1 / 31, 30 / 31, 0.25];
     const source = () => {
       let i = 0;
       return () => seq[i++ % seq.length] as number;
     };
-    expect(bookingCode(source())).toBe("AS9B9J");
+    expect(bookingCode(source())).toBe("AS9B9H");
     expect(bookingCode(source())).toBe(bookingCode(source()));
   });
 });
