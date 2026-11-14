@@ -33,7 +33,7 @@ Without the key, signing refuses with "Notes cannot be signed yet… Your draft 
 ## 3. Check the lane and RLS against the dev project
 
 - [ ] Locally, the PGlite lane (no database needed): `npm run test:emr-db`. Expected: all green (327 lane tests after the
-      owner-support round). Needs the PGlite symlink `node_modules/@electric-sql → ~/Desktop/emr-harness/pg/node_modules/@electric-sql`;
+      owner-support round). Needs the PGlite symlink `node_modules/@electric-sql → ~/Desktop/medsync/.emr-harness/pg/node_modules/@electric-sql`;
       without it every lane test skips.
 - [ ] Against the dev project, the hosted RLS suites: `MEDSYNC_ALLOW_RLS_DB_WRITES=1 npx vitest run tests/rls`
       (they write fixtures; **dev project only, never production**).

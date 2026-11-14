@@ -4,7 +4,7 @@
  * are tested on the SQL that ships rather than on mocks.
  *
  * On only when EMR_PGLITE=1. PGlite is not a dependency of this repo (8 GB machine, no new deps):
- * it lives in ~/Desktop/emr-harness/pg/node_modules and is symlinked into node_modules locally.
+ * it lives in ~/Desktop/medsync/.emr-harness/pg/node_modules and is symlinked into node_modules locally.
  * Every PGlite import is a dynamic import of a string variable, so tsc and CI never resolve it.
  *
  * Boot replays 70+ migrations (~10 s), so each test file boots once (`bootLane` caches per module,
@@ -33,7 +33,7 @@ export interface Pg extends PgQueryable {
   transaction<T>(fn: (tx: PgQueryable & { rollback(): Promise<void> }) => Promise<T>): Promise<T>;
 }
 
-/** Copied from ~/Desktop/emr-harness/pg/run.mjs (the Supabase bootstrap), plus the default
+/** Copied from ~/Desktop/medsync/.emr-harness/pg/run.mjs (the Supabase bootstrap), plus the default
  *  privileges Supabase gives anon/authenticated on public, so a missing REVOKE shows up here as it
  *  would in production instead of being hidden by an empty grant table. */
 const BOOTSTRAP = `

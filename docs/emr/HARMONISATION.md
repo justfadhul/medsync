@@ -19,11 +19,11 @@
 - **Migrations:** `0071_emr_record_spine.sql` (schema), `0072_emr_reference_seed.sql` (generated seeds),
   `0073_emr_realtime.sql` (broadcast triggers), `0074_emr_prescriptions.sql` (OPD prescriptions) and `0075_cosign_policy_defaults.sql` (co-sign defaults for every hospital). All five carry the GATED header like 0069: the owner applies them
   with `npm run db:migrate`. **Never edit 0000–0070.** Verify every migration with the PGlite harness:
-  `cd ~/Desktop/emr-harness/pg && node run.mjs`, which replays everything.
+  `cd ~/Desktop/medsync/.emr-harness/pg && node run.mjs`, which replays everything.
 - **Machine:** 8 GB RAM. Do not run `npm run build`, full `npm run typecheck` or the full `npm run test` unless your
   brief says so. Run `npx vitest run <your test files>`. `npx tsc --noEmit -p tsconfig.json` is allowed only in a
   stage whose brief allows it.
-- **No new dependencies.** PGlite is used from the harness (`~/Desktop/emr-harness/pg/node_modules`) and never added to
+- **No new dependencies.** PGlite is used from the harness (`~/Desktop/medsync/.emr-harness/pg/node_modules`) and never added to
   `package.json`.
 - **No clinical numbers.** Critical limits, plausibility bounds, HMIS, IDSR, REF-PREG-AGE and the fasting definition
   are `RefEntry` files (the resus pattern, `lib/resus/reference/ref.ts`) with `status: 'pending_cso'` and the value

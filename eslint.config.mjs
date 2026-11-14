@@ -51,6 +51,8 @@ const eslintConfig = defineConfig([
     "docs/pharmacy/rework/prototype/**",
     // Self-contained Vite subproject with its own toolchain.
     "bionic-islet-bench/**",
+    // The local PGlite and screenshot harness (not a dependency, ADR 0133).
+    ".emr-harness/**",
     // Static assets served verbatim, including the sensor bench's built
     // bundle. Never source, never linted.
     "public/**",

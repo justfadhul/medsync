@@ -4,7 +4,7 @@
  * moved or re-cadred — inside the transaction that changed the affiliation, each with a
  * `lab_access` audit row carrying the basis. No client role writes a role or runs the sync.
  *
- * Runs with EMR_PGLITE=1 (PGlite symlinked from ~/Desktop/emr-harness, tests/emr-db/_pglite.ts).
+ * Runs with EMR_PGLITE=1 (PGlite symlinked from ~/Desktop/medsync/.emr-harness, tests/emr-db/_pglite.ts).
  */
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";

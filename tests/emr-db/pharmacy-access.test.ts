@@ -10,7 +10,7 @@
  * hospital. Reception, lab, hospital admins, other hospitals, superadmin and anon read nothing;
  * nobody writes.
  *
- * Runs with EMR_PGLITE=1 (PGlite symlinked from ~/Desktop/emr-harness, tests/emr-db/_pglite.ts).
+ * Runs with EMR_PGLITE=1 (PGlite symlinked from ~/Desktop/medsync/.emr-harness, tests/emr-db/_pglite.ts).
  */
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";

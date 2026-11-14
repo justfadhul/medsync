@@ -59,7 +59,7 @@ Ward builder and the live bed board (ADRs 0191–0196, `docs/wards/ward-builder/
 
 ### `tests/` — Vitest
 
-`emr-db/` is the **PGlite lane** (EMR migrations, RLS probes, write paths, scenarios A1–A9): runs only with `EMR_PGLITE=1` (`npm run test:emr-db`) and a local symlink `node_modules/@electric-sql` → `~/Desktop/emr-harness/pg/node_modules/@electric-sql` (never a dependency; ADR 0133), else skips.
+`emr-db/` is the **PGlite lane** (EMR migrations, RLS probes, write paths, scenarios A1–A9): runs only with `EMR_PGLITE=1` (`npm run test:emr-db`) and a local symlink `node_modules/@electric-sql` → `~/Desktop/medsync/.emr-harness/pg/node_modules/@electric-sql` (never a dependency; ADR 0133), else skips.
 
 ### `docs/adr/` — Architecture Decision Records (numbered, immutable; see below).
 
