@@ -3,10 +3,10 @@ import { Suspense } from "react";
 
 import { SignInForm } from "@/app/(auth)/sign-in/form";
 import { AuthHead, AuthPage, JoinPanel } from "@/components/landing/tether/auth";
-import { AUTH } from "@/content/tether-landing/copy";
+import { AUTH, NAV } from "@/content/tether-landing/copy";
 
 /** `/sign-in` while LANDING_TETHER is on (ADR 0498): the hospital app's sign-in in the Tether look, beside the ways to join. */
-export const metadata: Metadata = { title: AUTH.title };
+export const metadata: Metadata = { title: { absolute: `${AUTH.title} · ${NAV.brand}` } };
 
 export default function TetherSignInPage() {
   return (

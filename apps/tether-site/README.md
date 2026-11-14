@@ -33,7 +33,6 @@ takes about 13 minutes.
    | Variable                    | Value                                                                                      | Needed for                                                    |
    | --------------------------- | ------------------------------------------------------------------------------------------ | ------------------------------------------------------------- |
    | `TETHER_SITE_URL`           | the site's domain, e.g. `tether.ug` (https:// optional); unset, Vercel's production domain | canonical links, sitemap, sharing                             |
-   | `HOSPITAL_APP_URL`          | the hospital app's address (https:// optional)                                             | Sign in, sign-up and Help links (the site has no such pages)  |
    | `NEXT_PUBLIC_SUPABASE_URL`  | as in the hospital project                                                                 | the clinic form                                               |
    | `SUPABASE_SERVICE_ROLE_KEY` | as in the hospital project                                                                 | the clinic form                                               |
    | `FEATURE_PRE_ALERT`         | leave unset                                                                                | keeps the emergency answer's pre-alert sentence off (D-LP-06) |

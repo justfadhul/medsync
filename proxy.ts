@@ -2,7 +2,7 @@ import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 
 import { getAuthState } from "@/lib/auth";
-import { tetherRewrite } from "@/lib/landing/feature";
+import { isTetherHost, landingTetherOn, tetherClosed, tetherRewrite } from "@/lib/landing/feature";
 import { pwRedirect, pwRewrite } from "@/lib/patient-web/routes";
 import { updateSession } from "@/lib/supabase/proxy";
 
@@ -104,16 +104,28 @@ export async function proxy(request: NextRequest): Promise<NextResponse> {
   // ADR 0477, 0498: the Tether pages' addresses are `/` and `/sign-in`; `/tether` is only where they are built.
   const built = /^\/tether(\/sign-in(?:\/mfa)?)?$/.exec(request.nextUrl.pathname);
   if (built) return NextResponse.redirect(new URL(built[1] ?? "/", request.url), 308);
+  // ADR 0499: on the Tether domain only booking opens; the rest is MedSync's (MEDSYNC_URL), else not found.
+  const tether = isTetherHost(request.headers.get("host"));
+  if (tether && tetherClosed(request.nextUrl.pathname)) return closedOnTether(request);
   const response = await gate(request);
   // D-PW-10: the new patient pages serve at the old URLs while PATIENT_WEB_TIDE is on. Gating above ran on
   // the URL the patient asked for; redirects (sign-in, MFA) pass through untouched.
-  const target = pwRewrite(request.nextUrl.pathname) ?? tetherRewrite(request.nextUrl.pathname);
+  const target =
+    pwRewrite(request.nextUrl.pathname) ??
+    tetherRewrite(request.nextUrl.pathname, tether || landingTetherOn());
   if (!target || response.headers.has("location")) return response;
   const url = request.nextUrl.clone();
   url.pathname = target;
   const rewrite = NextResponse.rewrite(url, { request }); // carries the cookies updateSession refreshed
   for (const cookie of response.cookies.getAll()) rewrite.cookies.set(cookie);
   return rewrite;
+}
+
+function closedOnTether(request: NextRequest): NextResponse {
+  const medsync = (process.env.MEDSYNC_URL ?? "").trim().replace(/\/+$/, "");
+  if (!medsync) return NextResponse.rewrite(new URL("/not-found", request.url), { status: 404 });
+  const base = /^https?:\/\//.test(medsync) ? medsync : `https://${medsync}`;
+  return NextResponse.redirect(`${base}${request.nextUrl.pathname}${request.nextUrl.search}`);
 }
 
 async function gate(request: NextRequest): Promise<NextResponse> {

@@ -22,16 +22,3 @@ describe("apps/tether-site", () => {
     );
   });
 });
-
-describe("apps/tether-site redirects", () => {
-  it("sends sign-in, sign-up and emergency to HOSPITAL_APP_URL", async () => {
-    process.env.HOSPITAL_APP_URL = "app.example.test/";
-    const { default: config } = await import("../../apps/tether-site/next.config");
-    const rules = await config.redirects!();
-    const to = (s: string) => rules.find((r) => r.source === s)?.destination;
-    expect(to("/sign-in")).toBe("https://app.example.test/sign-in");
-    expect(to("/signup/:rest*")).toBe("https://app.example.test/signup/:rest*");
-    expect(to("/emergency")).toBe("https://app.example.test/emergency");
-    delete process.env.HOSPITAL_APP_URL;
-  });
-});

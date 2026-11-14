@@ -25,3 +25,51 @@ const TETHER_PAGES: Record<string, string> = {
 export function tetherRewrite(pathname: string, on: boolean = landingTetherOn()): string | null {
   return on ? (TETHER_PAGES[pathname] ?? null) : null;
 }
+
+/**
+ * `TETHER_HOSTS` (ADR 0499): the domains that serve Tether, comma-separated (`tether.ug,www.tether.ug`). Tether
+ * is this app on its own domain: there the Tether landing and sign-in are always on, and only booking opens.
+ */
+export function isTetherHost(
+  host: string | null,
+  env: string | undefined = process.env.TETHER_HOSTS,
+): boolean {
+  if (!host || !env) return false;
+  const name = host.split(":")[0]?.toLowerCase();
+  return env.split(",").some((h) => h.trim().toLowerCase() === name);
+}
+
+/**
+ * What the Tether domain opens: sign-in and sign-up, emergency, and the booking side of each workspace. The
+ * clinical workspaces (record, lab, pharmacy, wards, HMIS, IPC, NCD) stay on MedSync's domain.
+ */
+const TETHER_OPEN = [
+  "/sign-in",
+  "/sign-up",
+  "/sign-out",
+  "/signup",
+  "/onboarding",
+  "/get-started",
+  "/emergency",
+  "/share",
+  "/privacy",
+  "/terms",
+  "/not-authorised",
+  "/offline",
+  "/api",
+  "/opengraph-image",
+  "/patient",
+  "/pw",
+  "/reception",
+  "/clinician",
+  "/doctor/schedule",
+  "/nurse/incoming",
+  "/hospital-admin",
+  "/admin",
+];
+
+/** True when the Tether domain does not serve `pathname`. Files (`/sw.js`, `/robots.txt`) always serve. */
+export function tetherClosed(pathname: string): boolean {
+  if (pathname === "/" || /\.[a-z0-9]+$/i.test(pathname)) return false;
+  return !TETHER_OPEN.some((p) => pathname === p || pathname.startsWith(`${p}/`));
+}

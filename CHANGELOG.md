@@ -5,6 +5,12 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); version
 
 ## [Unreleased]
 
+### Added — Tether on its own domain — 14 Nov 2026
+
+- The hospital app serves Tether on the domains in `TETHER_HOSTS`: the Tether landing and sign-in, and only
+  booking. Clinical workspaces there go to `MEDSYNC_URL`
+  ([ADR 0499](docs/adr/0499-tether-is-this-app-on-its-own-domain.md)).
+
 ### Added — Sign-in in the Tether look (off) — 14 Nov 2026
 
 - With `LANDING_TETHER` on, `/sign-in` and the authenticator-code page are drawn in the Tether look, in two

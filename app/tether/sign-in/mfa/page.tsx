@@ -4,9 +4,10 @@ import { Suspense } from "react";
 import { MfaChallengeForm } from "@/app/(auth)/sign-in/mfa/form";
 import { AuthHead, AuthPage } from "@/components/landing/tether/auth";
 import { MFA } from "@/content/auth";
+import { NAV } from "@/content/tether-landing/copy";
 
 /** `/sign-in/mfa` while LANDING_TETHER is on (ADR 0498): the authenticator-code step in the Tether look. */
-export const metadata: Metadata = { title: "Two-factor" };
+export const metadata: Metadata = { title: { absolute: `Two-factor · ${NAV.brand}` } };
 
 export default function TetherMfaPage() {
   return (
