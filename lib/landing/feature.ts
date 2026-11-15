@@ -19,6 +19,7 @@ const TETHER_PAGES: Record<string, string> = {
   "/": "/tether",
   "/sign-in": "/tether/sign-in",
   "/sign-in/mfa": "/tether/sign-in/mfa",
+  "/onboarding/mfa-setup": "/tether/onboarding/mfa-setup",
 };
 
 /** Where proxy.ts rewrites `pathname` to, or null. The visible address never changes. */

@@ -5,6 +5,12 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); version
 
 ## [Unreleased]
 
+### Changed — Authenticator setup opens on the sign-in page — 15 Nov 2026
+
+- A clinical or admin account with no authenticator sets one up under the password, in the page's look, then goes
+  to its usual landing ([ADR 0512](docs/adr/0512-authenticator-setup-on-the-sign-in-page.md)). On Tether the setup
+  page is in the Tether look too.
+
 ### Changed — Sign-up headings say Tether on Tether — 15 Nov 2026
 
 - On the Tether domain the patient, clinical and hospital sign-up headings name Tether

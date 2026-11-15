@@ -110,8 +110,10 @@ export async function proxy(request: NextRequest): Promise<NextResponse> {
   // GATE A §1: an old patient URL that moved answers 308 to its new home, then gates there.
   const moved = pwRedirect(request.nextUrl.pathname);
   if (moved) return NextResponse.redirect(new URL(moved, request.url), 308);
-  // ADR 0477, 0498: the Tether pages' addresses are `/` and `/sign-in`; `/tether` is only where they are built.
-  const built = /^\/tether(\/sign-in(?:\/mfa)?)?$/.exec(request.nextUrl.pathname);
+  // ADR 0477, 0498, 0512: the Tether pages' addresses are `/`, `/sign-in` and the MFA setup; `/tether` is only where they are built.
+  const built = /^\/tether(\/sign-in(?:\/mfa)?|\/onboarding\/mfa-setup)?$/.exec(
+    request.nextUrl.pathname,
+  );
   if (built) return NextResponse.redirect(new URL(built[1] ?? "/", request.url), 308);
   // ADR 0499: on the Tether domain only booking opens; the rest is MedSync's (MEDSYNC_URL), else not found.
   const tether = isTetherHost(request.headers.get("host"));
