@@ -6,8 +6,8 @@
     "status": "Done",
     "progress": 100,
     "branch": "fix/review-perimeter",
-    "note": "Pushed (4c24af5b); 0279–0289 applied and every Edge Function redeployed. Side effect found: with DEV_SKIP_MFA on, staff without MFA can sign in on production but check-in, cancel and most actions now fail.",
-    "updated": "2026-11-12"
+    "note": "On main 15 Nov (4c24af5b). 0279–0289 applied and every Edge Function redeployed.",
+    "updated": "2026-11-15"
   },
   {
     "id": "dry-run",
@@ -16,8 +16,8 @@
     "status": "Done",
     "progress": 100,
     "branch": "fix/booking-dry-run",
-    "note": "Pushed (28e86d1d), checks green, no PR. 6 fixes plus both rulings. Not tested: End visit, waitlist. Seen, not fixed: doctor queue needs a reload; the phone app still shows \"Something is wrong\" (pilot is web first).",
-    "updated": "2026-11-12"
+    "note": "On main 15 Nov (28e86d1d). 6 fixes plus both rulings. Not tested: End visit, waitlist. The phone app still shows \"Something is wrong\" (pilot is web first).",
+    "updated": "2026-11-15"
   },
   {
     "id": "reminders",
@@ -26,8 +26,8 @@
     "status": "Done",
     "progress": 100,
     "branch": "feat/booking-pilot-go-live",
-    "note": "Pushed (a8fe8824), checks green, no PR. Reminders every 15 minutes with a no-double-send test; docs/booking-pilot/GO-LIVE.md lists every setting. Do not merge until the host is on Vercel Pro.",
-    "updated": "2026-11-12"
+    "note": "Pushed (a8fe8824), not merged (2 ahead of main). Reminders every 15 minutes with a no-double-send test; docs/booking-pilot/GO-LIVE.md lists every setting. Do not merge until the host is on Vercel Pro.",
+    "updated": "2026-11-15"
   },
   {
     "id": "metrics",
@@ -36,8 +36,8 @@
     "status": "Done",
     "progress": 100,
     "branch": "feat/pilot-numbers",
-    "note": "Pushed (16c76564), no PR, no migration. Weekly counts only, no patients: on /admin/scheduling-rollup and each hospital Reports page. Not seen in a browser yet. Not measured: queueing before check-in, real consultation start, walk-ins.",
-    "updated": "2026-11-12"
+    "note": "Pushed (16c76564), not merged (1 ahead of main), no migration. Weekly counts only, no patients: on /admin/scheduling-rollup and each hospital Reports page. Not seen in a browser yet. Not measured: queueing before check-in, real consultation start, walk-ins.",
+    "updated": "2026-11-15"
   },
   {
     "id": "clinic-kit",
@@ -46,8 +46,8 @@
     "status": "Done",
     "progress": 100,
     "branch": "docs/booking-pilot-clinic-setup",
-    "note": "Pushed (9806d385), no PR. CLINIC-SETUP.md (12 steps per site) and RECEPTION-TRAINING.md (60-minute script plus cheat sheet). Written from the code; the app was not run.",
-    "updated": "2026-11-12"
+    "note": "Pushed (9806d385), not merged (1 ahead of main). CLINIC-SETUP.md (12 steps per site) and RECEPTION-TRAINING.md (60-minute script plus cheat sheet). Written from the code; the app was not run.",
+    "updated": "2026-11-15"
   },
   {
     "id": "reception-cancel",
@@ -56,8 +56,8 @@
     "status": "Done",
     "progress": 100,
     "branch": "feat/reception-cancel-move",
-    "note": "Pushed (6e029117), no PR, ADR 0473. New Bookings page: cancel with a reason, or move (clinic days too). Patient gets a cancel SMS. Also fixed: clinic-day-cancelled texts were never sent. Not run on a real database or in a browser.",
-    "updated": "2026-11-13"
+    "note": "On main 15 Nov (6e029117), ADR 0473. New Bookings page: cancel with a reason, or move (clinic days too). Patient gets a cancel SMS. Also fixed: clinic-day-cancelled texts were never sent. Not run on a real database or in a browser.",
+    "updated": "2026-11-15"
   },
   {
     "id": "walk-in",
@@ -66,8 +66,8 @@
     "status": "Done",
     "progress": 100,
     "branch": "feat/reception-walk-in-register",
-    "note": "Pushed (ca762c61), no PR, ADR 0475. Register new patient at the desk with a duplicate check and consent. Not built: taking over the record if they sign up later (until then, a second record). Not run on real Supabase or in a browser.",
-    "updated": "2026-11-13"
+    "note": "On main 15 Nov (ca762c61), ADR 0475. Register new patient at the desk with a duplicate check and consent. Not built: taking over the record if they sign up later (until then, a second record). Not run on real Supabase or in a browser.",
+    "updated": "2026-11-15"
   },
   {
     "id": "password-reset",
@@ -76,8 +76,8 @@
     "status": "Done",
     "progress": 100,
     "branch": "feat/password-reset",
-    "note": "Pushed (d921813b), no PR, ADR 0474, no migration. Forgot password by email for staff and patients; staff still enter their MFA code. Not run on real Supabase or in a browser.",
-    "updated": "2026-11-13"
+    "note": "On main 15 Nov (d921813b), ADR 0474, no migration. Forgot password by email for staff and patients; staff still enter their MFA code. Not run on real Supabase or in a browser.",
+    "updated": "2026-11-15"
   },
   {
     "id": "takeover",
@@ -86,8 +86,8 @@
     "status": "Done",
     "progress": 100,
     "branch": "feat/desk-record-takeover",
-    "note": "Pushed (d0e61754), no PR, ADR 0475. Desk gives a one-time sign-up code; the patient claims the same record at /signup/patient/claim. Desk records can never get a password any other way. Not run on real Supabase or in a browser; phone app has no claim screen.",
-    "updated": "2026-11-13"
+    "note": "On main 15 Nov (d0e61754), ADR 0475. Desk gives a one-time sign-up code; the patient claims the same record at /signup/patient/claim. Desk records can never get a password any other way. Not run on real Supabase or in a browser; phone app has no claim screen.",
+    "updated": "2026-11-15"
   },
   {
     "id": "tether-brief",
@@ -106,8 +106,8 @@
     "status": "Done",
     "progress": 100,
     "branch": "feat/landing-tether",
-    "note": "Pushed (3a2c5db9), no PR; report docs/landing/REPORT.md. LCP 2.41 s, INP 80 ms, CLS 0.008, axe 0, own JS 26 KB. Steps 3–6 were built without separate stops; their notes are in steps-3-6-report.md for you to sign.",
-    "updated": "2026-11-13"
+    "note": "On main 13 Nov (PR #289, 104d5396); report docs/landing/REPORT.md. LCP 2.41 s, INP 80 ms, CLS 0.008, axe 0, own JS 26 KB. Steps 3–6 were built without separate stops; their notes are in steps-3-6-report.md for you to sign.",
+    "updated": "2026-11-15"
   },
   {
     "id": "reception-desk",
@@ -116,8 +116,8 @@
     "status": "Done",
     "progress": 100,
     "branch": "feat/reception-desk",
-    "note": "Steps 0–8 pushed (4b44c851), no PR; report docs/reception/REPORT.md. Stopped before the pilot-clinic flag, deleting old pages and 308s. First-load JS 345 KB vs 160 budget (shared root alone 229 KB). INP, axe, CLS not measured: need a signed-in browser.",
-    "updated": "2026-11-13"
+    "note": "On main 15 Nov (PR #295, via feat/tether-reception-desk 21c0f9fa): on the Tether domain, reception is the desk. Report docs/reception/REPORT.md. Not done: pilot-clinic flag, deleting old pages and 308s. First-load JS 345 KB vs 160 budget (shared root alone 229 KB). INP, axe, CLS not measured: need a signed-in browser.",
+    "updated": "2026-11-15"
   },
   {
     "id": "clinic-floor",
@@ -126,8 +126,48 @@
     "status": "Done",
     "progress": 100,
     "branch": "feat/clinic-floor",
-    "note": "de1258dc, 273f7907, 1e8fdb8d, not pushed; report docs/clinic-floor/REPORT.md. Triage panel matches the engine on 200 sets. Panel lacks pregnancy and SpO2 scale 2: keep /nurse/triage until added. Not wired: follow-up booking, lab results back, trend history, age/sex. axe, budgets, 8 h screen test not measured.",
-    "updated": "2026-11-13"
+    "note": "On main 15 Nov (PR #296, 85d3dc42); /clinic opens on the Tether domain. Report docs/clinic-floor/REPORT.md. Panel lacks pregnancy and SpO2 scale 2: keep /nurse/triage until added. Not wired: follow-up booking, lab results back, trend history, age/sex. axe, budgets, 8 h screen test not measured.",
+    "updated": "2026-11-15"
+  },
+  {
+    "id": "clinics-schedule",
+    "area": "Claude",
+    "task": "Tether clinics and schedule",
+    "status": "Done",
+    "progress": 100,
+    "branch": "feat/clinics-schedule",
+    "note": "On main 15 Nov (PR #297; test fixes #300, #305). Cut over (ADR 0508), flag gone. Admins on Tether land on Clinics & schedule. Deploy is yours.",
+    "updated": "2026-11-15"
+  },
+  {
+    "id": "tether-sign-in",
+    "area": "Claude",
+    "task": "Tether sign-in and sign-up look, MFA on the sign-in page",
+    "status": "Done",
+    "progress": 100,
+    "branch": "feat/inline-mfa",
+    "note": "On main 15 Nov (PRs #292–294, #298, #301, #302). Not merged: feat/inline-mfa-setup (21551699), authenticator setup under the password on sign-in.",
+    "updated": "2026-11-15"
+  },
+  {
+    "id": "tether-logo",
+    "area": "Claude",
+    "task": "Tether wordmark as the logo and favicon",
+    "status": "Done",
+    "progress": 100,
+    "branch": "feat/tether-logo",
+    "note": "On main 15 Nov (PRs #299, #303). The Create Next App icon is gone.",
+    "updated": "2026-11-15"
+  },
+  {
+    "id": "prod-check",
+    "area": "Claude",
+    "task": "Check production after the redeploy: landing, Tether sign-in, Tether reception",
+    "status": "Queued",
+    "progress": 0,
+    "branch": "",
+    "note": "Waits for you to remove the two test switches and redeploy. Then: / on both addresses, /sign-in on Tether shows the Tether sign-in, /reception on Tether asks for sign-in then shows the desk.",
+    "updated": "2026-11-15"
   },
   {
     "id": "doctor-confirm",
@@ -136,8 +176,8 @@
     "status": "Done",
     "progress": 100,
     "branch": "fix/doctor-booking-confirm",
-    "note": "Pushed (fd03d95c), no PR, ADR 0476, no migration. Auto-confirm follows what the page shows; queue refreshes every 15 s. Failing tests were all failing before this change too (missing env and phone-app packages in the worktree). Not run in a browser.",
-    "updated": "2026-11-13"
+    "note": "On main 15 Nov (fd03d95c), ADR 0476, no migration. Auto-confirm follows what the page shows; queue refreshes every 15 s. Failing tests were all failing before this change too (missing env and phone-app packages in the worktree). Not run in a browser.",
+    "updated": "2026-11-15"
   },
   {
     "id": "rule-urgent",
@@ -210,14 +250,24 @@
     "note": "Owner applied 0292–0295 (one migrate run in the clinic-floor folder) and deployed the five desk functions, 13 Nov."
   },
   {
+    "id": "migrations-0296",
+    "area": "You",
+    "task": "Apply 0296–0298 (clinics & schedule, clinic leads MFA gate)",
+    "status": "Needs you",
+    "progress": null,
+    "branch": "",
+    "note": "0296 and 0298 applied. 0297 clinic_leads_mfa_gate: not confirmed. Was it applied?",
+    "updated": "2026-11-15"
+  },
+  {
     "id": "doctor-functions",
     "area": "You",
     "task": "Redeploy the booking Edge Functions from main at the final deploy",
     "status": "Later",
     "progress": null,
     "branch": "",
-    "note": "No rush: no real bookings yet. After the branches merge, redeploy every booking function from main once, so they all share the same code. The doctor fix touches 7 of them.",
-    "updated": "2026-11-13"
+    "note": "Every booking branch is on main now. At the final deploy, redeploy every booking function from main once, so they all share the same code. The doctor fix touches 7 of them.",
+    "updated": "2026-11-15"
   },
   {
     "area": "You",
@@ -236,8 +286,8 @@
     "status": "Needs you",
     "progress": null,
     "branch": "",
-    "note": "Parity map and all desk strings are drafts in feat/reception-desk (docs/reception/REPORT.md).",
-    "updated": "2026-11-13"
+    "note": "Parity map and all desk strings are drafts (docs/reception/REPORT.md). Then turn the desk flag on at one clinic for 2 days.",
+    "updated": "2026-11-15"
   },
   {
     "id": "floor-signoffs",
@@ -246,8 +296,8 @@
     "status": "Needs you",
     "progress": null,
     "branch": "",
-    "note": "All drafts in feat/clinic-floor (docs/clinic-floor/REPORT.md). Then pilot one clinic for 2 days and delete the old pages and flag.",
-    "updated": "2026-11-13"
+    "note": "All drafts (docs/clinic-floor/REPORT.md). Then turn CLINIC_FLOOR on at one clinic for 2 days, and delete the old pages and flag.",
+    "updated": "2026-11-15"
   },
   {
     "id": "landing-signoffs",
@@ -342,22 +392,12 @@
   {
     "id": "staff-mfa",
     "area": "You",
-    "task": "Get staff working again: set up MFA, then remove DEV_SKIP_MFA",
+    "task": "Fix production: remove DEV_SKIP_MFA and PHARMACY_DEV_HOSPITALS, redeploy",
     "status": "Needs you",
     "progress": null,
     "branch": "",
-    "note": "1) Each staff account opens /onboarding/mfa-setup and scans the code with an authenticator app. 2) Delete DEV_SKIP_MFA from Vercel Production and redeploy the current build. 3) Sign in again with the 6-digit code.",
-    "updated": "2026-11-12"
-  },
-  {
-    "id": "test-switches",
-    "area": "You",
-    "task": "Remove PHARMACY_DEV_HOSPITALS from production",
-    "status": "Later",
-    "progress": null,
-    "branch": "",
-    "note": "At go-live; the go-live list will have it.",
-    "updated": "2026-11-12"
+    "note": "15 Nov: every production page returned 500, because the start-up guard refuses to run with either switch set in Vercel Production. You agreed to remove both and redeploy; not confirmed yet. Staff then sign in with MFA (set up at /onboarding/mfa-setup).",
+    "updated": "2026-11-15"
   },
   {
     "id": "clinics",
@@ -373,11 +413,11 @@
     "id": "merge",
     "area": "You",
     "task": "Merge the pilot branches into main",
-    "status": "Later",
+    "status": "Needs you",
     "progress": null,
     "branch": "",
-    "note": "Order: fix/review-perimeter, fix/booking-dry-run, then feat/pilot-numbers, docs/booking-pilot-clinic-setup, feat/reception-cancel-move, feat/desk-record-takeover (holds the walk-in work), feat/password-reset, fix/doctor-booking-confirm. feat/booking-pilot-go-live only after Vercel Pro. They merge cleanly apart from CHANGELOG.md.",
-    "updated": "2026-11-13"
+    "note": "Most are on main (15 Nov). Still to merge: feat/pilot-numbers, docs/booking-pilot-clinic-setup, feat/inline-mfa-setup, docs/tether-sessions-handout. feat/booking-pilot-go-live only after Vercel Pro.",
+    "updated": "2026-11-15"
   },
   {
     "id": "deploy",
