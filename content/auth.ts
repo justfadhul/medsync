@@ -119,6 +119,21 @@ export const MFA = {
   submitting: "Verifying…",
 } as const;
 
+/** Setting up the authenticator: `/onboarding/mfa-setup`, and under the password on sign-in (ADR 0512). */
+export const MFA_SETUP = {
+  title: "Set up two-factor",
+  helper:
+    "Required for clinical and administrative roles. Scan the code with an authenticator app (1Password, Authy, Google Authenticator) and enter the 6-digit code.",
+  cantScan: "Can't scan the QR code?",
+  secretLead: "Enter this secret manually:",
+  label: "Authenticator code",
+  submit: "Activate two-factor",
+  submitting: "Verifying…",
+  preparing: "Preparing your authenticator code…",
+  failed: "Could not start MFA enrolment:",
+  retry: "Reload the page and sign in again.",
+} as const;
+
 export interface Door {
   title: string;
   description: string;

@@ -8,6 +8,7 @@ describe("tetherRewrite", () => {
     expect(tetherRewrite("/", true)).toBe("/tether");
     expect(tetherRewrite("/sign-in", true)).toBe("/tether/sign-in");
     expect(tetherRewrite("/sign-in/mfa", true)).toBe("/tether/sign-in/mfa");
+    expect(tetherRewrite("/onboarding/mfa-setup", true)).toBe("/tether/onboarding/mfa-setup");
   });
 
   it("leaves everything else, and everything when off", () => {

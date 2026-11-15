@@ -4,8 +4,10 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 
 import { SIGN_IN } from "@/content/auth";
+import { MFA_REQUIRED_ROLES } from "@/lib/auth";
 import { logger } from "@/lib/logger";
 import { createClient, setActiveAccount, slotForSignIn } from "@/lib/supabase/server";
+import { createServiceClient } from "@/lib/supabase/service";
 import { safeRedirect, signInErrorMessage } from "./errors";
 import { landingFor } from "./landing";
 
@@ -19,7 +21,20 @@ export type SignInState = {
   errors?: Partial<Record<"email" | "password" | "_form", string>>;
   /** The password was right and the account has an authenticator: the code field opens under the password. */
   mfa?: { redirect: string };
+  /** The password was right and the role needs an authenticator it doesn't have: setup opens under the password. */
+  setup?: { redirect: string };
 };
+
+/** A clinical or admin role (MFA_REQUIRED_ROLES), as lib/auth.ts asks; read by id, since this request's own
+ *  cookies don't hold the new session yet. */
+async function roleNeedsAuthenticator(userId: string): Promise<boolean> {
+  if (process.env.DEV_SKIP_MFA === "1") return false;
+  const { data } = await createServiceClient()
+    .from("user_roles")
+    .select("role")
+    .eq("user_id", userId);
+  return (data ?? []).some((r: { role: string }) => MFA_REQUIRED_ROLES.has(r.role));
+}
 
 export async function signInAction(_prev: SignInState, formData: FormData): Promise<SignInState> {
   const parsed = SignInSchema.safeParse({
@@ -63,6 +78,15 @@ export async function signInAction(_prev: SignInState, formData: FormData): Prom
   if (aal?.nextLevel === "aal2" && aal.currentLevel !== "aal2") {
     logger.info("sign-in password accepted; code next");
     return { mfa: { redirect: parsed.data.redirect ?? "" } };
+  }
+  // No authenticator yet but the role needs one: set it up here, not on a page of its own (ADR 0512).
+  if (
+    aal?.nextLevel !== "aal2" &&
+    signInData.user &&
+    (await roleNeedsAuthenticator(signInData.user.id))
+  ) {
+    logger.info("sign-in password accepted; authenticator setup next");
+    return { setup: { redirect: parsed.data.redirect ?? "" } };
   }
 
   // The landing decides whether ?redirect= may be honoured (a path the user may open, LD-4).
