@@ -275,7 +275,7 @@ export function Step({
 }
 
 /** A centred dialog frame on the desk's DeskDialog (ADR 0161); `size` sets the width. */
-export { DeskDialog } from "@/components/reception/ui";
+export { DeskDialog } from "@/components/reception/desk-dialog";
 export { Icon } from "@/components/reception/ui";
 
 /**

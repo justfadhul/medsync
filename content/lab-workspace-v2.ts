@@ -13,10 +13,8 @@ export const LABWS2_COPY_STATUS: SignedCopy = {
   signedOn: null,
 };
 
-/** Fills `{name}` slots. A missing value leaves the slot visible, so a gap is never silent. */
-export function fill(template: string, values: Record<string, string | number>): string {
-  return template.replace(/\{(\w+)\}/g, (m, k: string) => (k in values ? String(values[k]) : m));
-}
+// `fill` lives in its own file so a page that needs only it does not load this copy (reception desk, first load).
+export { fill } from "@/content/fill";
 
 export const LABWS2 = {
   shell: {

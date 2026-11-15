@@ -5,7 +5,7 @@ import type { Modal } from "./desk-dialogs";
 import type { DeskSession, Tone } from "@/lib/reception/desk/model";
 import { useState } from "react";
 
-import { fill } from "@/content/lab-workspace-v2";
+import { fill } from "@/content/fill";
 import { DESK } from "@/content/reception/desk";
 import {
   addDays,

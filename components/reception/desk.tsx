@@ -4,9 +4,10 @@ import type { Modal } from "./desk-dialogs";
 import type { DeskPort } from "./port";
 import type { DeskData } from "@/lib/reception/desk/fixture";
 import type { DeskRow, DeskSession, QuickFilter, Stage } from "@/lib/reception/desk/model";
+import dynamic from "next/dynamic";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
-import { fill } from "@/content/lab-workspace-v2";
+import { fill } from "@/content/fill";
 import { DESK } from "@/content/reception/desk";
 import {
   arrivals,
@@ -21,10 +22,15 @@ import {
   STAGES,
   whoOf,
 } from "@/lib/reception/desk/model";
-import { DeskCalendar } from "./desk-calendar";
-import { DeskDialogs } from "./desk-dialogs";
 import { DeskShell } from "./shell";
 import { c, Icon } from "./ui";
+
+// The calendar and the dialogs (forms, ticket, slip) are their own chunks, fetched once the desk is idle: Arrivals
+// paints and hydrates without them, and every dialog is closed on first paint.
+const loadCalendar = () => import("./desk-calendar");
+const loadDialogs = () => import("./desk-dialogs");
+const DeskCalendar = dynamic(() => loadCalendar().then((m) => m.DeskCalendar));
+const DeskDialogs = dynamic(() => loadDialogs().then((m) => m.DeskDialogs));
 
 export type View = "arr" | "day" | "week" | "month";
 /** What a dialog opens with: the calendar's chosen day or time, or the session that is running late. */
@@ -65,6 +71,15 @@ export function Desk({ data, port }: { data: DeskData; port: DeskPort }) {
     const id = setInterval(() => setElapsed(Date.now() - t0.current), 1000);
     return () => clearInterval(id);
   }, []);
+  // The dialogs mount once the desk is idle, or at once when one is asked for first.
+  const [dialogsOn, setDialogsOn] = useState(false);
+  useEffect(() => {
+    const idle = window.requestIdleCallback ?? ((cb: () => void) => window.setTimeout(cb, 1500));
+    idle(() => {
+      setDialogsOn(true);
+      void loadCalendar();
+    });
+  }, []);
   const now = kampala(new Date(new Date(data.nowIso).getTime() + elapsed));
   const nowHour = now.hour;
 
@@ -88,6 +103,7 @@ export function Desk({ data, port }: { data: DeskData; port: DeskPort }) {
   const [yob, setYob] = useState("");
   const [ph3, setPh3] = useState("");
   const [modal, setModal] = useState<Modal>(null);
+  if (modal && !dialogsOn) setDialogsOn(true);
   const [rail, setRail] = useState(false);
   const [drawer, setDrawer] = useState(false);
   const [clQ, setClQ] = useState("");
@@ -731,24 +747,26 @@ export function Desk({ data, port }: { data: DeskData; port: DeskPort }) {
             </div>
           ) : null}
 
-          <DeskDialogs
-            ctx={ctx}
-            modal={modal}
-            setModal={(m) => {
-              setModal(m);
-              if (!m) setIntent({});
-            }}
-            intent={intent}
-            setLate={(key, m) => setLateMap((x) => ({ ...x, [key]: m }))}
-            selR={selR}
-            clearSel={closeSel}
-            openRow={openRow}
-            user={user}
-            setUser={setUser}
-            clinicsOn={on}
-            setTab={setTab}
-            setView={setView}
-          />
+          {dialogsOn ? (
+            <DeskDialogs
+              ctx={ctx}
+              modal={modal}
+              setModal={(m) => {
+                setModal(m);
+                if (!m) setIntent({});
+              }}
+              intent={intent}
+              setLate={(key, m) => setLateMap((x) => ({ ...x, [key]: m }))}
+              selR={selR}
+              clearSel={closeSel}
+              openRow={openRow}
+              user={user}
+              setUser={setUser}
+              clinicsOn={on}
+              setTab={setTab}
+              setView={setView}
+            />
+          ) : null}
         </>
       }
     >

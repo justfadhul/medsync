@@ -12,7 +12,8 @@ import { useState } from "react";
 
 import { Ticket } from "@/components/landing/tether/ticket";
 import { EditorDialog } from "@/components/medsync/editor-dialog";
-import { c, DeskDialog } from "@/components/reception/ui";
+import { DeskDialog } from "@/components/reception/desk-dialog";
+import { c } from "@/components/reception/ui";
 import { FLOOR } from "@/content/clinic-floor/floor";
 import { fill } from "@/content/lab-workspace-v2";
 import { TICKET } from "@/content/tether-landing/copy";

@@ -5,7 +5,7 @@ import type { SlipData } from "./desk-forms";
 import type { DeskRow } from "@/lib/reception/desk/model";
 import { useState } from "react";
 
-import { fill } from "@/content/lab-workspace-v2";
+import { fill } from "@/content/fill";
 import { DESK } from "@/content/reception/desk";
 import {
   codeHasBadChar,
@@ -16,9 +16,10 @@ import {
   initials,
   whoOf,
 } from "@/lib/reception/desk/model";
+import { DeskDialog } from "./desk-dialog";
 import { BookDialog, WalkInDialog } from "./desk-forms";
 import s from "./desk.module.css";
-import { c, Chips, DeskDialog, Icon } from "./ui";
+import { c, Chips, Icon } from "./ui";
 
 export type Modal =
   | null

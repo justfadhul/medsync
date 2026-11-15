@@ -5,7 +5,7 @@ import type { AgeInput, AgeMode, DeskRow, DeskSession } from "@/lib/reception/de
 import { useState } from "react";
 
 import { Ticket } from "@/components/landing/tether/ticket";
-import { fill } from "@/content/lab-workspace-v2";
+import { fill } from "@/content/fill";
 import { DESK } from "@/content/reception/desk";
 import { TICKET } from "@/content/tether-landing/copy";
 import {
@@ -18,8 +18,9 @@ import {
   initials,
   whoOf,
 } from "@/lib/reception/desk/model";
+import { DeskDialog } from "./desk-dialog";
 import { SlipCard } from "./desk-dialogs";
-import { c, Chips, DeskDialog, Icon } from "./ui";
+import { c, Chips, Icon } from "./ui";
 
 export interface SlipData {
   kind: string;

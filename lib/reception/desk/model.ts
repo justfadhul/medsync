@@ -2,7 +2,7 @@
  * The reception desk's pure rules (docs/reception/gate-a-proposal.md §2): no React, no I/O, time injected, so
  * Vitest pins every rule. Strings come from content/reception/desk.ts.
  */
-import { fill } from "@/content/lab-workspace-v2";
+import { fill } from "@/content/fill";
 import { DESK } from "@/content/reception/desk";
 
 /* ─── types ─────────────────────────────────────────────────────────── */

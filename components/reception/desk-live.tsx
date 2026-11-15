@@ -4,7 +4,7 @@ import type { DeskData } from "@/lib/reception/desk/fixture";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 
-import { fill } from "@/content/lab-workspace-v2";
+import { fill } from "@/content/fill";
 import { DESK } from "@/content/reception/desk";
 import { offlineQueue } from "@/lib/reception/desk/queue";
 import { Desk } from "./desk";

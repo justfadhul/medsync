@@ -66,3 +66,4 @@
 - [Clinic floor build](clinic-floor-build-state.md) — 13 Nov: STOP 0–8 on feat/clinic-floor (worktree clinic-floor-4f4be4), 85d3dc42 pushed, PR to main pending (no gh); 0295 GATED unapplied; read docs/clinic-floor/REPORT.md
 - [Desktop consolidated](desktop-consolidated.md) — 14 Nov: only ~/Desktop/medsync left; harness now at medsync/.emr-harness; new worktrees go in .claude/worktrees
 - [Clinics & schedule build](clinics-schedule-build.md) — 15 Nov: built+signed+CUT OVER (e4ac2bab, ADR 0508) on feat/clinics-schedule (worktree clinics-schedule-940aa4), local only; 0296+0298 applied by owner; flag gone; pushed 15 Nov (no PR), not deployed
+- [Reception desk first load](reception-desk-first-load.md) — 15 Nov: /reception 341.6 → ~263 KB gz on perf/reception-desk-first-load (pushed, not merged); root 229.7 blocks the 160 budget; how to measure

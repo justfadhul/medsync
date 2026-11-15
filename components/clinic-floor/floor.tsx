@@ -13,8 +13,9 @@ import type { FloorClinic, FloorData, FloorPerson, Role } from "@/lib/clinic-flo
 import type { DoctorState, EventKind, FloorEvent, FloorRow } from "@/lib/clinic-floor/model";
 import { useEffect, useMemo, useRef, useState } from "react";
 
+import { DeskDialog } from "@/components/reception/desk-dialog";
 import { DeskShell } from "@/components/reception/shell";
-import { c, DeskDialog, Icon } from "@/components/reception/ui";
+import { c, Icon } from "@/components/reception/ui";
 import { FLOOR } from "@/content/clinic-floor/floor";
 import { fill } from "@/content/lab-workspace-v2";
 import { canCall, doctorStates, lineOrder, projectFloor } from "@/lib/clinic-floor/model";
