@@ -5,6 +5,7 @@ For a Claude Code session picking this repo up without the previous session's lo
 ## Start here: the owner works from a tablet (since 2026-11-15)
 
 - **The Mac is switched off.** Every session ran there until 2026-11-15; from now on all work is cloud sessions. Every branch those sessions built was pushed (no local-only commits left). Their 53 conversations stay on the Mac and can't be opened from here.
+- **Tether pilot sessions: read `docs/claude-memory/tether-main-chat-handout.md` first** (relaunch briefs per session).
 - **What they knew is in `docs/claude-memory/`.** Start at `MEMORY.md` (one line per note), then open the notes your task touches. Notes are dated; newer beats older, and check the branch or file before trusting one. Paths such as `~/Desktop/medsync/.claude/worktrees/…`, `~/.claude/…` or `~/Desktop/*-harness` were on the Mac: use the branch the note names (`git fetch origin <branch>`).
 - **Keep the notes alive.** Cloud sessions have no memory of their own. When you finish a piece of work, update its note in `docs/claude-memory/` (same format: one fact per file, one index line in `MEMORY.md`) and commit it with the work, so it reaches `main` when the branch merges.
 - `REVIEW/` is the 11 Nov senior review (`senior-review-2026-11-11.md`; mark fixes DONE in `fix-plan.html`), see `docs/claude-memory/review-fixes-build.md`. `.claude/pilot-board/tracks.json` is the data behind the booking pilot board, see `docs/claude-memory/booking-pilot-board.md`.
