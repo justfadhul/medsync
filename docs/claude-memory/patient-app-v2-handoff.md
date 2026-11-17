@@ -44,7 +44,7 @@ Prompt: the owner's "Tether patient app v2, phone and web, with booking payments
 **Still the owner's:**
 
 1. Sign `parity-phone.md` and `parity-web.md` (gaps: phone 17, web 13).
-2. Apply GATED migrations **0302, 0303, 0304** (0299–0301 are on main; check they were applied), in order, from a checkout of feat/patient-app-v2. 0304 adds the 0288 MFA gate on the 21 new tables and must go in.
+2. ~~Apply migrations~~ **Done 17 Nov:** the owner applied 0299–0304 from a tablet in the Supabase SQL Editor (each wrapped in begin/commit and recorded in `_medsync_migrations`). Earlier, 0297 was confirmed applied (15 Nov).
 3. Secrets: `MEDICAL_ID_TOKEN_SECRET` (32+ chars) and `PAY_WEBHOOK_SECRET` on the functions. Keep `PAY_SANDBOX_*` off production.
 4. Deploy the new Edge Functions after merge: pt-pay-intent, pt-refund-request, ha-refund-decide, ha-pay-desk, pt-care-reading, pt-dose-event, pt-care-message, pt-programme-bill, pt-plus, pt-medical-id-token.
 5. Payments:
