@@ -26,7 +26,7 @@ Prompt: the owner's "Tether patient app v2, phone and web, with booking payments
 
 **Already on main:** the first half (migrations 0299–0301, ADRs 0516–0519) reached main before the PR. ADR 0520 on main is "one admin workspace", so v2's Plus ADR is renumbered to **0523**.
 
-**PR #318 open (17 Nov):** https://github.com/justfadhul/medsync/pull/318, feat/patient-app-v2 @ 9b0e88a → main. origin/main is merged in, the CHANGELOG conflict is resolved, and the Plus ADR is renumbered 0520 → 0523. After the merge: typecheck and lint clean; vitest 12,598 pass, once `mobile/` dependencies are installed. Merging is the owner's.
+**PR #318 merged (17 Nov):** https://github.com/justfadhul/medsync/pull/318, feat/patient-app-v2 @ 9b0e88a → main. origin/main is merged in, the CHANGELOG conflict is resolved, and the Plus ADR is renumbered 0520 → 0523. After the merge: typecheck and lint clean; vitest 12,598 pass, once `mobile/` dependencies are installed. Merging is the owner's.
 
 **Flags (all off):** `appV2Mobile`, `appV2Web`, `careMode` (locked in code: `GATE_CG_SIGNED = false`), `mobilePayments` (sandbox only).
 
@@ -45,8 +45,8 @@ Prompt: the owner's "Tether patient app v2, phone and web, with booking payments
 
 1. Sign `parity-phone.md` and `parity-web.md` (gaps: phone 17, web 13).
 2. ~~Apply migrations~~ **Done 17 Nov:** the owner applied 0299–0304 from a tablet in the Supabase SQL Editor (each wrapped in begin/commit and recorded in `_medsync_migrations`). Earlier, 0297 was confirmed applied (15 Nov).
-3. Secrets: `MEDICAL_ID_TOKEN_SECRET` (32+ chars) and `PAY_WEBHOOK_SECRET` on the functions. Keep `PAY_SANDBOX_*` off production.
-4. Deploy the new Edge Functions after merge: pt-pay-intent, pt-refund-request, ha-refund-decide, ha-pay-desk, pt-care-reading, pt-dose-event, pt-care-message, pt-programme-bill, pt-plus, pt-medical-id-token.
+3. Secrets: `MEDICAL_ID_TOKEN_SECRET` is the owner's to set in Supabase (Edge Functions → Secrets); **not confirmed set.** `PAY_WEBHOOK_SECRET` goes in Vercel (the callback is a Next route). Keep `PAY_SANDBOX_*` off production.
+4. ~~Deploy the Edge Functions~~ **Done 17 Nov:** PRs #318, #319 and #320 are merged. The owner deployed all ten from `main` with the Actions button "Deploy Edge Functions" (`.github/workflows/deploy-functions.yml`, manual only; needs repo secrets `SUPABASE_ACCESS_TOKEN` and `SUPABASE_PROJECT_REF`). Use the same button for later function deploys. The Vercel deploy of main is still the owner's.
 5. Payments:
    - choose the provider, Flutterwave or Pesapal (fees, refund API and callback signing not verified);
    - each hospital's merchant agreement;
