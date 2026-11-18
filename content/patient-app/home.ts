@@ -40,4 +40,17 @@ export const HOME_V2_COPY = {
     book: "Book for {name}",
   },
   card: { title: "Your card", open: "Open your card" },
+  offline:
+    "You are offline. What you see may be out of date. A reading you type stays on its page until you save it.",
+  myCareNew: "new from your care team",
+  wellness: {
+    title: "Wellness",
+    note: "Only you see what you log here. It does not go to your care team.",
+    move: "Move",
+    moveNote: "Minutes walked and water",
+    mood: "Mood",
+    moodNote: "How you feel, by day, month and year",
+    eat: "Eat",
+    eatNote: "The plate guide and foods you log",
+  },
 } as const;

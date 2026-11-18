@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import {
   ageWords,
   cardLines,
@@ -11,6 +12,7 @@ import { placesSummary } from "@patient-core/me-places";
 import { memberNumber, plansFrom, tierNow } from "@patient-core/membership";
 
 import { PageHeader } from "@/components/tide/shell";
+import { HOME_V2_COPY } from "@/content/patient-app/home";
 import { ME_COPY as C } from "@/content/patient/me";
 import { loadMedicines } from "@/lib/patient-web/day";
 import { patientFlag } from "@/lib/patient-web/flags";
@@ -103,6 +105,15 @@ export default async function MePage() {
             plans={plansFrom(membership?.prices ?? [], now.toISOString().slice(0, 10))}
             msisdn={msisdn}
           />
+          <Link
+            href="/patient/wellness"
+            className="rounded-pw-card bg-pw-surface shadow-pw-card hover:bg-pw-surface-2 focus-visible:outline-pw-focus mt-6 flex min-h-14 items-center justify-between gap-3 p-4 text-[17px] font-semibold focus-visible:outline-2"
+          >
+            {HOME_V2_COPY.wellness.title}
+            <span className="text-pw-ink-2 text-[14px] font-medium">
+              {HOME_V2_COPY.wellness.moveNote}
+            </span>
+          </Link>
         </div>
       ) : null}
       <MeView

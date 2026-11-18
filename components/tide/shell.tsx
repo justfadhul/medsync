@@ -4,7 +4,7 @@ import type { Area } from "./kit";
 import type { ReactNode } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { createContext, useContext } from "react";
+import { createContext, useContext, useSyncExternalStore } from "react";
 import {
   BellIcon,
   CalendarDaysIcon,
@@ -22,6 +22,7 @@ import {
 import { useTheme } from "next-themes";
 
 import { Wordmark } from "@/components/landing/tether/chrome";
+import { HOME_V2_COPY } from "@/content/patient-app/home";
 import { TIDE_COPY } from "@/content/tide";
 import { cn } from "@/lib/utils";
 import { Avatar, DemoRibbon, ICON, Overline } from "./kit";
@@ -62,6 +63,8 @@ const PLACES = [
  */
 export interface ShellV2 {
   mode: "visit" | "care";
+  /** Care mode: unanswered care team items; the My care place pulses (M9; Reduce Motion: a still dot). */
+  myCareUnread?: number;
   hospital: string | null;
   name: string;
   initials: string;
@@ -239,6 +242,7 @@ function ShellV2Frame({
                 >
                   <p.Icon className="size-[18px]" {...ICON} />
                   {p.label}
+                  {p.label === "My care" && (v2.myCareUnread ?? 0) > 0 ? <PulseDot /> : null}
                 </Link>
               );
             })}
@@ -258,6 +262,7 @@ function ShellV2Frame({
           </div>
         </div>
       </header>
+      <OfflineBanner />
       <div className="px-[max(24px,env(safe-area-inset-left))] pt-6 pb-12 max-[760px]:px-4 max-[760px]:pt-4 max-[760px]:pb-[132px]">
         <main className="mx-auto flex w-full max-w-[1240px] min-w-0 flex-col gap-7 max-[760px]:gap-5">
           {children}
@@ -268,10 +273,42 @@ function ShellV2Frame({
         className="bg-pw-surface shadow-pw-float fixed bottom-[calc(14px+env(safe-area-inset-bottom))] left-1/2 z-30 hidden h-[76px] w-[min(560px,calc(100%-32px))] -translate-x-1/2 items-center justify-around rounded-[38px] p-2 max-[760px]:flex"
       >
         {places.map((p) => (
-          <Place key={p.href} {...p} current={p.match(path)} />
+          <Place
+            key={p.href}
+            {...p}
+            current={p.match(path)}
+            pulse={p.label === "My care" ? (v2.myCareUnread ?? 0) : 0}
+          />
         ))}
       </nav>
     </div>
+  );
+}
+
+const subscribe = (cb: () => void) => {
+  window.addEventListener("online", cb);
+  window.addEventListener("offline", cb);
+  return () => {
+    window.removeEventListener("online", cb);
+    window.removeEventListener("offline", cb);
+  };
+};
+
+/** The web's offline state (MR13, 1.6): said plainly, politely, while the browser has no connection. */
+function OfflineBanner() {
+  const online = useSyncExternalStore(
+    subscribe,
+    () => navigator.onLine,
+    () => true,
+  );
+  if (online) return null;
+  return (
+    <p
+      role="status"
+      className="bg-pw-surface-2 text-pw-ink border-pw-line border-b px-4 py-2.5 text-center text-[14px] font-semibold"
+    >
+      {HOME_V2_COPY.offline}
+    </p>
   );
 }
 
@@ -291,18 +328,34 @@ function ThemeToggle() {
   );
 }
 
+/** M9: unread care team items. A pulse in the accent, never red; a still dot under Reduce Motion. */
+function PulseDot() {
+  return (
+    <span className="relative inline-flex size-2.5">
+      <span
+        aria-hidden
+        className="bg-pw-accent absolute inset-0 rounded-full motion-safe:animate-ping"
+      />
+      <span aria-hidden className="bg-pw-accent relative size-2.5 rounded-full" />
+      <span className="sr-only">, {HOME_V2_COPY.myCareNew}</span>
+    </span>
+  );
+}
+
 function Place({
   href,
   label,
   Icon,
   current,
   badge = 0,
+  pulse = 0,
 }: {
   href: string;
   label: string;
   Icon: typeof HouseIcon;
   current: boolean;
   badge?: number;
+  pulse?: number;
 }) {
   return (
     <Link
@@ -320,6 +373,11 @@ function Place({
     >
       <Icon className="size-6" {...ICON} />
       {label}
+      {pulse > 0 ? (
+        <span className="absolute top-2 right-4">
+          <PulseDot />
+        </span>
+      ) : null}
       {badge > 0 ? (
         <span
           className={cn(

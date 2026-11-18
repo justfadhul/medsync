@@ -108,8 +108,9 @@ export default async function DayPage({
   const waitlistLine =
     !doctor && days.days.length === 0 ? await waitlistLineFor(days.hospitalId, reason) : null;
 
-  // Patient app v2 (W1), behind appV2Web: the whole booking on one page.
-  if (patientFlag("appV2Web") && !doctor) {
+  // Patient app v2 (W1), behind appV2Web: the whole booking on one page, a doctor's own times included (their
+  // slots are sessions with a `slot`; the booking slice's action takes them the same way, S9).
+  if (patientFlag("appV2Web")) {
     const mobile = await myMobile().catch(() => null);
     return (
       <>

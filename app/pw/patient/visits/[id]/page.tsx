@@ -122,7 +122,7 @@ export default async function VisitPage({ params }: { params: Promise<{ id: stri
           now: new Date(),
         })
       : null;
-    const ticket = ticketView(visit, pay.get(visit.id), "You");
+    const ticket = ticketView(visit, pay.get(visit.id), scope.fullName?.trim() || "You");
     return (
       <>
         <PageHeader back={back} title={title} />

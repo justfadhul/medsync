@@ -41,7 +41,7 @@ export function TodayClient(p: {
       snippets={p.snippets}
       tick={tickWith(p.planVersionId)}
       logHref={(m) => `/patient/care/readings?kind=${m}`}
-      detailsHref="/patient/care/trends"
+      detailsHref="/patient/care/readings"
       heroHref={heroHref}
     />
   );

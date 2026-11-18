@@ -251,6 +251,17 @@ export function tenDays(
   now: Date,
   sugarContext = "fasting",
 ): { days: CardDay[]; weekAgo: number | null } {
+  return daysOf(readings, metric, now, 10, sugarContext);
+}
+
+/** The same, over `n` days (the Readings page draws 30). */
+export function daysOf(
+  readings: CardReading[],
+  metric: "bp" | "sugar" | "weight",
+  now: Date,
+  n: number,
+  sugarContext = "fasting",
+): { days: CardDay[]; weekAgo: number | null } {
   const mine = readings
     .filter(
       (r) =>
@@ -263,8 +274,8 @@ export function tenDays(
     const k = kampalaDayKey(new Date(r.at));
     if (!byDay.has(k)) byDay.set(k, r);
   }
-  const days: CardDay[] = Array.from({ length: 10 }, (_, i) => {
-    const d = new Date(now.getTime() - (9 - i) * 86_400_000);
+  const days: CardDay[] = Array.from({ length: n }, (_, i) => {
+    const d = new Date(now.getTime() - (n - 1 - i) * 86_400_000);
     const dayKey = kampalaDayKey(d);
     const r = byDay.get(dayKey);
     const [, m, dd] = dayKey.split("-");
@@ -288,4 +299,31 @@ export function tenDays(
     weekAgo = best?.v ?? null;
   }
   return { days, weekAgo };
+}
+
+/** The Readings page's stats over the days shown: the average, how many days were in target, the latest. */
+export function readingStats(
+  days: CardDay[],
+  band: { lo: number; hi: number } | null,
+): {
+  average: number | null;
+  averageBottom: number | null;
+  inTarget: number | null;
+  logged: number;
+  latest: CardDay | null;
+} {
+  const logged = days.filter((d) => d.value !== null);
+  const avg = (xs: number[]) =>
+    xs.length ? Math.round((xs.reduce((a, b) => a + b, 0) / xs.length) * 10) / 10 : null;
+  const bottoms = logged.flatMap((d) => (typeof d.bottom === "number" ? [d.bottom] : []));
+  return {
+    average: avg(logged.map((d) => d.value as number)),
+    averageBottom: bottoms.length ? Math.round(avg(bottoms)!) : null,
+    inTarget: band
+      ? logged.filter((d) => (d.value as number) >= band.lo && (d.value as number) <= band.hi)
+          .length
+      : null,
+    logged: logged.length,
+    latest: logged.at(-1) ?? null,
+  };
 }

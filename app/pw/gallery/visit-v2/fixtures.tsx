@@ -3,6 +3,7 @@
 import type { WebQuestion } from "@/components/tide/v2-visit-web";
 import type { DayOption } from "@patient-core/book-days";
 import { useState } from "react";
+import { slotDays } from "@patient-core/book-days";
 import { ticketView } from "@patient-core/ticket-view";
 import { visitMoney } from "@patient-core/visit-money";
 import { stageOf } from "@patient-core/visit-stages";
@@ -83,6 +84,39 @@ export function VisitV2Fixtures({ screen }: { screen: string }) {
     { id: "q2", body: "When should I come back?", suggested: true, asked: false },
   ]);
   if (screen === "pay") return <PayFixtures />;
+  if (screen === "book-doctor")
+    return (
+      <BookOnePage
+        hospitalName="Demo Hospital"
+        emergencyLine="Emergency? Go to the emergency entrance now, or press Help."
+        who={[{ id: null, label: "Sample Member" }]}
+        reasons={[{ code: "follow_up", label: "A follow-up visit" }]}
+        days={slotDays(
+          {
+            userId: "c1",
+            fullName: "Your doctor",
+            cadreId: null,
+            departmentId: "d1",
+            departmentName: "Medical outpatients",
+            slotsByDate: {
+              "2026-11-19": [
+                { startsAtIso: "2026-11-19T06:00:00Z", endsAtIso: "2026-11-19T06:20:00Z" },
+                { startsAtIso: "2026-11-19T06:40:00Z", endsAtIso: "2026-11-19T07:00:00Z" },
+              ],
+              "2026-11-20": [
+                { startsAtIso: "2026-11-20T07:20:00Z", endsAtIso: "2026-11-20T07:40:00Z" },
+              ],
+            },
+          },
+          [],
+          "follow_up",
+        )}
+        savedMsisdn={null}
+        submit={async () => ({ ok: true, appointmentId: "fx-doc", code: "D0C42X" })}
+        pay={async () => ({ ok: true, view: "paid" })}
+        visitsHref="/pw/gallery/visit-v2?screen=visits"
+      />
+    );
   if (screen === "book")
     return (
       <BookOnePage

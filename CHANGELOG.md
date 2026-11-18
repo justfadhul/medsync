@@ -5,6 +5,16 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); version
 
 ## [Unreleased]
 
+### Changed — Patient app v2 web finish, second pass: Readings, doctor's times, the rest of the gaps — 18 Nov 2026
+
+- The Readings page (`/patient/care/readings`, behind `appV2Web`): tabs, sugar timing chips, the 30-day chart with the target band or lines, gaps kept and a crosshair on hover or keyboard focus, stats, a plain-words note, the table, and Add a reading beside it. Shared rules: `daysOf` and `readingStats` in `packages/patient-core/care-plan.ts`. Card Details now opens it.
+- A doctor's own times book on the v2 one-page Book (the same action and slot rules).
+- The patient's name on the ticket (a household member's label on theirs).
+- An offline banner in the v2 shell; the My care pulse for unanswered care team items (care mode only).
+- Wellness (`/patient/wellness`, from Me): move, mood and eat.
+- Fixed: `/patient/care/plan` and `/patient/care/my-care` were missing from the route rewrite, so those URLs did not reach the Tide pages.
+- `parity-web.md`: 28 v2, 21 kept, 6 gaps, each with its reason.
+
 ### Changed — Patient app v2 web finish, first pass: shell, Home, Me, Tether brand — 17 Nov 2026
 
 - Shell (M3, M4), behind `appV2Web`: a sticky frosted top bar at ≥ 761 px (Tether mark and hospital, the mode's places, theme toggle, red Help, avatar with name) and the pill at the foot at ≤ 760 px. Visit mode: Home, Book, Visits, Me; Care mode (only where `careModeOn()`): Today, Plan, My care, Me. Page headers drop their own Help and avatar where the top bar carries them.

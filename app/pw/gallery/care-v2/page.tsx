@@ -14,7 +14,9 @@ export default async function CareV2Gallery({
 }) {
   const { screen = "today" } = await searchParams;
   const title =
-    { plan: "Your plan today", mycare: "My care", reading: "Add a reading" }[screen] ?? "Today";
+    { plan: "Your plan today", mycare: "My care", reading: "Add a reading", readings: "Readings" }[
+      screen
+    ] ?? "Today";
   return (
     <PatientShell v2={GALLERY_SHELL}>
       <PageHeader overline="Kit · v2" area="readings" title={title} demo />

@@ -155,3 +155,29 @@ describe("tenDays (the reading card)", () => {
     expect(tenDays([], "weight", now)).toMatchObject({ weekAgo: null });
   });
 });
+
+describe("daysOf and readingStats (the Readings page)", () => {
+  it("30 days with gaps; stats over the days logged", async () => {
+    const { daysOf, readingStats } = await import("@patient-core/care-plan");
+    const now = new Date("2026-11-16T09:00:00Z");
+    const r = (d: number, v: number) => ({
+      at: new Date(now.getTime() - d * 86_400_000).toISOString(),
+      input: { kind: "sugar" as const, value: v, context: "fasting" },
+    });
+    const { days } = daysOf([r(0, 6), r(2, 8), r(29, 7)], "sugar", now, 30);
+    expect(days).toHaveLength(30);
+    expect(days.filter((d) => d.value !== null)).toHaveLength(3);
+    expect(readingStats(days, { lo: 4, hi: 7.2 })).toMatchObject({
+      average: 7,
+      inTarget: 2,
+      logged: 3,
+      latest: { value: 6 },
+    });
+    expect(
+      readingStats(
+        days.map((d) => ({ ...d, value: null })),
+        null,
+      ),
+    ).toMatchObject({ average: null, inTarget: null, logged: 0 });
+  });
+});

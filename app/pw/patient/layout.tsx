@@ -27,7 +27,8 @@ export default async function PatientWebShell({ children }: { children: ReactNod
   const day = gated ? null : await loadAddDialogDay(scope.userId).catch(() => null);
   // Patient app v2 (M3): the mode's places in a top bar and a pill. Care mode only where it is unlocked (MR11).
   const v2 = patientFlag("appV2Web");
-  const mode = v2 && careModeOn() && (await loadCareWeb().catch(() => null)) ? "care" : "visit";
+  const care = v2 && careModeOn() ? await loadCareWeb().catch(() => null) : null;
+  const mode = care ? "care" : "visit";
   const name = scope.fullName?.trim() || "You";
   const initials =
     name
@@ -38,7 +39,17 @@ export default async function PatientWebShell({ children }: { children: ReactNod
   return (
     <PatientShell
       bare={gated}
-      v2={v2 ? { mode, hospital: scope.primaryHospitalName ?? null, name, initials } : undefined}
+      v2={
+        v2
+          ? {
+              mode,
+              myCareUnread: care?.asks.length ?? 0,
+              hospital: scope.primaryHospitalName ?? null,
+              name,
+              initials,
+            }
+          : undefined
+      }
       plus={<AddButton day={day} />}
       dosesDue={day?.today.dueNow.length ?? 0}
     >

@@ -84,7 +84,7 @@ export default async function VisitsPage() {
         : [];
     });
     const row = (v: (typeof all)[number]) => {
-      const t = ticketView(v, pay.get(v.id), "You");
+      const t = ticketView(v, pay.get(v.id), scope.fullName?.trim() || "You");
       const d = inKampala(v.startsAtIso);
       return {
         id: v.id,

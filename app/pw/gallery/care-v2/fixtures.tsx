@@ -15,6 +15,7 @@ import { heroFor } from "@patient-core/today-hero";
 
 import { ReadingForm } from "@/components/tide/reading-dialog";
 import { CareTodayWeb, MyCareWeb, PlanWeb } from "@/components/tide/v2-care-web";
+import { ReadingsPageWeb } from "@/components/tide/v2-readings-web";
 
 /** Fixed sample day: Monday 16 Nov 2026, 08:10 in Kampala. Invented plan and readings; no patient data. */
 const NOW = kampalaInstant("2026-11-16", "08:10");
@@ -133,6 +134,10 @@ export function CareV2Fixtures({ screen }: { screen: string }) {
         ]}
         send={ok}
       />
+    );
+  if (screen === "readings")
+    return (
+      <ReadingsPageWeb readings={READINGS} recent={[]} nowIso={NOW.toISOString()} initial="sugar" />
     );
   if (screen === "reading")
     return (
