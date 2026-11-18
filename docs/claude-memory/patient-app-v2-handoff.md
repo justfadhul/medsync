@@ -1,76 +1,108 @@
 ---
 name: patient-app-v2-handoff
-description: 17 Nov 2026 cloud-to-Mac handoff of the booking-pilot nested session and the patient app v2 build (Steps 0–12, widgets deferred); branches, signatures, owner items, next steps
+description: 18 Nov 2026 handout of the patient app v2 build (phone, web, payments sandbox, care mode locked): what is merged and live, what is on a branch, owner items, and how to carry on from the Mac or a new cloud session
 metadata:
   type: project
 ---
 
-# Handoff: booking pilot follow-ups and patient app v2 (cloud, 15–17 Nov 2026)
+# Handout: Tether patient app v2 (state on 18 Nov 2026)
 
-Cloud session session_01AyHv1D2ewdBPDWcVvucFxZ (a nested session of the Tether main chat session_01AyHv1BQVYvi9chtZG8652e) ran two threads. The patient app v2 build ran in its own nested session, session_01AyHv1EmYfFgC7sodexhkEn. Neither conversation can be opened on the Mac. This file is what they knew. Owner rules: [[medsync-owner-rules]].
+Built 15–18 Nov in cloud sessions that cannot be reopened elsewhere: this session (session_01AyHv1D2ewdBPDWcVvucFxZ) and the build session it started (session_01AyHv1EmYfFgC7sodexhkEn). This file is what they knew. Owner rules: [[medsync-owner-rules]]. Read `docs/patient-app/REPORT.md`, `parity-web.md` and `parity-phone.md` next.
 
-## 1. Booking pilot branches (done)
+## 1. Where things stand
 
-| Branch                           | Tip     | State                                                                                                                                                                                                                            |
-| -------------------------------- | ------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `claude/booking-pilot-onto-main` | c16ab37 | Pilot numbers + clinic set-up guide cherry-picked onto main; docs rewritten for Clinics & schedule (ADR 0508); desk "Running late" steps in RECEPTION-TRAINING. Main later took #308/#310, so check it is merged before using it |
-| `claude/booking-pilot-go-live`   | fb89678 | 15-min reminder cron + GO-LIVE.md. **Waits for Vercel Pro.** Main shows a go-live PR #310: check whether this cron is already on main and that Pro is on before any deploy                                                       |
+| Thing                                                                     | State                                                                                                                                         |
+| ------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| PR #314: Apple HIG + Expo SDK 58 (ADR 0515)                               | merged                                                                                                                                        |
+| PR #318: patient app v2, Steps 0–10 and 12                                | merged 17 Nov                                                                                                                                 |
+| PRs #319, #320: Actions button "Deploy Edge Functions"                    | merged                                                                                                                                        |
+| PR #321: member number shows the whole ID                                 | merged 18 Nov                                                                                                                                 |
+| PR #322: web v2 pass 1 (navigation, Home, one card on Me, Tether wording) | merged 18 Nov                                                                                                                                 |
+| `feat/patient-app-v2-web-finish-2` @ 1a51419: web v2 pass 2               | pushed and rebased on main 31150f2; **no PR yet**; owner to say "open the PR"                                                                 |
+| Migrations 0299–0304                                                      | applied by the owner 17 Nov (Supabase SQL Editor, each recorded in `_medsync_migrations`); 0297 confirmed applied 15 Nov                      |
+| Edge Functions (10)                                                       | deployed by the owner 17 Nov from main with the Actions button                                                                                |
+| Web                                                                       | `medsync-tether-site.vercel.app` runs main with `PATIENT_WEB_TIDE=1` and `PATIENT_FLAGS=appV2Web`. Not known to be redeployed since #321/#322 |
+| Step 11, widgets                                                          | deferred by the owner; options in `docs/patient-app/step11-dependencies.md` (recommended `expo-widgets`)                                      |
 
-Open: reminder toggle says "Sent at 18:00 the evening before" but the daily cron runs 08:00 EAT until Pro (wording change needs the CSO).
+The ten functions: pt-pay-intent, pt-refund-request, ha-refund-decide, ha-pay-desk, pt-care-reading, pt-dose-event, pt-care-message, pt-programme-bill, pt-plus, pt-medical-id-token.
 
-## 2. Patient app v2 (`feat/patient-app-v2`)
+## 2. Switches
 
-Prompt: the owner's "Tether patient app v2, phone and web, with booking payments" (gated, Steps 0–12). Branch was cut from main 971b9da after PR #314 (Apple HIG + Expo SDK 58, ADR 0515) was merged.
+| Switch                             | Where                  | Now        | Notes                                                                                             |
+| ---------------------------------- | ---------------------- | ---------- | ------------------------------------------------------------------------------------------------- |
+| `PATIENT_WEB_TIDE`                 | Vercel env             | `1`        | serves `app/pw` pages at `/patient`                                                               |
+| `PATIENT_FLAGS`                    | Vercel env, comma list | `appV2Web` | **global: every patient on that site sees v2**, with draft wording. No per-hospital switch exists |
+| `EXPO_PUBLIC_MOBILE_FLAGS`         | `mobile/.env`          | owner's    | add `appV2Mobile` for the v2 phone screens                                                        |
+| `careMode`                         | both lists             | off        | does nothing until `GATE_CG_SIGNED` is flipped in code (reviewed change)                          |
+| `MOBILE_PAYMENTS`, `PAY_SANDBOX_*` | function env           | unset      | keep unset in production; the sandbox is for dev and tests                                        |
 
-**State on 17 Nov:** Steps 0–10 and 12 done and pushed (tip af8d670). Step 11 (widgets) deferred by the owner: "lets first leave out widgets"; options in `docs/patient-app/step11-dependencies.md` (recommended `expo-widgets@58.0.28`). Read `docs/patient-app/REPORT.md` first, then `parity-phone.md`, `parity-web.md`, `gate-a-proposal.md`, `gate-a-amendment-1.md`, `payments-setup.md`, `business-model.md`.
+Secrets:
 
-**Already on main:** the first half (migrations 0299–0301, ADRs 0516–0519) reached main before the PR. ADR 0520 on main is "one admin workspace", so v2's Plus ADR is renumbered to **0523**.
+- `MEDICAL_ID_TOKEN_SECRET` (Supabase → Edge Functions → Secrets, 32+ characters): **not confirmed set**. Without it the card's QR fails.
+- `PAY_WEBHOOK_SECRET` (Vercel, 16+ letters and digits): optional until a provider is chosen.
+- Repo secrets `SUPABASE_ACCESS_TOKEN` and `SUPABASE_PROJECT_REF` exist for the deploy button.
 
-**PR #318 open (17 Nov):** https://github.com/justfadhul/medsync/pull/318, feat/patient-app-v2 @ 9b0e88a → main. origin/main is merged in, the CHANGELOG conflict is resolved, and the Plus ADR is renumbered 0520 → 0523. After the merge: typecheck and lint clean; vitest 12,598 pass, once `mobile/` dependencies are installed. Merging is the owner's.
+## 3. How the owner does things from a tablet
 
-**Flags (all off):** `appV2Mobile`, `appV2Web`, `careMode` (locked in code: `GATE_CG_SIGNED = false`), `mobilePayments` (sandbox only).
+- **Migrations:** Supabase SQL Editor. Wrap the file in `begin; … insert into public._medsync_migrations (name) values ('<file>.sql'); commit;`, one query per file, in order. The check is `select name from public._medsync_migrations order by name desc limit 8;`.
+- **Edge Functions:** GitHub → Actions → Deploy Edge Functions → Run workflow from `main`, with the function names separated by spaces.
+- **Web:** merging does not deploy (`vercel.json` has git deploys off), and "Redeploy" rebuilds the old commit. Make a new deployment from the latest main. To check the build, sign in as a patient and open `/pw/gallery/me-v2`.
+- **Phone:** needs the Mac: `cd mobile && npx expo start` with the real keys. Cloud sessions run Expo web with dummy keys only (the sample page `/dev/v2`, no sign-in).
 
-**Signed by the owner/CSO in chat, 16 Nov:**
+## 4. Signed by the owner/CSO in chat (16–18 Nov)
 
-- GATE A §6 block, A1–A5, the feature matrix and renames.json;
-- D-PA-07: 30-day credit, then refund on request;
-- amendment 1 (MR9: safety free, programmes paid);
-- Plus prices 5,000 / 10,000 / 13,000 a month;
-- very high BP at 180 or 110;
-- red danger hero on both red allowlists;
-- stage 3 wording;
-- all STOP 4/5 departures.
+- GATE A §6, A1–A5, the feature matrix and renames.json.
+- D-PA-07: 30-day credit, then refund on request.
+- Amendment 1: safety stays free, care programmes are paid.
+- Plus prices: 5,000 / 10,000 / 13,000 a month.
+- Very high BP: 180 or 110.
+- The red danger hero.
+- Stage 3 wording.
+- The STOP 4/5 departures.
 
-**Still the owner's:**
+Not signed:
 
-1. Sign `parity-phone.md` and `parity-web.md` (gaps: phone 17, web 13).
-2. ~~Apply migrations~~ **Done 17 Nov:** the owner applied 0299–0304 from a tablet in the Supabase SQL Editor (each wrapped in begin/commit and recorded in `_medsync_migrations`). Earlier, 0297 was confirmed applied (15 Nov).
-3. Secrets: `MEDICAL_ID_TOKEN_SECRET` (32+ chars) and `PAY_WEBHOOK_SECRET` on the functions. Keep `PAY_SANDBOX_*` off production.
-4. Deploy the new Edge Functions after merge: pt-pay-intent, pt-refund-request, ha-refund-decide, ha-pay-desk, pt-care-reading, pt-dose-event, pt-care-message, pt-programme-bill, pt-plus, pt-medical-id-token.
+- the draft strings in `content/patient-app/` and the Tether wording (never edit a `*_COPY_STATUS`);
+- the danger-flow wording, including the sugar recheck at 15 min (prompt) or 5 (old phone screen);
+- Gate CG;
+- D-PA-01, the payment provider (shortlist Flutterwave or Pesapal; fees, refund API and callback signing not verified);
+- the parity reports.
+
+## 5. Open, in order
+
+1. Open and merge the PR for `feat/patient-app-v2-web-finish-2`, then make a new Vercel deployment. It adds the Readings page, doctor's-times booking on the one-page Book, the name on the ticket, the offline banner, `/patient/wellness`, and a fix for the `/patient/care/plan` and `/patient/care/my-care` rewrites.
+2. Confirm `MEDICAL_ID_TOKEN_SECRET` is set.
+3. Decide whether v2 stays on for all patients on that site while the wording is unsigned, or turn `appV2Web` off after testing.
+4. Sign the parity reports. Then pilot at one hospital for 5 days, then remove the old screens (Step 12 cutover; not done).
 5. Payments:
-   - choose the provider, Flutterwave or Pesapal (fees, refund API and callback signing not verified);
+   - choose the provider;
    - each hospital's merchant agreement;
-   - Tether's own agreement for Plus;
-   - approve Tether's share on care programme bills (`platform_share_ugx`; needs a provider with UGX split).
-6. Care mode:
-   - sign the danger-flow wording, including the sugar recheck at 15 min (prompt) or 5 (old phone screen);
-   - sign the BP "rest 5 min" step;
-   - then Gate CG.
-7. Sign the draft strings in `content/patient-app/`. Never edit a `*_COPY_STATUS`.
-8. Pilot: `appV2Mobile`/`appV2Web` on for one hospital for 5 days, then remove the old screens (legacy app/patient redirects are already in MOVED).
-9. Measure budgets (2 GB Android, iPhone, production web build): not measured in the cloud.
-10. Widgets later: App Group, APNs Live Activity key, EAS dev build.
+   - Tether's own agreement for Plus (ADR 0523);
+   - approve Tether's share on programme bills (`platform_share_ugx`; needs a UGX split);
+   - wire the payment SMS (drafted, not sent).
+6. Care mode: sign the danger wording, then Gate CG.
+7. Decide whether to re-issue the data-processing notice under the Tether name (it still says MedSync; legal text, untouched).
+8. Measure budgets on a 2 GB Android, an iPhone and a production web build (never measured).
+9. Widgets, later: App Group, APNs Live Activity key, EAS dev build.
 
-**Known gaps:**
+Six web gaps remain (reasons in `parity-web.md`):
 
-- the full Readings page reuses Add a reading/Trends;
-- checks never show Done (no done dates);
-- payment SMS drafted but not wired to the dispatcher;
-- web ticket says "You" (no name data);
-- the doctor's-times booking stays on the old screen;
-- Plan goals wait for a targets format.
+- analytics: no tool chosen;
+- one merged medicines list: waits for Gate CG;
+- lab results in v2: needs the CSO's lab wording;
+- settings (bigger text, sharing, family helper): needs storage that doesn't exist;
+- Plan goals: no format agreed;
+- the "Called" banner: patients can't read the floor's call state yet.
 
-**Not from this work:** 38 PGlite EMR-lane failures already on main (14 Drizzle parity, rls-probes, pharmacy, others).
+Phone gaps are in `parity-phone.md` (17 at Step 12; not revisited since).
 
-**Why:** the owner moved back to the Mac on 17 Nov and asked for a handoff.
-**How to apply:** first finish the PR (section 2), then work the owner list. Patient app copy and clinical content stay draft until the owner signs.
+Not from this work: 38 PGlite EMR-lane failures already on main (Drizzle parity, rls-probes, pharmacy).
+
+## 6. Leftover branches
+
+- `ops/sql-editor-0299-0304`: identical to main, a failed helper; delete it.
+- `docs/handoff-functions-deployed`: an older copy of this note; delete it once this one is on main.
+- `claude/booking-pilot-onto-main` and `claude/booking-pilot-go-live`: check against main (#308/#310) before using. The 15-minute reminder cron needs Vercel Pro.
+
+**Why:** the owner asked for a handout on 18 Nov to carry on elsewhere.
+**How to apply:** start from section 5. To continue building, start a new session from main with this file. Patient wording and clinical content stay draft until the owner signs.
