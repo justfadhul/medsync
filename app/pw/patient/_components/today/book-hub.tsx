@@ -184,7 +184,7 @@ export function BookHub(p: {
     <section
       id="book"
       aria-labelledby="book-h"
-      className="rounded-pw-card bg-pw-surface shadow-pw-card grid scroll-mt-24 overflow-hidden min-[1101px]:grid-cols-[minmax(0,0.8fr)_minmax(0,1.6fr)]"
+      className="rounded-pw-card bg-pw-surface shadow-pw-card grid scroll-mt-24 overflow-hidden min-[761px]:grid-cols-[260px_minmax(0,1fr)] min-[1101px]:grid-cols-[minmax(0,0.8fr)_minmax(0,1.6fr)]"
     >
       <div className="bg-pw-band text-pw-on-band flex flex-col gap-3 p-6 max-[760px]:hidden">
         <div>
@@ -211,8 +211,9 @@ export function BookHub(p: {
           line={B.doorWrongSub}
           href="/patient/book/wrong"
         />
-        {ticket}
-        <div className="bg-pw-band-glass mt-auto flex items-center justify-between gap-3 rounded-[18px] p-4">
+        {/* A tablet's side panel is too narrow for the ticket: it opens from Preview ticket instead. */}
+        <div className="max-[1100px]:hidden">{ticket}</div>
+        <div className="bg-pw-band-glass mt-auto flex items-center justify-between gap-3 rounded-[18px] p-4 max-[1100px]:flex-col max-[1100px]:items-start">
           <p className="text-[14px] font-semibold">{B.footnote}</p>
           <HelpButton />
         </div>
@@ -402,9 +403,18 @@ export function BookHub(p: {
                 {who?.label}, {reasonTitle}, {day ? `${WD.format(at(day.key))} ${DAY.format(at(day.key))} ${MON.format(at(day.key))}` : ""}
                 {shownClinic ? ` · ${shownClinic}` : ""}
               </p>
-              <Button tone="primary" size="m" onClick={ask} busy={busy}>
-                {T.askThisDay}
-              </Button>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setPreview(true)}
+                  className="text-pw-accent-text min-h-11 px-2 text-[14px] font-semibold min-[1101px]:hidden"
+                >
+                  {T.previewTicket}
+                </button>
+                <Button tone="primary" size="m" onClick={ask} busy={busy}>
+                  {T.askThisDay}
+                </Button>
+              </div>
             </div>
             {error ? (
               <p role="alert" className="text-pw-ink text-[15px] font-semibold">
