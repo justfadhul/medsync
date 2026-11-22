@@ -5,11 +5,13 @@ import { z } from "zod";
 
 import { submitTriageAction } from "@/app/nurse/triage/actions";
 import { FLOOR_ERRORS } from "@/content/clinic-floor/floor";
-import { EVENT_KINDS } from "@/lib/clinic-floor/model";
+import { TD } from "@/content/clinic-floor/triage-dialog";
+import { EVENT_KINDS, mayRecord } from "@/lib/clinic-floor/model";
 import { logger } from "@/lib/logger";
 import { kampala } from "@/lib/reception/desk/model";
 import { callEdge } from "@/lib/supabase/edge";
 import { createServiceClient } from "@/lib/supabase/service";
+import { notifyTriageOutcome } from "@/lib/triage/notify";
 import { requireTriageScope } from "@/lib/triage/scope";
 
 /**
@@ -42,6 +44,23 @@ export async function recordFloorEventAction(raw: FloorEventInput): Promise<Floo
   const e = parsed.data;
   const scope = await requireTriageScope();
   const service = createServiceClient();
+
+  // A nurse works in triage only (ADR 0531): anything on the line needs a clinic session of the caller's own today,
+  // the same test the floor uses to show the doctor's controls.
+  if (!mayRecord("nurse", e.kind)) {
+    const day = kampala(new Date()).key;
+    const start = new Date(Date.parse(`${day}T00:00:00+03:00`));
+    const { data: mine } = await service
+      .from("clinic_sessions")
+      .select("id")
+      .eq("hospital_id", scope.hospitalId)
+      .eq("clinician_user_id", scope.userId)
+      .neq("status", "cancelled")
+      .gte("starts_at", start.toISOString())
+      .lt("starts_at", new Date(start.getTime() + 86_400_000).toISOString())
+      .limit(1);
+    if (!mine?.length) return { ok: false, error: TD.watch.viewOnly };
+  }
 
   if (e.intakeId) {
     const { data } = await service
@@ -135,6 +154,22 @@ export async function triageOnFloorAction(
     detail: res.recheck ?? null,
     note: f.note,
   });
+  // Level 1 or 2: the engine action has alerted the triager's own department; the floor also alerts the clinic
+  // the person is sent to, and the doctor chosen for them (ADR 0531). Best-effort: it never blocks the save.
+  if ((res.assignedLevel ?? 5) <= 2 && f.departmentId && !f.recheck) {
+    const scope = await requireTriageScope();
+    if (f.departmentId !== scope.departmentId || f.doctorUserId)
+      await notifyTriageOutcome({
+        service: createServiceClient(),
+        hospitalId: scope.hospitalId,
+        departmentId: f.departmentId,
+        assignedLevel: res.assignedLevel as 1 | 2,
+        patientLabel: "a patient",
+        triageRecordId: res.triageRecordId,
+        alsoUserId: f.doctorUserId,
+        skipDepartment: f.departmentId === scope.departmentId,
+      }).catch((e) => logger.warn("clinic_floor.alert_failed", { reason: String(e) }));
+  }
   // The triage record is saved and audited either way; the floor event is replayable by its client id.
   return ev.ok ? res : { ...res, error: ev.error };
 }

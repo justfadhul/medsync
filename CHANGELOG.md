@@ -5,6 +5,17 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); version
 
 ## [Unreleased]
 
+### Changed — Clinic floor: triage is a centred pop-up with scores, the NEWS2 map and trends — 23 Nov 2026
+
+From the owner's approved clickable prototype ([ADR 0531](docs/adr/0531-clinic-floor-triage-is-a-pop-up.md)); it replaces the floor's triage side panel. Seen on localhost with example patients at a test hospital. Wording is draft.
+
+- One screen: the level and seven scores across the top, vital signs with what each was at the last triage beside its field, and one tabbed panel (Red flags, NEWS2 map, Other scores, Next steps, Send to).
+- The NEWS2 map and the other scores read the engine's own cut-offs; nothing is typed in.
+- Kept from the panel: the life-threat check with "None of these", the stop at Level 1, the reason for changing a level, and offline queueing.
+- Send to shows only clinics running today and, for the chosen clinic, each doctor's photo, state and queue. Level 1 or 2 also alerts the receiving clinic and the chosen doctor (in-app).
+- A nurse works in triage only: the Clinic line and the Floor are view-only for them, on the screen and on the server.
+- Two drafts for the CSO: temperature in plain words (off in production until signed) and the Glasgow Coma Scale, kept in the visit's note.
+
 ### Changed — The patient website follows the phone's 19 Nov changes: See a doctor previews, and the header Help rule (ADR 0528) (web) — 19 Nov 2026
 
 No migration, no flag, no new clinical wording.

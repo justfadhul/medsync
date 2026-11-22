@@ -49,29 +49,36 @@ export async function notifyTriageOutcome(args: {
   assignedLevel: AcuityLevel;
   patientLabel: string;
   triageRecordId: string;
+  /** A named doctor to alert as well (the clinic floor's chosen doctor), whatever their department. */
+  alsoUserId?: string | null;
+  /** The department was alerted already (by the engine action): alert only `alsoUserId`. */
+  skipDepartment?: boolean;
   sink?: NotificationSink;
 }): Promise<{ notified: number }> {
   if (!ALERT_LEVELS.includes(args.assignedLevel)) return { notified: 0 };
 
   let recipients: { userId: string }[] = [];
-  try {
-    recipients = await db
-      .select({ userId: staffAffiliations.userId })
-      .from(staffAffiliations)
-      .innerJoin(cadres, eq(cadres.id, staffAffiliations.cadreId))
-      .where(
-        and(
-          eq(staffAffiliations.hospitalId, args.hospitalId),
-          eq(staffAffiliations.departmentId, args.departmentId),
-          inArray(staffAffiliations.state, ["active", "approved"]),
-          eq(cadres.isClinical, true),
-        ),
-      );
-  } catch (e) {
-    logger.warn("triage.notify.recipients_failed", { reason: String(e) });
-    return { notified: 0 };
-  }
+  if (!args.skipDepartment)
+    try {
+      recipients = await db
+        .select({ userId: staffAffiliations.userId })
+        .from(staffAffiliations)
+        .innerJoin(cadres, eq(cadres.id, staffAffiliations.cadreId))
+        .where(
+          and(
+            eq(staffAffiliations.hospitalId, args.hospitalId),
+            eq(staffAffiliations.departmentId, args.departmentId),
+            inArray(staffAffiliations.state, ["active", "approved"]),
+            eq(cadres.isClinical, true),
+          ),
+        );
+    } catch (e) {
+      logger.warn("triage.notify.recipients_failed", { reason: String(e) });
+      return { notified: 0 };
+    }
 
+  if (args.alsoUserId && !recipients.some((r) => r.userId === args.alsoUserId))
+    recipients.push({ userId: args.alsoUserId });
   if (recipients.length === 0) return { notified: 0 };
 
   const levelWord = args.assignedLevel === 1 ? "RED (Level 1)" : "ORANGE (Level 2)";

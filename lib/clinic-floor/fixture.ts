@@ -22,7 +22,8 @@ export interface FloorClinic {
   room: string;
   rooms: string;
   hours: string;
-  doctors: { id: string; name: string }[];
+  /** `photo` is a short-lived signed link to the doctor's own profile picture, when they have one. */
+  doctors: { id: string; name: string; photo?: string | null }[];
   /** Days the clinic runs, 0 = Sunday. */
   days: number[];
 }

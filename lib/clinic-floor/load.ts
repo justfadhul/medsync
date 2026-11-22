@@ -19,6 +19,7 @@ import { appointments } from "@/db/schema/scheduling";
 import { triageRecords } from "@/db/schema/triage";
 import { users } from "@/db/schema/users";
 import { computeAgeYears } from "@/lib/age";
+import { signedAvatarUrl } from "@/lib/avatars";
 import { fetchIncomingPreArrivals } from "@/lib/emergency/queries";
 import { listClinicDepartments } from "@/lib/intake/queries";
 import { logger } from "@/lib/logger";
@@ -100,6 +101,7 @@ export async function loadFloorData(
         departmentId: clinicSessions.departmentId,
         clinicianUserId: clinicSessions.clinicianUserId,
         clinician: users.fullName,
+        avatar: users.avatarPath,
         venue: clinicSessions.venue,
         startsAt: clinicSessions.startsAt,
         endsAt: clinicSessions.endsAt,
@@ -170,6 +172,18 @@ export async function loadFloorData(
     dayStart: dayStart.getTime(),
   });
 
+  // Today's doctors' own profile pictures for the triage pop-up's Send to (signed, one hour). The waiting-room
+  // screen gets none (S3).
+  const paths = new Map(
+    sess.flatMap((s) =>
+      readings && s.clinicianUserId && s.avatar ? [[s.clinicianUserId, s.avatar] as const] : [],
+    ),
+  );
+  const photos = new Map(
+    await Promise.all(
+      [...paths].map(async ([id, path]) => [id, await signedAvatarUrl(path)] as const),
+    ),
+  );
   const clinics: FloorClinic[] = depts.map((d, i) => {
     const mine = sess.filter((s) => s.departmentId === d.id);
     const docs = new Map(
@@ -188,7 +202,7 @@ export async function loadFloorData(
       room: rooms[0] ?? d.name,
       rooms: rooms.join(", "),
       hours: from && to ? `${hhmm(from)}–${hhmm(to)}` : "",
-      doctors: [...docs].map(([id, name]) => ({ id, name })),
+      doctors: [...docs].map(([id, name]) => ({ id, name, photo: photos.get(id) ?? null })),
       // ponytail: follow-up days come from the clinic's weekdays; the booking engine checks real sessions.
       days: [1, 2, 3, 4, 5],
     };
