@@ -226,10 +226,10 @@ function ShellV2Frame({
       </div>
       <nav
         aria-label="Places"
-        className="bg-pw-surface shadow-pw-float fixed bottom-[calc(14px+env(safe-area-inset-bottom))] left-1/2 z-30 hidden h-[76px] w-[min(560px,calc(100%-32px))] -translate-x-1/2 items-center justify-around rounded-[38px] p-2 max-[760px]:flex"
+        className="bg-pw-surface shadow-pw-float fixed bottom-[calc(14px+env(safe-area-inset-bottom))] left-1/2 z-30 hidden h-[66px] w-[min(560px,calc(100%-24px))] -translate-x-1/2 items-center gap-1 rounded-full p-1.5 max-[760px]:flex"
       >
         {places.map((p) => (
-          <Place key={p.href} {...p} current={p.match(path)} />
+          <Place key={p.href} {...p} current={p.match(path)} row />
         ))}
       </nav>
     </div>
@@ -258,28 +258,33 @@ function Place({
   Icon,
   current,
   badge = 0,
+  row = false,
 }: {
   href: string;
   label: string;
   Icon: typeof HouseIcon;
   current: boolean;
   badge?: number;
+  /** Icon and label side by side, the current place a wider dark pill (the v2 phone bar). */
+  row?: boolean;
 }) {
   return (
     <Link
       href={href}
       aria-current={current ? "page" : undefined}
       className={cn(
-        "relative flex flex-col items-center justify-center gap-1 text-xs leading-[14px] font-semibold",
+        "relative flex items-center justify-center font-semibold",
+        row ? "gap-2 text-[13px] leading-4" : "flex-col gap-1 text-xs leading-[14px]",
         "transition-[scale,background-color] duration-150 ease-out active:scale-[0.96] motion-reduce:transition-none",
         "focus-visible:outline-pw-focus focus-visible:outline-2 focus-visible:outline-offset-2",
-        "min-h-[60px] w-auto flex-1 rounded-[30px]",
+        row ? "min-h-[54px] rounded-full" : "min-h-[60px] rounded-[30px]",
+        row && current ? "flex-[1.4]" : "w-auto flex-1",
         current
           ? "bg-pw-act text-pw-on-act font-bold"
           : "text-pw-ink-2 hover:bg-pw-surface-3 hover:text-pw-ink",
       )}
     >
-      <Icon className="size-6" {...ICON} />
+      <Icon className={row ? "size-5" : "size-6"} {...ICON} />
       {label}
       {badge > 0 ? (
         <span
