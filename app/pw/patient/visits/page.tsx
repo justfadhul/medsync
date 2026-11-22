@@ -170,7 +170,8 @@ export default async function VisitsPage({
               <h2 id="past-h" className="text-[19px] font-semibold">
                 {V.past}
               </h2>
-              <div className="grid gap-2.5 min-[761px]:max-[1100px]:grid-cols-2">
+              {/* Six visits in view (rows are 66 px, gaps 10); the rest scroll inside. The padding keeps the shadows. */}
+              <div className="-m-1 grid max-h-[454px] gap-2.5 overflow-y-auto overscroll-contain p-1 [scrollbar-width:thin] min-[761px]:max-[1100px]:max-h-[226px] min-[761px]:max-[1100px]:grid-cols-2">
                 {past.map((v) => (
                   <Row key={v.id} v={v} href={href(v.id)} on={v.id === selected?.id} past />
                 ))}
