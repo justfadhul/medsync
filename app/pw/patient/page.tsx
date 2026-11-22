@@ -20,6 +20,7 @@ import {
 
 import { REASONS } from "@/app/patient/book/_lib/booking";
 import { ICON } from "@/components/tide/kit";
+import { HelpButton } from "@/components/tide/shell";
 import { CARE_V2_COPY } from "@/content/patient-app/care";
 import { VISIT_COPY } from "@/content/patient-app/visit";
 import { BOOK_COPY as B, DAY_COPY as D, WRONG_COPY as W } from "@/content/patient/book";
@@ -225,12 +226,14 @@ export default async function TodayPage({ searchParams }: { searchParams: Promis
           <span className="bg-pw-accent-tint text-pw-accent-text grid size-11 shrink-0 place-items-center rounded-full text-[15px] font-bold">
             {initials(name || first)}
           </span>
-          <p className="text-pw-ink-3 text-[13px] leading-[17px]">
+          <p className="text-pw-ink-3 min-w-0 flex-1 text-[13px] leading-[17px]">
             {DATE.format(now)}
             <b className="text-pw-ink block text-[15px]">
               {greeting}, {first}
             </b>
           </p>
+          {/* The phone's Today has no page header and its booking panel is hidden, so Help sits here (S6). */}
+          <HelpButton />
         </div>
 
         <MoodCard {...moodProps} tone="page" />

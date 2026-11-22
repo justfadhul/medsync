@@ -50,6 +50,8 @@ describe("S6 Help on every web page", () => {
 
   it.each(all.map((p) => [relative(ROOT, p), p]))("%s shows Help", (_name, page) => {
     if (page.includes(`${join(PW, "emergency")}`)) return; // Help's own family
+    const own = readFileSync(page, "utf8");
+    if (/\bredirect\(/.test(own) && !/<[A-Za-z]/.test(own)) return; // renders nothing: it only sends you on
     const d = dirname(page);
     const sources = [
       page,
