@@ -216,15 +216,6 @@ function ShellV2Frame({
           <div className="flex items-center gap-2">
             <ThemeToggle />
             <HelpButton />
-            <Link
-              href="/patient/me"
-              className="focus-visible:outline-pw-focus hover:bg-pw-surface-3 flex min-h-11 items-center gap-2 rounded-full pr-3 pl-1 focus-visible:outline-2 focus-visible:outline-offset-2"
-            >
-              <Avatar initials={v2.initials} label={v2.name} />
-              <span className="max-w-[160px] truncate text-[14px] font-semibold max-[1023px]:hidden">
-                {v2.name}
-              </span>
-            </Link>
           </div>
         </div>
       </header>

@@ -1,4 +1,5 @@
 import type { PatientReasonCode } from "@/supabase/functions/_shared/sessions-sql";
+import type { DoctorCard } from "@patient-core/doctors";
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import Link from "next/link";
@@ -60,6 +61,8 @@ export default async function TodayPage({ searchParams }: { searchParams: Promis
   const home = scope.primaryHospitalId
     ? { id: scope.primaryHospitalId, name: scope.primaryHospitalName ?? "Your hospital" }
     : null;
+  // One load for See a doctor and the booking panel's photos; neither waits for it to render.
+  const doctors = home ? loadDoctors(home.id).catch(() => null) : Promise.resolve(null);
   const care = careModeOn() ? await loadToday(scope.userId, now).catch(() => null) : null;
   const [week, labs, household, rows, meds, days, walkIns] = await Promise.all([
     loadWeek(scope.userId, scope.primaryHospitalId, now).catch(() => null),
@@ -213,6 +216,7 @@ export default async function TodayPage({ searchParams }: { searchParams: Promis
         reason={reason}
         days={days ? days.days : home ? null : []}
         walkIns={walkIns ? walkIns.length : null}
+        doctors={doctors}
       />
 
       <div className="grid grid-cols-1 gap-4 min-[761px]:grid-cols-2 min-[1101px]:grid-cols-4">
@@ -344,7 +348,7 @@ export default async function TodayPage({ searchParams }: { searchParams: Promis
       <section className={CARD}>
         {home ? (
           <Suspense fallback={<QuietRow line={C.doctorsLoading} />}>
-            <Doctors hospitalId={home.id} />
+            <Doctors doctors={doctors} />
           </Suspense>
         ) : (
           <QuietRow line={C.doctorsNoHospital} href="/patient/hospitals" />
@@ -354,8 +358,8 @@ export default async function TodayPage({ searchParams }: { searchParams: Promis
   );
 }
 
-async function Doctors({ hospitalId }: { hospitalId: string }) {
-  return <DoctorsView doctors={await loadDoctors(hospitalId).catch(() => null)} />;
+async function Doctors(p: { doctors: Promise<DoctorCard[] | null> }) {
+  return <DoctorsView doctors={await p.doctors} />;
 }
 
 function Glance(p: { icon: ReactNode; k: string; v: string; s: string; href: string }) {

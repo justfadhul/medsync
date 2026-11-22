@@ -1,6 +1,7 @@
 "use client";
 
 import type { DayOption, Part, SessionOption } from "@patient-core/book-days";
+import type { DoctorCard } from "@patient-core/doctors";
 import type { ReactNode } from "react";
 import { feeText } from "@patient-core/fees";
 import {
@@ -13,7 +14,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { useMemo, useState, useTransition } from "react";
+import { Suspense, use, useMemo, useState, useTransition } from "react";
 
 import { Button, buttonClass, ICON } from "@/components/tide/kit";
 import { Dialog } from "@/components/tide/controls";
@@ -63,6 +64,8 @@ export function BookHub(p: {
   reason: PatientReasonCode;
   days: DayOption[] | null;
   walkIns: number | null;
+  /** See a doctor's list, for the doctors' photos (the same load as that section). */
+  doctors: Promise<DoctorCard[] | null>;
   footer?: ReactNode;
 }) {
   const router = useRouter();
@@ -288,17 +291,42 @@ export function BookHub(p: {
             <Step n={5} title={D.whoTitle}>
               <div className="grid grid-cols-1 gap-2 min-[700px]:grid-cols-3">
                 {sessions.map((s) => (
-                  <Tile key={s.id} on={s.id === session?.id} onClick={() => setSessionId(s.id)}>
-                    <UserRoundIcon className="text-pw-ink-3 size-8 shrink-0" {...ICON} />
-                    <span className="flex min-w-0 flex-col text-left">
-                      <span className="break-words text-[15px] font-semibold">
+                  <button
+                    key={s.id}
+                    type="button"
+                    aria-pressed={s.id === session?.id}
+                    onClick={() => setSessionId(s.id)}
+                    className={cn(
+                      "rounded-pw-row relative flex min-h-[72px] min-w-0 items-center gap-3 p-3 pr-9 text-left",
+                      "transition-[background-color,box-shadow,scale] duration-150 ease-[cubic-bezier(0.16,1,0.3,1)] active:scale-[0.98] motion-reduce:active:scale-100",
+                      s.id === session?.id
+                        ? "bg-pw-surface shadow-pw-card"
+                        : "bg-pw-surface-2 hover:bg-pw-surface-3",
+                    )}
+                  >
+                    {s.clinicianName ? (
+                      <Suspense fallback={<Face name={s.clinicianName} />}>
+                        <DoctorFace name={s.clinicianName} doctors={p.doctors} />
+                      </Suspense>
+                    ) : (
+                      <span className="bg-pw-surface-3 text-pw-ink-3 grid size-12 shrink-0 place-items-center rounded-full">
+                        <UserRoundIcon className="size-6" {...ICON} />
+                      </span>
+                    )}
+                    <span className="flex min-w-0 flex-col">
+                      <span className="text-[15px] leading-5 font-semibold break-words">
                         {s.clinicianName || D.anyDoctor}
                       </span>
-                      <span className="text-[13px] font-semibold">
+                      <span className="text-pw-ink-3 text-[13px] font-semibold">
                         {s.feeLabel ?? feeText(s.fee)}
                       </span>
                     </span>
-                  </Tile>
+                    {s.id === session?.id ? (
+                      <span className="bg-pw-ink text-pw-surface absolute top-1/2 right-3 grid size-5 -translate-y-1/2 place-items-center rounded-full">
+                        <CheckIcon className="size-3" strokeWidth={3} aria-hidden />
+                      </span>
+                    ) : null}
+                  </button>
                 ))}
               </div>
             </Step>
@@ -350,6 +378,24 @@ function Step(p: { n: number; title: string; tool?: ReactNode; children: ReactNo
       </div>
       {p.children}
     </div>
+  );
+}
+
+/** The doctor's photo from See a doctor's list, matched by name; their initials while it loads or with none. */
+function DoctorFace(p: { name: string; doctors: Promise<DoctorCard[] | null> }) {
+  const photo = use(p.doctors)?.find((d) => d.name === p.name)?.photoUrl ?? null;
+  return <Face name={p.name} photo={photo} />;
+}
+
+function Face(p: { name: string; photo?: string | null }) {
+  return (
+    <span className="bg-pw-accent-tint text-pw-accent-text relative grid size-12 shrink-0 place-items-center overflow-hidden rounded-full text-[15px] font-bold">
+      {initials(p.name)}
+      {p.photo ? (
+        // eslint-disable-next-line @next/next/no-img-element -- a short-lived signed URL, as See a doctor shows it
+        <img src={p.photo} alt="" className="absolute inset-0 size-full object-cover" />
+      ) : null}
+    </span>
   );
 }
 
