@@ -13,6 +13,15 @@ export const ME_WEB_COPY_STATUS: SignedCopy = {
 
 export const ME_WEB_COPY = {
   sectionsLabel: "Me sections",
+  addShort: "Add",
+  addOne: "Add one",
+  unconfirmedShort: "Not yet confirmed",
+  hints: {
+    conditions: "Pick from the list your clinician uses",
+    allergies: "What you react to, and how",
+    family: "Conditions that run in your family",
+  },
+  inYourHealth: "In your health record",
   memberNo: (n: string) => `Member no. ${n}`,
   stats: { conditions: "Conditions", allergies: "Allergies", people: "People", records: "Records" },
   sections: {

@@ -102,6 +102,17 @@ export default async function MePage({ searchParams }: { searchParams: Promise<{
       }}
       plans={plansFrom(membership?.prices ?? [], now.toISOString().slice(0, 10))}
       msisdn={msisdn}
+      card={{
+        holder: name ?? C.holderUnknown,
+        number: cardNumber(id?.code ?? null),
+        facility,
+        age: ageWords(id?.dob ?? null, now),
+        sex: sexLetter(id?.sex ?? null),
+        conditions: null,
+        allergies: lines.allergies,
+        nextOfKin: nok === null ? null : nok ? C.nokOnFile(facility) : C.nokNone,
+        ifFound: emergencyPhone && facility ? C.ifFoundCall(facility, emergencyPhone) : C.ifFoundReturn(facility),
+      }}
     />
   ) : undefined;
   const conditions = C.historySub(hOff, h.conditions.length, "condition", "conditions", C.noneAdded);
@@ -111,6 +122,7 @@ export default async function MePage({ searchParams }: { searchParams: Promise<{
     <>
       <MeView
         initial={(s ?? "card") as MeSection}
+        tier={v2 ? held.tier : null}
         card={{
           holder: name ?? C.holderUnknown,
           number: cardNumber(id?.code ?? null),

@@ -6,10 +6,11 @@ import Link from "next/link";
 import { initials, SECTION_WORDS, splitHistory } from "@patient-core/me-health";
 import { OFF_WORDS } from "@patient-core/me-places";
 import { HOUSEHOLD_RELATIONSHIPS } from "@patient-core/me-profile";
-import { ChevronRightIcon } from "lucide-react";
+import { ChevronRightIcon, HeartPulseIcon, LockIcon, PillIcon, TriangleAlertIcon, UsersIcon } from "lucide-react";
 
 import { Avatar, EmptyState, ICON, Note, Pill, TextLink } from "@/components/tide/kit";
 import { ME_COPY as C } from "@/content/patient/me";
+import { ME_WEB_COPY as M } from "@/content/patient/me-web";
 import { PATIENT_WEB_COPY as W } from "@/content/patient/web";
 import { formatFullDate } from "@/lib/patient/booking-format";
 import { RetryButton } from "../../_components/home-bits";
@@ -26,7 +27,8 @@ import { HistoryEditorView } from "./history-editor";
 
 type History = Loaded<ReportedItem[]>;
 
-/** My conditions, Allergies and Family history, one editor each (ADR 0414), unconfirmed until a clinician checks. */
+/** My conditions, Allergies and Family history, one compact group each (ADR 0414), unconfirmed until a clinician
+ * checks; a rail with the counts, the privacy notes said once, and medicines. */
 export function HealthSection(p: {
   history: History;
   legacyConditions: string[];
@@ -38,36 +40,57 @@ export function HealthSection(p: {
     p.history.status === "ready"
       ? (p.history.value.find((i) => i.kind === "no_known_allergies")?.id ?? null)
       : null;
+  const groups: { section: Section; Icon: typeof HeartPulseIcon; cls: string; items: typeof h.conditions }[] = [
+    { section: "conditions", Icon: HeartPulseIcon, cls: "text-pw-area-readings", items: h.conditions },
+    { section: "allergies", Icon: TriangleAlertIcon, cls: "text-pw-area-medicines", items: h.allergies },
+    { section: "family", Icon: UsersIcon, cls: "text-pw-area-team", items: h.family },
+  ];
   return (
-    <div className="flex flex-col gap-6">
-      {(["conditions", "allergies", "family"] as Section[]).map((section) => (
-        <section key={section} aria-label={SECTION_WORDS[section].title} className="flex flex-col gap-2">
-          <h3 className="text-[17px] font-semibold">{SECTION_WORDS[section].title}</h3>
-          <p className="text-pw-ink-3 text-[13px]">
-            {section === "family" ? C.historyIntro.family : C.historyIntro.other}
-          </p>
+    <div className="grid items-start gap-5 min-[1101px]:grid-cols-[230px_minmax(0,1fr)]">
+      <aside className="flex flex-col gap-3 max-[1100px]:order-2">
+        <div className="rounded-pw-card bg-pw-surface-2 flex flex-col gap-1 p-2">
+          <span className="text-pw-ink-3 px-2 pt-1 text-[12px] font-semibold">{M.inYourHealth}</span>
+          {groups.map(({ section, Icon, cls, items }) => (
+            <div key={section} className="flex items-center gap-2.5 rounded-xl px-2 py-1.5">
+              <Icon className={`size-4 shrink-0 ${cls}`} {...ICON} />
+              <span className="flex-1 text-[14px] font-semibold">{SECTION_WORDS[section].title}</span>
+              <span className="text-[14px] font-bold tabular-nums">{items.length}</span>
+            </div>
+          ))}
+        </div>
+        <Link
+          href="/patient/care/medicines"
+          className="rounded-pw-card bg-pw-surface-2 hover:bg-pw-surface-3 flex items-center gap-3 p-3.5"
+        >
+          <PillIcon className="text-pw-area-medicines size-4 shrink-0" {...ICON} />
+          <span className="flex min-w-0 flex-1 flex-col">
+            <span className="text-[14px] font-semibold">{C.medicines}</span>
+            <span className="text-pw-ink-3 text-[12px]">{p.medicinesSub}</span>
+          </span>
+          <ChevronRightIcon className="text-pw-ink-3 size-4 shrink-0" {...ICON} />
+        </Link>
+        <p className="text-pw-ink-3 flex gap-2 text-[12px] leading-[17px]">
+          <LockIcon className="mt-0.5 size-3.5 shrink-0" {...ICON} />
+          {C.privateNote}
+        </p>
+        <p className="text-pw-ink-3 text-[12px] leading-[17px]">{W.whoSeesHistory}</p>
+      </aside>
+      <div className="flex min-w-0 flex-col gap-3">
+        {groups.map(({ section, Icon, cls, items }) => (
           <HistoryEditorView
+            key={section}
             section={section}
-            items={section === "conditions" ? h.conditions : section === "allergies" ? h.allergies : h.family}
+            items={items}
             noKnownAllergies={h.noKnownAllergies}
             nkaId={nkaId}
             status={p.history.status}
             legacy={section === "conditions" ? p.legacyConditions : []}
             sex={p.sex}
             whoSees={W.whoSeesHistory}
+            compact={{ icon: <Icon className={`size-[18px] ${cls}`} {...ICON} />, hint: M.hints[section] }}
           />
-        </section>
-      ))}
-      <Link
-        href="/patient/care/medicines"
-        className="rounded-pw-row bg-pw-surface-2 flex items-center gap-3 p-4 hover:bg-pw-surface-3"
-      >
-        <span className="flex min-w-0 flex-1 flex-col">
-          <span className="text-[15px] font-semibold">{C.medicines}</span>
-          <span className="text-pw-ink-3 text-[13px]">{p.medicinesSub}</span>
-        </span>
-        <ChevronRightIcon className="text-pw-ink-3 size-5 shrink-0" {...ICON} />
-      </Link>
+        ))}
+      </div>
     </div>
   );
 }

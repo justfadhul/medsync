@@ -25,7 +25,9 @@ import { useTheme } from "next-themes";
 
 import { Segments } from "@/components/tide/controls";
 import { Button, ICON } from "@/components/tide/kit";
+import type { Tier } from "@/components/tide/v2-membership";
 import { MeHealthCard } from "@/components/tide/me-health-card";
+import { TIER_SURFACE } from "@/components/tide/v2-membership";
 import { HelpButton } from "@/components/tide/shell";
 import { MEMBERSHIP_COPY } from "@/content/patient-app/membership";
 import { ME_COPY as C } from "@/content/patient/me";
@@ -53,6 +55,8 @@ export interface MeViewProps {
   /** The bodies drawn on the server: the membership card (v2), my health, my care, records, people, places, details. */
   panes: Partial<Record<MeSection, ReactNode>>;
   initial: MeSection;
+  /** The plan held (v2): the header takes the card's material; null keeps the mint header. */
+  tier: Tier | null;
   language: string;
   /** Null until the SMS consent text is seeded: the row hides, as on the old settings page. */
   smsOn: boolean | null;
@@ -220,7 +224,10 @@ export function MeView(p: MeViewProps) {
     <div className="flex flex-col gap-5">
       <section
         aria-labelledby="me-h"
-        className="rounded-pw-card bg-pw-accent-tint text-pw-ink flex flex-col gap-5 p-6 max-[760px]:p-4"
+        className={cn(
+          "rounded-pw-card flex flex-col gap-5 p-6 max-[760px]:p-4",
+          p.tier ? TIER_SURFACE[p.tier] : "bg-pw-accent-tint text-pw-ink",
+        )}
       >
         <div className="flex items-center gap-4 max-[760px]:flex-wrap max-[760px]:gap-3">
           <span className="bg-pw-surface text-pw-accent-text grid size-[72px] shrink-0 place-items-center rounded-full text-[24px] font-bold max-[760px]:size-14 max-[760px]:text-[19px]">
@@ -230,7 +237,7 @@ export function MeView(p: MeViewProps) {
             <h1 id="me-h" className="font-display text-[32px] leading-[38px] font-semibold tracking-[-0.03em] max-[760px]:text-[24px] max-[760px]:leading-[30px]">
               {p.hero.name}
             </h1>
-            <p className="text-pw-ink-2 text-[14px]">{p.hero.line}</p>
+            <p className="text-[14px] opacity-85">{p.hero.line}</p>
           </div>
           {/* A phone has no top bar: Help sits in the header here (S6). */}
           <span className="flex w-full justify-end min-[761px]:hidden max-[760px]:order-first">
@@ -243,7 +250,7 @@ export function MeView(p: MeViewProps) {
               key={s.label}
               type="button"
               onClick={() => pick(s.section)}
-              className="bg-pw-surface rounded-pw-row flex flex-col items-start px-4 py-3 text-left transition-[scale] duration-150 active:scale-[0.97]"
+              className="bg-pw-surface text-pw-ink rounded-pw-row flex flex-col items-start px-4 py-3 text-left transition-[scale] duration-150 active:scale-[0.97]"
             >
               <span className="text-[24px] leading-7 font-bold tabular-nums">{s.n}</span>
               <span className="text-pw-ink-3 text-[12px] font-semibold">{s.label}</span>

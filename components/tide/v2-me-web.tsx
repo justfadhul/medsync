@@ -8,6 +8,8 @@ import { feeText } from "@patient-core/fees";
 import { maskMsisdn, NETWORK_NAME } from "@patient-core/payments";
 
 import { buttonClass } from "@/components/tide/kit";
+import type { TetherCardData } from "@/components/tide/tether-card";
+import { TetherCard } from "@/components/tide/tether-card";
 import { MembershipCard, TierCard } from "@/components/tide/v2-membership";
 import { PromptStatus } from "@/components/tide/v2-pay";
 import { MEMBERSHIP_COPY } from "@/content/patient-app/membership";
@@ -66,6 +68,8 @@ export function MeMembershipWeb(p: {
   id: Omit<MedicalId, "qr">;
   plans: Plan[];
   msisdn: string | null;
+  /** The one card (the phone's TetherCard): with it, Me shows the merged card instead of the membership card. */
+  card?: TetherCardData;
   qrToken: () => Promise<
     { ok: true; modules: string[]; expiresAt: string } | { ok: false; error: string }
   >;
@@ -140,12 +144,20 @@ export function MeMembershipWeb(p: {
   return (
     <div className="flex flex-col gap-8">
       <div className="flex flex-col items-start gap-2">
-        <MembershipCard
-          tier={p.tier}
-          name={p.name}
-          memberNo={p.memberNo}
-          id={{ ...p.id, qr: <QrGrid modules={qr} label={M.card.back.qrNote} /> }}
-        />
+        {p.card ? (
+          <TetherCard
+            data={p.card}
+            tier={p.tier}
+            qr={qr.length ? <QrGrid modules={qr} label={M.card.back.qrNote} /> : null}
+          />
+        ) : (
+          <MembershipCard
+            tier={p.tier}
+            name={p.name}
+            memberNo={p.memberNo}
+            id={{ ...p.id, qr: <QrGrid modules={qr} label={M.card.back.qrNote} /> }}
+          />
+        )}
         {p.endsLabel && p.tier !== "basic" ? (
           <p className="text-pw-ink-2 self-center text-[14px]">
             {(p.trial ? M.plans.trialEnds : M.plans.paidUntil).replace("{date}", p.endsLabel)}

@@ -2,6 +2,7 @@
 
 import type { ReportedItem, ReportedOption } from "@/lib/patient/reported-history";
 import type { Draft, Section } from "@patient-core/me-health";
+import type { ReactNode } from "react";
 import { useState, useTransition } from "react";
 import {
   draftOf,
@@ -17,6 +18,7 @@ import { ChevronRightIcon, LockIcon, PlusIcon, SearchIcon } from "lucide-react";
 import { Chip, ChipRow, Dialog, Segments, TextField } from "@/components/tide/controls";
 import { Button, Card, EmptyState, ICON, Note } from "@/components/tide/kit";
 import { ME_COPY as C } from "@/content/patient/me";
+import { ME_WEB_COPY as M } from "@/content/patient/me-web";
 import { PATIENT_WEB_COPY as W } from "@/content/patient/web";
 import { removeReportedAction, saveReportedAction } from "@/lib/patient-web/me-actions";
 import {
@@ -56,6 +58,9 @@ const sub = (i: ReportedItem) =>
       : (labelIn(REPORTED_CATALOGUE.relations, i.relation) ?? C.relative);
 
 /** The section's list, "No known allergies", and the centred dialog that adds or changes one entry. */
+/** A square workflow tag (never red, amber or green). */
+const TAG = "bg-pw-surface-2 text-pw-ink-2 rounded-[4px] px-1.5 py-0.5 text-[11px] font-bold";
+
 export function HistoryEditorView({
   section,
   items,
@@ -65,6 +70,7 @@ export function HistoryEditorView({
   legacy,
   sex,
   whoSees,
+  compact,
 }: {
   section: Section;
   items: ReportedItem[];
@@ -74,6 +80,9 @@ export function HistoryEditorView({
   legacy: string[];
   sex: string | null;
   whoSees: string;
+  /** Inside Me's My health pane: one compact group (icon, title, hint, a small Add), rows with square tags;
+   * the who-sees and private notes are said once by the pane. */
+  compact?: { icon: ReactNode; hint: string };
 }) {
   const words = SECTION_WORDS[section];
   const [editing, setEditing] = useState<ReportedItem | "new" | null>(null);
@@ -91,6 +100,80 @@ export function HistoryEditorView({
         : await saveReportedAction([NKA_ROW]);
       if (!res.ok) setNote(res.error);
     });
+
+  const dialog = editing ? (
+    <HistoryDialog
+      key={editing === "new" ? "new" : editing.id}
+      section={section}
+      editing={editing}
+      existing={items}
+      sex={sex}
+      onClose={() => setEditing(null)}
+    />
+  ) : null;
+
+  if (compact)
+    return (
+      <section aria-label={words.title} className="rounded-pw-card bg-pw-surface-2 flex flex-col gap-2.5 p-3.5">
+        <div className="flex items-center gap-3">
+          <span className="bg-pw-surface grid size-9 shrink-0 place-items-center rounded-xl">{compact.icon}</span>
+          <span className="flex min-w-0 flex-1 flex-col">
+            <h3 className="text-[16px] leading-5 font-semibold">{words.title}</h3>
+            <span className="text-pw-ink-3 text-[12px]">{compact.hint}</span>
+          </span>
+          {!off ? (
+            <Button tone="soft" size="s" onClick={() => setEditing("new")} aria-label={words.add} className="bg-pw-surface">
+              <PlusIcon className="size-4" {...ICON} />
+              {M.addShort}
+            </Button>
+          ) : null}
+        </div>
+        {off ? <p className="text-pw-ink-3 text-[13px]">{C.historyOff}</p> : null}
+        {status === "error" ? <p className="text-pw-ink-3 text-[13px]">{C.historyFailed}</p> : null}
+        {note ? <p className="text-pw-ink-2 text-[13px] font-semibold">{note}</p> : null}
+        {legacy.length ? <p className="text-pw-ink-2 text-[13px]">{C.legacy(legacy.join(", "))}</p> : null}
+        {items.length ? (
+          <ul className="flex flex-col gap-1.5">
+            {items.map((i) => (
+              <li key={i.id}>
+                <button
+                  type="button"
+                  onClick={() => setEditing(i)}
+                  aria-label={`${reportedLabel(i)}. ${sub(i)}. Change`}
+                  className="rounded-pw-row bg-pw-surface hover:bg-pw-surface-3 focus-visible:outline-pw-focus flex w-full flex-wrap items-center gap-x-3 gap-y-1.5 px-3.5 py-2.5 text-left transition-colors duration-150 focus-visible:outline-2"
+                >
+                  <span className="flex min-w-0 flex-1 flex-col">
+                    <span className="text-[15px] font-semibold">{reportedLabel(i)}</span>
+                    <span className="text-pw-ink-3 text-[13px] min-[521px]:truncate">{sub(i)}</span>
+                  </span>
+                  <span className="flex shrink-0 flex-wrap justify-end gap-1 max-[520px]:order-last max-[520px]:w-full max-[520px]:justify-start">
+                    {isSensitive(i) ? <span className={TAG}>{C.privateTag.replace(" · ", "")}</span> : null}
+                    <span className={TAG}>{M.unconfirmedShort}</span>
+                  </span>
+                  <ChevronRightIcon className="text-pw-ink-3 size-4 shrink-0" {...ICON} />
+                </button>
+              </li>
+            ))}
+          </ul>
+        ) : section === "allergies" && !off ? (
+          <div className="rounded-pw-row bg-pw-surface flex flex-wrap items-center justify-between gap-2 px-3.5 py-2.5">
+            <span className="text-pw-ink-2 text-[13px]">{noKnownAllergies ? C.nkaOn : words.empty}</span>
+            <Chip selected={noKnownAllergies} onClick={onNka} disabled={nkaBusy} aria-busy={nkaBusy || undefined}>
+              {nkaBusy ? C.saving : C.nkaChip}
+            </Chip>
+          </div>
+        ) : !off && status !== "error" ? (
+          <button
+            type="button"
+            onClick={() => setEditing("new")}
+            className="rounded-pw-row border-pw-line-strong text-pw-ink-3 hover:text-pw-ink border border-dashed px-3.5 py-3 text-left text-[13px]"
+          >
+            {words.empty} {M.addOne}
+          </button>
+        ) : null}
+        {dialog}
+      </section>
+    );
 
   return (
     <>
@@ -169,16 +252,7 @@ export function HistoryEditorView({
       ) : null}
       <Note>{whoSees}</Note>
 
-      {editing ? (
-        <HistoryDialog
-          key={editing === "new" ? "new" : editing.id}
-          section={section}
-          editing={editing}
-          existing={items}
-          sex={sex}
-          onClose={() => setEditing(null)}
-        />
-      ) : null}
+      {dialog}
     </>
   );
 }
