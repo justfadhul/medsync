@@ -108,21 +108,6 @@ export default async function VisitsPage({
             )}
           </section>
 
-          {past.length ? (
-            <section
-              aria-labelledby="past-h"
-              className="order-5 flex min-w-0 flex-col gap-2.5 min-[761px]:max-[1100px]:col-span-2"
-            >
-              <h2 id="past-h" className="text-[19px] font-semibold">
-                {V.past}
-              </h2>
-              <div className="grid gap-2.5 min-[761px]:grid-cols-2">
-                {past.map((v) => (
-                  <Row key={v.id} v={v} href={href(v.id)} on={v.id === selected?.id} past />
-                ))}
-              </div>
-            </section>
-          ) : null}
         </div>
 
         <aside className="flex min-w-0 flex-col gap-4 max-[1100px]:contents">
@@ -176,6 +161,22 @@ export default async function VisitsPage({
             href={(v, m) => href(v ?? selected?.id ?? null, m)}
             selected={selected?.id ?? null}
           />
+
+          {past.length ? (
+            <section
+              aria-labelledby="past-h"
+              className="order-5 flex min-w-0 flex-col gap-2.5 min-[761px]:max-[1100px]:col-span-2"
+            >
+              <h2 id="past-h" className="text-[19px] font-semibold">
+                {V.past}
+              </h2>
+              <div className="grid gap-2.5 min-[761px]:max-[1100px]:grid-cols-2">
+                {past.map((v) => (
+                  <Row key={v.id} v={v} href={href(v.id)} on={v.id === selected?.id} past />
+                ))}
+              </div>
+            </section>
+          ) : null}
         </aside>
       </div>
     </>
