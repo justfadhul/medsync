@@ -10,13 +10,13 @@ const M = MEMBERSHIP_COPY;
 
 export type Tier = "basic" | "plus_family" | "plus_care" | "family_care";
 
-const TIER_SURFACE: Record<Tier, string> = {
+export const TIER_SURFACE: Record<Tier, string> = {
   basic: "bg-pw-tier-basic text-pw-tier-on-basic",
   plus_family: "bg-pw-tier-plus-family text-pw-tier-on-tier",
   plus_care: "bg-pw-tier-plus-care text-pw-tier-on-tier",
   family_care: "bg-pw-tier-family-care text-pw-tier-on-tier",
 };
-const TIER_NAME: Record<Tier, string> = {
+export const TIER_NAME: Record<Tier, string> = {
   basic: M.tiers.basic,
   plus_family: M.tiers.plusFamily,
   plus_care: M.tiers.plusCare,

@@ -1,5 +1,6 @@
 "use client";
 
+import type { TetherCardData } from "@/components/tide/tether-card";
 import type { MedicalId } from "@/components/tide/v2-membership";
 import type { Plan, Tier } from "@patient-core/membership";
 
@@ -21,6 +22,7 @@ export function MeMembership(p: {
   id: Omit<MedicalId, "qr">;
   plans: Plan[];
   msisdn: string | null;
+  card?: TetherCardData;
 }) {
   return (
     <MeMembershipWeb
