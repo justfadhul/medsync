@@ -330,13 +330,8 @@ export default async function TodayPage({ searchParams }: { searchParams: Promis
         </section>
       </div>
 
-      <section aria-labelledby="dc-h" className={CARD}>
-        <div className="flex items-center justify-between gap-2">
-          <h2 id="dc-h" className="text-[17px] font-semibold">
-            {T.seeADoctor}
-          </h2>
-          <span className="text-pw-ink-3 text-[13px]">{T.pickToBook}</span>
-        </div>
+      {/* DoctorsView carries its own heading and See all. */}
+      <section className={CARD}>
         {home ? (
           <Suspense fallback={<QuietRow line={C.doctorsLoading} />}>
             <Doctors hospitalId={home.id} />

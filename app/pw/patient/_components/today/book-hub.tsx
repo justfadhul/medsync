@@ -1,6 +1,5 @@
 "use client";
 
-import type { PatientReasonCode } from "@/supabase/functions/_shared/sessions-sql";
 import type { DayOption, Part, SessionOption } from "@patient-core/book-days";
 import type { ReactNode } from "react";
 import { feeText } from "@patient-core/fees";
@@ -23,7 +22,9 @@ import { TicketV2 } from "@/components/tide/v2-ticket";
 import { BOOK_COPY as B, DAY_COPY as D, WRONG_COPY as W } from "@/content/patient/book";
 import { TODAY_WEB_COPY as T } from "@/content/patient/today-web";
 import { requestDayAction } from "@/lib/patient-web/book-actions";
+import { toSlot } from "@/lib/patient-web/opaque";
 import { cn } from "@/lib/utils";
+import { PATIENT_REASON_CODES, type PatientReasonCode } from "@/supabase/functions/_shared/sessions-sql";
 
 export interface HubWho {
   /** null = the patient; else a household member's provisional id. */
@@ -91,7 +92,7 @@ export function BookHub(p: {
 
   const pickReason = (r: PatientReasonCode) => {
     const q = new URLSearchParams(params.toString());
-    q.set("r", r);
+    q.set("r", toSlot(PATIENT_REASON_CODES, r));
     router.replace(`${path}?${q.toString()}#book`, { scroll: false });
   };
 
@@ -127,6 +128,7 @@ export function BookHub(p: {
       block={null}
       pay={session.fee ? { kind: "to_pay", amountUgx: session.fee } : { kind: "free" }}
       code={booked?.code ?? "··· ···"}
+      stacked
     />
   );
 
@@ -289,7 +291,7 @@ export function BookHub(p: {
                   <Tile key={s.id} on={s.id === session?.id} onClick={() => setSessionId(s.id)}>
                     <UserRoundIcon className="text-pw-ink-3 size-8 shrink-0" {...ICON} />
                     <span className="flex min-w-0 flex-col text-left">
-                      <span className="truncate text-[15px] font-semibold">
+                      <span className="break-words text-[15px] font-semibold">
                         {s.clinicianName || D.anyDoctor}
                       </span>
                       <span className="text-[13px] font-semibold">

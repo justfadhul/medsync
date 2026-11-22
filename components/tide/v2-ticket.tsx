@@ -34,6 +34,8 @@ export interface TicketV2Props {
   pay: TicketPayLine;
   code: string;
   onPayNow?: () => void;
+  /** Vertical at every width, for a narrow column (the booking preview on Today). */
+  stacked?: boolean;
 }
 
 /** "K7M 42Q" read as "K, 7, M. 4, 2, Q." */
@@ -49,7 +51,10 @@ export function TicketV2(p: TicketV2Props) {
   return (
     <article
       aria-label={`${T.kicker}, ${p.dayLine} ${p.day}`}
-      className="pw-ticket rounded-pw-card shadow-pw-card flex min-w-0 flex-col overflow-hidden min-[761px]:flex-row"
+      className={cn(
+        "pw-ticket rounded-pw-card shadow-pw-card flex min-w-0 flex-col overflow-hidden",
+        p.stacked ? "pw-ticket-stacked" : "min-[761px]:flex-row",
+      )}
     >
       <div className="pw-ticket-main bg-pw-ticket-navy text-pw-ticket-on-navy flex min-w-0 flex-1 flex-col gap-4 p-5">
         <div className="flex items-start gap-3">
@@ -85,7 +90,10 @@ export function TicketV2(p: TicketV2Props) {
 
       <div aria-hidden className="pw-ticket-tear bg-pw-ticket-stub relative shrink-0" />
 
-      <div className="pw-ticket-stub bg-pw-ticket-stub text-pw-ticket-on-stub flex min-w-0 flex-col gap-3 p-5 min-[761px]:w-[300px]">
+      <div className={cn(
+          "pw-ticket-stub bg-pw-ticket-stub text-pw-ticket-on-stub flex min-w-0 flex-col gap-3 p-5",
+          !p.stacked && "min-[761px]:w-[300px]",
+        )}>
         <dl className="grid grid-cols-2 gap-x-4 gap-y-2">
           {(
             [

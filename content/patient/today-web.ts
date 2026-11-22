@@ -49,8 +49,6 @@ export const TODAY_WEB_COPY = {
   labsLater: "Results show here after your clinician reviews them.",
   openRecords: "Open your visit records",
   careTeam: "Your care team",
-  seeADoctor: "See a doctor",
-  pickToBook: "Pick one to fill in your booking",
   visits: "Visits",
   seeAll: "See all",
   bookVisit: "Book a visit",
