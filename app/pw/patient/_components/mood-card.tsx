@@ -3,7 +3,7 @@
 import type { DayMood, Mood } from "@patient-core/log";
 import { countMoods } from "@patient-core/log";
 import Link from "next/link";
-import { useState, useTransition } from "react";
+import { useId, useState, useTransition } from "react";
 
 import { Toast } from "@/components/tide/controls";
 import { MoodFace } from "@/components/tide/mood-face";
@@ -36,7 +36,12 @@ export function MoodCard(p: {
   monthStart: number;
   year: ([number, number, number] | null)[];
   chat: boolean;
+  /** "band" sits on Today's navy band (desktop); "page" is the phone's: the question as the page's headline,
+   * big face tiles and the views in their own card. The page tone maps the band tokens onto the page's. */
+  tone?: "band" | "page";
 }) {
+  const page = p.tone === "page";
+  const id = useId();
   const [picked, setPicked] = useState<DayMood | null>(null);
   const [view, setView] = useState<View>("week");
   const [error, setError] = useState<string | null>(null);
@@ -59,32 +64,44 @@ export function MoodCard(p: {
     });
   };
 
+  const seg = (
+    <div role="group" aria-label={M.viewsLabel} className="bg-pw-band-glass flex rounded-full p-0.5">
+      {VIEWS.map((v) => (
+        <button
+          key={v}
+          type="button"
+          aria-pressed={view === v}
+          onClick={() => setView(v)}
+          className={cn(
+            "min-h-8 rounded-full px-3 text-[12px] font-semibold transition-colors duration-150",
+            FOCUS,
+            view === v ? "bg-pw-on-band text-pw-band" : "text-pw-on-band-2 hover:text-pw-on-band",
+          )}
+        >
+          {M.views[v]}
+        </button>
+      ))}
+    </div>
+  );
+
   return (
     <section
-      aria-labelledby="mood-h"
-      className="rounded-pw-card bg-pw-band-glass text-pw-on-band flex min-w-0 flex-col gap-3 p-4 [&_.pw-mood-none]:stroke-pw-on-band/40"
+      aria-labelledby={id}
+      className={cn(
+        "text-pw-on-band flex min-w-0 flex-col gap-3 [&_.pw-mood-none]:stroke-pw-on-band/40",
+        page
+          ? "[--pw-band:var(--pw-surface)] [--pw-band-glass:var(--pw-surface-2)] [--pw-on-band:var(--pw-ink)] [--pw-on-band-2:var(--pw-ink-3)] [--pw-on-band-accent:var(--pw-accent-text)]"
+          : "rounded-pw-card bg-pw-band-glass p-4",
+      )}
     >
       <div className="flex items-center justify-between gap-2">
-        <h2 id="mood-h" className="text-[17px] leading-[22px] font-semibold">
+        <h2
+          id={id}
+          className={page ? "text-[30px] leading-[34px] font-semibold tracking-[-0.03em]" : "text-[17px] leading-[22px] font-semibold"}
+        >
           {C.moodTitle}
         </h2>
-        <div role="group" aria-label={M.viewsLabel} className="bg-pw-band-glass flex rounded-full p-0.5">
-          {VIEWS.map((v) => (
-            <button
-              key={v}
-              type="button"
-              aria-pressed={view === v}
-              onClick={() => setView(v)}
-              className={cn(
-                "min-h-8 rounded-full px-3 text-[12px] font-semibold transition-colors duration-150",
-                FOCUS,
-                view === v ? "bg-pw-on-band text-pw-band" : "text-pw-on-band-2 hover:text-pw-on-band",
-              )}
-            >
-              {M.views[v]}
-            </button>
-          ))}
-        </div>
+        {page ? null : seg}
       </div>
 
       <div className="grid grid-cols-3 gap-2">
@@ -98,22 +115,41 @@ export function MoodCard(p: {
               aria-label={C.moodPick(C.moods[m])}
               onClick={() => pick(m)}
               className={cn(
-                "rounded-pw-row flex min-h-12 items-center justify-center gap-2 px-2 ring-1 ring-inset",
+                page
+                  ? "rounded-pw-card bg-pw-surface shadow-pw-card flex flex-col items-center gap-1.5 py-3 ring-2 ring-inset"
+                  : "rounded-pw-row flex min-h-12 items-center justify-center gap-2 px-2 ring-1 ring-inset",
                 "transition-[background-color,scale] duration-150 ease-[cubic-bezier(0.16,1,0.3,1)] active:scale-[0.97] motion-reduce:active:scale-100",
                 FOCUS,
-                on
-                  ? "bg-pw-accent-tint text-pw-accent-text ring-pw-on-band-accent"
-                  : "ring-pw-on-band/20 hover:bg-pw-band-glass",
+                page
+                  ? on
+                    ? "ring-pw-ink"
+                    : "text-pw-ink-2 ring-transparent"
+                  : on
+                    ? "bg-pw-accent-tint text-pw-accent-text ring-pw-on-band-accent"
+                    : "ring-pw-on-band/20 hover:bg-pw-band-glass",
               )}
             >
-              <MoodFace mood={m} size={28} pop={on} decorative />
+              <MoodFace mood={m} size={page ? 44 : 28} pop={on} decorative />
               <span className="text-[13px] font-semibold">{C.moods[m]}</span>
             </button>
           );
         })}
       </div>
 
-      <div className="border-pw-on-band/15 flex h-[140px] flex-col justify-between gap-2 border-t pt-3">
+      <div
+        className={cn(
+          "flex flex-col justify-between gap-2",
+          page ? "rounded-pw-card bg-pw-surface shadow-pw-card h-[184px] p-3" : "border-pw-on-band/15 h-[140px] border-t pt-3",
+        )}
+      >
+        {page ? (
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-[13px] font-semibold">
+              {view === "week" ? M.thisWeek : view === "month" ? M.thisMonth : M.byMonth}
+            </span>
+            {seg}
+          </div>
+        ) : null}
         {view === "week" ? (
           <ol className="flex flex-1 items-center justify-between">
             {week.map((mood, i) => (

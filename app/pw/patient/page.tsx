@@ -7,11 +7,22 @@ import { Suspense } from "react";
 import { lastDays, monthDays, moodsFor, readingsFrom, yearMix } from "@patient-core/log";
 import { checkReading } from "@patient-core/readings";
 import { nextVisit } from "@patient-core/visits-calendar";
-import { CalendarDaysIcon, FlaskConicalIcon, HeartPulseIcon } from "lucide-react";
+import { feeText } from "@patient-core/fees";
+import {
+  AlertCircleIcon,
+  CalendarDaysIcon,
+  ClockIcon,
+  FlaskConicalIcon,
+  HeartPulseIcon,
+  PillIcon,
+  UsersRoundIcon,
+} from "lucide-react";
 
 import { REASONS } from "@/app/patient/book/_lib/booking";
 import { ICON } from "@/components/tide/kit";
 import { CARE_V2_COPY } from "@/content/patient-app/care";
+import { VISIT_COPY } from "@/content/patient-app/visit";
+import { BOOK_COPY as B, DAY_COPY as D, WRONG_COPY as W } from "@/content/patient/book";
 import { CARE_COPY } from "@/content/patient/care";
 import { HOME_COPY as C } from "@/content/patient/home";
 import { TODAY_WEB_COPY as T } from "@/content/patient/today-web";
@@ -24,10 +35,12 @@ import { fromSlot } from "@/lib/patient-web/opaque";
 import { loadWeek } from "@/lib/patient-web/visits-data";
 import { fetchHousehold } from "@/lib/patient/household";
 import { requirePatientScope } from "@/lib/patient/scope";
+import { cn } from "@/lib/utils";
 import { PATIENT_REASON_CODES } from "@/supabase/functions/_shared/sessions-sql";
 import { DoctorsView, QuietRow } from "./_components/doctors";
 import { MoodCard } from "./_components/mood-card";
 import { BookHub } from "./_components/today/book-hub";
+import { shownName } from "./_lib/names";
 import { ReadingButton } from "./_components/today/reading-button";
 import { kampalaClock, loadToday } from "./care/_v2/data";
 import { TodayClient } from "./care/_v2/today";
@@ -46,6 +59,13 @@ const initials = (s: string) =>
     .map((w) => w[0]?.toUpperCase() ?? "")
     .join("") || "·";
 const CARD = "rounded-pw-card bg-pw-surface shadow-pw-card flex min-w-0 flex-col gap-3 p-5";
+const WD = new Intl.DateTimeFormat("en-GB", { weekday: "short" });
+const DAYNUM = new Intl.DateTimeFormat("en-GB", { day: "numeric" });
+const MON = new Intl.DateTimeFormat("en-GB", { month: "short" });
+/** A "Your health" tile on the phone: tinted from its place's colour (`--c`), as the phone's places are. */
+const TILE =
+  "rounded-[22px] flex min-h-[132px] min-w-0 flex-col gap-1.5 p-3.5 bg-[color-mix(in_srgb,var(--c)_13%,var(--pw-surface))] active:scale-[0.98] transition-[scale] duration-150";
+const TAG = "bg-pw-surface text-pw-ink-2 self-start rounded-[4px] px-1.5 py-0.5 text-[11px] leading-4 font-bold";
 
 /**
  * Today (the owner's three-page redesign, 22 Nov 2026; replaces Home, Book and the Care hub): the day's band with
@@ -95,6 +115,21 @@ export default async function TodayPage({ searchParams }: { searchParams: Promis
     ...household.map((m) => ({ id: m.provisionalPatientId, label: m.memberLabel, rel: m.relationship })),
   ];
 
+  const moodProps = {
+    today: todayMood && todayMood !== "none" ? todayMood : null,
+    week: mood,
+    weekdays: lastDays(now).map((d) => d.getDay()),
+    month: moodsFor(moods, monthDays(now)),
+    monthStart: new Date(now.getFullYear(), now.getMonth(), 1).getDay(),
+    year: yearMix(moods, now),
+    chat: false,
+  };
+  const last = week
+    ? ([...week.past].filter((v) => v.status === "completed").sort((a, b) => b.startsAtIso.localeCompare(a.startsAtIso))[0] ?? null)
+    : null;
+  const openDay = days?.days[0]?.key ?? null;
+  const open = days?.days[0]?.sessions.find((s) => s.placesLeft > 0) ?? null;
+
   const glance: ReactNode[] = [
     <Glance
       key="visit"
@@ -133,7 +168,7 @@ export default async function TodayPage({ searchParams }: { searchParams: Promis
     <div className="flex flex-col gap-6">
       <section
         aria-labelledby="day-h"
-        className="rounded-pw-card bg-pw-band text-pw-on-band grid gap-6 p-6 min-[1101px]:grid-cols-[minmax(0,1fr)_400px]"
+        className="rounded-pw-card bg-pw-band text-pw-on-band grid gap-6 p-6 max-[760px]:hidden min-[1101px]:grid-cols-[minmax(0,1fr)_400px]"
       >
         <div className="flex min-w-0 flex-col justify-between gap-4">
           <div className="flex items-center gap-4">
@@ -181,16 +216,170 @@ export default async function TodayPage({ searchParams }: { searchParams: Promis
             </div>
           </div>
         </div>
-        <MoodCard
-          today={todayMood && todayMood !== "none" ? todayMood : null}
-          week={mood}
-          weekdays={lastDays(now).map((d) => d.getDay())}
-          month={moodsFor(moods, monthDays(now))}
-          monthStart={new Date(now.getFullYear(), now.getMonth(), 1).getDay()}
-          year={yearMix(moods, now)}
-          chat={false}
-        />
+        <MoodCard {...moodProps} />
       </section>
+
+      {/* The phone's Today (up to 760 px): the greeting, the mood question, the next visit, the ways in, your health. */}
+      <div className="flex flex-col gap-6 min-[761px]:hidden">
+        <div className="flex items-center gap-3">
+          <span className="bg-pw-accent-tint text-pw-accent-text grid size-11 shrink-0 place-items-center rounded-full text-[15px] font-bold">
+            {initials(name || first)}
+          </span>
+          <p className="text-pw-ink-3 text-[13px] leading-[17px]">
+            {DATE.format(now)}
+            <b className="text-pw-ink block text-[15px]">
+              {greeting}, {first}
+            </b>
+          </p>
+        </div>
+
+        <MoodCard {...moodProps} tone="page" />
+
+        <section aria-labelledby="nv-h" className="bg-pw-band text-pw-on-band shadow-pw-float flex flex-col gap-3.5 rounded-[26px] p-4">
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0">
+              <p className="text-pw-on-band-2 text-[12px] font-semibold">{T.glance.nextVisit}</p>
+              <h2 id="nv-h" className="text-[20px] leading-[26px] font-semibold">
+                {next ? SHORT.format(new Date(next.startsAtIso)) : T.glance.noVisit}
+              </h2>
+            </div>
+            {last ? (
+              <p className="text-pw-on-band-2 shrink-0 text-right text-[11px] leading-[15px]">
+                {T.lastVisit}
+                <b className="text-pw-on-band block text-[13px]">{SHORT.format(new Date(last.startsAtIso))}</b>
+                {last.departmentName}
+              </p>
+            ) : null}
+          </div>
+          {next ? (
+            <p className="bg-pw-band-glass rounded-[18px] p-3 text-[14px] font-semibold">
+              {next.departmentName} · {next.hospitalName}
+            </p>
+          ) : open && openDay ? (
+            <>
+              <div className="bg-pw-band-glass flex items-center gap-3 rounded-[18px] p-2.5">
+                <span className="bg-pw-on-band text-pw-band flex h-[62px] w-14 shrink-0 flex-col items-center justify-center rounded-[14px] leading-tight">
+                  <small className="text-[10px] font-bold uppercase">{WD.format(new Date(`${openDay}T12:00:00`))}</small>
+                  <b className="text-[22px] tabular-nums">{DAYNUM.format(new Date(`${openDay}T12:00:00`))}</b>
+                  <small className="text-[10px] font-bold uppercase">{MON.format(new Date(`${openDay}T12:00:00`))}</small>
+                </span>
+                <span className="text-pw-on-band-2 flex min-w-0 flex-col text-[12px]">
+                  <small className="text-[11px]">{T.nextOpenFor}</small>
+                  <b className="text-pw-on-band text-[16px]">{open.clinicName}</b>
+                  <span>
+                    {[open.doors ? D.doors(open.doors) : null, open.clinicianName ? shownName(open.clinicianName) : null, open.feeLabel ?? feeText(open.fee)]
+                      .filter(Boolean)
+                      .join(" · ")}
+                  </span>
+                </span>
+              </div>
+              <ol className="grid grid-cols-3 gap-1.5" aria-label={B.askDayTitle}>
+                {T.how.map((h, i) => (
+                  <li key={h} className="text-pw-on-band-2 flex flex-col gap-1.5 text-[11px] leading-[14px] font-semibold">
+                    <span className="ring-pw-on-band/35 text-pw-on-band grid size-[22px] place-items-center rounded-full ring-1 ring-inset">
+                      {i + 1}
+                    </span>
+                    {h}
+                  </li>
+                ))}
+              </ol>
+            </>
+          ) : null}
+          <div className="flex flex-wrap gap-1.5 text-[12px] font-semibold">
+            <span className="bg-pw-band-glass rounded-full px-2.5 py-1.5">{home?.name ?? T.yourHospital}</span>
+            <span className="bg-pw-band-glass rounded-full px-2.5 py-1.5">{VISIT_COPY.ticket.seenInTurn}</span>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <Link
+              href={next ? `/patient/visits/${next.id}` : "#book"}
+              className="bg-pw-on-band text-pw-band flex min-h-11 items-center rounded-full px-5 text-[15px] font-bold"
+            >
+              {next ? T.seeInVisits : B.askDayTitle}
+            </Link>
+            {next ? null : (
+              <Link
+                href="/patient/book/day"
+                className="ring-pw-on-band/30 flex min-h-11 items-center rounded-full px-4 text-[14px] font-semibold ring-1 ring-inset"
+              >
+                {T.otherDays}
+              </Link>
+            )}
+          </div>
+        </section>
+
+        <div className="-mt-3 grid grid-cols-2 gap-2">
+          {(
+            [
+              ["/patient/book/today", ClockIcon, B.comeTodayTitle, walkIns?.length ? T.walkInsOpen(walkIns.length) : B.noWalkIns],
+              ["/patient/book/wrong", AlertCircleIcon, W.title, B.doorWrongSub],
+            ] as const
+          ).map(([href, Icon, title, line]) => (
+            <Link key={href} href={href} className="rounded-pw-card bg-pw-surface shadow-pw-card flex flex-col gap-2 p-3">
+              <span className="bg-pw-surface-2 grid size-9 place-items-center rounded-xl">
+                <Icon className="size-[18px]" {...ICON} />
+              </span>
+              <b className="text-[14px] leading-[18px]">{title}</b>
+              <span className="text-pw-ink-3 text-[12px] leading-4">{line}</span>
+            </Link>
+          ))}
+        </div>
+
+        <section aria-labelledby="yh-h" className="flex flex-col gap-2.5">
+          <div className="flex items-baseline justify-between gap-2">
+            <h2 id="yh-h" className="text-[19px] font-semibold">
+              {T.yourHealth}
+            </h2>
+            <span className="text-pw-ink-3 text-[12px]">{T.onlyYouShort}</span>
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            <ReadingButton kind="bp" className={cn(TILE, "text-left [--c:var(--pw-area-readings)]")} label={`${T.glance.bloodPressure}. ${T.logReading}`}>
+              <TileHead Icon={HeartPulseIcon} k={T.glance.bloodPressure} />
+              <span className="mt-auto text-[26px] leading-8 font-bold tracking-[-0.02em] tabular-nums">
+                {bp && bp.input.kind === "bp" ? `${bp.input.top}/${bp.input.bottom}` : "–"}
+              </span>
+              <span className="text-pw-ink-2 text-[12px]">{bp ? SHORT.format(new Date(bp.at)) : T.glance.noReading}</span>
+              {bpCheck ? <span className={TAG}>{bpCheck.text}</span> : null}
+            </ReadingButton>
+            <Link href="/patient/care/medicines" className={cn(TILE, "[--c:var(--pw-area-medicines)]")}>
+              <TileHead Icon={PillIcon} k={T.medicines} />
+              {day && day.doses.length ? (
+                <>
+                  <span className="mt-auto text-[26px] leading-8 font-bold tabular-nums">
+                    {day.taken} / {day.total}
+                  </span>
+                  <span className="text-pw-ink-2 truncate text-[12px]">
+                    {day.doses[0]!.medicine} · {day.doses[0]!.time}
+                  </span>
+                </>
+              ) : (
+                <span className="text-pw-ink-2 mt-auto text-[13px]">{C.addMedicine}</span>
+              )}
+            </Link>
+            <Link href={labs.state === "ready" && ready ? "/patient/care/labs" : "/patient/me/records"} className={cn(TILE, "[--c:var(--pw-area-visits)]")}>
+              <TileHead Icon={FlaskConicalIcon} k={T.labTests} />
+              {labs.state === "ready" && ready + waiting > 0 ? (
+                <>
+                  <span className="mt-auto text-[26px] leading-8 font-bold tabular-nums">{ready + waiting}</span>
+                  <span className="text-pw-ink-2 text-[12px]">{T.glance.labsLine(ready, waiting)}</span>
+                </>
+              ) : (
+                <span className="text-pw-ink-2 mt-auto text-[12px]">{T.labsLater}</span>
+              )}
+            </Link>
+            <Link href={care ? "/patient/care/my-care" : "#book"} className={cn(TILE, "[--c:var(--pw-area-team)]")}>
+              <TileHead Icon={UsersRoundIcon} k={care ? T.myCare : T.careTeam} />
+              <span className="text-pw-ink-2 mt-auto text-[12px]">{CARE_COPY.messages.notYet}</span>
+            </Link>
+            <ReadingButton className={cn(TILE, "col-span-2 min-h-0 flex-row items-center justify-between text-left [--c:var(--pw-accent)]")}>
+              <span className="text-pw-ink-2 text-[12px]">
+                <b className="text-pw-ink block text-[14px]">{T.logReading}</b>
+                {T.logLine}
+              </span>
+              <span className="bg-pw-surface rounded-full px-3 py-2 text-[12px] font-bold">{T.log}</span>
+            </ReadingButton>
+          </div>
+        </section>
+      </div>
 
       {care ? (
         <section aria-labelledby="plan-h" className={CARD}>
@@ -219,7 +408,7 @@ export default async function TodayPage({ searchParams }: { searchParams: Promis
         doctors={doctors}
       />
 
-      <div className="grid grid-cols-1 gap-4 min-[761px]:grid-cols-2 min-[1101px]:grid-cols-4">
+      <div className="grid grid-cols-1 gap-4 max-[760px]:hidden min-[761px]:grid-cols-2 min-[1101px]:grid-cols-4">
         <section aria-labelledby="rd-h" className={CARD}>
           <div className="flex items-center justify-between gap-2">
             <h2 id="rd-h" className="text-[17px] font-semibold">
@@ -360,6 +549,17 @@ export default async function TodayPage({ searchParams }: { searchParams: Promis
 
 async function Doctors(p: { doctors: Promise<DoctorCard[] | null> }) {
   return <DoctorsView doctors={await p.doctors} />;
+}
+
+function TileHead(p: { Icon: typeof PillIcon; k: string }) {
+  return (
+    <span className="text-pw-ink-2 flex items-center gap-2 text-[12px] font-semibold">
+      <span className="bg-pw-surface grid size-[30px] place-items-center rounded-full text-[var(--c)]">
+        <p.Icon className="size-4" {...ICON} />
+      </span>
+      {p.k}
+    </span>
+  );
 }
 
 function Glance(p: { icon: ReactNode; k: string; v: string; s: string; href: string }) {

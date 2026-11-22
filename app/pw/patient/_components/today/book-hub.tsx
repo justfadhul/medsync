@@ -4,17 +4,29 @@ import type { DayOption, Part, SessionOption } from "@patient-core/book-days";
 import type { DoctorCard } from "@patient-core/doctors";
 import type { ReactNode } from "react";
 import { feeText } from "@patient-core/fees";
+import type { LucideIcon } from "lucide-react";
 import {
   AlertCircleIcon,
+  BabyIcon,
   CalendarDaysIcon,
   CheckIcon,
   ClockIcon,
+  FlaskConicalIcon,
+  HeartHandshakeIcon,
+  HospitalIcon,
+  MessageCircleQuestionIcon,
+  PillIcon,
   PlusIcon,
+  RefreshCwIcon,
+  ScissorsIcon,
+  ShieldPlusIcon,
+  StethoscopeIcon,
   UserRoundIcon,
+  UsersRoundIcon,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { Suspense, use, useMemo, useState, useTransition } from "react";
+import { Suspense, use, useEffect, useMemo, useRef, useState, useTransition } from "react";
 
 import { Button, buttonClass, ICON } from "@/components/tide/kit";
 import { Dialog } from "@/components/tide/controls";
@@ -25,6 +37,7 @@ import { TODAY_WEB_COPY as T } from "@/content/patient/today-web";
 import { requestDayAction } from "@/lib/patient-web/book-actions";
 import { toSlot } from "@/lib/patient-web/opaque";
 import { cn } from "@/lib/utils";
+import { shownName } from "../../_lib/names";
 import { PATIENT_REASON_CODES, type PatientReasonCode } from "@/supabase/functions/_shared/sessions-sql";
 
 export interface HubWho {
@@ -56,6 +69,26 @@ const initials = (s: string) =>
  * picking one reloads the page's days through the URL (`?r=`), as the ask-for-a-day page does. The request is the
  * booking slice's own action (S9), one idempotency key per attempt. No count of people in line (ADR 0084 §5).
  */
+/** Each booking reason's picture on the phone's reason tiles (the words stay the phone's own). */
+const REASON_ICON: Record<PatientReasonCode, LucideIcon> = {
+  follow_up: RefreshCwIcon,
+  post_discharge: HospitalIcon,
+  new_concern: AlertCircleIcon,
+  refill: PillIcon,
+  test_results: FlaskConicalIcon,
+  antenatal: HeartHandshakeIcon,
+  immunisation: ShieldPlusIcon,
+  child_wellness: BabyIcon,
+  specialist_review: StethoscopeIcon,
+  routine: CalendarDaysIcon,
+  procedure: ScissorsIcon,
+  counselling: UsersRoundIcon,
+  second_opinion: MessageCircleQuestionIcon,
+};
+/** On a phone a row of tiles scrolls sideways, edge to edge. */
+const ROW =
+  "max-[760px]:-mx-4 max-[760px]:flex max-[760px]:flex-nowrap max-[760px]:overflow-x-auto max-[760px]:px-4 max-[760px]:pt-0.5 max-[760px]:pb-2 max-[760px]:[scrollbar-width:none]";
+
 export function BookHub(p: {
   hospitalId: string | null;
   hospitalName: string;
@@ -90,6 +123,17 @@ export function BookHub(p: {
   const [busy, start] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [booked, setBooked] = useState<{ code: string | null } | null>(null);
+  const [preview, setPreview] = useState(false);
+  // The phone's ask bar shows while the booking steps are on screen.
+  const stepsRef = useRef<HTMLDivElement>(null);
+  const [inView, setInView] = useState(false);
+  useEffect(() => {
+    const el = stepsRef.current;
+    if (!el) return;
+    const io = new IntersectionObserver(([e]) => setInView(!!e?.isIntersecting), { rootMargin: "0px 0px -160px 0px" });
+    io.observe(el);
+    return () => io.disconnect();
+  }, []);
   const who = p.who.find((w) => w.id === member) ?? p.who[0];
   const reasonTitle = p.reasons.find((r) => r.value === p.reason)?.title ?? "";
 
@@ -135,7 +179,6 @@ export function BookHub(p: {
     />
   );
 
-  const visible = more ? p.reasons : p.reasons.slice(0, 4);
 
   return (
     <section
@@ -143,7 +186,7 @@ export function BookHub(p: {
       aria-labelledby="book-h"
       className="rounded-pw-card bg-pw-surface shadow-pw-card grid scroll-mt-24 overflow-hidden min-[1101px]:grid-cols-[minmax(0,0.8fr)_minmax(0,1.6fr)]"
     >
-      <div className="bg-pw-band text-pw-on-band flex flex-col gap-3 p-6">
+      <div className="bg-pw-band text-pw-on-band flex flex-col gap-3 p-6 max-[760px]:hidden">
         <div>
           <h2 id="book-h" className="text-[24px] leading-[30px] font-semibold">
             {B.title}
@@ -175,11 +218,15 @@ export function BookHub(p: {
         </div>
       </div>
 
-      <div className="flex flex-col gap-6 p-6">
+      <div ref={stepsRef} className="flex min-w-0 flex-col gap-6 p-6 max-[760px]:gap-5 max-[760px]:p-4">
+        <div className="min-[761px]:hidden">
+          <h2 className="text-[22px] leading-7 font-semibold">{B.askDayTitle}</h2>
+          <p className="text-pw-ink-3 text-[13px]">{B.honest}</p>
+        </div>
         <Step n={1} title={B.whoTitle}>
-          <div className="flex flex-wrap gap-2">
+          <div className={cn("flex flex-wrap gap-2", ROW)}>
             {p.who.map((w) => (
-              <Tile key={w.id ?? "me"} on={w.id === member} onClick={() => setMember(w.id)}>
+              <Tile key={w.id ?? "me"} on={w.id === member} onClick={() => setMember(w.id)} className="max-[760px]:shrink-0">
                 <span className="bg-pw-accent-tint text-pw-accent-text grid size-9 shrink-0 place-items-center rounded-full text-[13px] font-bold">
                   {initials(w.label)}
                 </span>
@@ -191,7 +238,7 @@ export function BookHub(p: {
             ))}
             <Link
               href="/patient/me/household"
-              className="rounded-pw-row border-pw-line-strong text-pw-ink-2 flex min-h-14 items-center gap-2 border border-dashed px-4 text-[15px] font-semibold"
+              className="rounded-pw-row border-pw-line-strong text-pw-ink-2 flex min-h-14 shrink-0 items-center gap-2 border border-dashed px-4 text-[15px] font-semibold"
             >
               <PlusIcon className="size-4" {...ICON} />
               {B.addSomeone}
@@ -206,7 +253,7 @@ export function BookHub(p: {
             p.reasons.length > 4 ? (
               <button
                 type="button"
-                className="text-pw-accent-text min-h-11 text-[14px] font-semibold"
+                className="text-pw-accent-text min-h-11 text-[14px] font-semibold max-[760px]:hidden"
                 onClick={() => setMore((m) => !m)}
               >
                 {more ? T.fewerReasons : T.moreReasons}
@@ -214,12 +261,29 @@ export function BookHub(p: {
             ) : null
           }
         >
-          <div className="grid grid-cols-2 gap-2 min-[1101px]:grid-cols-4">
-            {visible.map((r) => (
-              <Tile key={r.value} on={r.value === p.reason} onClick={() => pickReason(r.value)}>
-                <span className="text-left text-[14px] leading-[18px] font-semibold">{r.title}</span>
-              </Tile>
-            ))}
+          <div className={cn("grid grid-cols-2 gap-2 min-[1101px]:grid-cols-4", ROW)}>
+            {p.reasons.map((r, i) => {
+              const Icon = REASON_ICON[r.value];
+              return (
+                <Tile
+                  key={r.value}
+                  on={r.value === p.reason}
+                  onClick={() => pickReason(r.value)}
+                  // Past the first four, desktop shows a reason only after More reasons; the phone's row scrolls.
+                  className={cn(
+                    "max-[760px]:w-[108px] max-[760px]:shrink-0 max-[760px]:flex-col max-[760px]:justify-start max-[760px]:gap-2 max-[760px]:px-2 max-[760px]:py-3",
+                    i >= 4 && !more && "min-[761px]:hidden",
+                  )}
+                >
+                  <span className="bg-pw-surface-3 grid size-11 place-items-center rounded-[14px] min-[761px]:hidden">
+                    <Icon className="size-5" {...ICON} />
+                  </span>
+                  <span className="text-left text-[14px] leading-[18px] font-semibold max-[760px]:text-center max-[760px]:text-[12px] max-[760px]:leading-[15px]">
+                    {r.title}
+                  </span>
+                </Tile>
+              );
+            })}
           </div>
         </Step>
 
@@ -298,7 +362,7 @@ export function BookHub(p: {
                     aria-pressed={s.id === session?.id}
                     onClick={() => setSessionId(s.id)}
                     className={cn(
-                      "rounded-pw-row relative flex min-h-[84px] w-[300px] shrink-0 snap-start items-center gap-3 p-3 pr-10 text-left",
+                      "rounded-pw-row relative flex min-h-[84px] w-[300px] shrink-0 snap-start max-[760px]:w-[264px] items-center gap-3 p-3 pr-10 text-left",
                       "transition-[background-color,box-shadow,scale] duration-150 ease-[cubic-bezier(0.16,1,0.3,1)] active:scale-[0.98] motion-reduce:active:scale-100",
                       s.id === session?.id
                         ? "bg-pw-surface shadow-pw-card"
@@ -332,7 +396,8 @@ export function BookHub(p: {
               </div>
             </Step>
 
-            <div className="border-pw-line flex flex-wrap items-center justify-between gap-3 border-t pt-4">
+            <p className="text-pw-ink-3 text-[13px] min-[761px]:hidden">{B.footnote}</p>
+            <div className="border-pw-line flex flex-wrap items-center justify-between gap-3 border-t pt-4 max-[760px]:hidden">
               <p className="text-[15px]">
                 {who?.label}, {reasonTitle}, {day ? `${WD.format(at(day.key))} ${DAY.format(at(day.key))} ${MON.format(at(day.key))}` : ""}
                 {shownClinic ? ` · ${shownClinic}` : ""}
@@ -350,6 +415,44 @@ export function BookHub(p: {
         )}
         {p.footer}
       </div>
+
+      {day && session ? (
+        <div
+          aria-hidden={!inView}
+          className={cn(
+            "bg-pw-band text-pw-on-band fixed inset-x-3 bottom-[calc(92px+env(safe-area-inset-bottom))] z-20 flex items-center gap-3 rounded-[24px] py-2.5 pr-2.5 pl-4 shadow-pw-float min-[761px]:hidden",
+            "transition-[translate,opacity] duration-250 ease-[cubic-bezier(0.16,1,0.3,1)] motion-reduce:transition-none",
+            inView ? "" : "pointer-events-none translate-y-4 opacity-0",
+          )}
+        >
+          <div className="text-pw-on-band-2 min-w-0 flex-1 text-[11px] leading-[15px]">
+            <b className="text-pw-on-band block text-[16px] leading-5">{session.feeLabel ?? feeText(session.fee)}</b>
+            {`${WD.format(at(day.key))} ${DAY.format(at(day.key))} ${MON.format(at(day.key))} · ${session.clinicName}`}
+            {" · "}
+            <button
+              type="button"
+              tabIndex={inView ? 0 : -1}
+              onClick={() => setPreview(true)}
+              className="text-pw-on-band-accent font-semibold underline"
+            >
+              {T.previewTicket}
+            </button>
+          </div>
+          <button
+            type="button"
+            tabIndex={inView ? 0 : -1}
+            onClick={ask}
+            disabled={busy}
+            className="bg-pw-accent text-pw-on-accent min-h-12 shrink-0 rounded-full px-4 text-[14px] font-bold active:scale-[0.97] disabled:opacity-60"
+          >
+            {T.askThisDay}
+          </button>
+        </div>
+      ) : null}
+
+      <Dialog open={preview} onOpenChange={setPreview} title={T.previewTitle} width="medium">
+        {ticket}
+      </Dialog>
 
       <Dialog open={!!booked} onOpenChange={(o) => !o && setBooked(null)} title={T.bookedTitle} width="medium"
         footer={
@@ -391,9 +494,6 @@ function Doctor(p: { name: string; fee: string; doctors: Promise<DoctorCard[] | 
   return <Clinician name={p.name} fee={p.fee} doctor={d} />;
 }
 
-/** "MIREMBE JOSELYN NAYIGA" reads as "Mirembe Joselyn Nayiga"; a name typed in mixed case is left alone. */
-const shownName = (n: string) =>
-  n === n.toUpperCase() ? n.toLowerCase().replace(/(^|[\s'-])\p{L}/gu, (c) => c.toUpperCase()) : n;
 
 function Clinician(p: { name: string; fee: string; doctor?: DoctorCard }) {
   return (
@@ -424,7 +524,13 @@ function Face(p: { name: string; photo?: string | null }) {
   );
 }
 
-function Tile(p: { on: boolean; disabled?: boolean; onClick: () => void; children: ReactNode }) {
+function Tile(p: {
+  on: boolean;
+  disabled?: boolean;
+  onClick: () => void;
+  children: ReactNode;
+  className?: string;
+}) {
   return (
     <button
       type="button"
@@ -434,11 +540,12 @@ function Tile(p: { on: boolean; disabled?: boolean; onClick: () => void; childre
       className={cn(
         "rounded-pw-row relative flex min-h-14 min-w-0 items-center gap-3 px-3 py-2 pr-9 transition-colors disabled:opacity-45",
         p.on ? "bg-pw-surface ring-pw-ink ring-2" : "bg-pw-surface-2 hover:bg-pw-surface-3",
+        p.className,
       )}
     >
       {p.children}
       {p.on ? (
-        <span className="bg-pw-ink text-pw-surface absolute top-1/2 right-2 grid size-5 -translate-y-1/2 place-items-center rounded-full">
+        <span className="bg-pw-ink text-pw-surface absolute top-1/2 right-2 grid size-5 -translate-y-1/2 place-items-center rounded-full max-[760px]:top-2 max-[760px]:translate-y-0">
           <CheckIcon className="size-3" strokeWidth={3} aria-hidden />
         </span>
       ) : null}
