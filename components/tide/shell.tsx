@@ -8,16 +8,13 @@ import { createContext, useContext } from "react";
 import {
   BellIcon,
   CalendarDaysIcon,
-  CalendarPlusIcon,
   ChevronLeftIcon,
-  ClipboardListIcon,
   HeartPulseIcon,
   HouseIcon,
   MoonIcon,
   SirenIcon,
   SunIcon,
   UserRoundIcon,
-  UsersRoundIcon,
 } from "lucide-react";
 import { useTheme } from "next-themes";
 
@@ -67,55 +64,28 @@ export interface ShellV2 {
   initials: string;
 }
 
-const PLACES_V2 = {
-  visit: [
-    { href: "/patient", label: "Home", Icon: HouseIcon, match: (p: string) => p === "/patient" },
-    {
-      href: "/patient/book",
-      label: "Book",
-      Icon: CalendarPlusIcon,
-      match: (p: string) => p.startsWith("/patient/book"),
-    },
-    {
-      href: "/patient/visits",
-      label: "Visits",
-      Icon: CalendarDaysIcon,
-      match: (p: string) => p.startsWith("/patient/visits"),
-    },
-    {
-      href: "/patient/me",
-      label: "Me",
-      Icon: UserRoundIcon,
-      match: (p: string) => p.startsWith("/patient/me"),
-    },
-  ],
-  care: [
-    {
-      href: "/patient/care",
-      label: "Today",
-      Icon: HeartPulseIcon,
-      match: (p: string) => p === "/patient/care" || p === "/patient",
-    },
-    {
-      href: "/patient/care/plan",
-      label: "Plan",
-      Icon: ClipboardListIcon,
-      match: (p: string) => p.startsWith("/patient/care/plan"),
-    },
-    {
-      href: "/patient/care/my-care",
-      label: "My care",
-      Icon: UsersRoundIcon,
-      match: (p: string) => p.startsWith("/patient/care/my-care"),
-    },
-    {
-      href: "/patient/me",
-      label: "Me",
-      Icon: UserRoundIcon,
-      match: (p: string) => p.startsWith("/patient/me"),
-    },
-  ],
-} as const;
+/** Three places, one for each page of the web (the owner's three-page redesign, 22 Nov 2026), in both modes. */
+const TABS = [
+  {
+    href: "/patient",
+    label: "Today",
+    Icon: HouseIcon,
+    match: (p: string) => p === "/patient" || p.startsWith("/patient/book") || p.startsWith("/patient/care"),
+  },
+  {
+    href: "/patient/visits",
+    label: "Visits",
+    Icon: CalendarDaysIcon,
+    match: (p: string) => p.startsWith("/patient/visits"),
+  },
+  {
+    href: "/patient/me",
+    label: "Me",
+    Icon: UserRoundIcon,
+    match: (p: string) => p.startsWith("/patient/me"),
+  },
+] as const;
+const PLACES_V2 = { visit: TABS, care: TABS } as const;
 
 /** Under the v2 shell the top bar carries Help and the avatar at ≥ 761 px, so page headers do not repeat them. */
 const ShellV2Context = createContext(false);

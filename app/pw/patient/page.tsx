@@ -1,214 +1,351 @@
+import type { PatientReasonCode } from "@/supabase/functions/_shared/sessions-sql";
 import type { Metadata } from "next";
+import type { ReactNode } from "react";
 import Link from "next/link";
-import { cache, Suspense } from "react";
+import { Suspense } from "react";
 import { lastDays, moodsFor, readingsFrom } from "@patient-core/log";
-import { weekCounts } from "@patient-core/medicines";
-import { memberNumber, tierNow } from "@patient-core/membership";
-import { ticketView } from "@patient-core/ticket-view";
-import { stageOf } from "@patient-core/visit-stages";
+import { checkReading } from "@patient-core/readings";
 import { nextVisit } from "@patient-core/visits-calendar";
-import {
-  ActivityIcon,
-  ChevronRightIcon,
-  DropletIcon,
-  HeartPulseIcon,
-  ScaleIcon,
-} from "lucide-react";
+import { CalendarDaysIcon, FlaskConicalIcon, HeartPulseIcon } from "lucide-react";
 
-import {
-  Card,
-  ICON,
-  IconDisc,
-  Overline,
-  SectionHead,
-  Skeleton,
-  TextLink,
-} from "@/components/tide/kit";
-import { PageHeader } from "@/components/tide/shell";
-import { HomeV2 } from "@/components/tide/v2-home-web";
-import { MEMBERSHIP_COPY } from "@/content/patient-app/membership";
+import { REASONS } from "@/app/patient/book/_lib/booking";
+import { ICON } from "@/components/tide/kit";
+import { CARE_V2_COPY } from "@/content/patient-app/care";
+import { CARE_COPY } from "@/content/patient/care";
 import { HOME_COPY as C } from "@/content/patient/home";
+import { TODAY_WEB_COPY as T } from "@/content/patient/today-web";
+import { loadDays, loadWalkIns } from "@/lib/patient-web/book-data";
 import { loadLabNames } from "@/lib/patient-web/care-labs";
 import { loadLog, loadMedicines, today } from "@/lib/patient-web/day";
 import { loadDoctors } from "@/lib/patient-web/doctors";
-import { patientFlag } from "@/lib/patient-web/flags";
-import { loadCardIdentity } from "@/lib/patient-web/me-data";
-import { loadMembership } from "@/lib/patient-web/membership-v2";
-import { countUnseenNotifications } from "@/lib/patient-web/notifications";
-import { loadPayStatus } from "@/lib/patient-web/visit-v2";
+import { careModeOn } from "@/lib/patient-web/flags";
+import { fromSlot } from "@/lib/patient-web/opaque";
 import { loadWeek } from "@/lib/patient-web/visits-data";
-import { fetchAppointments, formatWhen } from "@/lib/patient/appointments";
 import { fetchHousehold } from "@/lib/patient/household";
 import { requirePatientScope } from "@/lib/patient/scope";
-import { DEFAULT_TIME_ZONE, startOfLocalDay } from "@/supabase/functions/_shared/slots";
-import { DayCascade } from "./_components/day-cascade";
+import { PATIENT_REASON_CODES } from "@/supabase/functions/_shared/sessions-sql";
 import { DoctorsView, QuietRow } from "./_components/doctors";
-import { HomeSegments, RetryButton } from "./_components/home-bits";
 import { MoodCard } from "./_components/mood-card";
-import { buildDay } from "./_lib/cascade";
+import { BookHub } from "./_components/today/book-hub";
+import { ReadingButton } from "./_components/today/reading-button";
+import { kampalaClock, loadToday } from "./care/_v2/data";
+import { TodayClient } from "./care/_v2/today";
 
-export const metadata: Metadata = { title: "Home" };
+export const metadata: Metadata = { title: "Today" };
 export const dynamic = "force-dynamic";
 
-// One read per request, shared by the day and the right column.
-const log = cache((userId: string) => loadLog(userId, 8));
-const medicines = cache((userId: string) => loadMedicines(userId));
+const KAMPALA = "Africa/Kampala";
+const DATE = new Intl.DateTimeFormat("en-GB", { timeZone: KAMPALA, weekday: "long", day: "numeric", month: "long" });
+const SHORT = new Intl.DateTimeFormat("en-GB", { timeZone: KAMPALA, weekday: "short", day: "numeric", month: "short" });
+const HOUR = new Intl.DateTimeFormat("en-GB", { timeZone: KAMPALA, hour: "numeric", hourCycle: "h23" });
+const initials = (s: string) =>
+  s
+    .split(/\s+/)
+    .slice(0, 2)
+    .map((w) => w[0]?.toUpperCase() ?? "")
+    .join("") || "·";
+const CARD = "rounded-pw-card bg-pw-surface shadow-pw-card flex min-w-0 flex-col gap-3 p-5";
 
 /**
- * Home, your day (the phone's (tabs)/index.tsx): the greeting, Today / This week, the mood card, the day
- * cascade and See a doctor; at > 1100 px the next visit, the Log a reading tiles and the week's medicines
- * sit beside them (the split grid, ~1.55 : 1), below that one column in the phone's order.
+ * Today (the owner's three-page redesign, 22 Nov 2026; replaces Home, Book and the Care hub): the day's band with
+ * the greeting, a glance at the next visit, lab tests and blood pressure, the mood check-in and who the patient
+ * books for; booking on the page; then readings, medicines, lab tests and the care team, and See a doctor. In
+ * Care mode (`careModeOn()`, locked until Gate CG) the care plan comes before booking. Real rows only.
  */
-const TIER_NAMES = {
-  basic: MEMBERSHIP_COPY.tiers.basic,
-  plus_family: MEMBERSHIP_COPY.tiers.plusFamily,
-  plus_care: MEMBERSHIP_COPY.tiers.plusCare,
-  family_care: MEMBERSHIP_COPY.tiers.familyCare,
-} as const;
-
-/** The patient's own code for the card number; null before it exists. */
-async function patientCode(userId: string): Promise<string | null> {
-  return (await loadCardIdentity(userId).catch(() => null))?.code ?? null;
-}
-
-export default async function PatientHome() {
+export default async function TodayPage({ searchParams }: { searchParams: Promise<{ r?: string }> }) {
   const scope = await requirePatientScope();
-  const name = scope.fullName?.trim();
-  const first = name ? (name.split(/\s+/)[0] ?? C.there) : C.there;
-  const unseen = await countUnseenNotifications(scope.userId).catch(() => 0);
-
-  // Patient app v2 (board 16), behind appV2Web: the visit as the ticket, booking, results, household, the card.
-  if (patientFlag("appV2Web")) {
-    const now = new Date();
-    const [week, labs, household, membership] = await Promise.all([
-      loadWeek(scope.userId, scope.primaryHospitalId, now).catch(() => null),
-      loadLabNames(scope.userId, scope.primaryHospitalId).catch(() => ({ state: "off" as const })),
-      fetchHousehold(scope.userId).catch(() => []),
-      loadMembership().catch(() => null),
-    ]);
-    const next = week ? nextVisit(week.upcoming) : null;
-    const pay = next ? await loadPayStatus([next.id]).catch(() => new Map()) : new Map();
-    const held = tierNow(membership?.row ?? null, now);
-    const dayKey = (iso: string) =>
-      new Date(new Date(iso).getTime() + 3 * 3600_000).toISOString().slice(0, 10);
-    return (
-      <>
-        <PageHeader greeting title={`${C.hello} ${first}`} unseen={unseen} />
-        <HomeV2
-          visit={
-            next
-              ? {
-                  ticket: ticketView(next, pay.get(next.id), name ?? "You"),
-                  stage: stageOf(next.status, null),
-                  today: dayKey(next.startsAtIso) === dayKey(now.toISOString()),
-                  href: `/patient/visits/${next.id}`,
-                }
-              : null
-          }
-          results={
-            labs.state === "ready"
-              ? { state: "ready", ready: labs.ready.length, waiting: labs.notReady.length }
-              : { state: "off" }
-          }
-          household={household.map((m) => ({ id: m.bookingAgentId, label: m.memberLabel }))}
-          doctors={<SeeADoctor hospitalId={scope.primaryHospitalId} />}
-          card={{
-            tierName: TIER_NAMES[held.tier],
-            memberNo: memberNumber(await patientCode(scope.userId)),
-            plus: held.tier !== "basic",
-          }}
-        />
-      </>
-    );
-  }
-
-  return (
-    <>
-      <PageHeader
-        greeting
-        title={`${C.hello} ${first}`}
-        tools={<HomeSegments />}
-        unseen={unseen}
-        avatar={{ initials: name ? first.slice(0, 2).toUpperCase() : "·", label: C.avatarLabel }}
-      />
-      <div className="grid items-start gap-7 max-[760px]:gap-5 min-[1101px]:grid-cols-[minmax(0,1.55fr)_minmax(0,1fr)]">
-        <div className="flex min-w-0 flex-col gap-7 max-[760px]:gap-5">
-          <Suspense fallback={<DayLoading />}>
-            <Day userId={scope.userId} chat={patientFlag("mobileChat")} />
-          </Suspense>
-          <SeeADoctor hospitalId={scope.primaryHospitalId} />
-        </div>
-        <div className="flex min-w-0 flex-col gap-7 max-[760px]:gap-5">
-          <Suspense fallback={<Skeleton className="h-32" />}>
-            <NextVisit userId={scope.userId} />
-          </Suspense>
-          <LogTiles />
-          <Suspense fallback={<Skeleton className="h-40" />}>
-            <MedicinesWeek userId={scope.userId} />
-          </Suspense>
-        </div>
-      </div>
-    </>
-  );
-}
-
-function DayLoading() {
-  return (
-    <section className="flex flex-col gap-3" aria-busy>
-      <SectionHead title={C.dayTitle} />
-      <p className="sr-only" role="status">
-        {C.dayLoading}
-      </p>
-      <Skeleton className="h-[78px]" />
-      <Skeleton className="h-[78px]" />
-      <Skeleton className="h-[78px]" />
-    </section>
-  );
-}
-
-async function Day({ userId, chat }: { userId: string; chat: boolean }) {
   const now = new Date();
-  const data = await Promise.all([log(userId), medicines(userId)]).catch(() => null);
-  const rows = data?.[0] ?? [];
-  const mood = moodsFor(rows, lastDays(now));
-  const todayMood = mood[mood.length - 1];
+  const q = await searchParams;
+  const reason: PatientReasonCode = fromSlot(PATIENT_REASON_CODES, q.r) ?? REASONS[0]!.value;
+  const home = scope.primaryHospitalId
+    ? { id: scope.primaryHospitalId, name: scope.primaryHospitalName ?? "Your hospital" }
+    : null;
+  const care = careModeOn() ? await loadToday(scope.userId, now).catch(() => null) : null;
+  const [week, labs, household, rows, meds, days, walkIns] = await Promise.all([
+    loadWeek(scope.userId, scope.primaryHospitalId, now).catch(() => null),
+    loadLabNames(scope.userId, scope.primaryHospitalId).catch(() => ({ state: "off" as const })),
+    fetchHousehold(scope.userId).catch(() => []),
+    loadLog(scope.userId, 8).catch(() => null),
+    loadMedicines(scope.userId).catch(() => null),
+    home ? loadDays(home, reason, null).catch(() => null) : Promise.resolve(null),
+    home ? loadWalkIns(home.id).catch(() => null) : Promise.resolve(null),
+  ]);
+
+  const name = scope.fullName?.trim() || "";
+  const first = name.split(/\s+/)[0] || C.there;
+  const h = Number(HOUR.format(now));
+  const greeting = h < 12 ? T.greeting.morning : h < 17 ? T.greeting.afternoon : T.greeting.evening;
+  const next = week ? nextVisit(week.upcoming) : null;
+  const readings = rows ? readingsFrom(rows) : [];
+  const latest = (k: string) => readings.filter((r) => r.input.kind === k).at(-1) ?? null;
+  const bp = latest("bp");
+  const bpCheck = bp ? checkReading(bp.input) : null;
+  const mood = rows ? moodsFor(rows, lastDays(now)) : [];
+  const todayMood = mood.at(-1);
+  const day = meds ? today(meds.meds, meds.takes, now) : null;
+  const ready = labs.state === "ready" ? labs.ready.length : 0;
+  const waiting = labs.state === "ready" ? labs.notReady.length : 0;
+  const who = [
+    { id: null, label: name || "Me", rel: T.me },
+    ...household.map((m) => ({ id: m.provisionalPatientId, label: m.memberLabel, rel: m.relationship })),
+  ];
+
+  const glance: ReactNode[] = [
+    <Glance
+      key="visit"
+      icon={<CalendarDaysIcon className="size-5" {...ICON} />}
+      k={T.glance.nextVisit}
+      v={next ? SHORT.format(new Date(next.startsAtIso)) : T.glance.noVisit}
+      s={next ? `${next.departmentName} · ${next.hospitalName}` : T.glance.bookOne}
+      href={next ? `/patient/visits/${next.id}` : "#book"}
+    />,
+    <Glance
+      key="labs"
+      icon={<FlaskConicalIcon className="size-5" {...ICON} />}
+      k={T.glance.labs}
+      v={labs.state === "ready" ? String(ready + waiting) : "–"}
+      s={labs.state === "ready" ? T.glance.labsLine(ready, waiting) : T.labsLater}
+      href="#labs"
+    />,
+    <ReadingButton
+      key="bp"
+      kind="bp"
+      label={`${T.glance.bloodPressure}: ${bp && bp.input.kind === "bp" ? `${bp.input.top}/${bp.input.bottom}` : T.glance.noReading}. ${T.logReading}`}
+      className="flex min-w-0 flex-col items-start gap-0.5 rounded-[18px] bg-pw-band-glass p-4 text-left hover:opacity-90"
+    >
+      <span className="text-pw-on-band-2 flex items-center gap-2 text-[12px] font-semibold">
+        <HeartPulseIcon className="size-4" {...ICON} />
+        {T.glance.bloodPressure}
+      </span>
+      <span className="text-[22px] leading-[28px] font-bold tabular-nums">
+        {bp && bp.input.kind === "bp" ? `${bp.input.top}/${bp.input.bottom}` : T.glance.noReading}
+      </span>
+      <span className="text-pw-on-band-2 truncate text-[12px]">{bpCheck ? bpCheck.text : T.logReading}</span>
+    </ReadingButton>,
+  ];
+
   return (
-    <>
-      <MoodCard
-        today={todayMood && todayMood !== "none" ? todayMood : null}
-        week={mood}
-        chat={chat}
-      />
-      <section aria-labelledby="your-day" className="flex flex-col gap-3">
-        <SectionHead id="your-day" title={C.dayTitle} />
-        {data ? (
-          <DayCascade
-            view={buildDay({
-              today: today(data[1].meds, data[1].takes, now),
-              medicineCount: data[1].meds.length,
-              readings: readingsFrom(rows),
-              rows,
-              now,
-            })}
-          />
-        ) : (
-          <div className="flex flex-col items-start gap-2">
-            <p className="text-pw-ink-2 text-[17px]">{C.dayFailed}</p>
-            <RetryButton />
+    <div className="flex flex-col gap-6">
+      <section
+        aria-labelledby="day-h"
+        className="rounded-pw-card bg-pw-band text-pw-on-band grid gap-6 p-6 min-[1101px]:grid-cols-[minmax(0,1fr)_400px]"
+      >
+        <div className="flex min-w-0 flex-col justify-between gap-5">
+          <div className="flex items-center gap-4">
+            <span className="bg-pw-accent-tint text-pw-accent-text ring-pw-band grid size-[72px] shrink-0 place-items-center rounded-full text-[24px] font-bold ring-4">
+              {initials(name || first)}
+            </span>
+            <div className="min-w-0">
+              <p className="text-pw-on-band-2 text-[14px] font-semibold">{DATE.format(now)}</p>
+              <h1 id="day-h" className="text-[36px] leading-[42px] font-semibold tracking-[-0.03em]">
+                {greeting}, {first}
+              </h1>
+            </div>
           </div>
+          <div className="grid grid-cols-1 gap-2.5 min-[700px]:grid-cols-3">{glance}</div>
+        </div>
+        <MoodCard today={todayMood && todayMood !== "none" ? todayMood : null} week={mood} chat={false} />
+        <div className="border-pw-on-band/20 col-span-full flex flex-wrap items-center justify-between gap-3 border-t-2 border-dashed pt-4">
+          <p className="text-pw-on-band-2 text-[13px]">
+            {T.yourHospital}: <b className="text-pw-on-band">{home?.name ?? "–"}</b>{" "}
+            <Link href="/patient/hospitals" className="text-pw-on-band-accent font-semibold">
+              {T.change}
+            </Link>
+          </p>
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-pw-on-band-2 text-[13px] font-semibold">{T.bookFor}</span>
+            {household.map((m) => (
+              <Link
+                key={m.provisionalPatientId}
+                href="#book"
+                className="flex min-h-11 items-center gap-2 rounded-full bg-pw-band-glass py-1 pr-4 pl-1"
+              >
+                <span className="bg-pw-accent-tint text-pw-accent-text grid size-9 place-items-center rounded-full text-[12px] font-bold">
+                  {initials(m.memberLabel)}
+                </span>
+                <span className="flex flex-col leading-4">
+                  <span className="text-[14px] font-semibold">{m.memberLabel}</span>
+                  <span className="text-pw-on-band-2 text-[12px]">{m.relationship}</span>
+                </span>
+              </Link>
+            ))}
+            <Link
+              href="/patient/me/household"
+              className="flex min-h-11 items-center rounded-full border border-dashed border-pw-on-band/30 px-4 text-[14px] font-semibold"
+            >
+              + {T.addSomeone}
+            </Link>
+          </div>
+        </div>
+      </section>
+
+      {care ? (
+        <section aria-labelledby="plan-h" className={CARD}>
+          <h2 id="plan-h" className="text-[24px] font-semibold">
+            {T.carePlan}
+          </h2>
+          <p className="text-pw-ink-3 -mt-2 text-[13px]">{T.carePlanLine}</p>
+          <TodayClient
+            hero={care.hero}
+            slots={care.slots}
+            nowLabel={kampalaClock(now)}
+            snippets={care.snippets}
+            planVersionId={care.care.planVersionId}
+          />
+        </section>
+      ) : null}
+
+      <BookHub
+        hospitalId={home?.id ?? null}
+        hospitalName={days?.hospitalName ?? home?.name ?? ""}
+        who={who}
+        reasons={REASONS.map((r) => ({ value: r.value, title: r.title }))}
+        reason={reason}
+        days={days ? days.days : home ? null : []}
+        walkIns={walkIns ? walkIns.length : null}
+      />
+
+      <div className="grid grid-cols-1 gap-4 min-[761px]:grid-cols-2 min-[1101px]:grid-cols-4">
+        <section aria-labelledby="rd-h" className={CARD}>
+          <div className="flex items-center justify-between gap-2">
+            <h2 id="rd-h" className="text-[17px] font-semibold">
+              {T.readings}
+            </h2>
+            <ReadingButton className="text-pw-accent-text min-h-11 text-[14px] font-semibold">
+              {T.logReading}
+            </ReadingButton>
+          </div>
+          {(["bp", "sugar", "weight"] as const).map((k) => {
+            const r = latest(k);
+            const v = !r
+              ? T.glance.noReading
+              : r.input.kind === "bp"
+                ? `${r.input.top}/${r.input.bottom}`
+                : String("value" in r.input ? r.input.value : "");
+            return (
+              <div key={k} className="bg-pw-surface-2 rounded-pw-row flex items-center justify-between gap-2 px-3 py-2">
+                <span className="flex flex-col">
+                  <span className="text-pw-ink-3 text-[12px]">{CARE_V2_COPY.readings.titles[k]}</span>
+                  <span className="text-[17px] font-bold tabular-nums">{v}</span>
+                </span>
+                <span className="text-pw-ink-3 text-[12px]">{r ? SHORT.format(new Date(r.at)) : ""}</span>
+              </div>
+            );
+          })}
+          <p className="text-pw-ink-3 text-[13px]">{T.onlyYou}</p>
+        </section>
+
+        <section aria-labelledby="md-h" className={CARD}>
+          <div className="flex items-center justify-between gap-2">
+            <h2 id="md-h" className="text-[17px] font-semibold">
+              {T.medicines}
+            </h2>
+            {day ? (
+              <span className="text-pw-ink-3 text-[13px]">
+                {day.taken} / {day.total}
+              </span>
+            ) : null}
+          </div>
+          {day && day.doses.length ? (
+            day.doses.map((d) => (
+              <Link
+                key={d.id}
+                href="/patient/care/medicines"
+                className="bg-pw-surface-2 rounded-pw-row flex items-center justify-between gap-2 px-3 py-2"
+              >
+                <span className="flex min-w-0 flex-col">
+                  <span className="truncate text-[15px] font-semibold">{d.medicine}</span>
+                  <span className="text-pw-ink-3 text-[12px]">{d.time}</span>
+                </span>
+                <span className="text-[13px] font-bold">
+                  {d.status === "taken"
+                    ? CARE_V2_COPY.plan.taken
+                    : d.status === "due"
+                      ? CARE_V2_COPY.plan.due
+                      : d.status === "missed"
+                        ? CARE_V2_COPY.plan.missed
+                        : CARE_V2_COPY.plan.later}
+                </span>
+              </Link>
+            ))
+          ) : (
+            <Link href="/patient/care/medicines" className="text-pw-accent-text text-[15px] font-semibold">
+              {C.addMedicine}
+            </Link>
+          )}
+        </section>
+
+        <section id="labs" aria-labelledby="lb-h" className={`${CARD} scroll-mt-24`}>
+          <h2 id="lb-h" className="text-[17px] font-semibold">
+            {T.labTests}
+          </h2>
+          {labs.state === "ready" && labs.ready.length + labs.notReady.length > 0 ? (
+            <>
+              {labs.notReady.map((l) => (
+                <div key={l.key} className="bg-pw-surface-2 rounded-pw-row flex flex-col px-3 py-2">
+                  <span className="text-pw-ink-3 text-[12px]">{T.labsWaiting}</span>
+                  <span className="text-[15px] font-semibold">{l.test}</span>
+                  <span className="text-pw-ink-3 text-[12px]">{l.line}</span>
+                </div>
+              ))}
+              {labs.ready.map((l) => (
+                <Link
+                  key={l.id}
+                  href="/patient/care/labs"
+                  className="bg-pw-surface-2 rounded-pw-row flex flex-col px-3 py-2"
+                >
+                  <span className="text-pw-ink-3 text-[12px]">{T.labsReady}</span>
+                  <span className="text-[15px] font-semibold">{l.test}</span>
+                  <span className="text-pw-ink-3 text-[12px]">
+                    {l.releasedOn} · {l.hospitalName}
+                  </span>
+                </Link>
+              ))}
+            </>
+          ) : (
+            <p className="text-pw-ink-2 text-[15px]">{T.labsLater}</p>
+          )}
+          <Link href="/patient/me/records" className="text-pw-accent-text mt-auto text-[15px] font-semibold">
+            {T.openRecords}
+          </Link>
+        </section>
+
+        <section aria-labelledby="ct-h" className={CARD}>
+          <h2 id="ct-h" className="text-[17px] font-semibold">
+            {care ? CARE_V2_COPY.myCare.title : T.careTeam}
+          </h2>
+          {care ? (
+            <Link href="/patient/care/my-care" className="text-pw-accent-text text-[15px] font-semibold">
+              {CARE_V2_COPY.myCare.team} · {CARE_V2_COPY.myCare.checks} · {T.messages}
+            </Link>
+          ) : (
+            <>
+              <p className="text-[15px]">{CARE_COPY.messages.notYet} {CARE_COPY.messages.instead}</p>
+              <Link href="#book" className="text-pw-accent-text text-[15px] font-semibold">
+                {T.bookVisit}
+              </Link>
+            </>
+          )}
+          <p className="text-pw-ink-3 text-[13px]">{CARE_V2_COPY.messages.notForEmergencies}</p>
+        </section>
+      </div>
+
+      <section aria-labelledby="dc-h" className={CARD}>
+        <div className="flex items-center justify-between gap-2">
+          <h2 id="dc-h" className="text-[17px] font-semibold">
+            {T.seeADoctor}
+          </h2>
+          <span className="text-pw-ink-3 text-[13px]">{T.pickToBook}</span>
+        </div>
+        {home ? (
+          <Suspense fallback={<QuietRow line={C.doctorsLoading} />}>
+            <Doctors hospitalId={home.id} />
+          </Suspense>
+        ) : (
+          <QuietRow line={C.doctorsNoHospital} href="/patient/hospitals" />
         )}
       </section>
-    </>
-  );
-}
-
-/** "See a doctor" (the phone's Home): the previews, or one quiet row while loading, on failure or with none. */
-function SeeADoctor({ hospitalId }: { hospitalId: string | null }) {
-  if (!hospitalId) return <QuietRow line={C.doctorsNoHospital} href="/patient/hospitals" />;
-  return (
-    <Suspense fallback={<QuietRow line={C.doctorsLoading} />}>
-      <Doctors hospitalId={hospitalId} />
-    </Suspense>
+    </div>
   );
 }
 
@@ -216,123 +353,18 @@ async function Doctors({ hospitalId }: { hospitalId: string }) {
   return <DoctorsView doctors={await loadDoctors(hospitalId).catch(() => null)} />;
 }
 
-/** The next live visit, with no position and no clock numeral (ADR 0084 §6, §10). */
-async function NextVisit({ userId }: { userId: string }) {
-  const now = new Date();
-  const [visit] = await fetchAppointments(
-    userId,
-    "upcoming-active",
-    1,
-    startOfLocalDay(now, DEFAULT_TIME_ZONE),
-  ).catch(() => []);
+function Glance(p: { icon: ReactNode; k: string; v: string; s: string; href: string }) {
   return (
-    <Card className="flex flex-col gap-3">
-      <Overline area="visits">{C.nextVisit}</Overline>
-      {visit ? (
-        <Link
-          href={`/patient/visits/${visit.id}`}
-          className="rounded-pw-row hover:bg-pw-surface-2 focus-visible:outline-pw-focus -mx-2 flex items-center gap-3 p-2 focus-visible:outline-2"
-        >
-          <span className="min-w-0 flex-1">
-            <span className="block text-[17px] leading-[22px] font-semibold">
-              {formatWhen(visit.startsAtIso)}
-            </span>
-            <span className="text-pw-ink-2 block text-[15px] font-medium">
-              {visit.departmentName} · {visit.hospitalName}
-            </span>
-          </span>
-          <ChevronRightIcon className="text-pw-ink-3 size-5" {...ICON} />
-        </Link>
-      ) : (
-        <p className="text-pw-ink-2 text-[15px]">{C.noVisit}</p>
-      )}
-      <TextLink href={visit ? "/patient/visits" : "/patient/book"}>
-        {visit ? C.seeVisits : C.bookVisit}
-      </TextLink>
-    </Card>
-  );
-}
-
-const TILES = [
-  { kind: "bp", Icon: HeartPulseIcon },
-  { kind: "sugar", Icon: DropletIcon },
-  { kind: "pulse", Icon: ActivityIcon },
-  { kind: "weight", Icon: ScaleIcon },
-] as const;
-
-function LogTiles() {
-  return (
-    <section aria-labelledby="log-tiles" className="flex flex-col gap-3">
-      <SectionHead id="log-tiles" title={C.logTiles} />
-      <ul className="grid grid-cols-2 gap-3">
-        {TILES.map(({ kind, Icon }) => (
-          <li key={kind}>
-            <Link
-              href={`/patient/care/readings?kind=${kind}`}
-              className="rounded-pw-row bg-pw-surface shadow-pw-card hover:bg-pw-surface-2 focus-visible:outline-pw-focus flex min-h-20 items-center gap-3 p-4 text-[15px] leading-5 font-semibold focus-visible:outline-2 focus-visible:outline-offset-2"
-            >
-              <IconDisc tone="accent">
-                <Icon className="size-5" {...ICON} />
-              </IconDisc>
-              {C.kindWords[kind]}
-            </Link>
-          </li>
-        ))}
-      </ul>
-    </section>
-  );
-}
-
-const WEEKDAY = new Intl.DateTimeFormat("en-GB", { weekday: "short" });
-
-/** Doses taken against doses on the list, each of the last seven days; the text is the chart's finding. */
-async function MedicinesWeek({ userId }: { userId: string }) {
-  const now = new Date();
-  const data = await medicines(userId).catch(() => null);
-  if (!data) return null;
-  const { taken, totals } = weekCounts(data.meds, data.takes, now);
-  const days = lastDays(now);
-  const sumTaken = taken.reduce((a, b) => a + b, 0);
-  const sumTotal = totals.reduce((a, b) => a + b, 0);
-  return (
-    <Card className="flex flex-col gap-3">
-      <Overline area="medicines">{C.medsWeek}</Overline>
-      {sumTotal ? (
-        <>
-          <p className="text-[17px] leading-[22px] font-semibold">
-            {C.medsWeekLine(sumTaken, sumTotal)}
-          </p>
-          <ol className="flex h-24 items-end gap-2">
-            {days.map((d, i) => {
-              const total = totals[i] ?? 0;
-              const done = taken[i] ?? 0;
-              const label = i === days.length - 1 ? C.today : WEEKDAY.format(d);
-              return (
-                <li key={i} className="flex h-full flex-1 flex-col items-center gap-1">
-                  <span className="sr-only">{C.medsDay(label, done, total)}</span>
-                  <span
-                    aria-hidden
-                    className="bg-pw-surface-3 relative w-full flex-1 overflow-hidden rounded-full"
-                  >
-                    <span
-                      className="bg-pw-act absolute inset-x-0 bottom-0 rounded-full"
-                      style={{ height: total ? `${(done / total) * 100}%` : 0 }}
-                    />
-                  </span>
-                  <span aria-hidden className="text-pw-ink-3 text-xs font-semibold">
-                    {label}
-                  </span>
-                </li>
-              );
-            })}
-          </ol>
-        </>
-      ) : (
-        <p className="text-pw-ink-2 text-[15px]">{C.medsWeekNone}</p>
-      )}
-      <TextLink href="/patient/care/medicines">
-        {sumTotal ? C.seeMedicines : C.addMedicine}
-      </TextLink>
-    </Card>
+    <Link
+      href={p.href}
+      className="flex min-w-0 flex-col gap-0.5 rounded-[18px] bg-pw-band-glass p-4 hover:opacity-90"
+    >
+      <span className="text-pw-on-band-2 flex items-center gap-2 text-[12px] font-semibold">
+        {p.icon}
+        {p.k}
+      </span>
+      <span className="truncate text-[22px] leading-[28px] font-bold tabular-nums">{p.v}</span>
+      <span className="text-pw-on-band-2 truncate text-[12px]">{p.s}</span>
+    </Link>
   );
 }

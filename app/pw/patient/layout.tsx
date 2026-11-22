@@ -25,9 +25,8 @@ export default async function PatientWebShell({ children }: { children: ReactNod
   const gated = consent !== null && consent.acceptedAt === null;
   // The plus's "Right now" dose and the rail's Care badge come from the same day (S5).
   const day = gated ? null : await loadAddDialogDay(scope.userId).catch(() => null);
-  // Patient app v2 (M3): the mode's places in a top bar and a pill. Care mode only where it is unlocked (MR11).
-  const v2 = patientFlag("appV2Web");
-  const mode = v2 && careModeOn() && (await loadCareWeb().catch(() => null)) ? "care" : "visit";
+  // The three-page web (Today, Visits, Me) is the only shell. Care mode only where it is unlocked (MR11).
+  const mode = careModeOn() && (await loadCareWeb().catch(() => null)) ? "care" : "visit";
   const name = scope.fullName?.trim() || "You";
   const initials =
     name
@@ -38,7 +37,7 @@ export default async function PatientWebShell({ children }: { children: ReactNod
   return (
     <PatientShell
       bare={gated}
-      v2={v2 ? { mode, hospital: scope.primaryHospitalName ?? null, name, initials } : undefined}
+      v2={{ mode, hospital: scope.primaryHospitalName ?? null, name, initials }}
       plus={<AddButton day={day} />}
       dosesDue={day?.today.dueNow.length ?? 0}
     >
