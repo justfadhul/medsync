@@ -1,10 +1,6 @@
-import type { Metadata } from "next";
+import { redirect } from "next/navigation";
 
-import { HistoryPage } from "../_components/history-page";
-
-export const metadata: Metadata = { title: "My conditions" };
-export const dynamic = "force-dynamic";
-
-export default function ConditionsPage() {
-  return <HistoryPage section="conditions" />;
+/** This page now opens as a section of Me (the owner's three-page redesign); old links land on it there. */
+export default function Page() {
+  redirect("/patient/me?s=health");
 }

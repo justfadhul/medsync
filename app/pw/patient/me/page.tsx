@@ -10,25 +10,33 @@ import {
 import { placesSummary } from "@patient-core/me-places";
 import { memberNumber, plansFrom, tierNow } from "@patient-core/membership";
 
-import { PageHeader } from "@/components/tide/shell";
+import { TextLink } from "@/components/tide/kit";
 import { ME_COPY as C } from "@/content/patient/me";
+import { ME_WEB_COPY as M } from "@/content/patient/me-web";
 import { loadMedicines } from "@/lib/patient-web/day";
-import { patientFlag } from "@/lib/patient-web/flags";
+import { careModeOn, patientFlag } from "@/lib/patient-web/flags";
 import {
   loadCardIdentity,
   loadHistory,
   loadOnFile,
   loadPlaces,
+  loadRecords,
   loadSms,
 } from "@/lib/patient-web/me-data";
 import { loadMembership } from "@/lib/patient-web/membership-v2";
-import { countUnseenNotifications } from "@/lib/patient-web/notifications";
 import { myMobile } from "@/lib/patient-web/visit-v2";
 import { fetchHousehold } from "@/lib/patient/household";
 import { requirePatientScope } from "@/lib/patient/scope";
 import pkg from "@/package.json";
 import { MeMembership } from "./_components/me-membership";
-import { MeView } from "./_components/me-view";
+import { MeView, type MeSection } from "./_components/me-view";
+import {
+  DetailsSection,
+  HealthSection,
+  PeopleSection,
+  PlacesSection,
+  RecordsSection,
+} from "./_components/sections";
 
 export const metadata: Metadata = { title: "Me" };
 export const dynamic = "force-dynamic";
@@ -39,18 +47,19 @@ export const dynamic = "force-dynamic";
  * ("Not switched on yet", or the empty words) and the page still draws. Not on the web: the profile photo
  * (no upload path here yet) and the phone's push row (the web has no push).
  */
-export default async function MePage() {
+export default async function MePage({ searchParams }: { searchParams: Promise<{ s?: string }> }) {
+  const { s } = await searchParams;
   const scope = await requirePatientScope();
   const now = new Date();
-  const [id, history, places, meds, household, smsOn, onFile, unseen] = await Promise.all([
+  const [id, history, places, meds, household, smsOn, onFile, records] = await Promise.all([
     loadCardIdentity(scope.userId).catch(() => null),
     loadHistory(scope.userId).catch(() => ({ status: "error" as const })),
     loadPlaces(scope.userId).catch(() => ({ status: "error" as const })),
     loadMedicines(scope.userId).catch(() => null),
-    fetchHousehold(scope.userId).catch(() => []),
+    fetchHousehold(scope.userId).catch(() => null),
     loadSms(scope.userId).catch(() => null),
     loadOnFile().catch(() => null),
-    countUnseenNotifications(scope.userId).catch(() => 0),
+    loadRecords(scope.userId).catch(() => null),
   ]);
 
   const name = scope.fullName?.trim() || null;
@@ -72,40 +81,36 @@ export default async function MePage() {
     ? new Date(new Date(held.endsIso).getTime() + 3 * 3600_000).toISOString().slice(0, 10)
     : null;
 
+  const membershipCard = v2 ? (
+    <MeMembership
+      tier={held.tier}
+      trial={held.trial}
+      endsLabel={endsLabel}
+      trialUsed={membership?.row?.trialUsed ?? false}
+      name={name ?? C.holderUnknown}
+      memberNo={memberNumber(id?.code ?? null)}
+      id={{
+        ageSex: [ageWords(id?.dob ?? null, now), sexLetter(id?.sex ?? null)].filter(Boolean).join(" · ") || null,
+        nextOfKin: nok === null ? null : nok ? C.nokOnFile(facility) : C.nokNone,
+        ifFound:
+          emergencyPhone && facility ? C.ifFoundCall(facility, emergencyPhone) : C.ifFoundReturn(facility),
+        emergencyContact: emergencyPhone ?? "—",
+        bloodGroup: null,
+        allergies: lines.allergies === "None listed" ? [] : [lines.allergies],
+        conditions: lines.conditions === "None listed" ? [] : [lines.conditions],
+        hospitalLine: facility ?? "—",
+      }}
+      plans={plansFrom(membership?.prices ?? [], now.toISOString().slice(0, 10))}
+      msisdn={msisdn}
+    />
+  ) : undefined;
+  const conditions = C.historySub(hOff, h.conditions.length, "condition", "conditions", C.noneAdded);
+  const careOn = careModeOn();
+
   return (
     <>
-      <PageHeader title={C.title} area="me" unseen={unseen} />
-      {v2 ? (
-        <div className="mb-8">
-          <MeMembership
-            tier={held.tier}
-            trial={held.trial}
-            endsLabel={endsLabel}
-            trialUsed={membership?.row?.trialUsed ?? false}
-            name={name ?? C.holderUnknown}
-            memberNo={memberNumber(id?.code ?? null)}
-            id={{
-              ageSex:
-                [ageWords(id?.dob ?? null, now), sexLetter(id?.sex ?? null)]
-                  .filter(Boolean)
-                  .join(" · ") || null,
-              nextOfKin: nok === null ? null : nok ? C.nokOnFile(facility) : C.nokNone,
-              ifFound:
-                emergencyPhone && facility
-                  ? C.ifFoundCall(facility, emergencyPhone)
-                  : C.ifFoundReturn(facility),
-              emergencyContact: emergencyPhone ?? "—",
-              bloodGroup: null,
-              allergies: lines.allergies === "None listed" ? [] : [lines.allergies],
-              conditions: lines.conditions === "None listed" ? [] : [lines.conditions],
-              hospitalLine: facility ?? "—",
-            }}
-            plans={plansFrom(membership?.prices ?? [], now.toISOString().slice(0, 10))}
-            msisdn={msisdn}
-          />
-        </div>
-      ) : null}
       <MeView
+        initial={(s ?? "card") as MeSection}
         card={{
           holder: name ?? C.holderUnknown,
           number: cardNumber(id?.code ?? null),
@@ -114,46 +119,65 @@ export default async function MePage() {
           allergies: lines.allergies,
           nextOfKin: nok === null ? null : nok ? C.nokOnFile(facility) : C.nokNone,
           ifFound:
-            emergencyPhone && facility
-              ? C.ifFoundCall(facility, emergencyPhone)
-              : C.ifFoundReturn(facility),
+            emergencyPhone && facility ? C.ifFoundCall(facility, emergencyPhone) : C.ifFoundReturn(facility),
         }}
         cardConditions={lines.conditions}
         sex={sexLetter(id?.sex ?? null)}
-        rows={{
-          conditions: C.historySub(
-            hOff,
-            h.conditions.length,
-            "condition",
-            "conditions",
-            C.noneAdded,
-          ),
-          allergies:
-            !h.allergies.length && h.noKnownAllergies
-              ? C.noKnownAllergies
-              : C.historySub(hOff, h.allergies.length, "allergy", "allergies", C.noneAdded),
-          family: C.historySub(
-            hOff,
-            h.family.length,
-            "family condition",
-            "family conditions",
-            C.familyNone,
-          ),
-          medicines: C.medicinesSub(meds?.meds.length ?? 0),
+        hero={{
+          initials: initials(name),
+          name: name ?? C.holderUnknown,
+          line: [
+            facility,
+            ageWords(id?.dob ?? null, now),
+            sexLetter(id?.sex ?? null),
+            id?.code ? M.memberNo(memberNumber(id.code)) : null,
+          ]
+            .filter(Boolean)
+            .join(" · "),
+          stats: [
+            { section: "health", n: hOff ? "–" : String(h.conditions.length), label: M.stats.conditions },
+            { section: "health", n: hOff ? "–" : String(h.allergies.length), label: M.stats.allergies },
+            { section: "people", n: household ? String(household.length) : "–", label: M.stats.people },
+            { section: "records", n: records ? String(records.length) : "–", label: M.stats.records },
+          ],
+        }}
+        subs={{
+          card: M.sections.card.sub,
+          health: conditions,
+          records: C.recordsSub,
+          people: household ? C.historySub(false, household.length, "person", "people", C.nobody) : undefined,
           places:
             places.status === "off"
               ? C.placesOff
               : places.status === "ready"
                 ? C.placesSub(placesSummary(places.value))
                 : C.placesFailed,
-          language: C.languageSub(language),
+          details: C.detailsSub,
+          settings: M.sections.settings.sub,
         }}
-        me={{ initials: initials(name), label: name ?? C.peopleMe }}
-        household={household.map((m) => ({
-          id: m.bookingAgentId,
-          label: m.memberLabel,
-          initials: initials(m.memberLabel),
-        }))}
+        panes={{
+          card: membershipCard,
+          health: (
+            <HealthSection
+              history={history}
+              legacyConditions={id?.conditions ?? []}
+              sex={id?.sex ?? null}
+              medicinesSub={C.medicinesSub(meds?.meds.length ?? 0)}
+            />
+          ),
+          ...(careOn
+            ? {
+                mycare: (
+                  <TextLink href="/patient/care/my-care">{M.sections.mycare.title}</TextLink>
+                ),
+              }
+            : {}),
+          records: <RecordsSection records={records} />,
+          people: <PeopleSection members={household} />,
+          places: <PlacesSection places={places} />,
+          details: <DetailsSection onFile={onFile} hospitalName={scope.primaryHospitalName} />,
+        }}
+        language={C.languageSub(language)}
         smsOn={smsOn}
         version={pkg.version}
         v2={v2}
