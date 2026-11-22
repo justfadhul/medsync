@@ -89,7 +89,7 @@ export default async function VisitsPage({
         </div>
       )}
 
-      <div className="grid items-start gap-6 min-[761px]:max-[1100px]:grid-cols-2 min-[1101px]:grid-cols-[minmax(0,1fr)_340px]">
+      <div className="grid items-start gap-6 min-[761px]:max-[1100px]:grid-cols-2 min-[761px]:max-[1100px]:items-stretch min-[1101px]:grid-cols-[minmax(0,1fr)_340px]">
         <div className="flex min-w-0 flex-col gap-6 max-[1100px]:contents">
           <section
             aria-label={V.yourVisit}
@@ -139,7 +139,7 @@ export default async function VisitsPage({
             </div>
           ) : null}
 
-          <section aria-labelledby="up-h" className={cn(CARD, "order-2 gap-1 p-3")}>
+          <section aria-labelledby="up-h" className={cn(CARD, "order-2 gap-1 p-3 min-[761px]:max-[1100px]:self-stretch")}>
             <div className="flex items-center justify-between px-1 pb-1">
               <h2 id="up-h" className="text-[17px] font-semibold">
                 {V.comingUp}
@@ -255,7 +255,7 @@ function Calendar(p: {
           const visit = mine.get(key);
           const isOpen = open.has(key);
           const cls = cn(
-            "relative grid aspect-square place-items-center rounded-[10px] text-[13px] font-semibold",
+            "relative grid h-10 place-items-center rounded-[10px] text-[13px] font-semibold",
             key === p.todayKey
               ? "bg-pw-band text-pw-on-band"
               : visit
