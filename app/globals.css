@@ -1625,6 +1625,13 @@ select:not([multiple]):not([size]):not(.appearance-none) {
   --color-pw-tier-family-care: var(--pw-tier-family-care);
   --color-pw-tier-on-tier: var(--pw-tier-on-tier);
   --color-pw-tier-gold: var(--pw-tier-gold);
+  --color-pw-mood-good: var(--pw-mood-good);
+  --color-pw-mood-okay: var(--pw-mood-okay);
+  --color-pw-mood-low: var(--pw-mood-low);
+  --color-pw-mood-ink: var(--pw-mood-ink);
+  --color-pw-mood-tongue: var(--pw-mood-tongue);
+  --color-pw-mood-cheek: var(--pw-mood-cheek);
+  --color-pw-mood-tear: var(--pw-mood-tear);
   --shadow-pw-card: var(--pw-shadow-card);
   --shadow-pw-float: var(--pw-shadow-float);
   --shadow-pw-accent: var(--pw-shadow-accent);
@@ -1704,6 +1711,13 @@ select:not([multiple]):not([size]):not(.appearance-none) {
   --pw-tier-family-care: #111827;
   --pw-tier-on-tier: #ffffff;
   --pw-tier-gold: #d4a72c;
+  --pw-mood-good: #99f6e4;
+  --pw-mood-okay: #38bdf8;
+  --pw-mood-low: #4338ca;
+  --pw-mood-ink: #1b2540;
+  --pw-mood-tongue: #5eead4;
+  --pw-mood-cheek: #ffffff;
+  --pw-mood-tear: #c7d2fe;
   --pw-shadow-card: 0 1px 2px rgba(27, 37, 64, 0.06), 0 10px 24px -14px rgba(27, 37, 64, 0.22);
   --pw-shadow-float: 0 2px 6px rgba(27, 37, 64, 0.08), 0 16px 28px -12px rgba(27, 37, 64, 0.18);
   --pw-shadow-accent: 0 8px 22px -6px rgba(45, 212, 191, 0.65);
@@ -1775,6 +1789,13 @@ select:not([multiple]):not([size]):not(.appearance-none) {
   --pw-tier-family-care: #111827;
   --pw-tier-on-tier: #ffffff;
   --pw-tier-gold: #d4a72c;
+  --pw-mood-good: #99f6e4;
+  --pw-mood-okay: #38bdf8;
+  --pw-mood-low: #4338ca;
+  --pw-mood-ink: #1b2540;
+  --pw-mood-tongue: #5eead4;
+  --pw-mood-cheek: #ffffff;
+  --pw-mood-tear: #c7d2fe;
   --pw-shadow-card: 0 1px 2px rgba(0, 0, 0, 0.1), 0 10px 24px -14px rgba(0, 0, 0, 0.35);
   --pw-shadow-float: 0 2px 6px rgba(0, 0, 0, 0.4), 0 16px 26px -12px rgba(0, 0, 0, 0.45);
   --pw-shadow-accent: 0 8px 22px -6px rgba(45, 212, 191, 0.65);
@@ -1817,6 +1838,22 @@ select:not([multiple]):not([size]):not(.appearance-none) {
     -webkit-mask-composite: source-in;
     mask-composite: intersect;
   }
+}
+/* A stacked ticket (a narrow column) keeps the across-the-ticket tear at every width. */
+.pw-ticket-stacked .pw-ticket-tear {
+  height: 24px;
+  width: 100%;
+  background-image: linear-gradient(to right, var(--pw-ticket-tear) 55%, transparent 0);
+  background-size: 10px 1.5px;
+  background-repeat: repeat-x;
+  -webkit-mask:
+    radial-gradient(circle 12px at 0 50%, transparent 11.5px, black 12px),
+    radial-gradient(circle 12px at 100% 50%, transparent 11.5px, black 12px);
+  mask:
+    radial-gradient(circle 12px at 0 50%, transparent 11.5px, black 12px),
+    radial-gradient(circle 12px at 100% 50%, transparent 11.5px, black 12px);
+  -webkit-mask-composite: source-in;
+  mask-composite: intersect;
 }
 /* The membership card turns over (M10); Reduce Motion swaps faces without the turn. */
 .pw-card-turn {

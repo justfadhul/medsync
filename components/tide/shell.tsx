@@ -8,16 +8,13 @@ import { createContext, useContext } from "react";
 import {
   BellIcon,
   CalendarDaysIcon,
-  CalendarPlusIcon,
   ChevronLeftIcon,
-  ClipboardListIcon,
   HeartPulseIcon,
   HouseIcon,
   MoonIcon,
   SirenIcon,
   SunIcon,
   UserRoundIcon,
-  UsersRoundIcon,
 } from "lucide-react";
 import { useTheme } from "next-themes";
 
@@ -67,55 +64,28 @@ export interface ShellV2 {
   initials: string;
 }
 
-const PLACES_V2 = {
-  visit: [
-    { href: "/patient", label: "Home", Icon: HouseIcon, match: (p: string) => p === "/patient" },
-    {
-      href: "/patient/book",
-      label: "Book",
-      Icon: CalendarPlusIcon,
-      match: (p: string) => p.startsWith("/patient/book"),
-    },
-    {
-      href: "/patient/visits",
-      label: "Visits",
-      Icon: CalendarDaysIcon,
-      match: (p: string) => p.startsWith("/patient/visits"),
-    },
-    {
-      href: "/patient/me",
-      label: "Me",
-      Icon: UserRoundIcon,
-      match: (p: string) => p.startsWith("/patient/me"),
-    },
-  ],
-  care: [
-    {
-      href: "/patient/care",
-      label: "Today",
-      Icon: HeartPulseIcon,
-      match: (p: string) => p === "/patient/care" || p === "/patient",
-    },
-    {
-      href: "/patient/care/plan",
-      label: "Plan",
-      Icon: ClipboardListIcon,
-      match: (p: string) => p.startsWith("/patient/care/plan"),
-    },
-    {
-      href: "/patient/care/my-care",
-      label: "My care",
-      Icon: UsersRoundIcon,
-      match: (p: string) => p.startsWith("/patient/care/my-care"),
-    },
-    {
-      href: "/patient/me",
-      label: "Me",
-      Icon: UserRoundIcon,
-      match: (p: string) => p.startsWith("/patient/me"),
-    },
-  ],
-} as const;
+/** Three places, one for each page of the web (the owner's three-page redesign, 22 Nov 2026), in both modes. */
+const TABS = [
+  {
+    href: "/patient",
+    label: "Today",
+    Icon: HouseIcon,
+    match: (p: string) => p === "/patient" || p.startsWith("/patient/book") || p.startsWith("/patient/care"),
+  },
+  {
+    href: "/patient/visits",
+    label: "Visits",
+    Icon: CalendarDaysIcon,
+    match: (p: string) => p.startsWith("/patient/visits"),
+  },
+  {
+    href: "/patient/me",
+    label: "Me",
+    Icon: UserRoundIcon,
+    match: (p: string) => p.startsWith("/patient/me"),
+  },
+] as const;
+const PLACES_V2 = { visit: TABS, care: TABS } as const;
 
 /** Under the v2 shell the top bar carries Help and the avatar at ≥ 761 px, so page headers do not repeat them. */
 const ShellV2Context = createContext(false);
@@ -246,15 +216,6 @@ function ShellV2Frame({
           <div className="flex items-center gap-2">
             <ThemeToggle />
             <HelpButton />
-            <Link
-              href="/patient/me"
-              className="focus-visible:outline-pw-focus hover:bg-pw-surface-3 flex min-h-11 items-center gap-2 rounded-full pr-3 pl-1 focus-visible:outline-2 focus-visible:outline-offset-2"
-            >
-              <Avatar initials={v2.initials} label={v2.name} />
-              <span className="max-w-[160px] truncate text-[14px] font-semibold max-[1023px]:hidden">
-                {v2.name}
-              </span>
-            </Link>
           </div>
         </div>
       </header>
@@ -265,10 +226,10 @@ function ShellV2Frame({
       </div>
       <nav
         aria-label="Places"
-        className="bg-pw-surface shadow-pw-float fixed bottom-[calc(14px+env(safe-area-inset-bottom))] left-1/2 z-30 hidden h-[76px] w-[min(560px,calc(100%-32px))] -translate-x-1/2 items-center justify-around rounded-[38px] p-2 max-[760px]:flex"
+        className="bg-pw-surface shadow-pw-float fixed bottom-[calc(14px+env(safe-area-inset-bottom))] left-1/2 z-30 hidden h-[66px] w-[min(560px,calc(100%-24px))] -translate-x-1/2 items-center gap-1 rounded-full p-1.5 max-[760px]:flex"
       >
         {places.map((p) => (
-          <Place key={p.href} {...p} current={p.match(path)} />
+          <Place key={p.href} {...p} current={p.match(path)} row />
         ))}
       </nav>
     </div>
@@ -297,28 +258,33 @@ function Place({
   Icon,
   current,
   badge = 0,
+  row = false,
 }: {
   href: string;
   label: string;
   Icon: typeof HouseIcon;
   current: boolean;
   badge?: number;
+  /** Icon and label side by side, the current place a wider dark pill (the v2 phone bar). */
+  row?: boolean;
 }) {
   return (
     <Link
       href={href}
       aria-current={current ? "page" : undefined}
       className={cn(
-        "relative flex flex-col items-center justify-center gap-1 text-xs leading-[14px] font-semibold",
+        "relative flex items-center justify-center font-semibold",
+        row ? "gap-2 text-[13px] leading-4" : "flex-col gap-1 text-xs leading-[14px]",
         "transition-[scale,background-color] duration-150 ease-out active:scale-[0.96] motion-reduce:transition-none",
         "focus-visible:outline-pw-focus focus-visible:outline-2 focus-visible:outline-offset-2",
-        "min-h-[60px] w-auto flex-1 rounded-[30px]",
+        row ? "min-h-[54px] rounded-full" : "min-h-[60px] rounded-[30px]",
+        row && current ? "flex-[1.4]" : "w-auto flex-1",
         current
           ? "bg-pw-act text-pw-on-act font-bold"
           : "text-pw-ink-2 hover:bg-pw-surface-3 hover:text-pw-ink",
       )}
     >
-      <Icon className="size-6" {...ICON} />
+      <Icon className={row ? "size-5" : "size-6"} {...ICON} />
       {label}
       {badge > 0 ? (
         <span
