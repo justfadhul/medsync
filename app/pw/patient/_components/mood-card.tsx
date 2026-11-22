@@ -1,40 +1,52 @@
 "use client";
 
 import type { DayMood, Mood } from "@patient-core/log";
+import { countMoods } from "@patient-core/log";
 import Link from "next/link";
 import { useState, useTransition } from "react";
 
 import { Toast } from "@/components/tide/controls";
-import { Card } from "@/components/tide/kit";
 import { MoodFace } from "@/components/tide/mood-face";
-import { HOME_COPY as C } from "@/content/patient/home";
+import { HOME_COPY as C, MOOD_COPY as M } from "@/content/patient/home";
 import { cn } from "@/lib/utils";
 import { saveMoodAction } from "../_lib/day-actions";
 
 const MOODS: DayMood[] = ["good", "okay", "low"];
-const LINK =
-  "focus-visible:outline-pw-focus inline-flex min-h-12 items-center rounded-full focus-visible:outline-2 focus-visible:outline-offset-2";
+const VIEWS = ["week", "month", "year"] as const;
+type View = (typeof VIEWS)[number];
+const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+const WEEKDAYS = ["S", "M", "T", "W", "T", "F", "S"];
+/** The year bars take the faces' own fills; the legend and each bar's hidden line say the numbers (never colour alone). */
+const MIX = ["bg-pw-accent-soft", "bg-pw-info-tint", "bg-pw-ink-4"] as const;
+const FOCUS =
+  "focus-visible:outline-pw-focus focus-visible:outline-2 focus-visible:outline-offset-2";
 
 /**
- * "How are you today?" (the phone's MoodCard): three faces, then the week strip. A not-well day offers
- * "Tell my team" while chat is on; with `mobileChat` off it offers "Book a visit", and Help is in the header.
- * A save that fails says so; a save that lands says nothing (as the phone).
+ * "How are you today?" on Today's navy band: three faces, then the week, the month or the year in place (the
+ * phone's mood screen, without leaving Today). A not-well day offers Book a visit; Help is in the header. A save
+ * that fails says so; a save that lands says nothing (as the phone).
  */
-export function MoodCard({
-  today,
-  week,
-  chat,
-}: {
+export function MoodCard(p: {
   today: DayMood | null;
   week: Mood[];
+  /** `getDay()` of each of the week's days, oldest first. */
+  weekdays: number[];
+  month: Mood[];
+  /** `getDay()` of the 1st of this month. */
+  monthStart: number;
+  year: ([number, number, number] | null)[];
   chat: boolean;
 }) {
   const [picked, setPicked] = useState<DayMood | null>(null);
+  const [view, setView] = useState<View>("week");
   const [error, setError] = useState<string | null>(null);
   const [, start] = useTransition();
-  const shown = picked ?? today;
-  // Today's face is the strip's last day, as soon as it is picked.
-  const strip = shown ? [...week.slice(0, -1), shown] : week;
+  const shown = picked ?? p.today;
+  // Today's face is the last day of the week and the month as soon as it is picked.
+  const withToday = (days: Mood[]) => (shown ? [...days.slice(0, -1), shown] : days);
+  const week = withToday(p.week);
+  const month = withToday(p.month);
+  const count = view === "week" ? countMoods(week) : countMoods(month);
 
   const pick = (m: DayMood) => {
     setPicked(m);
@@ -48,9 +60,34 @@ export function MoodCard({
   };
 
   return (
-    <Card className="flex flex-col gap-3 p-4">
-      <h2 className="text-[17px] leading-[22px] font-semibold">{C.moodTitle}</h2>
-      <div className="flex gap-2">
+    <section
+      aria-labelledby="mood-h"
+      className="rounded-pw-card bg-pw-band-glass text-pw-on-band flex min-w-0 flex-col gap-3 p-4"
+    >
+      <div className="flex items-center justify-between gap-2">
+        <h2 id="mood-h" className="text-[17px] leading-[22px] font-semibold">
+          {C.moodTitle}
+        </h2>
+        <div role="group" aria-label={M.viewsLabel} className="bg-pw-band-glass flex rounded-full p-0.5">
+          {VIEWS.map((v) => (
+            <button
+              key={v}
+              type="button"
+              aria-pressed={view === v}
+              onClick={() => setView(v)}
+              className={cn(
+                "min-h-8 rounded-full px-3 text-[12px] font-semibold transition-colors duration-150",
+                FOCUS,
+                view === v ? "bg-pw-on-band text-pw-band" : "text-pw-on-band-2 hover:text-pw-on-band",
+              )}
+            >
+              {M.views[v]}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="grid grid-cols-3 gap-2">
         {MOODS.map((m) => {
           const on = shown === m;
           return (
@@ -61,57 +98,115 @@ export function MoodCard({
               aria-label={C.moodPick(C.moods[m])}
               onClick={() => pick(m)}
               className={cn(
-                "rounded-pw-card flex min-h-[92px] flex-1 flex-col items-center justify-center gap-1.5 ring-2 ring-inset",
-                "focus-visible:outline-pw-focus focus-visible:outline-2 focus-visible:outline-offset-2",
-                on ? "bg-pw-accent-tint ring-pw-accent" : "bg-pw-surface-2 ring-transparent",
+                "rounded-pw-row flex min-h-12 items-center justify-center gap-2 px-2 ring-1 ring-inset",
+                "transition-[background-color,scale] duration-150 ease-[cubic-bezier(0.16,1,0.3,1)] active:scale-[0.97] motion-reduce:active:scale-100",
+                FOCUS,
+                on
+                  ? "bg-pw-accent-tint text-pw-accent-text ring-pw-on-band-accent"
+                  : "ring-pw-on-band/20 hover:bg-pw-band-glass",
               )}
             >
-              <MoodFace mood={m} size={44} pop={on} decorative />
-              <span
-                className={cn(
-                  "text-[13px] font-semibold",
-                  on ? "text-pw-accent-text" : "text-pw-ink-2",
-                )}
-              >
-                {C.moods[m]}
-              </span>
+              <MoodFace mood={m} size={28} pop={on} decorative />
+              <span className="text-[13px] font-semibold">{C.moods[m]}</span>
             </button>
           );
         })}
       </div>
-      {shown ? (
-        <div className="flex items-center gap-2">
-          <Link
-            href="/patient/mood"
-            aria-label={C.moodWeekLink}
-            className={cn(LINK, "flex-1 gap-1.5")}
-          >
-            <span className="text-pw-ink-3 text-xs font-semibold">{C.thisWeek}</span>
-            {strip.map((m, i) => (
-              <MoodFace key={i} mood={m} size={20} decorative />
+
+      <div className="border-pw-on-band/15 flex h-[176px] flex-col justify-between gap-2 border-t pt-3">
+        {view === "week" ? (
+          <ol className="flex flex-1 items-center justify-between">
+            {week.map((mood, i) => (
+              <li key={i} className="flex flex-col items-center gap-1.5">
+                <MoodFace mood={mood} size={32} />
+                <span className="text-pw-on-band-2 text-[11px] font-semibold">
+                  {i === week.length - 1 ? M.today : WEEKDAYS[p.weekdays[i] ?? 0]}
+                </span>
+              </li>
             ))}
-          </Link>
+          </ol>
+        ) : null}
+
+        {view === "month" ? (
+          <div className="flex flex-col gap-1">
+            <div aria-hidden className="grid grid-cols-7">
+              {WEEKDAYS.map((d, i) => (
+                <span key={i} className="text-pw-on-band-2 text-center text-[10px] font-semibold">
+                  {d}
+                </span>
+              ))}
+            </div>
+            <ol className="grid grid-cols-7 gap-y-1">
+              {month.map((mood, i) => (
+                <li
+                  key={i}
+                  className="flex justify-center"
+                  style={i === 0 ? { gridColumnStart: p.monthStart + 1 } : undefined}
+                >
+                  <span className="sr-only">{`${i + 1}: ${M.faces[mood]}`}</span>
+                  <MoodFace mood={mood} size={18} decorative />
+                </li>
+              ))}
+            </ol>
+          </div>
+        ) : null}
+
+        {view === "year" ? (
+          <ol className="grid flex-1 grid-cols-12 gap-1.5">
+            {MONTHS.map((name, i) => {
+              const mix = p.year[i];
+              return (
+                <li key={name} className="flex flex-col items-center gap-1">
+                  <span className="sr-only">
+                    {i >= p.year.length ? name : mix ? M.monthMix(name, mix[0], mix[1], mix[2]) : M.monthNone(name)}
+                  </span>
+                  <span
+                    aria-hidden
+                    className={cn(
+                      "flex w-full max-w-4 flex-1 flex-col-reverse overflow-hidden rounded-full",
+                      !mix && "border-pw-on-band/25 border border-dashed",
+                      i >= p.year.length && "opacity-40",
+                    )}
+                  >
+                    {mix?.map((pct, k) => <span key={k} className={MIX[k]} style={{ flexGrow: pct }} />)}
+                  </span>
+                  <span aria-hidden className="text-pw-on-band-2 text-[10px] font-semibold">
+                    {name[0]}
+                  </span>
+                </li>
+              );
+            })}
+          </ol>
+        ) : null}
+
+        <div className="flex min-h-6 items-center justify-between gap-2">
+          {view === "year" ? (
+            <span className="flex flex-wrap gap-3">
+              {MOODS.map((k) => (
+                <span key={k} className="text-pw-on-band-2 flex items-center gap-1 text-[12px] font-semibold">
+                  <MoodFace mood={k} size={14} decorative />
+                  {M.faces[k]}
+                </span>
+              ))}
+            </span>
+          ) : (
+            <span className="text-pw-on-band-2 text-[12px] font-semibold">
+              {view === "week"
+                ? M.weekCount(count.good, count.okay, count.low)
+                : M.monthCount(count.good, count.okay, count.low)}
+            </span>
+          )}
           {shown === "low" ? (
             <Link
-              href={chat ? "/patient/care/messages" : "/patient/book"}
-              className={cn(
-                LINK,
-                "bg-pw-accent-tint text-pw-accent-text px-3 text-[13px] font-semibold",
-              )}
+              href={p.chat ? "/patient/care/messages" : "#book"}
+              className={cn("text-pw-on-band-accent shrink-0 rounded-full text-[13px] font-semibold", FOCUS)}
             >
-              {chat ? C.tellTeam : C.bookVisit}
+              {p.chat ? C.tellTeam : C.bookVisit}
             </Link>
-          ) : (
-            <Link
-              href="/patient/mood"
-              className={cn(LINK, "text-pw-accent-text text-sm font-semibold")}
-            >
-              {C.seeAll}
-            </Link>
-          )}
+          ) : null}
         </div>
-      ) : null}
+      </div>
       {error ? <Toast message={error} onClose={() => setError(null)} /> : null}
-    </Card>
+    </section>
   );
 }

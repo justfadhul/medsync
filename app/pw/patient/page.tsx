@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import Link from "next/link";
 import { Suspense } from "react";
-import { lastDays, moodsFor, readingsFrom } from "@patient-core/log";
+import { lastDays, monthDays, moodsFor, readingsFrom, yearMix } from "@patient-core/log";
 import { checkReading } from "@patient-core/readings";
 import { nextVisit } from "@patient-core/visits-calendar";
 import { CalendarDaysIcon, FlaskConicalIcon, HeartPulseIcon } from "lucide-react";
@@ -65,7 +65,8 @@ export default async function TodayPage({ searchParams }: { searchParams: Promis
     loadWeek(scope.userId, scope.primaryHospitalId, now).catch(() => null),
     loadLabNames(scope.userId, scope.primaryHospitalId).catch(() => ({ state: "off" as const })),
     fetchHousehold(scope.userId).catch(() => []),
-    loadLog(scope.userId, 8).catch(() => null),
+    // Enough for the mood card's year view, as the mood screen reads it.
+    loadLog(scope.userId, 400).catch(() => null),
     loadMedicines(scope.userId).catch(() => null),
     home ? loadDays(home, reason, null).catch(() => null) : Promise.resolve(null),
     home ? loadWalkIns(home.id).catch(() => null) : Promise.resolve(null),
@@ -80,7 +81,8 @@ export default async function TodayPage({ searchParams }: { searchParams: Promis
   const latest = (k: string) => readings.filter((r) => r.input.kind === k).at(-1) ?? null;
   const bp = latest("bp");
   const bpCheck = bp ? checkReading(bp.input) : null;
-  const mood = rows ? moodsFor(rows, lastDays(now)) : [];
+  const moods = rows?.filter((r) => r.kind === "mood") ?? [];
+  const mood = moodsFor(moods, lastDays(now));
   const todayMood = mood.at(-1);
   const day = meds ? today(meds.meds, meds.takes, now) : null;
   const ready = labs.state === "ready" ? labs.ready.length : 0;
@@ -144,7 +146,15 @@ export default async function TodayPage({ searchParams }: { searchParams: Promis
           </div>
           <div className="grid grid-cols-1 gap-2.5 min-[700px]:grid-cols-3">{glance}</div>
         </div>
-        <MoodCard today={todayMood && todayMood !== "none" ? todayMood : null} week={mood} chat={false} />
+        <MoodCard
+          today={todayMood && todayMood !== "none" ? todayMood : null}
+          week={mood}
+          weekdays={lastDays(now).map((d) => d.getDay())}
+          month={moodsFor(moods, monthDays(now))}
+          monthStart={new Date(now.getFullYear(), now.getMonth(), 1).getDay()}
+          year={yearMix(moods, now)}
+          chat={false}
+        />
         <div className="border-pw-on-band/20 col-span-full flex flex-wrap items-center justify-between gap-3 border-t-2 border-dashed pt-4">
           <p className="text-pw-on-band-2 text-[13px]">
             {T.yourHospital}: <b className="text-pw-on-band">{home?.name ?? "–"}</b>{" "}
