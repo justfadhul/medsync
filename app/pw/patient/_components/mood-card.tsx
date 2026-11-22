@@ -17,7 +17,7 @@ type View = (typeof VIEWS)[number];
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 const WEEKDAYS = ["S", "M", "T", "W", "T", "F", "S"];
 /** The year bars take the faces' own fills; the legend and each bar's hidden line say the numbers (never colour alone). */
-const MIX = ["bg-pw-accent-soft", "bg-pw-info-tint", "bg-pw-ink-4"] as const;
+const MIX = ["bg-pw-mood-good", "bg-pw-mood-okay", "bg-pw-mood-low"] as const;
 const FOCUS =
   "focus-visible:outline-pw-focus focus-visible:outline-2 focus-visible:outline-offset-2";
 
@@ -62,7 +62,7 @@ export function MoodCard(p: {
   return (
     <section
       aria-labelledby="mood-h"
-      className="rounded-pw-card bg-pw-band-glass text-pw-on-band flex min-w-0 flex-col gap-3 p-4"
+      className="rounded-pw-card bg-pw-band-glass text-pw-on-band flex min-w-0 flex-col gap-3 p-4 [&_.pw-mood-none]:stroke-pw-on-band/40"
     >
       <div className="flex items-center justify-between gap-2">
         <h2 id="mood-h" className="text-[17px] leading-[22px] font-semibold">
@@ -113,12 +113,12 @@ export function MoodCard(p: {
         })}
       </div>
 
-      <div className="border-pw-on-band/15 flex h-[176px] flex-col justify-between gap-2 border-t pt-3">
+      <div className="border-pw-on-band/15 flex h-[140px] flex-col justify-between gap-2 border-t pt-3">
         {view === "week" ? (
           <ol className="flex flex-1 items-center justify-between">
             {week.map((mood, i) => (
               <li key={i} className="flex flex-col items-center gap-1.5">
-                <MoodFace mood={mood} size={32} />
+                <MoodFace mood={mood} size={30} />
                 <span className="text-pw-on-band-2 text-[11px] font-semibold">
                   {i === week.length - 1 ? M.today : WEEKDAYS[p.weekdays[i] ?? 0]}
                 </span>
@@ -128,7 +128,7 @@ export function MoodCard(p: {
         ) : null}
 
         {view === "month" ? (
-          <div className="flex flex-col gap-1">
+          <div className="flex flex-col gap-0.5">
             <div aria-hidden className="grid grid-cols-7">
               {WEEKDAYS.map((d, i) => (
                 <span key={i} className="text-pw-on-band-2 text-center text-[10px] font-semibold">
@@ -136,7 +136,7 @@ export function MoodCard(p: {
                 </span>
               ))}
             </div>
-            <ol className="grid grid-cols-7 gap-y-1">
+            <ol className="grid grid-cols-7 gap-y-0.5">
               {month.map((mood, i) => (
                 <li
                   key={i}
@@ -144,7 +144,7 @@ export function MoodCard(p: {
                   style={i === 0 ? { gridColumnStart: p.monthStart + 1 } : undefined}
                 >
                   <span className="sr-only">{`${i + 1}: ${M.faces[mood]}`}</span>
-                  <MoodFace mood={mood} size={18} decorative />
+                  <MoodFace mood={mood} size={14} decorative />
                 </li>
               ))}
             </ol>

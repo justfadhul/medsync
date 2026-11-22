@@ -132,7 +132,7 @@ export default async function TodayPage({ searchParams }: { searchParams: Promis
         aria-labelledby="day-h"
         className="rounded-pw-card bg-pw-band text-pw-on-band grid gap-6 p-6 min-[1101px]:grid-cols-[minmax(0,1fr)_400px]"
       >
-        <div className="flex min-w-0 flex-col justify-between gap-5">
+        <div className="flex min-w-0 flex-col justify-between gap-4">
           <div className="flex items-center gap-4">
             <span className="bg-pw-accent-tint text-pw-accent-text ring-pw-band grid size-[72px] shrink-0 place-items-center rounded-full text-[24px] font-bold ring-4">
               {initials(name || first)}
@@ -145,6 +145,38 @@ export default async function TodayPage({ searchParams }: { searchParams: Promis
             </div>
           </div>
           <div className="grid grid-cols-1 gap-2.5 min-[700px]:grid-cols-3">{glance}</div>
+          <div className="border-pw-on-band/20 flex flex-wrap items-center justify-between gap-3 border-t-2 border-dashed pt-3">
+            <p className="text-pw-on-band-2 text-[13px]">
+              {T.yourHospital}: <b className="text-pw-on-band">{home?.name ?? "–"}</b>{" "}
+              <Link href="/patient/hospitals" className="text-pw-on-band-accent font-semibold">
+                {T.change}
+              </Link>
+            </p>
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-pw-on-band-2 text-[13px] font-semibold">{T.bookFor}</span>
+              {household.map((m) => (
+                <Link
+                  key={m.provisionalPatientId}
+                  href="#book"
+                  className="flex min-h-11 items-center gap-2 rounded-full bg-pw-band-glass py-1 pr-4 pl-1"
+                >
+                  <span className="bg-pw-accent-tint text-pw-accent-text grid size-9 place-items-center rounded-full text-[12px] font-bold">
+                    {initials(m.memberLabel)}
+                  </span>
+                  <span className="flex flex-col leading-4">
+                    <span className="text-[14px] font-semibold">{m.memberLabel}</span>
+                    <span className="text-pw-on-band-2 text-[12px]">{m.relationship}</span>
+                  </span>
+                </Link>
+              ))}
+              <Link
+                href="/patient/me/household"
+                className="flex min-h-11 items-center rounded-full border border-dashed border-pw-on-band/30 px-4 text-[14px] font-semibold"
+              >
+                + {T.addSomeone}
+              </Link>
+            </div>
+          </div>
         </div>
         <MoodCard
           today={todayMood && todayMood !== "none" ? todayMood : null}
@@ -155,38 +187,6 @@ export default async function TodayPage({ searchParams }: { searchParams: Promis
           year={yearMix(moods, now)}
           chat={false}
         />
-        <div className="border-pw-on-band/20 col-span-full flex flex-wrap items-center justify-between gap-3 border-t-2 border-dashed pt-4">
-          <p className="text-pw-on-band-2 text-[13px]">
-            {T.yourHospital}: <b className="text-pw-on-band">{home?.name ?? "–"}</b>{" "}
-            <Link href="/patient/hospitals" className="text-pw-on-band-accent font-semibold">
-              {T.change}
-            </Link>
-          </p>
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="text-pw-on-band-2 text-[13px] font-semibold">{T.bookFor}</span>
-            {household.map((m) => (
-              <Link
-                key={m.provisionalPatientId}
-                href="#book"
-                className="flex min-h-11 items-center gap-2 rounded-full bg-pw-band-glass py-1 pr-4 pl-1"
-              >
-                <span className="bg-pw-accent-tint text-pw-accent-text grid size-9 place-items-center rounded-full text-[12px] font-bold">
-                  {initials(m.memberLabel)}
-                </span>
-                <span className="flex flex-col leading-4">
-                  <span className="text-[14px] font-semibold">{m.memberLabel}</span>
-                  <span className="text-pw-on-band-2 text-[12px]">{m.relationship}</span>
-                </span>
-              </Link>
-            ))}
-            <Link
-              href="/patient/me/household"
-              className="flex min-h-11 items-center rounded-full border border-dashed border-pw-on-band/30 px-4 text-[14px] font-semibold"
-            >
-              + {T.addSomeone}
-            </Link>
-          </div>
-        </div>
       </section>
 
       {care ? (

@@ -85,6 +85,13 @@ const map = {
   "tier-family-care": "tier.familyCare",
   "tier-on-tier": "tier.onTier",
   "tier-gold": "tier.gold",
+  "mood-good": "mood.good",
+  "mood-okay": "mood.okay",
+  "mood-low": "mood.low",
+  "mood-ink": "mood.ink",
+  "mood-tongue": "mood.tongue",
+  "mood-cheek": "mood.cheek",
+  "mood-tear": "mood.tear",
 };
 const shadows = {
   card: "shadow.card",
