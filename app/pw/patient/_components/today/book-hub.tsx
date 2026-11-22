@@ -289,7 +289,8 @@ export function BookHub(p: {
             </div>
 
             <Step n={5} title={D.whoTitle}>
-              <div className="grid grid-cols-1 gap-2 min-[700px]:grid-cols-3">
+              {/* One row; past the section's width it scrolls sideways (padding keeps the shadow unclipped). */}
+              <div className="-mx-2 flex snap-x gap-3 overflow-x-auto px-2 pt-1 pb-3 [scrollbar-width:thin]">
                 {sessions.map((s) => (
                   <button
                     key={s.id}
@@ -297,7 +298,7 @@ export function BookHub(p: {
                     aria-pressed={s.id === session?.id}
                     onClick={() => setSessionId(s.id)}
                     className={cn(
-                      "rounded-pw-row relative flex min-h-[72px] min-w-0 items-center gap-3 p-3 pr-9 text-left",
+                      "rounded-pw-row relative flex min-h-[84px] w-[300px] shrink-0 snap-start items-center gap-3 p-3 pr-10 text-left",
                       "transition-[background-color,box-shadow,scale] duration-150 ease-[cubic-bezier(0.16,1,0.3,1)] active:scale-[0.98] motion-reduce:active:scale-100",
                       s.id === session?.id
                         ? "bg-pw-surface shadow-pw-card"
@@ -305,22 +306,22 @@ export function BookHub(p: {
                     )}
                   >
                     {s.clinicianName ? (
-                      <Suspense fallback={<Face name={s.clinicianName} />}>
-                        <DoctorFace name={s.clinicianName} doctors={p.doctors} />
+                      <Suspense fallback={<Clinician name={s.clinicianName} fee={s.feeLabel ?? feeText(s.fee)} />}>
+                        <Doctor name={s.clinicianName} fee={s.feeLabel ?? feeText(s.fee)} doctors={p.doctors} />
                       </Suspense>
                     ) : (
-                      <span className="bg-pw-surface-3 text-pw-ink-3 grid size-12 shrink-0 place-items-center rounded-full">
-                        <UserRoundIcon className="size-6" {...ICON} />
-                      </span>
+                      <>
+                        <span className="bg-pw-surface-3 text-pw-ink-3 grid size-12 shrink-0 place-items-center rounded-full">
+                          <UserRoundIcon className="size-6" {...ICON} />
+                        </span>
+                        <span className="flex min-w-0 flex-col">
+                          <span className="text-[15px] leading-5 font-semibold">{D.anyDoctor}</span>
+                          <span className="text-pw-ink-3 text-[13px] font-semibold">
+                            {s.feeLabel ?? feeText(s.fee)}
+                          </span>
+                        </span>
+                      </>
                     )}
-                    <span className="flex min-w-0 flex-col">
-                      <span className="text-[15px] leading-5 font-semibold break-words">
-                        {s.clinicianName || D.anyDoctor}
-                      </span>
-                      <span className="text-pw-ink-3 text-[13px] font-semibold">
-                        {s.feeLabel ?? feeText(s.fee)}
-                      </span>
-                    </span>
                     {s.id === session?.id ? (
                       <span className="bg-pw-ink text-pw-surface absolute top-1/2 right-3 grid size-5 -translate-y-1/2 place-items-center rounded-full">
                         <CheckIcon className="size-3" strokeWidth={3} aria-hidden />
@@ -381,10 +382,34 @@ function Step(p: { n: number; title: string; tool?: ReactNode; children: ReactNo
   );
 }
 
-/** The doctor's photo from See a doctor's list, matched by name; their initials while it loads or with none. */
-function DoctorFace(p: { name: string; doctors: Promise<DoctorCard[] | null> }) {
-  const photo = use(p.doctors)?.find((d) => d.name === p.name)?.photoUrl ?? null;
-  return <Face name={p.name} photo={photo} />;
+/**
+ * A session's clinician, filled in from See a doctor's list (doctors only), matched by name: on that list they
+ * get "Dr", their role and their photo; otherwise, and while it loads, their name and initials only.
+ */
+function Doctor(p: { name: string; fee: string; doctors: Promise<DoctorCard[] | null> }) {
+  const d = use(p.doctors)?.find((x) => x.name === p.name);
+  return <Clinician name={p.name} fee={p.fee} doctor={d} />;
+}
+
+/** "MIREMBE JOSELYN NAYIGA" reads as "Mirembe Joselyn Nayiga"; a name typed in mixed case is left alone. */
+const shownName = (n: string) =>
+  n === n.toUpperCase() ? n.toLowerCase().replace(/(^|[\s'-])\p{L}/gu, (c) => c.toUpperCase()) : n;
+
+function Clinician(p: { name: string; fee: string; doctor?: DoctorCard }) {
+  return (
+    <>
+      <Face name={p.name} photo={p.doctor?.photoUrl} />
+      <span className="flex min-w-0 flex-col">
+        <span className="line-clamp-2 text-[15px] leading-5 font-semibold">
+          {p.doctor ? `Dr ${shownName(p.name)}` : shownName(p.name)}
+        </span>
+        {p.doctor?.role ? (
+          <span className="text-pw-ink-3 truncate text-[13px]">{p.doctor.role}</span>
+        ) : null}
+        <span className="text-[13px] font-semibold">{p.fee}</span>
+      </span>
+    </>
+  );
 }
 
 function Face(p: { name: string; photo?: string | null }) {
