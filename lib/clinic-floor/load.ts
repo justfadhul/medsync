@@ -15,12 +15,14 @@ import { clinicalPhiAccessLog } from "@/db/schema/doctor-workspace";
 import { encounterOrders, encounterResults } from "@/db/schema/encounter";
 import { patientIntakes } from "@/db/schema/patient-intakes";
 import { patientProfiles } from "@/db/schema/patient-profiles";
-import { appointments } from "@/db/schema/scheduling";
+import { appointments, encounters } from "@/db/schema/scheduling";
 import { triageRecords } from "@/db/schema/triage";
 import { users } from "@/db/schema/users";
 import { computeAgeYears } from "@/lib/age";
 import { signedAvatarUrl } from "@/lib/avatars";
 import { fetchIncomingPreArrivals } from "@/lib/emergency/queries";
+import { emrV1LiveFor } from "@/lib/emr/feature";
+import { encounterEngineLive } from "@/lib/encounter/feature";
 import { listClinicDepartments } from "@/lib/intake/queries";
 import { logger } from "@/lib/logger";
 import { clinicOf, preAlertOf, setUpClinics } from "@/lib/reception/desk/map";
@@ -129,6 +131,7 @@ export async function loadFloorData(
   const records = ids.length
     ? await db
         .select({
+          id: triageRecords.id,
           intakeId: triageRecords.intakeId,
           vitals: triageRecords.vitalsSnapshot,
           level: triageRecords.assignedLevel,
@@ -141,6 +144,32 @@ export async function loadFloorData(
         .orderBy(asc(triageRecords.triagedAt))
     : [];
   const latest = new Map(records.map((r) => [r.intakeId, r]));
+  // ADR 0532: each visit's encounter in MedSync's record, through its triage record (how the desk opens one).
+  const encounterLive = encounterEngineLive() && emrV1LiveFor(scope.hospitalId);
+  const opened =
+    encounterLive && records.length
+      ? await db
+          .select({ id: encounters.id, tr: encounters.triageRecordId, state: encounters.state })
+          .from(encounters)
+          .where(
+            and(
+              inArray(
+                encounters.triageRecordId,
+                records.map((r) => r.id),
+              ),
+              // A planned one (assigned, not begun) is left to Start, which begins it (takePatientAction).
+              inArray(encounters.state, ["in_progress", "completed"]),
+            ),
+          )
+      : [];
+  const intakeOfRecord = new Map(records.map((r) => [r.id, r.intakeId]));
+  const encounterOf = new Map<string | null | undefined, { id: string; done: boolean }>();
+  // An open one wins over a finished one for the same visit.
+  for (const e of opened) {
+    const k = intakeOfRecord.get(e.tr!);
+    if (!encounterOf.has(k) || e.state === "in_progress")
+      encounterOf.set(k, { id: e.id, done: e.state !== "in_progress" });
+  }
   const patients = [...new Set(intakes.flatMap((r) => (r.patientUserId ? [r.patientUserId] : [])))];
   // Lab "results back" (follow-up 4): released results for today's patients at this hospital, released today.
   // Encounters carry no intake, so the match is patient + hospital + day; the model keeps only those released
@@ -254,6 +283,7 @@ export async function loadFloorData(
       hist: [],
       readings: (r.patientUserId && past.get(r.patientUserId)) || [],
       resultsReleasedAt: (r.patientUserId && backAt.get(r.patientUserId)) || [],
+      encounter: encounterOf.get(r.id) ?? null,
     };
   });
 
@@ -321,6 +351,7 @@ export async function loadFloorData(
       return { id: a.id, name: a.who || a.name, what: a.what, km: a.eta };
     }),
     fixture: false,
+    encounterLive,
   };
 }
 

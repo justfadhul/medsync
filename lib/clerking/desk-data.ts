@@ -24,6 +24,9 @@ export interface ClerkingDeskData {
   vitals: AdultVitals;
   vitalsAt: string | null;
   vitalsFromTriage: boolean;
+  /** The reading before the newest of each numeric input, for the rail's trend mark; absent or
+   *  null where there is only one reading. */
+  vitalsPrev?: VitalsPrev;
   medicines: {
     statementId: string;
     name: string;
@@ -119,3 +122,11 @@ export interface ClerkingDeskData {
     weeksPostpartum?: number | null;
   };
 }
+
+/** The reading before the newest, per numeric NEWS2 input (and the diastolic, for blood pressure). */
+export type VitalsPrev = Partial<
+  Record<
+    "respiratoryRate" | "spo2" | "systolicBp" | "diastolicBp" | "pulse" | "temperature",
+    number | null
+  >
+>;

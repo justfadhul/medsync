@@ -74,6 +74,9 @@ const TETHER_OPEN = [
 /** True when the Tether domain does not serve `pathname`. Files (`/sw.js`, `/robots.txt`) always serve. */
 export function tetherClosed(pathname: string): boolean {
   if (pathname === "/" || /\.[a-z0-9]+$/i.test(pathname)) return false;
+  // ADR 0532: one encounter opens on Tether from the doctor's Clinic line (MedSync's own desk, as it is). The
+  // rest of the doctor's workspace, the encounter list included, stays on MedSync's domain.
+  if (/^\/doctor\/encounters\/[^/]+(\/|$)/.test(pathname)) return false;
   return !TETHER_OPEN.some((p) => pathname === p || pathname.startsWith(`${p}/`));
 }
 

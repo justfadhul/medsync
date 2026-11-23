@@ -7,6 +7,7 @@ import type { DeskPayload, KeyInput } from "@/components/emr/desk/model";
 import type { History, HistoryHeader, SymptomEntry, YesNo } from "@/lib/clerking/answers";
 import type { Catalogue, PatientSex, Symptom } from "@/lib/clerking/catalogue";
 import type { Block } from "@/lib/clerking/compose";
+import type { VitalsPrev } from "@/lib/clerking/desk-data";
 import type { ExamCatalogue } from "@/lib/clerking/exam/catalogue";
 import type { ClassifierResult, ExamSignoff } from "@/lib/clerking/exam/classifiers";
 import type { ExamContext, VitalValues } from "@/lib/clerking/exam/context";
@@ -551,6 +552,9 @@ export interface VitalRow {
   note: { text: string; caution: boolean } | null;
   /** The standard classification beside NEWS2 ("Stage 2 hypertension"); absent when none. */
   cls?: VitalClass | null;
+  /** What the reading before this one was ("was 124", as the triage pop-up shows it); absent when
+   *  there is no earlier reading. */
+  trend?: { was: string } | null;
 }
 
 export interface VitalsView {
@@ -598,8 +602,28 @@ export function vitalsView(
   v: AdultVitals,
   context: DeskPayload["context"]["vitals"],
   /** `dbp`: the chart's newest diastolic, when the context list carries none. */
-  ctx?: VitalCtx & { dbp?: number | null },
+  ctx?: VitalCtx & { dbp?: number | null; prev?: VitalsPrev },
 ): VitalsView {
+  const now: Record<string, [number | null, number | null | undefined]> = {
+    systolic_bp: [v.systolicBp, ctx?.prev?.systolicBp],
+    pulse: [v.pulse, ctx?.prev?.pulse],
+    respiratory_rate: [v.respiratoryRate, ctx?.prev?.respiratoryRate],
+    spo2: [v.spo2, ctx?.prev?.spo2],
+    temperature: [v.temperature, ctx?.prev?.temperature],
+  };
+  const trendOf = (key: string): VitalRow["trend"] => {
+    const [cur, was] = now[key] ?? [null, null];
+    if (cur == null || was == null) return null;
+    const dia = ctx?.prev?.diastolicBp;
+    return {
+      was:
+        key === "temperature"
+          ? was.toFixed(1)
+          : key === "systolic_bp" && dia != null
+            ? `${was}/${dia}`
+            : String(was),
+    };
+  };
   const news2 = scoreNews2(v);
   const pt = (id: string) => news2.parameters.find((x) => x.parameter === id);
   const row = (
@@ -621,6 +645,7 @@ export function vitalsView(
       arrow: s ? arrowFor(key, s.value, s.points) : null,
       note,
       cls: c,
+      trend: trendOf(key),
     };
   };
   const dia =

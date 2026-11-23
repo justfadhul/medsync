@@ -102,6 +102,15 @@ function InlineList({
   );
 }
 
+/** What the reading was before this one, in grey beside it, as the triage pop-up shows it. */
+function Trend({ t }: { t: NonNullable<VitalRow["trend"]> }) {
+  return (
+    <span data-slot="vital-trend" className="text-caption text-muted-foreground whitespace-nowrap">
+      {`was ${t.was}`}
+    </span>
+  );
+}
+
 function Row({ r, children }: { r: VitalRow; children?: ReactNode }) {
   const three = r.points === 3;
   const Arrow = r.arrow === "low" ? ArrowDownIcon : ArrowUpIcon;
@@ -147,7 +156,7 @@ function Row({ r, children }: { r: VitalRow; children?: ReactNode }) {
           <span aria-hidden className="w-[18px] shrink-0" />
         )}
       </div>
-      {r.cls || r.note ? (
+      {r.cls || r.note || r.trend ? (
         <span className="flex flex-wrap items-center justify-end gap-x-2 gap-y-0.5">
           {r.cls ? <Cls c={r.cls} /> : null}
           {r.note ? (
@@ -157,6 +166,7 @@ function Row({ r, children }: { r: VitalRow; children?: ReactNode }) {
               {r.note.text}
             </span>
           ) : null}
+          {r.trend ? <Trend t={r.trend} /> : null}
         </span>
       ) : null}
       {children}

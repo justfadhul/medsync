@@ -5,6 +5,15 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); version
 
 ## [Unreleased]
 
+### Changed — The doctor's Clinic line opens MedSync's own encounter, laid out as Tether — 23 Nov 2026
+
+From the owner's approved prototypes ([ADR 0532](docs/adr/0532-the-doctors-clinic-line-opens-the-encounter.md)). No migration, no new clinical rule. Wording is draft.
+
+- The doctor's line: For you / Whole clinic, the triage scores on the card, the actions pinned, and Start the encounter through MedSync's own take-patient action (Resume when one is open; a death on record asks for a reason).
+- Tether lets `/doctor/encounters/<id>` through; the desk there runs without the diabetes pack and goes back to the Clinic line.
+- On Tether at desk width the encounter desk's parts float as the floor's cards: the patient and the steps down the left, triage and vitals across the top, the step, then flags and note. Behaviour unchanged; phones keep MedSync's layout.
+- On both MedSync and Tether, each vital sign in the desk shows the reading before it from the same day ("was 124/78").
+
 ### Changed — Clinic floor: triage is a centred pop-up with scores, the NEWS2 map and trends — 23 Nov 2026
 
 From the owner's approved clickable prototype ([ADR 0531](docs/adr/0531-clinic-floor-triage-is-a-pop-up.md)); it replaces the floor's triage side panel. Seen on localhost with example patients at a test hospital. Wording is draft.

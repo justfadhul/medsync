@@ -588,6 +588,7 @@ export function ClerkingDesk(props: ClerkingDeskProps) {
         pregnant: k.exam.pregnant,
         bpScheme,
         dbp: k.exam.latest.dbp,
+        prev: k.vitalsPrev,
         spo2Scale: derived?.exam && scale2(derived.exam.exam) ? "scale2" : k.vitals.spo2Scale,
       })
     : null;

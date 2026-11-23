@@ -212,6 +212,15 @@ function newest(rows: readonly FlowRow[], conceptId: string) {
   const cell = rows.find((r) => r.conceptId === conceptId)?.cells.at(-1);
   return cell ?? null;
 }
+/** The reading before the newest, when it is from the same day as the newest (the rail's "was");
+ *  older ones may be another visit's, so none is shown. */
+const DAY_MS = 24 * 60 * 60 * 1000;
+function before(rows: readonly FlowRow[], conceptId: string) {
+  const cells = rows.find((r) => r.conceptId === conceptId)?.cells;
+  const was = cells?.at(-2);
+  const now = cells?.at(-1);
+  return was && now && Date.parse(now.at) - Date.parse(was.at) <= DAY_MS ? was.value : undefined;
+}
 const numberOf = (v: string | undefined) => {
   const n = Number.parseFloat((v ?? "").replace(",", "."));
   return Number.isFinite(n) ? n : null;
@@ -411,6 +420,14 @@ export async function clerkingData(i: {
       temperature: numberOf(cells.temp?.value),
     },
     vitalsAt: latest,
+    vitalsPrev: {
+      respiratoryRate: numberOf(before(i.rows, "obs.resp_rate")),
+      spo2: numberOf(before(i.rows, "obs.spo2")),
+      systolicBp: numberOf(before(i.rows, "obs.bp_systolic")),
+      diastolicBp: numberOf(before(i.rows, "obs.bp_diastolic")),
+      pulse: numberOf(before(i.rows, "obs.heart_rate")),
+      temperature: numberOf(before(i.rows, "obs.temperature")),
+    },
     vitalsFromTriage:
       present.length > 0 && present.every((c) => c!.id.startsWith("triage_records:")),
     medicines: i.medicines.map((m) => ({ ...m, addedHere: medsHere.has(m.statementId) })),

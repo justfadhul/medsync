@@ -155,6 +155,26 @@ export const TD = {
     foot: "Narrow pulse pressure is under {p}% of systolic. Glucose above {g}: screen for DKA.",
   },
   next: { none: "None yet." },
+  /** The doctor's Clinic line (ADR 0532). */
+  doctor: {
+    forYou: "For you · {n}",
+    whole: "Whole clinic · {n}",
+    lineLabel: "Whose line",
+    booked: { you: "booked for you", any: "any doctor", other: "for {doctor}" },
+    recheckDue: "re-check due",
+    scores: "At triage",
+    redFlags: "Red flags",
+    noneRaised: "none raised",
+    raised: "{n} raised",
+    was: "was {level} · {ago} ago",
+    more: "Trends and earlier visits",
+    start: "Start the encounter",
+    resume: "Continue the encounter",
+    open: "Open the encounter",
+    starting: "Opening the encounter…",
+    triageFirst: "Triage them first: the encounter starts from the triage record.",
+    off: "The encounter is not switched on at this hospital yet.",
+  },
   /** The clinic line as a nurse sees it: to watch, not to run. */
   watch: {
     viewOnly:

@@ -1,5 +1,6 @@
 import type { NcdSeed } from "./ncd-section";
 import type { DoctorScope } from "@/lib/doctor/scope";
+import { headers } from "next/headers";
 import Link from "next/link";
 import { Suspense } from "react";
 import { ArrowLeftIcon } from "lucide-react";
@@ -7,9 +8,11 @@ import { ArrowLeftIcon } from "lucide-react";
 import { sectionWith } from "@/components/emr/desk/model";
 import { EncounterPrescriptions } from "@/components/emr/prescribing/encounter-prescriptions";
 import { SafetyBarView } from "@/components/emr/safety-bar";
+import { TideScope } from "@/components/medsync/tide-scope";
 import { ncdDmDeskFor } from "@/lib/emr/feature";
 import { loadDesk } from "@/lib/emr/read/desk";
 import { ncdPackLive } from "@/lib/encounter/feature";
+import { isTetherHost } from "@/lib/landing/feature";
 import {
   leanDiabetesPack,
   ncdCatalog,
@@ -42,9 +45,14 @@ export async function DeskPage({
 }) {
   const load = await loadDesk(encounterId, template);
   const workspace = doctorWorkspace(scope.hospitalId);
-  const back = workspace
-    ? { href: "/doctor", label: "Workspace" }
-    : { href: "/doctor/encounters", label: "Encounters" };
+  // ADR 0532: opened from the Tether clinic floor, the desk is the same desk, in the Tether look, without the
+  // diabetes module, and it goes back to the Clinic line.
+  const tether = isTetherHost((await headers()).get("host"));
+  const back = tether
+    ? { href: "/clinic?view=line", label: "Clinic line" }
+    : workspace
+      ? { href: "/doctor", label: "Workspace" }
+      : { href: "/doctor/encounters", label: "Encounters" };
   if (!load)
     return (
       <div className="mx-auto flex w-full max-w-3xl flex-col gap-4 px-4 py-8 md:px-8">
@@ -60,7 +68,7 @@ export async function DeskPage({
   const p = load.payload;
   const allergySection = sectionWith(p.template, "allergy_status");
   let ncdSeed: NcdSeed | null = null;
-  if (p.flags.ncd && p.draft) {
+  if (!tether && p.flags.ncd && p.draft) {
     // The NCD module pre-fills from what the record holds (vitals, sex, life stage), as before.
     const [demographics, vitals] = await Promise.all([
       loadPatientDemographics(p.encounter.patientUserId),
@@ -103,7 +111,7 @@ export async function DeskPage({
   }
   // NCD_DM_DESK (ADR 0216): the pack reads the clerking; the module keeps only the questions the
   // clerking does not ask, with no panel of its own (the desk shows the result).
-  const dmDesk = !!p.clerking && ncdDmDeskFor(scope.hospitalId);
+  const dmDesk = !tether && !!p.clerking && ncdDmDeskFor(scope.hospitalId);
   if (dmDesk && ncdSeed) {
     ncdSeed = {
       ...ncdSeed,
@@ -114,60 +122,66 @@ export async function DeskPage({
   }
 
   return (
-    <div className="bg-background text-foreground flex min-h-svh flex-col xl:h-dvh xl:overflow-hidden">
-      <DeskTopBar
-        back={back}
-        hospital={scope.hospitalName}
-        department={scope.departmentName}
-        cadreWord={p.viewer.cadreWord}
-        name={scope.fullName}
-        phone={!!p.clerking}
-      />
-      {/* Clerking desk v2 draws its own safety bar (Draft, saved time, the NEWS2 chip). */}
-      {p.clerking ? null : (
-        <SafetyBarView
-          bar={p.safetyBar}
-          links={{
-            allergies: p.flags.actionsAllowed && allergySection ? `#desk-${allergySection}` : null,
-            problems: `${p.links.chart}#chart-problems`,
-            results: p.links.results,
-          }}
+    <TideScope group="doctor" force={tether}>
+      <div
+        data-tether-desk={tether ? "" : undefined}
+        className="bg-background text-foreground flex min-h-svh flex-col xl:h-dvh xl:overflow-hidden"
+      >
+        <DeskTopBar
+          back={back}
+          hospital={scope.hospitalName}
+          department={scope.departmentName}
+          cadreWord={p.viewer.cadreWord}
+          name={scope.fullName}
+          phone={!!p.clerking}
         />
-      )}
-      {workspace && !p.encounter.open ? (
-        <Suspense fallback={null}>
-          <NextPatient scope={scope} />
-        </Suspense>
-      ) : null}
-      <DeskClient
-        key={p.template.id}
-        p={p}
-        ncdSeed={ncdSeed}
-        dm={
-          // NCD_DM_DESK (ADR 0216): the diabetes pack runs on the ten-step clerking record.
-          dmDesk ? { pack: leanDiabetesPack(), fields: packFieldCodes() } : null
-        }
-        orders={
-          p.flags.actionsAllowed && p.draft ? (
-            <Suspense fallback={null}>
-              <EncounterOrders encounterId={encounterId} />
-              {/* Renders nothing unless EMR_PRESCRIBING is on here (PROMPT Phase 7). */}
-              <EncounterPrescriptions
-                encounterId={encounterId}
-                identity={{ name: p.safetyBar.name, mrn: p.safetyBar.mrn }}
-              />
-            </Suspense>
-          ) : null
-        }
-        rail={
-          workspace ? (
-            <Suspense fallback={null}>
-              <EncounterRail scope={scope} currentEncounterId={encounterId} />
-            </Suspense>
-          ) : null
-        }
-      />
-    </div>
+        {/* Clerking desk v2 draws its own safety bar (Draft, saved time, the NEWS2 chip). */}
+        {p.clerking ? null : (
+          <SafetyBarView
+            bar={p.safetyBar}
+            links={{
+              allergies:
+                p.flags.actionsAllowed && allergySection ? `#desk-${allergySection}` : null,
+              problems: `${p.links.chart}#chart-problems`,
+              results: p.links.results,
+            }}
+          />
+        )}
+        {workspace && !p.encounter.open ? (
+          <Suspense fallback={null}>
+            <NextPatient scope={scope} />
+          </Suspense>
+        ) : null}
+        <DeskClient
+          key={p.template.id}
+          p={p}
+          ncdSeed={ncdSeed}
+          dm={
+            // NCD_DM_DESK (ADR 0216): the diabetes pack runs on the ten-step clerking record.
+            dmDesk ? { pack: leanDiabetesPack(), fields: packFieldCodes() } : null
+          }
+          orders={
+            p.flags.actionsAllowed && p.draft ? (
+              <Suspense fallback={null}>
+                <EncounterOrders encounterId={encounterId} />
+                {/* Renders nothing unless EMR_PRESCRIBING is on here (PROMPT Phase 7). */}
+                <EncounterPrescriptions
+                  encounterId={encounterId}
+                  identity={{ name: p.safetyBar.name, mrn: p.safetyBar.mrn }}
+                />
+              </Suspense>
+            ) : null
+          }
+          rail={
+            workspace ? (
+              <Suspense fallback={null}>
+                <EncounterRail scope={scope} currentEncounterId={encounterId} />
+              </Suspense>
+            ) : null
+          }
+        />
+      </div>
+    </TideScope>
   );
 }
 

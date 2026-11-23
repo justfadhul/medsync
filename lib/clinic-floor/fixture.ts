@@ -67,6 +67,8 @@ export interface FloorPerson {
   resultsReleasedAt: number[];
   /** What the lab is doing, for the floor list. */
   testsFor?: string;
+  /** This visit's encounter in MedSync's record (ADR 0532); null until a doctor starts one. */
+  encounter?: { id: string; done: boolean } | null;
 }
 
 export interface FloorData {
@@ -81,6 +83,8 @@ export interface FloorData {
   preAlerts: { id: string; name: string; what: string; km: string }[];
   /** Median-free demo: the fixture never pretends to measure. */
   fixture: boolean;
+  /** MedSync's encounter desk runs at this hospital (EMR v1 on): the line offers Start the encounter. */
+  encounterLive?: boolean;
 }
 
 /* ─── Busy morning ─────────────────────────────────────────────────────── */

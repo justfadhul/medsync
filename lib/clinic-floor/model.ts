@@ -52,6 +52,13 @@ export const EVENT_KINDS = [
 ] as const;
 export type EventKind = (typeof EVENT_KINDS)[number];
 
+/** Who a person in the line is booked for, from the doctor's side: them, any doctor, or another doctor. */
+export const bookedFor = (
+  r: { doctorUserId: string | null },
+  me: string,
+): "you" | "any" | "other" =>
+  r.doctorUserId === me ? "you" : r.doctorUserId == null ? "any" : "other";
+
 /**
  * What a nurse may record on the floor (owner ruling 23 Nov 2026, ADR 0531): triage and re-checks, and their own
  * sign-in on a shared device. Calling, finishing, sending for tests and a doctor's status are the doctor's; the

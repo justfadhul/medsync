@@ -8,22 +8,27 @@
 import type { FloorCtx, Modal } from "./floor";
 import type { FloorPerson } from "@/lib/clinic-floor/fixture";
 import type { DoctorStatus, FloorRow, Outcome } from "@/lib/clinic-floor/model";
-import { useState } from "react";
+import type { PatientFlowRow } from "@/lib/workspace/flow";
+import { useState, useTransition } from "react";
 
+import DeathConfirm from "@/app/doctor/_components/workspace/death-confirm";
+import { takePatientAction } from "@/app/doctor/_lib/workspace-actions";
 import { Ticket } from "@/components/landing/tether/ticket";
 import { EditorDialog } from "@/components/medsync/editor-dialog";
 import { c, DeskDialog } from "@/components/reception/ui";
-import { FLOOR } from "@/content/clinic-floor/floor";
+import { FLOOR, FLOOR_ERRORS } from "@/content/clinic-floor/floor";
 import { TD } from "@/content/clinic-floor/triage-dialog";
 import { fill } from "@/content/lab-workspace-v2";
 import { TICKET } from "@/content/tether-landing/copy";
-import { floorMetrics, recheckDueAt, screenFeed } from "@/lib/clinic-floor/model";
-import { doctorLoad } from "@/lib/clinic-floor/triage-view";
+import { bookedFor, floorMetrics, recheckDueAt, screenFeed } from "@/lib/clinic-floor/model";
+import { doctorLoad, otherScores, toneOfBands } from "@/lib/clinic-floor/triage-view";
 import { initials } from "@/lib/reception/desk/model";
+import { runTriage } from "@/lib/triage/engine";
 import { ScreenBoard } from "./board";
 import { dayLabel, first, hm, levelCls, levelTxt, mins, vitalChips, whoOf } from "./shared";
 import { Trends } from "./trends";
 import { Av } from "./triage";
+import t from "./triage-dialog.module.css";
 
 const L = FLOOR.line;
 
@@ -96,13 +101,21 @@ function DoctorsNow({ ctx }: { ctx: FloorCtx }) {
 
 export function LineView({
   ctx,
-  line,
+  line: mine,
+  clinicLine,
   callNext,
 }: {
   ctx: FloorCtx;
+  /** Booked for this doctor or for any doctor. */
   line: FloorRow[];
+  /** Everyone waiting in the clinic, for the "Whole clinic" view. */
+  clinicLine: FloorRow[];
   callNext: () => void;
 }) {
+  const [whole, setWhole] = useState(false);
+  // The doctor's line: theirs and any doctor's by default, the whole clinic on request (ADR 0532).
+  const shown = whole ? clinicLine : mine;
+  const line = shown;
   const { clinic, rows, byId, now, user, priv, myState } = ctx;
   const [breakMins, setBreakMins] = useState<10 | 15 | 30>(15);
   const reason = (p: FloorPerson) =>
@@ -146,7 +159,8 @@ export function LineView({
         ? [L.groups.untriaged, L.groups.untriagedSub]
         : [levelTxt(Number(k) as 1), L.groups.sub[Number(k) as 1]];
   let no = 0;
-  const next = line[0] ? byId.get(line[0].intakeId) : undefined;
+  // Call next is always the doctor's own next (callNext calls from their line), whatever the list shows.
+  const next = mine[0] ? byId.get(mine[0].intakeId) : undefined;
 
   return (
     <div className={c("cf-wrap")}>
@@ -281,8 +295,8 @@ export function LineView({
                     <button type="button" className={c("btn", "k", "cf-big")} onClick={callNext}>
                       {fill(L.callNext, { name: next.name })}
                       <small>
-                        {levelTxt(line[0]!.level)} ·{" "}
-                        {fill(L.waited, { n: mins(now - line[0]!.arrivedAt) })}
+                        {levelTxt(mine[0]!.level)} ·{" "}
+                        {fill(L.waited, { n: mins(now - mine[0]!.arrivedAt) })}
                       </small>
                     </button>
                     <p className={c("cf-mt")}>{L.orN}</p>
@@ -297,11 +311,21 @@ export function LineView({
           <div className={c("cf-q")} aria-label={L.theLine}>
             <div className={c("cf-qh")}>
               <h3>{L.theLine}</h3>
-              <span className={c("cf-stat")} style={{ padding: "2px 10px" }}>
-                <b>{line.length}</b>
-              </span>
               <span className={c("grow")} />
-              <span className={c("cf-mt")}>{L.staffOnly}</span>
+              <span className={c("seg")} role="group" aria-label={TD.doctor.lineLabel}>
+                {([false, true] as const).map((w) => (
+                  <button
+                    key={String(w)}
+                    type="button"
+                    aria-pressed={whole === w}
+                    onClick={() => setWhole(w)}
+                  >
+                    {fill(w ? TD.doctor.whole : TD.doctor.forYou, {
+                      n: (w ? clinicLine : mine).length,
+                    })}
+                  </button>
+                ))}
+              </span>
             </div>
             <div className={c("cf-qs")}>
               {[...groups].map(([k, rs]) => (
@@ -336,6 +360,11 @@ export function LineView({
                                     </span>
                                   ))
                               : null}
+                            <span className={c("cf-flag")}>
+                              {fill(TD.doctor.booked[bookedFor(r, me)], {
+                                doctor: ctx.docName(r.doctorUserId),
+                              })}
+                            </span>
                             {p.needs.map((x) => (
                               <span key={x} className={c("cf-flag", "need")}>
                                 {x}
@@ -356,7 +385,7 @@ export function LineView({
                             ) : null}
                           </span>
                         </span>
-                        {viewOnly ? (
+                        {viewOnly || bookedFor(r, me) === "other" ? (
                           <span className={c("cf-mt")}>
                             {fill(TD.watch.forDoctor, { doctor: ctx.docName(r.doctorUserId) })}
                           </span>
@@ -465,8 +494,144 @@ function Vitals({ p }: { p: FloorPerson }) {
   );
 }
 
+/**
+ * The triage scores as the doctor reads them (ADR 0532): the level, NEWS2, shock index, qSOFA and the red flags
+ * raised, from the triage record through the engine, and what the level was before on a re-check.
+ */
+function Scores({ p, now }: { p: FloorPerson; now: number }) {
+  const tr = p.triage;
+  if (!tr) return null;
+  const r = runTriage(tr.input);
+  const o = otherScores(r, tr.input.vitals);
+  const n = r.news2;
+  const red = r.firedDiscriminators.filter((f) => f.source === "manual");
+  const prev = tr.earlier?.at(-1);
+  const tile = (label: string, value: string | number, sub: string, tone: string | null) => (
+    <div className={`${t.m} ${tone ? t[tone] : ""}`}>
+      <span className={t.cap}>{label}</span>
+      <b>{value}</b>
+      <small>{sub}</small>
+    </div>
+  );
+  const on = (b: readonly { on: boolean; word: string }[]) => b.find((x) => x.on)?.word;
+  return (
+    <div className={c("cf-sec")}>
+      <span className={c("cap")}>
+        {TD.doctor.scores}
+        {prev
+          ? ` · ${fill(TD.doctor.was, { level: levelTxt(prev.level), ago: mins(now - prev.at) })}`
+          : ""}
+      </span>
+      <div className={t.mg} style={{ gridTemplateColumns: "repeat(4, minmax(0, 1fr))" }}>
+        {tile(
+          TD.tiles.news2,
+          n ? n.total : "—",
+          !n
+            ? TD.tiles.adultOnly
+            : n.provisional
+              ? TD.tiles.provisional
+              : n.hasSingleParameterThree
+                ? TD.tiles.oneAtThree
+                : TD.tiles.allIn,
+          !n
+            ? null
+            : n.total >= 7
+              ? "bad"
+              : n.total >= 5 || n.hasSingleParameterThree
+                ? "warn"
+                : n.provisional
+                  ? null
+                  : "ok",
+        )}
+        {tile(
+          TD.tiles.shockIndex,
+          o.shockIndex.value == null ? "—" : o.shockIndex.value.toFixed(2),
+          on(o.shockIndex.bands)
+            ? TD.words[on(o.shockIndex.bands) as keyof typeof TD.words]
+            : TD.tiles.needsPulseBp,
+          toneOfBands(o.shockIndex.bands),
+        )}
+        {tile(
+          TD.tiles.qsofa,
+          o.qsofa.score == null ? "—" : `${o.qsofa.score}/3`,
+          o.qsofa.score == null
+            ? TD.tiles.needsVitals
+            : o.qsofa.positive
+              ? TD.tiles.positive
+              : TD.tiles.notPositive,
+          o.qsofa.score == null ? null : o.qsofa.positive ? "bad" : "ok",
+        )}
+        {tile(
+          TD.doctor.redFlags,
+          red.length || "—",
+          red.length ? red.map((f) => f.label).join(", ") : TD.doctor.noneRaised,
+          red.length ? "bad" : "ok",
+        )}
+      </div>
+    </div>
+  );
+}
+
+/** Start or reopen MedSync's own encounter for this visit (ADR 0532); off where the desk is not on. */
+function EncounterButton({ ctx, p }: { ctx: FloorCtx; p: FloorPerson }) {
+  const [pending, start] = useTransition();
+  // A death on record: MedSync's own confirm, a reason kept in the audit log, never a block.
+  const [died, setDied] = useState<boolean | null>(null);
+  const take = (overrideReason?: string) =>
+    start(async () => {
+      // MedSync's own path: assign to this doctor, open the encounter from the triage record, go to the desk.
+      const r = await takePatientAction({ intakeId: p.id, overrideReason });
+      if (r && !r.ok) {
+        if (r.deceased && !overrideReason) return setDied(true);
+        ctx.say(r.error ?? FLOOR_ERRORS.saveFailed);
+      }
+    });
+  if (!ctx.data.encounterLive) return null;
+  if (p.encounter)
+    return (
+      <a className={c("btn", "k")} href={`/doctor/encounters/${p.encounter.id}`}>
+        {p.encounter.done ? TD.doctor.open : TD.doctor.resume}
+      </a>
+    );
+  if (!p.triage)
+    return (
+      <button
+        type="button"
+        className={c("btn", "k")}
+        onClick={() => ctx.say(TD.doctor.triageFirst)}
+      >
+        {TD.doctor.start}
+      </button>
+    );
+  return (
+    <>
+      <button type="button" className={c("btn", "k")} disabled={pending} onClick={() => take()}>
+        {pending ? TD.doctor.starting : TD.doctor.start}
+      </button>
+      {died !== null ? (
+        <DeathConfirm
+          row={
+            {
+              key: p.id,
+              identity: { name: p.name, code: null, ageYears: null, sex: null, unknownLabel: null },
+              badges: [],
+            } as unknown as PatientFlowRow
+          }
+          open={died}
+          pending={pending}
+          onCancel={() => setDied(false)}
+          onConfirm={(reason) => {
+            setDied(false);
+            take(reason);
+          }}
+        />
+      ) : null}
+    </>
+  );
+}
+
 function WithYou({ ctx, row, p, reason, rCls }: Shown) {
-  const t = p.triage;
+  const t0 = p.triage;
   return (
     <div className={c("cf-nc")}>
       <div className={c("cf-nb")}>
@@ -492,7 +657,12 @@ function WithYou({ ctx, row, p, reason, rCls }: Shown) {
           ) : null}
         </div>
       </div>
+      <Scores p={p} now={ctx.now} />
       <div className={c("cf-sec")}>
+        <span className={c("cap")}>{L.whyCame}</span>
+        <p className={rCls(p)} style={{ fontSize: 16, lineHeight: "22px" }}>
+          {reason(p)}
+        </p>
         <Allergy p={p} />
         <div className={c("cf-bgl")}>
           <span>
@@ -504,34 +674,21 @@ function WithYou({ ctx, row, p, reason, rCls }: Shown) {
         </div>
       </div>
       <div className={c("cf-sec")}>
-        <span className={c("cap")}>{L.whyCame}</span>
-        <p className={rCls(p)} style={{ fontSize: 16, lineHeight: "22px" }}>
-          {reason(p)}
-        </p>
-      </div>
-      <div className={c("cf-sec")}>
         <span className={c("cap")}>
-          {fill(L.atTriage, { v: t ? `${hm(t.at)} · ${t.by}` : L.notTriaged })}
+          {fill(L.atTriage, { v: t0 ? `${hm(t0.at)} · ${t0.by}` : L.notTriaged })}
         </span>
-        {t ? (
-          <>
-            <div className={c("cf-lvl")}>
-              <span className={c("pri", levelCls(t.level))}>{levelTxt(t.level)}</span>
-            </div>
-            <Vitals p={p} />
-          </>
-        ) : (
-          <p className={c("note")}>{L.noVitals}</p>
-        )}
-        {t?.note ? (
+        {t0 ? <Vitals p={p} /> : <p className={c("note")}>{L.noVitals}</p>}
+        {t0?.note ? (
           <p className={c("cf-note")}>
-            &ldquo;{t.note}&rdquo; <span className={c("cf-mt")}>· {t.by}</span>
+            &ldquo;{t0.note}&rdquo; <span className={c("cf-mt")}>· {t0.by}</span>
           </p>
         ) : null}
       </div>
-      <Trends p={p} />
-      <div className={c("cf-sec")}>
-        <span className={c("cap")}>{L.before}</span>
+      <details className={c("cf-sec")}>
+        <summary className={c("cap")} style={{ cursor: "pointer" }}>
+          {TD.doctor.more} · {p.hist.length ? p.hist.length : L.firstVisit}
+        </summary>
+        <Trends p={p} />
         <div className={c("cf-hist")}>
           {p.hist.length ? (
             p.hist.map((h) => (
@@ -547,8 +704,9 @@ function WithYou({ ctx, row, p, reason, rCls }: Shown) {
             </div>
           )}
         </div>
-      </div>
+      </details>
       <div className={c("cf-na")}>
+        <EncounterButton ctx={ctx} p={p} />
         <button
           type="button"
           className={c("btn")}
@@ -559,11 +717,13 @@ function WithYou({ ctx, row, p, reason, rCls }: Shown) {
         >
           {L.sendTests}
         </button>
-        <button type="button" className={c("btn", "q")} onClick={() => ctx.say(L.toasts.record)}>
-          {L.record}
-        </button>
+        {ctx.data.encounterLive ? null : (
+          <button type="button" className={c("btn", "q")} onClick={() => ctx.say(L.toasts.record)}>
+            {L.record}
+          </button>
+        )}
         <span className={c("grow")} />
-        <button type="button" className={c("btn", "k")} onClick={() => ctx.setModal("finish")}>
+        <button type="button" className={c("btn")} onClick={() => ctx.setModal("finish")}>
           {L.finish}
         </button>
       </div>

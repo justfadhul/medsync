@@ -883,7 +883,8 @@
 .seg button:hover {
   color: var(--ink);
 }
-.seg button.on {
+.seg button.on,
+.seg button[aria-pressed="true"] {
   background: var(--acc);
   color: var(--accon);
 }
@@ -5046,7 +5047,8 @@
   background: var(--surface);
   border: 1px solid var(--line);
   box-shadow: var(--sh-card);
-  overflow: hidden;
+  /* clip, not hidden: hidden makes the card its own scroller, and the pinned actions would not stick. */
+  overflow: clip;
   display: flex;
   flex-direction: column;
 }
@@ -5180,7 +5182,11 @@
   gap: 8px;
   padding: 14px 18px 16px;
   border-top: 1px solid var(--line);
-  background: var(--bg);
+  /* ADR 0532: the doctor's actions stay in view while the card scrolls. */
+  position: sticky;
+  bottom: 0;
+  z-index: 1;
+  background: var(--raised);
 }
 .cf-na .grow {
   flex: 1;

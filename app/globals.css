@@ -1546,6 +1546,260 @@ select:not([multiple]):not([size]):not(.appearance-none) {
   }
 }
 
+/* ADR 0532: MedSync's encounter desk opened from the Tether clinic floor wears the floor's look: the current step in
+   navy, not indigo; one face (no display face); the patient's safety bar as the floor's navy band. Colours, faces
+   and corners only: nothing here changes what the desk does or shows. Status words keep their own colours. */
+:root:has([data-tether-desk]) {
+  --iris-solid: var(--tide-navy-900);
+  --iris-on-solid: var(--tide-on-band);
+  --iris-tint: var(--tide-lagoon-tint);
+  --iris-text: var(--foreground);
+  --iris-edge: var(--border);
+  --font-medsync-display: var(--font-medsync-lab);
+}
+/* The clerking desk's own bar only (an older template's SafetyBarView keeps MedSync's look). */
+[data-tether-desk] [data-slot="clerking-desk"] > [data-slot="safety-bar"] {
+  --background: var(--tide-navy-900);
+  --foreground: var(--tide-on-band);
+  --muted-foreground: var(--tide-on-band-2);
+  border-bottom-color: transparent;
+
+  /* The bar's ghost buttons (Keys ?) in the band's own colours, readable on navy. */
+  & .medsync-btn {
+    color: var(--tide-on-band-2);
+  }
+  & .medsync-btn:hover {
+    background: color-mix(in srgb, var(--tide-on-band) 12%, transparent);
+    color: var(--tide-on-band);
+  }
+}
+/* On a desk-width screen the parts float as the floor's cards on the floor's grey ground: the navy patient
+   card and the ten steps as a column down the left, the triage context (triage, vitals, results, medicines, problems) as
+   a strip above the step, and the note rail on the right. Only the placement changes; phones keep the desk as it is. */
+/* 80rem is Tailwind's xl, so the grid switches with the desk's own xl: classes at any browser font size. */
+@media (min-width: 80rem) {
+  [data-tether-desk] [data-slot="clerking-desk"] {
+    display: grid;
+    grid-template-columns: 236px minmax(0, 1fr) 392px;
+    /* The strip's row is a fixed height so the patient card beside it, which is taller, never stretches it; the
+       steps keep at least 160px and a tall patient card scrolls inside itself instead. */
+    grid-template-rows: 190px auto minmax(160px, 1fr);
+    gap: 10px;
+    padding: 12px;
+    background: var(--tide-sunken);
+  }
+  [data-tether-desk] [data-slot="clerking-desk"] > * {
+    grid-column: 1 / -1;
+  }
+  [data-tether-desk] [data-slot="clerking-desk"] > div:has(> main) {
+    display: contents;
+  }
+  [data-tether-desk] [data-slot="clerking-desk"] > [data-slot="safety-bar"],
+  [data-tether-desk] [data-slot="clerking-steps"],
+  [data-tether-desk] [data-slot="clerking-desk"] > div:has(> main) > aside {
+    border: 0;
+    border-radius: 22px;
+    background: var(--card);
+    box-shadow: var(--tide-shadow-card);
+  }
+  [data-tether-desk] [data-slot="clerking-desk"] > [data-slot="safety-bar"] {
+    grid-column: 1;
+    grid-row: 1 / 3;
+    min-height: 0;
+    overflow-y: auto;
+    padding: 16px;
+    background: var(--background);
+
+    & > div {
+      gap: 2px 10px;
+    }
+    & h1 {
+      flex-basis: 100%;
+    }
+    & > div > span.flex-1 {
+      display: none;
+    }
+    & > div > span:last-child {
+      flex-basis: 100%;
+      padding-top: 6px;
+    }
+    & > dl {
+      flex-direction: column;
+      align-items: stretch;
+      gap: 7px;
+      margin-top: 12px;
+      padding-top: 12px;
+      border-top: 1px solid color-mix(in srgb, var(--tide-on-band) 16%, transparent);
+    }
+    & > dl > div {
+      justify-content: space-between;
+    }
+  }
+  [data-tether-desk] [data-slot="clerking-steps"] {
+    grid-column: 1;
+    grid-row: 3;
+    flex-direction: column;
+    gap: 6px;
+    padding: 14px 10px;
+    overflow: hidden auto;
+  }
+  [data-tether-desk] [data-slot="clerking-steps"] > div,
+  [data-tether-desk] [data-slot="clerking-steps"] ol,
+  [data-tether-desk] [data-slot="clerking-steps"] li,
+  [data-tether-desk] [data-slot="clerking-steps"] li > button {
+    flex-direction: column;
+    align-items: stretch;
+    flex-shrink: 0;
+  }
+  [data-tether-desk] [data-slot="clerking-steps"] li > button {
+    flex-direction: row;
+    align-items: center;
+  }
+  [data-tether-desk] [data-slot="clerking-steps"] li > span[aria-hidden] {
+    display: none;
+  }
+  [data-tether-desk] [data-slot="clerking-steps"] > span.w-px {
+    width: auto;
+    height: 1px;
+    margin: 4px 8px;
+  }
+  [data-tether-desk] [data-slot="clerking-steps"] > span:last-child {
+    align-self: flex-start;
+    padding: 4px 8px 0;
+  }
+  /* The context strip: triage and its vital signs as one block, then results, medicines and problems stacked. */
+  [data-tether-desk] [data-slot="clerking-desk"] > div:has(> main) > aside:first-child {
+    grid-column: 2 / 4;
+    grid-row: 1;
+    width: auto;
+    overflow: clip;
+
+    & > div {
+      display: grid;
+      grid-template-columns: 164px minmax(0, 1fr) 232px;
+      grid-template-rows: repeat(3, minmax(0, 1fr));
+      height: 100%;
+    }
+    & > div > section {
+      min-height: 0;
+      overflow-y: auto;
+      border: 0;
+      gap: 6px;
+    }
+    & > div > section:nth-child(-n + 2) {
+      grid-row: 1 / -1;
+      padding: 14px 18px;
+    }
+    & > div > section:nth-child(n + 3) {
+      grid-column: 3;
+      gap: 0;
+      padding: 9px 18px;
+      border-left: 1px solid var(--border);
+    }
+    & > div > section:nth-child(n + 4) {
+      border-top: 1px solid var(--border);
+    }
+    /* Vital signs: the score and its warning share the heading's line, the six readings sit in one row of tiles,
+       and what is missing sits beside the button. */
+    & > div > section:nth-child(2) {
+      flex-flow: row wrap;
+      align-items: center;
+      gap: 8px 12px;
+      padding-left: 0;
+
+      & > div:first-child {
+        gap: 8px;
+      }
+      & > ul {
+        display: grid;
+        flex-basis: 100%;
+        grid-template-columns: 2.4fr repeat(5, minmax(0, 1fr));
+        align-items: start;
+        gap: 6px;
+      }
+      & > ul > li {
+        min-width: 0;
+        flex-flow: row wrap;
+        align-items: center;
+        gap: 2px 6px;
+        border: 0;
+        border-radius: 12px;
+        padding: 5px 8px 6px;
+        background: var(--tide-sunken);
+      }
+      & > ul > li > div {
+        flex-basis: 100%;
+        min-height: 0;
+        flex-wrap: wrap;
+        gap: 2px 6px;
+      }
+      & > ul > li > div > span:first-child {
+        flex-basis: 100%;
+        font-size: 12px;
+        line-height: 16px;
+      }
+      & > ul > li > div > .font-mono:not(.text-caption) {
+        font-size: 14px;
+        font-weight: 600;
+      }
+      & > ul > li > span {
+        justify-content: flex-start;
+        padding-top: 0;
+      }
+      & [role="group"] {
+        flex-wrap: nowrap;
+      }
+      /* Smaller only for a mouse; a touch screen keeps the switch's 44px targets. */
+      @media (pointer: fine) {
+        & [role="group"] > button {
+          min-height: 20px;
+          padding-inline: 4px;
+        }
+      }
+      & > p:last-of-type {
+        flex: 1;
+      }
+    }
+  }
+  /* The step is one card: its heading, the fields and the Next bar together. */
+  [data-tether-desk] [data-slot="clerking-desk"] > div:has(> main) > main {
+    grid-column: 2;
+    grid-row: 2 / 4;
+    border-radius: 22px;
+    background: var(--card);
+    box-shadow: var(--tide-shadow-card);
+    overflow: clip;
+
+    & > div:first-child {
+      padding: 0;
+    }
+    /* What renders before the step (the save/error line, a closed or deceased notice) keeps its inset. */
+    & > div:first-child > :not(section) {
+      margin-inline: 20px;
+    }
+    & > div:first-child > :first-child:not(section) {
+      margin-top: 16px;
+    }
+    & > div:first-child > section {
+      border-radius: 0;
+      box-shadow: none;
+    }
+    & > footer {
+      background: var(--card);
+    }
+  }
+  [data-tether-desk] [data-slot="clerking-desk"] > div:has(> main) > aside:nth-of-type(2) {
+    grid-column: 3;
+    grid-row: 2 / 4;
+    width: auto;
+    overflow-x: clip;
+  }
+  [data-tether-desk] [data-slot="desk-actions"] {
+    border-top-color: var(--border);
+    background: var(--card);
+  }
+}
+
 /* One lagoon fill per region: a row action in a table is a neutral pill (the pharmacy canvas's queue). */
 :root:has([data-ds="tide"]) td .medsync-btn.bg-primary {
   border-color: var(--input);

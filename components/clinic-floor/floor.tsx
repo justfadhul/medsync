@@ -229,6 +229,8 @@ export function ClinicFloor({
   const myLine = lineOrder(rows).filter(
     (r) => r.departmentId === clinic.id && (r.doctorUserId == null || r.doctorUserId === user.id),
   );
+  // The whole clinic's line, for the doctor's "Whole clinic" view (the line above is theirs and any doctor's).
+  const clinicLine = lineOrder(rows).filter((r) => r.departmentId === clinic.id);
   const withMe = rows.find((r) => r.doctorUserId === user.id && r.step === "with");
   const callNext = () => {
     if (!myLine[0]) return say(FLOOR.line.toasts.empty);
@@ -648,7 +650,9 @@ export function ClinicFloor({
       }
     >
       {view === "triage" ? <TriageView ctx={ctx} /> : null}
-      {view === "line" ? <LineView ctx={ctx} line={myLine} callNext={callNext} /> : null}
+      {view === "line" ? (
+        <LineView ctx={ctx} line={myLine} clinicLine={clinicLine} callNext={callNext} />
+      ) : null}
       {view === "floor" ? <BoardView ctx={ctx} /> : null}
     </DeskShell>
   );
