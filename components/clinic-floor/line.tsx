@@ -14,9 +14,11 @@ import { Ticket } from "@/components/landing/tether/ticket";
 import { EditorDialog } from "@/components/medsync/editor-dialog";
 import { c, DeskDialog } from "@/components/reception/ui";
 import { FLOOR } from "@/content/clinic-floor/floor";
+import { TD } from "@/content/clinic-floor/triage-dialog";
 import { fill } from "@/content/lab-workspace-v2";
 import { TICKET } from "@/content/tether-landing/copy";
 import { floorMetrics, recheckDueAt, screenFeed } from "@/lib/clinic-floor/model";
+import { doctorLoad } from "@/lib/clinic-floor/triage-view";
 import { initials } from "@/lib/reception/desk/model";
 import { ScreenBoard } from "./board";
 import { dayLabel, first, hm, levelCls, levelTxt, mins, vitalChips, whoOf } from "./shared";
@@ -31,6 +33,65 @@ export function lateOf(ctx: FloorCtx, doctorId: string): string {
     .filter((x) => x.kind === "running_late" && x.doctorUserId === doctorId)
     .at(-1);
   return e?.note ?? "";
+}
+
+/**
+ * Who is with which doctor, for someone watching the line: each of the clinic's doctors today with their state
+ * (free, with a patient, calling, on break, away) and how many are waiting for them. Nothing here can be pressed.
+ */
+function DoctorsNow({ ctx }: { ctx: FloorCtx }) {
+  const { clinic, rows, byId, now } = ctx;
+  return (
+    <div className={c("cf-idle")} style={{ alignItems: "stretch", textAlign: "left", gap: 10 }}>
+      <h2>{fill(TD.watch.title, { clinic: clinic.short })}</h2>
+      <p className={c("note")}>{TD.watch.viewOnly}</p>
+      {clinic.doctors.length ? null : <p>{fill(TD.watch.none, { clinic: clinic.short })}</p>}
+      {clinic.doctors.map((doc) => {
+        const load = doctorLoad(rows, ctx.doctors, doc.id, now);
+        const at = rows.find(
+          (r) => r.doctorUserId === doc.id && (r.step === "with" || r.step === "called"),
+        );
+        const who = at ? byId.get(at.intakeId) : undefined;
+        const state =
+          load.state === "break"
+            ? fill(TD.send.break, { t: hm(load.until ?? now) })
+            : load.state === "away"
+              ? TD.send.away
+              : at && who
+                ? fill(at.step === "with" ? TD.watch.with : TD.watch.calling, {
+                    name: ctx.priv ? first(who.name) : who.name,
+                    t: hm(at.since),
+                  })
+                : TD.send.free;
+        return (
+          <div key={doc.id} className={c("cf-away")}>
+            {doc.photo && !ctx.priv ? (
+              // eslint-disable-next-line @next/next/no-img-element -- a signed, short-lived link; no optimiser.
+              <img
+                className={c("av", "sm")}
+                src={doc.photo}
+                alt=""
+                style={{ objectFit: "cover" }}
+              />
+            ) : (
+              <span className={c("av", "sm")}>{initials(doc.name)}</span>
+            )}
+            <span className={c("grow")}>
+              <b>{doc.name}</b>
+              <span className={c("cf-mt")} style={{ display: "block" }}>
+                {state}
+              </span>
+            </span>
+            <span className={c("cf-stat")}>
+              {load.queue > 1
+                ? fill(TD.send.queue[2], { n: load.queue })
+                : TD.send.queue[load.queue]}
+            </span>
+          </div>
+        );
+      })}
+    </div>
+  );
 }
 
 export function LineView({
@@ -49,6 +110,8 @@ export function LineView({
   const rCls = (p: FloorPerson) => c(priv ? "hid" : p.own && "own");
 
   const me = user.id;
+  // A nurse sees the line; calling, status and finishing are the doctor's (ADR 0531).
+  const viewOnly = user.role === "nurse";
   const withRow = rows.find((r) => r.doctorUserId === me && r.step === "with");
   const callRow = rows.find((r) => r.doctorUserId === me && r.step === "called");
   const away = rows.filter((r) => r.step === "tests" && r.departmentId === clinic.id);
@@ -108,7 +171,12 @@ export function LineView({
             {late ? <span className={c("cf-stat")}>{fill(L.running, { n: late })}</span> : null}
           </div>
           <span className={c("grow")} />
-          <div className={c("cf-st")} role="group" aria-label={L.statusLabel}>
+          <div
+            className={c("cf-st")}
+            role="group"
+            aria-label={L.statusLabel}
+            style={viewOnly ? { display: "none" } : undefined}
+          >
             {(["in_room", "break", "away"] as const).map((s) => (
               <button
                 key={s}
@@ -122,7 +190,7 @@ export function LineView({
               </button>
             ))}
           </div>
-          <div className={c("cf-hb")}>
+          <div className={c("cf-hb")} style={viewOnly ? { display: "none" } : undefined}>
             <button
               type="button"
               className={c("btn", "sm", "q")}
@@ -146,7 +214,9 @@ export function LineView({
 
         <div className={c("cf-ln")}>
           <div className={c("cf-now")}>
-            {withRow ? (
+            {viewOnly ? (
+              <DoctorsNow ctx={ctx} />
+            ) : withRow ? (
               <WithYou
                 ctx={ctx}
                 row={withRow}
@@ -286,14 +356,20 @@ export function LineView({
                             ) : null}
                           </span>
                         </span>
-                        <button
-                          type="button"
-                          className={c("btn", "sm")}
-                          onClick={() => ctx.call(r.intakeId)}
-                          disabled={busy}
-                        >
-                          {L.call}
-                        </button>
+                        {viewOnly ? (
+                          <span className={c("cf-mt")}>
+                            {fill(TD.watch.forDoctor, { doctor: ctx.docName(r.doctorUserId) })}
+                          </span>
+                        ) : (
+                          <button
+                            type="button"
+                            className={c("btn", "sm")}
+                            onClick={() => ctx.call(r.intakeId)}
+                            disabled={busy}
+                          >
+                            {L.call}
+                          </button>
+                        )}
                       </div>
                     );
                   })}

@@ -52,6 +52,15 @@ export const EVENT_KINDS = [
 ] as const;
 export type EventKind = (typeof EVENT_KINDS)[number];
 
+/**
+ * What a nurse may record on the floor (owner ruling 23 Nov 2026, ADR 0531): triage and re-checks, and their own
+ * sign-in on a shared device. Calling, finishing, sending for tests and a doctor's status are the doctor's; the
+ * nurse sees the line and the floor but does not act on them. Enforced on the screen and again on the server.
+ */
+const NURSE_KINDS: ReadonlySet<EventKind> = new Set(["triaged", "rechecked", "user_switch"]);
+export const mayRecord = (role: "doctor" | "nurse" | "incharge", kind: EventKind) =>
+  role !== "nurse" || NURSE_KINDS.has(kind);
+
 export type DoctorStatus = "in_room" | "break_10" | "break_15" | "break_30" | "away";
 export type Outcome = "home" | "pharmacy_home" | "tests_back" | "admitted" | "referred";
 

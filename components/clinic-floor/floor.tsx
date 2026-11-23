@@ -17,8 +17,15 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { DeskShell } from "@/components/reception/shell";
 import { c, DeskDialog, Icon } from "@/components/reception/ui";
 import { FLOOR } from "@/content/clinic-floor/floor";
+import { TD } from "@/content/clinic-floor/triage-dialog";
 import { fill } from "@/content/lab-workspace-v2";
-import { canCall, doctorStates, lineOrder, projectFloor } from "@/lib/clinic-floor/model";
+import {
+  canCall,
+  doctorStates,
+  lineOrder,
+  mayRecord,
+  projectFloor,
+} from "@/lib/clinic-floor/model";
 import { BoardView } from "./board";
 import { FinishDialog, LineDialogs, LineView } from "./line";
 import { dayLabel, first, floorKey, hm, toVisit } from "./shared";
@@ -138,6 +145,8 @@ export function ClinicFloor({
   }, [toast]);
 
   const record: FloorCtx["record"] = (kind, intakeId, o = {}) => {
+    // A nurse works in triage only: the line and the floor are theirs to see, not to act on.
+    if (!mayRecord(user.role, kind)) return say(TD.watch.viewOnly);
     const self =
       kind === "doctor_status" ||
       kind === "running_late" ||
@@ -241,9 +250,9 @@ export function ClinicFloor({
       const act: Record<string, () => void> = {
         n: () => {
           go("line");
-          if (!withMe) callNext();
+          if (!withMe && user.role !== "nurse") callNext();
         },
-        f: () => withMe && setModal("finish"),
+        f: () => withMe && user.role !== "nurse" && setModal("finish"),
         h: togglePriv,
         e: () => setModal("emerg"),
         "1": () => go("triage"),
