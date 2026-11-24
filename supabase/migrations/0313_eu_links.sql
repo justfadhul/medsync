@@ -14,14 +14,15 @@
 --   4. R65: a triage stay (no encounter, the intake named) is adopted (observe_in_eu, 0311) and ended
 --      (end_eu_stay, 0312) only by an encounter of that visit (encounters.visit_id, or its triage's intake, or the
 --      intake whose encounter_id names it: the queue start); another visit of the patient leaves it, and the resus
---      space, alone. Both bodies are redefined verbatim but for that.
+--      space, alone, and admit_from_encounter (0312) boards it only from that visit (else its existing AD409 "on
+--      another visit" words). The three bodies are redefined verbatim but for that.
 --   Later sections come from Task 26.
 --
 -- ADDITIVE and re-runnable.
 -- Reverse: restore 0101's phi_access_basis_check (after removing any 'eu_staff' rows); restore 0295's
 -- clinic_floor_events detail list only while no 'eu' row exists (that log is append-only); drop
 -- send_to_eu_resus(jsonb) and restore 0311's audit list (after removing any 'send_to_eu_resus' rows); re-run 0311's
--- observe_in_eu and 0312's end_eu_stay definitions.
+-- observe_in_eu and 0312's end_eu_stay and admit_from_encounter definitions.
 
 -- ─── 1. Log an EU list name truthfully ───────────────────────────────────
 ALTER TABLE public.clinical_phi_access_log DROP CONSTRAINT IF EXISTS phi_access_basis_check;
@@ -206,7 +207,8 @@ ALTER TABLE public.sa_audit_log ADD CONSTRAINT sa_audit_log_action_check CHECK (
 -- space. Both bodies verbatim, except: the triage stay is matched only by an encounter whose visit is the stay's
 -- intake (encounters.visit_id, or the intake of its triage record, as observe_in_eu already names the intake), or
 -- that the stay's intake names (patient_intakes.encounter_id, stamped by the doctor's queue start).
--- Another visit's close finds no stay; its Send to EU is refused as "already in the EU". Grants are kept.
+-- Another visit's close finds no stay; its Send to EU is refused as "already in the EU"; its admission is refused
+-- as "on another visit" (admit_from_encounter, below). Grants are kept.
 
 -- 0311's observe_in_eu, plus R65 on the adoption.
 CREATE OR REPLACE FUNCTION public.observe_in_eu(p jsonb)
@@ -439,5 +441,123 @@ BEGIN
   INSERT INTO public.encounter_events (encounter_id, kind, label, actor_user_id, recorded_at)
   VALUES (v_enc.id, 'disposition', 'Visit completed: ' || (p->>'disposition') || ', left ' || v_ward, v_actor, now());
   RETURN jsonb_build_object('ended', true, 'stay_id', v_stay.id);
+END;
+$$;
+
+-- 0312's admit_from_encounter, plus R65: a triage stay boards only from its own visit.
+CREATE OR REPLACE FUNCTION public.admit_from_encounter(p jsonb)
+RETURNS jsonb
+LANGUAGE plpgsql
+SET search_path = public, pg_temp
+AS $$
+DECLARE
+  v_actor uuid := (p->>'actor')::uuid;
+  v_bed uuid := nullif(p->>'bed_id', '')::uuid;
+  v_enc public.encounters%ROWTYPE;
+  v_ward public.hospital_wards%ROWTYPE;
+  v_stay public.eu_stays%ROWTYPE;
+  v_inpatient uuid;
+  v_label text;
+  v_adm uuid;
+  v_asg uuid;
+  v_detail jsonb;
+BEGIN
+  SELECT * INTO v_enc FROM public.encounters WHERE id = (p->>'encounter_id')::uuid FOR UPDATE;
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'AD404 Visit not found.';
+  END IF;
+  IF v_enc.state <> 'in_progress' THEN
+    RAISE EXCEPTION 'AD409 This visit is not in progress, so it cannot be closed as an admission.';
+  END IF;
+  SELECT * INTO v_ward FROM public.hospital_wards
+   WHERE id = (p->>'ward_id')::uuid AND hospital_id = v_enc.hospital_id;
+  IF NOT FOUND OR v_ward.archived_at IS NOT NULL OR v_ward.state <> 'active' OR v_ward.closed_at IS NOT NULL THEN
+    RAISE EXCEPTION 'AD409 That ward is not taking admissions at this hospital.';
+  END IF;
+  IF v_ward.ward_type = 'emergency_observation' THEN
+    RAISE EXCEPTION 'AD409 An emergency unit is not a ward to admit to.';
+  END IF;
+  IF v_bed IS NULL AND (p->>'bed_wait_reason') IS NULL THEN
+    RAISE EXCEPTION 'AD400 Choose a bed, or say why the patient waits for one.';
+  END IF;
+  IF EXISTS (SELECT 1 FROM public.admissions
+              WHERE patient_user_id = v_enc.patient_user_id
+                AND status IN ('awaiting_bed', 'bed_allocated', 'arrived')) THEN
+    RAISE EXCEPTION 'AD409 This patient already has an open admission.';
+  END IF;
+  SELECT * INTO v_stay FROM public.eu_stays
+   WHERE patient_user_id = v_enc.patient_user_id AND hospital_id = v_enc.hospital_id AND status <> 'ended'
+   FOR UPDATE;
+  -- R65: a triage stay (no encounter yet) boards only from its own visit, as observe_in_eu adopts it.
+  IF v_stay.encounter_id <> v_enc.id
+     OR (v_stay.id IS NOT NULL AND v_stay.encounter_id IS NULL
+         AND NOT (coalesce(v_stay.intake_id = coalesce(v_enc.visit_id,
+                    (SELECT t.intake_id FROM public.triage_records t WHERE t.id = v_enc.triage_record_id)), false)
+                  OR EXISTS (SELECT 1 FROM public.patient_intakes i
+                              WHERE i.id = v_stay.intake_id AND i.encounter_id = v_enc.id))) THEN
+    RAISE EXCEPTION 'AD409 This patient is in the emergency unit on another visit. Admit them from that visit.';
+  END IF;
+  IF v_bed IS NOT NULL THEN
+    v_label := public.admission_free_bed(v_enc.hospital_id, v_ward.id, v_bed);
+    IF EXISTS (SELECT 1 FROM public.bed_assignments
+                WHERE patient_user_id = v_enc.patient_user_id AND ended_at IS NULL
+                  AND (eu_stay_id = v_stay.id) IS NOT TRUE) THEN
+      RAISE EXCEPTION 'AD409 This patient is already in a bed. The ward releases it first.';
+    END IF;
+    IF EXISTS (SELECT 1 FROM public.bed_assignments
+                WHERE eu_stay_id = v_stay.id AND ended_at IS NULL AND arrived_at IS NULL) THEN
+      RAISE EXCEPTION 'AD409 Mark the patient as arrived in the EU first.';
+    END IF;
+  END IF;
+
+  -- D6: a boarder's inpatient record opens at the decision to admit (everyone else's on arrival).
+  IF v_stay.id IS NOT NULL THEN
+    INSERT INTO public.encounters (hospital_id, patient_user_id, clinician_user_id, department_id, state,
+                                   encounter_type, started_at, last_activity_at)
+    VALUES (v_enc.hospital_id, v_enc.patient_user_id, v_actor, v_ward.department_id, 'in_progress', 'inpatient',
+            now(), now())
+    RETURNING id INTO v_inpatient;
+  END IF;
+
+  INSERT INTO public.admissions (hospital_id, patient_user_id, source_encounter_id, ward_id, leading_condition_id,
+                                 status, decided_by, bed_wait_reason, bed_wait_note_ciphertext,
+                                 inpatient_encounter_id)
+  VALUES (v_enc.hospital_id, v_enc.patient_user_id, v_enc.id, v_ward.id,
+          nullif(p->>'leading_condition_id', '')::uuid,
+          CASE WHEN v_bed IS NULL THEN 'awaiting_bed' ELSE 'bed_allocated' END, v_actor,
+          CASE WHEN v_bed IS NULL THEN p->>'bed_wait_reason' END,
+          CASE WHEN v_bed IS NULL THEN p->>'bed_wait_note_ciphertext' END, v_inpatient)
+  RETURNING id INTO v_adm;
+
+  -- The stay boards for this admission before the ward bed (the guard's pair) and the close (the close guard).
+  IF v_stay.id IS NOT NULL THEN
+    UPDATE public.eu_stays SET admission_id = v_adm, encounter_id = coalesce(encounter_id, v_enc.id)
+     WHERE id = v_stay.id;
+  END IF;
+
+  IF v_bed IS NOT NULL THEN
+    INSERT INTO public.bed_assignments (hospital_id, ward_id, bed_id, patient_user_id, encounter_id, admission_id,
+                                        started_by)
+    VALUES (v_enc.hospital_id, v_ward.id, v_bed, v_enc.patient_user_id, v_enc.id, v_adm, v_actor)
+    RETURNING id INTO v_asg;
+  END IF;
+
+  v_detail := coalesce(nullif(p->'disposition_detail', 'null'::jsonb), '{}'::jsonb)
+    || jsonb_build_object('admission_id', v_adm::text, 'ward_id', v_ward.id::text, 'ward', v_ward.name)
+    || CASE WHEN v_bed IS NULL THEN jsonb_build_object('bed', 'waiting')
+            ELSE jsonb_build_object('bed_id', v_bed::text, 'bed', v_label) END;
+  UPDATE public.encounters
+     SET state = 'completed', ended_at = now(), completed_by = v_actor, closure_kind = 'clinical',
+         completion_reason = coalesce(p->>'completion_reason', 'ended_by_clinician'),
+         disposition = 'admitted', disposition_detail = v_detail
+   WHERE id = v_enc.id;
+  INSERT INTO public.encounter_events (encounter_id, kind, label, actor_user_id, recorded_at)
+  VALUES (v_enc.id, 'disposition',
+          'Visit completed: admitted to ' || v_ward.name
+            || CASE WHEN v_bed IS NULL THEN ', waiting for a bed' ELSE ', bed ' || v_label END,
+          v_actor, now());
+
+  RETURN jsonb_build_object('admission_id', v_adm, 'assignment_id', v_asg, 'ward', v_ward.name, 'bed', v_label,
+                            'patient_user_id', v_enc.patient_user_id, 'hospital_id', v_enc.hospital_id);
 END;
 $$;

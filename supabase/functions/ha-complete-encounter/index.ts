@@ -216,11 +216,12 @@ Deno.serve(async (request: Request) => {
   };
   // R65: a triage stay is this visit's when its intake is the encounter's visit_id, else its triage's intake, or
   // the intake naming this encounter (the queue start), as end_eu_stay (0313). Looked for only when the patient has
-  // an open triage stay here; a failed link lookup then fails the close rather than leave a resus space held.
+  // an open triage stay here (a non-EU close gains one eu_stays read); a failed link lookup then fails the close
+  // rather than leave a resus space held.
   let triageStayId: string | null = null;
   const triageStay = await sb
     .from("eu_stays")
-    .select("id, intake_id, intake:patient_intakes!intake_id(encounter_id)")
+    .select("id, intake_id")
     .eq("patient_user_id", enc.patient_user_id)
     .eq("hospital_id", enc.hospital_id)
     .neq("status", "ended")
@@ -229,8 +230,7 @@ Deno.serve(async (request: Request) => {
   if (triageStay.error && !missingTable(triageStay.error.code))
     return euFail(triageStay.error.code);
   if (triageStay.data) {
-    const named = triageStay.data.intake as { encounter_id: string | null } | null;
-    let mine = enc.visit_id === triageStay.data.intake_id || named?.encounter_id === enc.id;
+    let mine = enc.visit_id === triageStay.data.intake_id;
     if (!mine && !enc.visit_id && enc.triage_record_id) {
       const tr = await sb
         .from("triage_records")
@@ -240,6 +240,16 @@ Deno.serve(async (request: Request) => {
         .maybeSingle();
       if (tr.error) return euFail(tr.error.code);
       mine = !!tr.data;
+    }
+    if (!mine) {
+      const named = await sb
+        .from("patient_intakes")
+        .select("id")
+        .eq("id", triageStay.data.intake_id)
+        .eq("encounter_id", enc.id)
+        .maybeSingle();
+      if (named.error) return euFail(named.error.code);
+      mine = !!named.data;
     }
     if (mine) triageStayId = triageStay.data.id as string;
   }

@@ -424,6 +424,83 @@ describe.skipIf(!laneOn)("0313 — triage sends to EU resus", () => {
     ).toEqual({ ended: true, stay_id: r.stay_id });
   });
 
+  it("adoption through the triage record (no visit_id) keeps the space", async () => {
+    const { ward, beds } = await newWard({ R1: "resus" });
+    const { p, i } = await triaged(2);
+    const r = await call({ hospital_id: h, intake_id: i, bed_id: beds["R1"], actor: nurse });
+    const e = await encounter(pg, { hospitalId: h, patientUserId: p, clinicianUserId: doctor });
+    await pg.query(
+      `UPDATE public.encounters SET triage_record_id = (SELECT id FROM public.triage_records WHERE intake_id = $2)
+        WHERE id = $1`,
+      [e, i],
+    );
+    const a = (
+      await pg.query<{ r: Record<string, unknown> }>(
+        `SELECT public.observe_in_eu($1::jsonb) AS r`,
+        [JSON.stringify({ encounter_id: e, actor: doctor, ward_id: ward, bed_id: beds["R1"] })],
+      )
+    ).rows[0]!.r;
+    expect(a).toMatchObject({ stay_id: r.stay_id, adopted: true, bed: "R1", intake_id: i });
+    expect(
+      (await row(`SELECT encounter_id FROM public.eu_stays WHERE id = $1`, [r.stay_id]))
+        .encounter_id,
+    ).toBe(e);
+  });
+
+  /* R65 review: admit_from_encounter boards a triage stay only from that visit (0312 adopted any). */
+  it("an unrelated visit's admission is refused and the triage stay stays unadopted; its own visit boards", async () => {
+    const { beds } = await newWard({ R1: "resus" });
+    const ward = await newWard({ W1: "standard" }, { type: "general" });
+    const { p, i } = await triaged(2);
+    const r = await call({ hospital_id: h, intake_id: i, bed_id: beds["R1"], actor: nurse });
+    const admit = async (e: string) => {
+      try {
+        return (
+          await pg.query<{ r: Record<string, unknown> }>(
+            `SELECT public.admit_from_encounter($1::jsonb) AS r`,
+            [
+              JSON.stringify({
+                encounter_id: e,
+                actor: doctor,
+                ward_id: ward.ward,
+                bed_wait_reason: "no_free_bed",
+              }),
+            ],
+          )
+        ).rows[0]!.r;
+      } catch (err) {
+        return (err as Error).message;
+      }
+    };
+    const other = await encounter(pg, { hospitalId: h, patientUserId: p, clinicianUserId: doctor });
+    expect(await admit(other)).toBe(
+      "AD409 This patient is in the emergency unit on another visit. Admit them from that visit.",
+    );
+    expect(
+      await row(
+        `SELECT s.encounter_id, s.admission_id, s.status,
+                (SELECT count(*)::int FROM public.admissions a WHERE a.patient_user_id = s.patient_user_id) AS adms
+           FROM public.eu_stays s WHERE s.id = $1`,
+        [r.stay_id],
+      ),
+    ).toEqual({ encounter_id: null, admission_id: null, status: "in_space", adms: 0 });
+
+    // The queue start's encounter (the intake names it) is this visit's: the stay boards for its admission.
+    const own = await encounter(pg, { hospitalId: h, patientUserId: p, clinicianUserId: doctor });
+    await pg.query(`UPDATE public.patient_intakes SET encounter_id = $2 WHERE id = $1`, [i, own]);
+    const a = await admit(own);
+    expect(a).toMatchObject({ admission_id: expect.any(String) });
+    expect(
+      await row(`SELECT encounter_id, admission_id, status FROM public.eu_stays WHERE id = $1`, [
+        r.stay_id,
+      ]),
+    ).toEqual({
+      encounter_id: own,
+      admission_id: (a as Record<string, unknown>).admission_id,
+      status: "in_space",
+    });
+  });
+
   it("only the service role runs it", async () => {
     const direct = await probe(
       pg,

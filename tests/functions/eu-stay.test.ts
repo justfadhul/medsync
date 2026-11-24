@@ -165,24 +165,26 @@ describe("ha-complete-encounter — the close ends the EU stay", () => {
 
   it("R65: a triage stay is this visit's by visit_id, its triage's intake, or the intake naming this encounter", () => {
     const eu = src.slice(src.indexOf("let triageStayId"), src.indexOf("let euLookup"));
-    // Looked for only when the patient has an open triage stay here: a non-EU close gains no query and no failure.
+    // A non-EU close gains one eu_stays read and nothing else; the link lookups run only for an open triage stay.
     expect(eu).toContain('.is("encounter_id", null)');
     expect(eu.indexOf("if (triageStay.data) {")).toBeLessThan(
       eu.indexOf('.from("triage_records")'),
     );
-    expect(eu).toContain(
-      '.select("id, intake_id, intake:patient_intakes!intake_id(encounter_id)")',
-    );
-    expect(eu).toContain(
-      "let mine = enc.visit_id === triageStay.data.intake_id || named?.encounter_id === enc.id;",
-    );
+    // No embed: before 0311 PostgREST could answer it with PGRST200, which missingTable does not cover.
+    expect(eu).toContain('.select("id, intake_id")');
+    expect(eu).not.toContain("patient_intakes!");
+    expect(eu).toContain("let mine = enc.visit_id === triageStay.data.intake_id;");
+    expect(eu).toContain('.from("patient_intakes")');
+    expect(eu).toContain('.eq("id", triageStay.data.intake_id)');
+    expect(eu).toContain('.eq("encounter_id", enc.id)');
+    expect(eu.indexOf("if (!mine) {")).toBeGreaterThan(eu.indexOf('.from("triage_records")'));
     expect(eu).toContain("if (!mine && !enc.visit_id && enc.triage_record_id) {");
     expect(eu).toContain('.eq("intake_id", triageStay.data.intake_id)');
     // A failed link lookup fails the close visibly, never leaving a resus space silently held.
     expect(src).toMatch(
       /const euFail = \(code\?: string\) => \{\s*log\.error\([^)]*\);\s*return serverError\("encounter update failed", init\);/,
     );
-    expect(eu.match(/return euFail\(/g)?.length).toBe(2);
+    expect(eu.match(/return euFail\(/g)?.length).toBe(3);
     // The intake close (step 3) keeps its own non-fatal triage lookup.
     const step3 = src.slice(src.indexOf("let triageIntakeId"), src.indexOf("const intakeLinks"));
     expect(step3).toContain('.from("triage_records")');
