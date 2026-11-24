@@ -5,11 +5,10 @@ import type { PlanRequestLine } from "@/lib/clerking/plan/draft";
 import type { EmrTx } from "@/lib/emr/db";
 import type { RequestKind } from "@/lib/requests/engine";
 import type { Candidate, RouteCandidates } from "@/lib/requests/routing";
-import type { AnyPgColumn } from "drizzle-orm/pg-core";
 import { and, asc, desc, eq, gt, inArray, isNull, lte, or, sql } from "drizzle-orm";
 
 import { CARE_REQUEST_COPY } from "@/content/care-requests";
-import { admissions } from "@/db/schema/admissions";
+import { admissions, OPEN_ADMISSION_STATUSES } from "@/db/schema/admissions";
 import { careRequestEvents, careRequests } from "@/db/schema/care-requests";
 import { staffAffiliations } from "@/db/schema/clinician-profiles";
 import { clinicalSupervision } from "@/db/schema/doctor-workspace";
@@ -33,12 +32,33 @@ import { checkReasonConditions, openEncounter, replayed } from "./orders";
  */
 
 const LIVE = ["active", "approved"] as const;
-const OPEN_ADMISSION = ["awaiting_bed", "bed_allocated", "arrived"];
+/** How far back a phone call may be recorded, and how far ahead (clock skew). */
+const PHONED_WINDOW_MS = { past: 24 * 60 * 60_000, ahead: 5 * 60_000 };
 
-/** Has a live affiliation at the hospital: inactive people are skipped by route(). */
-const liveHere = (hospitalId: string, userId: AnyPgColumn) =>
-  sql<boolean>`EXISTS (SELECT 1 FROM public.staff_affiliations sa WHERE sa.user_id = ${userId}
-    AND sa.hospital_id = ${hospitalId} AND sa.state IN ('active','approved'))`;
+/** Clinicians with an affiliation here (any state), and whether one of them is live. */
+async function cliniciansHere(
+  tx: EmrTx,
+  hospitalId: string,
+  userIds: string[],
+): Promise<Map<string, boolean>> {
+  if (!userIds.length) return new Map();
+  const rows = await tx
+    .select({
+      userId: staffAffiliations.userId,
+      live: sql<boolean>`bool_or(${staffAffiliations.state} IN ('active','approved'))`,
+    })
+    .from(staffAffiliations)
+    .innerJoin(cadres, eq(cadres.id, staffAffiliations.cadreId))
+    .where(
+      and(
+        inArray(staffAffiliations.userId, userIds),
+        eq(staffAffiliations.hospitalId, hospitalId),
+        eq(cadres.isClinical, true),
+      ),
+    )
+    .groupBy(staffAffiliations.userId);
+  return new Map(rows.map((r) => [r.userId, r.live]));
+}
 
 /**
  * The candidate lists route() walks. Phase 1 has no posts. A review takes senior cadres only on the
@@ -101,7 +121,6 @@ export async function loadRouteCandidates(
   const heads = await tx
     .select({
       userId: departmentHeads.userId,
-      active: liveHere(q.hospitalId, departmentHeads.userId),
     })
     .from(departmentHeads)
     .where(
@@ -117,22 +136,26 @@ export async function loadRouteCandidates(
   const hospitalContacts = await tx
     .select({
       userId: criticalContacts.userId,
-      active: liveHere(q.hospitalId, criticalContacts.userId),
     })
     .from(criticalContacts)
     .where(and(eq(criticalContacts.hospitalId, q.hospitalId), eq(criticalContacts.level, 2)))
     .orderBy(asc(criticalContacts.position));
 
-  const live = (rows: { userId: string }[]): Candidate[] =>
-    rows.map((r) => ({ userId: r.userId, active: true }));
+  // Named people, heads and contacts with no live clinical affiliation here are skipped (and recorded).
+  const live = await cliniciansHere(tx, q.hospitalId, [
+    ...q.namedUserIds,
+    ...heads.map((r) => r.userId),
+    ...hospitalContacts.map((r) => r.userId),
+  ]);
+  const checked = (ids: string[]): Candidate[] =>
+    ids.map((userId) => ({ userId, active: live.get(userId) ?? false }));
   return {
-    // Checked by placeRequests: every named person holds a live affiliation here.
-    named: live(q.namedUserIds.map((userId) => ({ userId }))),
+    named: checked(q.namedUserIds),
     post: [],
-    team: live(team),
+    team: team.map((r): Candidate => ({ userId: r.userId, active: true })),
     supervisor,
-    heads,
-    hospitalContacts,
+    heads: checked(heads.map((r) => r.userId)),
+    hospitalContacts: checked(hospitalContacts.map((r) => r.userId)),
   };
 }
 
@@ -171,7 +194,10 @@ export async function notifyRecipients(
   }
 }
 
-/** Places the Plan's request lines, in order; a replayed client key returns the request it placed. */
+/**
+ * Places the Plan's request lines, in order; a replayed client key returns the request it placed.
+ * Callers gate the cadre (placePlan: PRESCRIBING_CADRES).
+ */
 export async function placeRequests(
   ctx: WriteCtx,
   input: {
@@ -212,20 +238,29 @@ export async function placeRequests(
       if (!ward) throw new EmrWriteError("invalid", "That ward is not at this hospital.");
       place = ward.name;
     }
+    // R24: recipients are a trust boundary. Named people are clinicians here (an inactive one is
+    // skipped by routing); the phoned consultant is a live clinician here, not the requester.
     const named = [...new Set(line.namedUserIds)];
-    if (named.length) {
-      const here = await tx
-        .selectDistinct({ userId: staffAffiliations.userId })
-        .from(staffAffiliations)
-        .where(
-          and(
-            inArray(staffAffiliations.userId, named),
-            eq(staffAffiliations.hospitalId, hospitalId),
-            inArray(staffAffiliations.state, [...LIVE]),
-          ),
-        );
-      if (here.length !== named.length)
-        throw new EmrWriteError("invalid", "A named person does not work at this hospital now.");
+    const phoned = line.phoned;
+    const here = await cliniciansHere(tx, hospitalId, [
+      ...named,
+      ...(phoned ? [phoned.userId] : []),
+    ]);
+    if (named.some((u) => !here.has(u)))
+      throw new EmrWriteError("invalid", "A named person is not a clinician at this hospital.");
+    if (phoned) {
+      if (phoned.userId === actor.userId)
+        throw new EmrWriteError("invalid", "You cannot record a call to yourself.");
+      if (!here.get(phoned.userId))
+        throw new EmrWriteError("invalid", "The person phoned is not a clinician here now.");
+      const at = new Date(phoned.at).getTime();
+      if (
+        !(
+          at <= now.getTime() + PHONED_WINDOW_MS.ahead &&
+          at >= now.getTime() - PHONED_WINDOW_MS.past
+        )
+      )
+        throw new EmrWriteError("invalid", "The call time must be within the last 24 hours.");
     }
 
     const { restricted } = await checkReasonConditions(
@@ -240,7 +275,7 @@ export async function placeRequests(
         and(
           eq(admissions.patientUserId, input.patientUserId),
           eq(admissions.hospitalId, hospitalId),
-          inArray(admissions.status, OPEN_ADMISSION),
+          inArray(admissions.status, [...OPEN_ADMISSION_STATUSES]),
         ),
       )
       .limit(1);
@@ -261,8 +296,8 @@ export async function placeRequests(
         helpWanted: line.helpWanted,
         reasonConditionIds: [...new Set(line.reasonConditionIds)],
         questionCiphertext: question ? encrypt(question) : null,
-        phonedUserId: line.phoned?.userId ?? null,
-        phonedAt: line.phoned ? new Date(line.phoned.at) : null,
+        phonedUserId: phoned?.userId ?? null,
+        phonedAt: phoned ? new Date(phoned.at) : null,
         requesterUserId: actor.userId,
         requesterCadre: actor.cadreCode,
         requestedAt: now,
@@ -294,6 +329,7 @@ export async function placeRequests(
       at: now,
       level: 0,
       step: routed.step,
+      skippedUserIds: routed.skipped.map((k) => k.userId),
     };
     await tx
       .insert(careRequestEvents)

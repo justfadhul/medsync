@@ -12,7 +12,17 @@ import { CARE_REQUEST_COPY } from "@/content/care-requests";
 import { withPatientWrite } from "@/lib/emr/write/context";
 import { placeRequests } from "@/lib/emr/write/requests";
 import { generateKey } from "@/lib/encryption";
-import { bootLane, clinician, department, encounter, hospital, laneOn, patient } from "./_pglite";
+import {
+  bootLane,
+  clinician,
+  department,
+  encounter,
+  hospital,
+  laneOn,
+  patient,
+  reception,
+  staff,
+} from "./_pglite";
 
 describe.skipIf(!laneOn)("placing care requests (PGlite lane)", () => {
   let lane: Lane;
@@ -314,5 +324,128 @@ describe.skipIf(!laneOn)("placing care requests (PGlite lane)", () => {
     expect(r.rows).toHaveLength(1);
     expect(await routed(id!)).toEqual([{ recipient_user_id: mo.userId, step: "team", level: 0 }]);
     expect(await notices(id!)).toHaveLength(0);
+  });
+  const skips = async (requestId: string) =>
+    (
+      await pg.query<{ step: string; skipped: string[] }>(
+        `SELECT step, skipped_user_ids AS skipped FROM care_request_events
+          WHERE request_id = $1 AND kind = 'routed'`,
+        [requestId],
+      )
+    ).rows;
+
+  describe("recipients are a trust boundary (R24)", () => {
+    const refused = async (o: Partial<PlanRequestLine>, by: EmrActor = requester) => {
+      const v = await visit(by);
+      return place(by, v, [line(o)]).then(
+        () => "placed",
+        (e: { code?: string }) => e.code ?? String(e),
+      );
+    };
+    const minutes = (m: number) => new Date(Date.now() + m * 60_000).toISOString();
+
+    it("a non-clinical named person is refused", async () => {
+      const desk = await reception(pg, { hospitalId: h, departmentId: home });
+      expect(await refused({ namedUserIds: [desk.userId] })).toBe("invalid");
+    });
+
+    it("a named person at another hospital is refused", async () => {
+      const other = await hospital(pg, "Elsewhere");
+      const far = await clinician(pg, {
+        hospitalId: other,
+        departmentId: await department(pg, other),
+      });
+      expect(await refused({ namedUserIds: [far.userId] })).toBe("invalid");
+    });
+
+    it("a phoned user who is not a clinician here is refused", async () => {
+      expect(await refused({ phoned: { userId: await patient(pg), at: minutes(-5) } })).toBe(
+        "invalid",
+      );
+    });
+
+    it("the requester cannot be the phoned consultant", async () => {
+      expect(await refused({ phoned: { userId: requester.userId, at: minutes(-5) } })).toBe(
+        "invalid",
+      );
+    });
+
+    it("a phoned time in the future is refused", async () => {
+      const mo = await clinician(pg, { hospitalId: h, departmentId: home });
+      expect(await refused({ phoned: { userId: mo.userId, at: minutes(10) } })).toBe("invalid");
+    });
+
+    it("a phoned time over a day old is refused", async () => {
+      const mo = await clinician(pg, { hospitalId: h, departmentId: home });
+      expect(await refused({ phoned: { userId: mo.userId, at: minutes(-25 * 60) } })).toBe(
+        "invalid",
+      );
+    });
+
+    it("a clinician here phoned a moment ago is accepted", async () => {
+      const mo = await clinician(pg, { hospitalId: h, departmentId: home });
+      expect(await refused({ phoned: { userId: mo.userId, at: minutes(-5) } })).toBe("placed");
+    });
+  });
+
+  describe("the skip is recorded (R25)", () => {
+    it("a named inactive person falls through to the team and is recorded", async () => {
+      const med = await department(pg, h, "Medicine");
+      const mo = await clinician(pg, { hospitalId: h, departmentId: med });
+      const away = await staff(pg, { hospitalId: h, departmentId: home, state: "suspended" });
+      const v = await visit(requester);
+      const [id] = await place(requester, v, [
+        line({ targetDepartmentId: med, namedUserIds: [away.userId] }),
+      ]);
+      expect(await routed(id!)).toEqual([{ recipient_user_id: mo.userId, step: "team", level: 0 }]);
+      expect(await skips(id!)).toEqual([{ step: "team", skipped: [away.userId] }]);
+    });
+
+    it("an inactive head is skipped and the hospital contacts reached", async () => {
+      // Its own hospital: a level-2 contact would change where other tests route.
+      const h2 = await hospital(pg, "Contacts");
+      const d2 = await department(pg, h2, "Home");
+      const target = await department(pg, h2, "Theatre");
+      const asker: EmrActor = {
+        ...actor(await clinician(pg, { hospitalId: h2, departmentId: d2 }), "MEDICAL_OFFICER", d2),
+        hospitalId: h2,
+      };
+      const head = await staff(pg, { hospitalId: h2, departmentId: d2, state: "suspended" });
+      const contact = await clinician(pg, {
+        hospitalId: h2,
+        departmentId: d2,
+        cadre: "CONSULTANT",
+      });
+      await pg.query(
+        `INSERT INTO department_heads (hospital_id, department_id, user_id, acting) VALUES ($1, $2, $3, false)`,
+        [h2, target, head.userId],
+      );
+      await pg.query(
+        `INSERT INTO critical_contacts (hospital_id, level, user_id, position) VALUES ($1, 2, $2, 0)`,
+        [h2, contact.userId],
+      );
+      const p = await patient(pg);
+      const enc = await encounter(pg, {
+        hospitalId: h2,
+        patientUserId: p,
+        clinicianUserId: asker.userId,
+        departmentId: d2,
+      });
+      const [id] = await place(asker, { p, enc }, [line({ targetDepartmentId: target })]);
+      expect(await routed(id!)).toEqual([
+        { recipient_user_id: contact.userId, step: "hospital_contacts", level: 0 },
+      ]);
+      expect(await skips(id!)).toEqual([{ step: "hospital_contacts", skipped: [head.userId] }]);
+    });
+
+    it("reaching nobody records its skips on the none row", async () => {
+      const empty = await department(pg, h, "Quiet");
+      const away = await staff(pg, { hospitalId: h, departmentId: home, state: "suspended" });
+      const v = await visit(requester);
+      const [id] = await place(requester, v, [
+        line({ targetDepartmentId: empty, namedUserIds: [away.userId] }),
+      ]);
+      expect(await skips(id!)).toEqual([{ step: "none", skipped: [away.userId] }]);
+    });
   });
 });

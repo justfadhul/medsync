@@ -4,7 +4,8 @@
 --   1. care_requests: a review or a consult, written once when the Plan is placed and never updated
 --      (phoned_user_id / phoned_at are set at placement). care_request_events: its append-only history
 --      (routed, seen, accepted, declined, redirected, replied, closed, cancelled, escalated); the state is
---      derived from the events (lib/requests/engine.ts), never stored. Free text is ciphertext.
+--      derived from the events (lib/requests/engine.ts), never stored. Free text is ciphertext. A
+--      `routed` row names who that routing skipped (skipped_user_ids: inactive, or the requester).
 --   2. clinical_notes.note_type gains 'consult' (the reply note); sa_notifications.kind gains
 --      'care_request', 'care_request_update' and 'ward_incoming' (0068's seven kept verbatim).
 --   3. private.care_request_visible(): who reads a request through medsync_clinical_reader — the requester,
@@ -90,6 +91,13 @@ CREATE TABLE IF NOT EXISTS public.care_request_events (
 CREATE INDEX IF NOT EXISTS care_request_events_request_time ON public.care_request_events (request_id, at);
 CREATE INDEX IF NOT EXISTS care_request_events_recipient_routed
   ON public.care_request_events (recipient_user_id, at DESC) WHERE kind = 'routed';
+
+-- Who a routing step passed over (inactive, or the requester), on every row of that routing.
+ALTER TABLE public.care_request_events
+  ADD COLUMN IF NOT EXISTS skipped_user_ids uuid[] NOT NULL DEFAULT '{}';
+ALTER TABLE public.care_request_events DROP CONSTRAINT IF EXISTS care_request_events_skipped_shape;
+ALTER TABLE public.care_request_events ADD CONSTRAINT care_request_events_skipped_shape
+  CHECK (kind = 'routed' OR cardinality(skipped_user_ids) = 0);
 
 -- ─── 2. CHECK widenings (DROP-then-ADD: the earlier lists verbatim, plus the new values) ─────
 ALTER TABLE public.clinical_notes DROP CONSTRAINT IF EXISTS clinical_notes_note_type_check;

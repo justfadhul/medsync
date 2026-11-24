@@ -109,6 +109,8 @@ export const careRequestEvents = pgTable(
     }),
     expectAt: timestamp("expect_at", tz),
     clientKey: text("client_key").unique("care_request_events_client_key"),
+    /** Who that routing passed over (inactive, or the requester); routed rows only. */
+    skippedUserIds: uuid("skipped_user_ids").array().notNull().default([]),
   },
   (t) => [
     check(
@@ -135,6 +137,10 @@ export const careRequestEvents = pgTable(
     check(
       "care_request_events_actor_check",
       sql`${t.kind} NOT IN ('seen','accepted','declined','redirected','replied','closed','cancelled') OR ${t.actorUserId} IS NOT NULL`,
+    ),
+    check(
+      "care_request_events_skipped_shape",
+      sql`${t.kind} = 'routed' OR cardinality(${t.skippedUserIds}) = 0`,
     ),
     index("care_request_events_request_time").on(t.requestId, t.at),
     index("care_request_events_recipient_routed")
