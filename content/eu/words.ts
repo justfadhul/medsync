@@ -29,6 +29,7 @@ export const EU_SEND = {
   inSpace: (ward: string, bed: string | null, since: string) =>
     `In ${ward}${bed ? ` · ${bed}` : ""} since ${since}`,
   awaiting: (ward: string) => `Waiting for a space in ${ward}`,
+  boarding: (ward: string, waited: string) => `Admitted · ${ward} · waiting ${waited}`,
   closeEnds: "Closing the visit ends the stay in the EU.",
   chooseUnit: "Choose the emergency unit.",
   chooseSpace: "Choose a space, or say why the patient waits for one.",

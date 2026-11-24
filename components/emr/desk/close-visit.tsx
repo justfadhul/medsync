@@ -104,6 +104,12 @@ const clock = (iso: string) =>
     timeZone: "Africa/Kampala",
   }).format(new Date(iso));
 
+/** "2 h 10 min" since an instant. */
+const waited = (iso: string) => {
+  const m = Math.max(0, Math.round((Date.now() - new Date(iso).getTime()) / 60_000));
+  return m >= 60 ? `${Math.floor(m / 60)} h ${m % 60} min` : `${m} min`;
+};
+
 const timeWords = (iso: string) =>
   new Intl.DateTimeFormat("en-GB", {
     weekday: "short",
@@ -290,9 +296,11 @@ function CloseStep({
       </p>
       {stay ? (
         <p className="text-body-s text-foreground">
-          {stay.status === "in_space"
-            ? EU_SEND.inSpace(stay.wardName, stay.bedLabel, clock(stay.since))
-            : EU_SEND.awaiting(stay.wardName)}
+          {stay.boarding && stay.admit
+            ? EU_SEND.boarding(stay.admit.wardName, waited(stay.admit.since))
+            : stay.status === "in_space"
+              ? EU_SEND.inSpace(stay.wardName, stay.bedLabel, clock(stay.since))
+              : EU_SEND.awaiting(stay.wardName)}
           <span className="text-muted-foreground"> {EU_SEND.closeEnds}</span>
         </p>
       ) : null}

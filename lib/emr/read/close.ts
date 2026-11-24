@@ -6,7 +6,7 @@ import type { EmrDb, EmrTx } from "@/lib/emr/db";
 import { and, asc, desc, eq, inArray, isNotNull, isNull, ne } from "drizzle-orm";
 
 import { routeWord } from "@/components/emr/prescribing/views";
-import { patientVisitSummaries } from "@/db/schema/admissions";
+import { admissions, patientVisitSummaries } from "@/db/schema/admissions";
 import { euStays } from "@/db/schema/eu";
 import { hospitalWards } from "@/db/schema/hospital-wards";
 import { prescriptions } from "@/db/schema/prescribing";
@@ -46,6 +46,8 @@ export interface OpenStayView {
   arriving: boolean;
   since: string;
   boarding: boolean;
+  /** Boarding: the ward the patient is admitted to, and since when they have waited. */
+  admit: { wardName: string; since: string } | null;
 }
 export interface CloseRx {
   id: string;
@@ -270,6 +272,15 @@ export async function openStay(tx: EmrTx, encounterId: string): Promise<OpenStay
     .from(bedAssignments)
     .innerJoin(hospitalBeds, eq(hospitalBeds.id, bedAssignments.bedId))
     .where(and(eq(bedAssignments.euStayId, s.id), isNull(bedAssignments.endedAt)));
+  let admit: OpenStayView["admit"] = null;
+  if (s.admissionId) {
+    const [w] = await tx
+      .select({ name: hospitalWards.name, at: admissions.createdAt })
+      .from(admissions)
+      .innerJoin(hospitalWards, eq(hospitalWards.id, admissions.wardId))
+      .where(eq(admissions.id, s.admissionId));
+    if (w) admit = { wardName: w.name, since: w.at.toISOString() };
+  }
   return {
     stayId: s.id,
     wardName: s.wardName,
@@ -278,6 +289,7 @@ export async function openStay(tx: EmrTx, encounterId: string): Promise<OpenStay
     arriving: !!a && a.arrivedAt == null,
     since: (s.arrivedAt ?? s.decidedAt).toISOString(),
     boarding: s.admissionId != null,
+    admit,
   };
 }
 

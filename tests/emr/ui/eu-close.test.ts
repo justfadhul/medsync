@@ -122,9 +122,50 @@ describe("Send to EU at the close", () => {
         arriving: false,
         since: "2026-11-24T07:05:00Z",
         boarding: false,
+        admit: null,
       },
     });
     expect(button("Send to EU")).toBeUndefined();
     expect(document.body.textContent).toMatch(/In OPD EU · 3 since \d\d:\d\d/);
+  });
+
+  it("with a stay open, Admit is enabled and its footer says Admit and close visit", async () => {
+    await show({
+      live: true,
+      wards: WARDS,
+      stay: {
+        stayId: "s1",
+        wardName: "OPD EU",
+        bedLabel: "3",
+        status: "in_space",
+        arriving: false,
+        since: "2026-11-24T07:05:00Z",
+        boarding: false,
+        admit: null,
+      },
+    });
+    const chip = [...document.querySelectorAll("label")].find((l) =>
+      /Admitted/.test(l.textContent ?? ""),
+    )!;
+    await act(async () => (chip.querySelector("input") as HTMLInputElement).click());
+    expect(button("Admit and close visit")).toBeDefined();
+  });
+
+  it("boarding: the stay line says Admitted, the ward and how long the patient has waited", async () => {
+    await show({
+      live: true,
+      wards: WARDS,
+      stay: {
+        stayId: "s1",
+        wardName: "OPD EU",
+        bedLabel: "3",
+        status: "in_space",
+        arriving: false,
+        since: "2026-11-24T07:05:00Z",
+        boarding: true,
+        admit: { wardName: "Ward 4", since: "2020-01-01T00:00:00Z" },
+      },
+    });
+    expect(document.body.textContent).toMatch(/Admitted · Ward 4 · waiting \d/);
   });
 });

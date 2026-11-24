@@ -82,11 +82,12 @@ describe("ha-complete-encounter — the close ends the EU stay", () => {
     expect(src).toContain('.from("eu_stays")');
     expect(src).toContain('.eq("patient_user_id", enc.patient_user_id)');
     expect(src).toContain('.neq("status", "ended")');
-    expect(src).toContain(".or(`encounter_id.eq.${enc.id},encounter_id.is.null`)");
+    expect(src).toContain("encounter_id.eq.${enc.id},encounter_id.is.null${boardArm}");
     expect(src).toContain(
       'const missingTable = (code?: string) => code === "42P01" || code === "PGRST205";',
     );
     expect(src.match(/missingTable\(euLookup\.error/g)?.length).toBe(2);
+    expect(src).toContain("missingTable(boardAdm.error.code)");
   });
 
   it("a close refused by the database's EU guard returns its words (R59)", () => {
@@ -96,18 +97,21 @@ describe("ha-complete-encounter — the close ends the EU stay", () => {
     );
   });
 
-  it("refuses a non-clinical close and an admission while the patient is in the EU, before the audit", () => {
+  it("refuses a non-clinical close while the patient is in the EU, before the audit; an admission is allowed (boarding)", () => {
     const a = src.indexOf(
       "This patient is in the emergency unit. Close the visit with an outcome; that ends the EU stay.",
     );
-    const b = src.indexOf(
-      "Admitting a patient who is in the emergency unit comes with boarding, which is not switched on yet.",
-    );
-    const audit = src.indexOf("recordSaAudit({");
     expect(a).toBeGreaterThan(-1);
-    expect(b).toBeGreaterThan(-1);
-    expect(a).toBeLessThan(audit);
-    expect(b).toBeLessThan(audit);
+    expect(a).toBeLessThan(src.indexOf("recordSaAudit({"));
+    expect(src).not.toContain("comes with boarding");
+    expect(src).not.toContain("euStayId && admission");
+  });
+
+  it("the stay lookup has the boarder arm: the admission whose inpatient encounter is this one", () => {
+    expect(src).toContain('.from("admissions")');
+    expect(src).toContain('.eq("inpatient_encounter_id", enc.id)');
+    expect(src).toContain("admission_id.eq.");
+    expect(src).toContain("PGRST205");
   });
 
   it("ends the stay with the close, after the audit, end_kind and disposition from one input", () => {
