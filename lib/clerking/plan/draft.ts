@@ -8,6 +8,12 @@ import { z } from "zod";
 
 import { ORDER_FREQUENCIES, ORDER_PRIORITIES } from "@/lib/emr/orders";
 import { PlanRxReplaces, PlanRxSchema } from "@/lib/prescribing/plan-rx";
+import {
+  CONSULT_URGENCIES,
+  HELP_WANTED,
+  REQUEST_KINDS,
+  REVIEW_URGENCIES,
+} from "@/lib/requests/engine";
 
 const id = z.string().max(80);
 const uuid = z.uuid();
@@ -43,6 +49,37 @@ export const PlanBasketRxSchema = PlanRxSchema.extend({
   replaces: PlanRxReplaces.optional(),
 });
 export type PlanBasketRx = z.infer<typeof PlanBasketRxSchema>;
+
+/** A review or consult in the basket (ADR 0537); the refine mirrors care_requests' CHECKs (0306). */
+export const PlanRequestLineSchema = z
+  .object({
+    clientKey: z.string().trim().min(8).max(120),
+    kind: z.enum(REQUEST_KINDS),
+    targetDepartmentId: uuid,
+    wardId: uuid.nullable(),
+    namedUserIds: z.array(uuid).max(5),
+    urgency: z.union([z.enum(REVIEW_URGENCIES), z.enum(CONSULT_URGENCIES)]),
+    helpWanted: z.enum(HELP_WANTED).nullable(),
+    reasonConditionIds: z.array(uuid).max(10),
+    question: text(2_000),
+    phoned: z.object({ userId: uuid, at: z.iso.datetime({ offset: true }) }).nullable(),
+    /** The basket words; never sent to the request table. */
+    display: text(300),
+  })
+  .superRefine((l, ctx) => {
+    const issue = (path: string, message: string) =>
+      ctx.addIssue({ code: "custom", path: [path], message });
+    const urgencies: readonly string[] = l.kind === "review" ? REVIEW_URGENCIES : CONSULT_URGENCIES;
+    if (!urgencies.includes(l.urgency)) issue("urgency", "Not an urgency for this kind.");
+    if (l.kind === "review" && l.helpWanted !== null)
+      issue("helpWanted", "A review takes no help wanted.");
+    if (l.kind === "consult") {
+      if (l.helpWanted === null) issue("helpWanted", "Say what help is wanted.");
+      if (!l.reasonConditionIds.length) issue("reasonConditionIds", "Choose the problem.");
+      if (!l.question.trim()) issue("question", "Write the question.");
+    }
+  });
+export type PlanRequestLine = z.infer<typeof PlanRequestLineSchema>;
 
 export const PlanSchema = z.object({
   disposition: z

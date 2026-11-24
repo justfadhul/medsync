@@ -54,6 +54,8 @@ export const CARE_REQUEST_COPY = {
   },
   responsible: "The requesting team stays responsible for the patient.",
   unroutedNote: "Reached nobody: phone the team",
+  /** The notice's body; like the subject, it never names the patient. */
+  noticeBody: "Open your requests in MedSync to see it.",
   /** Staff names and places only, never a patient (ADR 0199). */
   noticeSubject(
     kind: "care_request" | "care_request_update" | "ward_incoming",

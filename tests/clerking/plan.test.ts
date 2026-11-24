@@ -12,7 +12,7 @@ import { z } from "zod";
 import { ContentV2Keys } from "@/lib/clerking/payload";
 import { checklist, planFingerprint, planStatus, statusWord } from "@/lib/clerking/plan/checklist";
 import { composePlanLines } from "@/lib/clerking/plan/compose";
-import { PlanSchema } from "@/lib/clerking/plan/draft";
+import { PlanRequestLineSchema, PlanSchema } from "@/lib/clerking/plan/draft";
 import {
   lessOftenThanRequired,
   requiredObservation,
@@ -394,5 +394,51 @@ describe("the note's Plan block", () => {
       "Talked through: what we think is wrong, when to come back.",
       "Follow-up: 2 weeks, Medical clinic; when-to-come-back advice given.",
     ]);
+  });
+});
+
+describe("request lines in the basket (ADR 0537)", () => {
+  const DEPT = "33333333-3333-4333-8333-333333333333";
+  const consult = {
+    clientKey: "req-key-0001",
+    kind: "consult",
+    targetDepartmentId: DEPT,
+    wardId: null,
+    namedUserIds: [],
+    urgency: "routine",
+    helpWanted: "advice",
+    reasonConditionIds: [LEAD_V],
+    question: "Is this nephrotic?",
+    phoned: null,
+    display: "Nephrology consult",
+  };
+  const review = {
+    ...consult,
+    kind: "review",
+    helpWanted: null,
+    reasonConditionIds: [],
+    question: "",
+  };
+
+  it("a consult line needs help wanted, a problem and a question", () => {
+    expect(PlanRequestLineSchema.safeParse(consult).success).toBe(true);
+    expect(PlanRequestLineSchema.safeParse({ ...consult, helpWanted: null }).success).toBe(false);
+    expect(PlanRequestLineSchema.safeParse({ ...consult, reasonConditionIds: [] }).success).toBe(
+      false,
+    );
+    expect(PlanRequestLineSchema.safeParse({ ...consult, question: "  " }).success).toBe(false);
+  });
+
+  it("a review takes only review urgencies", () => {
+    expect(PlanRequestLineSchema.safeParse(review).success).toBe(true);
+    expect(PlanRequestLineSchema.safeParse({ ...review, urgency: "now" }).success).toBe(true);
+    expect(PlanRequestLineSchema.safeParse({ ...review, urgency: "urgent_today" }).success).toBe(
+      false,
+    );
+    expect(PlanRequestLineSchema.safeParse({ ...consult, urgency: "now" }).success).toBe(false);
+    // R17: the database refuses help wanted on a review.
+    expect(PlanRequestLineSchema.safeParse({ ...review, helpWanted: "advice" }).success).toBe(
+      false,
+    );
   });
 });

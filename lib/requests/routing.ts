@@ -1,7 +1,7 @@
-// Routing order for a care request (pure). Callers build the candidate lists:
-// for a review, post / team / supervisor-free lists hold senior cadres only
-// (SENIOR_CADRE_CODES); a consult takes every active clinical member. The cadre
-// filter lives in the loader, so Phase 2 post holders inherit it by construction.
+// Routing order for a care request (pure). route() is cadre-free: the loader
+// (loadRouteCandidates, lib/emr/write/requests.ts) builds the team list, and in
+// Phase 2 the post list, with senior cadres only (SENIOR_CADRE_CODES) for a review;
+// a consult takes every active clinical member.
 import type { RouteStep } from "./engine";
 
 export interface Candidate {
