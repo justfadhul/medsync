@@ -39,6 +39,9 @@ import { PHARMACY_MAP_CADRES } from "@/lib/pharmacy/access";
 import { canAct } from "@/lib/requests/engine";
 import { route } from "@/lib/requests/routing";
 import { currentRound, deriveFromRows } from "@/lib/requests/rows";
+import { whoCovers } from "@/lib/rota/cover";
+import { dutyRotaLiveFor } from "@/lib/rota/feature";
+import { loadCoverWorld } from "@/lib/rota/read";
 import { EmrWriteError } from "./context";
 import { insertSignedNote } from "./notes";
 import {
@@ -69,11 +72,13 @@ export const notPharmacyDepartment = sql`(${hospitalDepartments.catalogueCode} I
     AND pd.catalogue_code = 'PHARMACY'))`;
 export const isPharmacyDepartment = sql<boolean>`NOT ${notPharmacyDepartment}`;
 
-/** Clinicians with an affiliation here (any state), and whether one of them is live. Never a pharmacy cadre. */
+/** Clinicians with an affiliation here (any state, in `codes` when given), and whether one of them is live.
+ *  Never a pharmacy cadre. */
 async function cliniciansHere(
   tx: EmrTx,
   hospitalId: string,
   userIds: string[],
+  codes?: readonly string[],
 ): Promise<Map<string, boolean>> {
   if (!userIds.length) return new Map();
   const rows = await tx
@@ -89,6 +94,7 @@ async function cliniciansHere(
         eq(staffAffiliations.hospitalId, hospitalId),
         eq(cadres.isClinical, true),
         notPharmacyCadre(),
+        codes ? inArray(cadres.code, [...codes]) : undefined,
       ),
     )
     .groupBy(staffAffiliations.userId);
@@ -96,8 +102,56 @@ async function cliniciansHere(
 }
 
 /**
- * The candidate lists route() walks. Phase 1 has no posts. A review takes senior cadres only on the
- * team list, and a junior's review falls back to their open primary supervisor.
+ * Who holds the post at `at` when the rota is on (ADR 0534), by whoCovers's post steps only: a review the
+ * ward's, else the department's, senior posts; a consult the department's takes-consults post. A review never
+ * reaches a junior holder (R7, dropped as on the team list); a holder not live clinical here is skipped and
+ * recorded (R25). The read runs in a savepoint: a failure falls through to the team list, never unplaces.
+ */
+async function postHolders(
+  tx: EmrTx,
+  q: { hospitalId: string; departmentId: string; wardId: string | null; at: Date },
+  review: boolean,
+): Promise<Candidate[]> {
+  if (!dutyRotaLiveFor(q.hospitalId)) return [];
+  try {
+    return await tx.transaction(async (sp) => {
+      const w = await loadCoverWorld(sp, q.hospitalId, {
+        departmentIds: [q.departmentId],
+        from: q.at,
+        to: new Date(q.at.getTime() + 1),
+      });
+      const cover = whoCovers(
+        w,
+        review
+          ? {
+              departmentId: q.departmentId,
+              wardId: q.wardId,
+              levels: ["senior", "consultant"],
+              at: q.at,
+            }
+          : { departmentId: q.departmentId, at: q.at },
+      );
+      if (cover.step !== "ward_post" && cover.step !== "department_post") return [];
+      const ids = cover.people.map((p) => p.userId);
+      const live = await cliniciansHere(sp, q.hospitalId, ids);
+      const senior = review
+        ? await cliniciansHere(sp, q.hospitalId, ids, SENIOR_CADRE_CODES)
+        : live;
+      return cover.people
+        .filter((p) => !live.get(p.userId) || senior.get(p.userId))
+        .map((p) => ({ userId: p.userId, active: live.get(p.userId) ?? false, postId: p.postId }));
+    });
+  } catch (e) {
+    logger.warn("care_request.rota_read_failed", {
+      reason: e instanceof Error ? e.name : "unknown",
+    });
+    return [];
+  }
+}
+
+/**
+ * The candidate lists route() walks: post holders only when the rota is on. A review takes senior cadres
+ * only on the post and team lists, and a junior's review falls back to their open primary supervisor.
  */
 export async function loadRouteCandidates(
   tx: EmrTx,
@@ -189,7 +243,7 @@ export async function loadRouteCandidates(
     ids.map((userId) => ({ userId, active: live.get(userId) ?? false }));
   return {
     named: checked(q.namedUserIds),
-    post: [],
+    post: await postHolders(tx, q, review),
     team: team.map((r): Candidate => ({ userId: r.userId, active: true })),
     supervisor,
     heads: checked(heads.map((r) => r.userId)),
