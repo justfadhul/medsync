@@ -173,8 +173,9 @@ export async function triageOnFloorAction(
         skipDepartment: f.departmentId === scope.departmentId,
       }).catch((e) => logger.warn("clinic_floor.alert_failed", { reason: String(e) }));
   }
-  // D4: after the floor has the visit, so its "Observed in EU" lands on it. The level is the saved one; the
-  // function checks it again, with the space and the caller. A refusal comes back beside the saved triage.
+  // D4: the level is the saved one; the function checks it again, with the space and the caller. The floor
+  // visit stays open (R70): "Observed in EU" lands when the doctor's encounter takes the stay over or closes it.
+  // A refusal comes back beside the saved triage.
   let euError: string | null = null;
   if (f.euBedId && (res.assignedLevel ?? 5) <= 2) {
     const scope = await requireTriageScope();
