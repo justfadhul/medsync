@@ -1,3 +1,5 @@
+"use client";
+
 import type { EuReportRead, EuReportUnavailable } from "@/lib/eu/report-load";
 
 import { k } from "@/components/clinics-schedule/shared";

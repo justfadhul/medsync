@@ -126,7 +126,9 @@ describe("the shell (D6, W8)", () => {
     const labels = [...nav.matchAll(/label: "([^"]+)"/g)].map((m) => m[1]);
     expect(labels.slice(0, 3)).toEqual(["Workspace", "Patients", "Schedule"]);
     expect(nav.slice(0, nav.indexOf("];"))).not.toMatch(/placeholder: true/);
-    expect(shell).toMatch(/const navItems = workspace\s*\? WORKSPACE_NAV\s*: DOCTOR_FEATURE_AREAS/);
+    expect(shell).toMatch(/const baseNav = workspace\s*\? WORKSPACE_NAV\s*: DOCTOR_FEATURE_AREAS/);
+    // The EU entry is appended only when EU_OBSERVATION is live (ADR 0543).
+    expect(shell).toMatch(/const navItems = eu \? \[\.\.\.baseNav, EU_NAV\] : baseNav;/);
   });
 
   it("Emergency moves into the header (and stands the floating pill down) only with the flag", () => {
