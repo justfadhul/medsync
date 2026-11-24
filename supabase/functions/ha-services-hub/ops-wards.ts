@@ -528,15 +528,16 @@ const assignBed: OpHandler = async (ctx, i) => {
   if (b.closed_at) throw new HubError(`Bed ${b.label} is out of service.`, 409);
   if (await openAssignmentOn(ctx, b.id))
     throw new HubError(`Bed ${b.label} already has a patient.`, 409);
-  const elsewhere = must(
+  // A boarder holds two open rows (EU space + ward bed, ADR 0542); any open row refuses a direct bed.
+  const [elsewhere] = must(
     await ctx.sb
       .from("bed_assignments")
       .select("id, hospital_beds(label)")
       .eq("patient_user_id", i.patient_user_id)
       .is("ended_at", null)
-      .maybeSingle(),
+      .limit(1),
     "patient's bed",
-  ) as { id: string; hospital_beds: { label: string } | null } | null;
+  ) as { id: string; hospital_beds: { label: string } | null }[];
   if (elsewhere)
     throw new HubError(
       `This patient is already in bed ${elsewhere.hospital_beds?.label ?? "elsewhere"}. Release them there first.`,

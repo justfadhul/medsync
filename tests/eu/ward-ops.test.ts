@@ -70,6 +70,18 @@ describe("R60 hardening", () => {
   });
 });
 
+describe("R61: boarders hold two open rows", () => {
+  it("hub assign_bed reads the patient's open rows as a list, never maybeSingle", () => {
+    const h = hub.slice(hub.indexOf("const assignBed"), hub.indexOf("const releaseBed"));
+    const q = h.slice(
+      h.indexOf('.eq("patient_user_id", i.patient_user_id)'),
+      h.indexOf('"patient\'s bed"'),
+    );
+    expect(q).toContain(".limit(1)");
+    expect(q).not.toContain("maybeSingle");
+  });
+});
+
 describe("euRefusal in the hub", () => {
   it("maps deadlocks to try again", () => {
     expect(euRefusal({ message: "x", code: "40P01" })).toBe(

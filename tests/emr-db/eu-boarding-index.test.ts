@@ -156,14 +156,24 @@ describe.skipIf(!laneOn)("0312 — one Occupied and one Arriving per patient", (
   });
 
   it("still one Occupied and one Arriving per patient", async () => {
-    await expect(direct(p1, beds["4"]!)).rejects.toThrow(/one_occupied_per_patient/);
-    await expect(
+    const arriving = () =>
       pg.query(
         `INSERT INTO public.bed_assignments (hospital_id, ward_id, bed_id, patient_user_id, started_by, admission_id)
          VALUES ($1, $2, $3, $4, $5, $6)`,
         [h, ward, beds["4"], p2, doctor, p2Admission],
-      ),
-    ).rejects.toThrow(/one_arriving_per_patient/);
+      );
+    // The guard (section 2, R61) refuses first, in words.
+    const guard = /one open bed, or their EU space and the ward bed they board for/;
+    await expect(direct(p1, beds["4"]!)).rejects.toThrow(guard);
+    await expect(arriving()).rejects.toThrow(guard);
+    // The indexes hold on their own (triggers off for this session only).
+    await pg.query(`SET session_replication_role = replica`);
+    try {
+      await expect(direct(p1, beds["4"]!)).rejects.toThrow(/one_occupied_per_patient/);
+      await expect(arriving()).rejects.toThrow(/one_arriving_per_patient/);
+    } finally {
+      await pg.query(`SET session_replication_role = origin`);
+    }
   });
 
   it("an ordinary admission still refuses a patient who is in a bed", async () => {

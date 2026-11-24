@@ -364,7 +364,7 @@ describe.skipIf(!laneOn)("0090 — the ward builder on real SQL", () => {
         `INSERT INTO public.bed_assignments (hospital_id, ward_id, bed_id, patient_user_id, started_by) VALUES ($1, $2, $3, $4, $5)`,
         [h, w, g2!.id, p, admin],
       ),
-    ).rejects.toThrow(/one_occupied_per_patient/);
+    ).rejects.toThrow(/one open bed, or their EU space and the ward bed they board for/);
     // An occupied bed can't be closed or archived.
     await expect(
       pg.query(
