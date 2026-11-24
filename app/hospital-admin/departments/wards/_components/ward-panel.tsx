@@ -7,7 +7,9 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 
 import { k, Toggle } from "@/components/clinics-schedule/shared";
+import { kampalaTime } from "@/components/rota/duty-chip";
 import { PlanView } from "@/components/wards/plan/plan-view";
+import { DUTY_ROTA_COPY as R } from "@/content/duty-rota";
 import { WARDS } from "@/content/hospital-admin/wards";
 import { WARD_TYPES } from "@/supabase/functions/_shared/services-hub";
 import { BED_STATES, BED_TYPES } from "@/supabase/functions/_shared/ward-layout";
@@ -212,6 +214,21 @@ export function WardPanel({
               </button>
             </div>
           </div>
+
+          {w.cover ? (
+            <div className={k("su-sec")}>
+              <span className={k("cap")}>{R.cover.title}</span>
+              {w.cover.people.map((c, i) => (
+                <p key={i} className={k("su-note")}>
+                  {R.cover.line(c.name, c.postName, c.until ? kampalaTime(c.until) : null)}
+                </p>
+              ))}
+              {R.cover.step[w.cover.step] ? (
+                <p className={k("su-note")}>{R.cover.step[w.cover.step]}</p>
+              ) : null}
+              <p className={k("su-note")}>{R.plannedNotPresent}</p>
+            </div>
+          ) : null}
 
           <div className={k("su-sec")}>
             <span className={k("cap")}>{P.register}</span>

@@ -3,6 +3,8 @@ import type { Metadata } from "next";
 
 import { WARDS } from "@/content/hospital-admin/wards";
 import { requireHospitalAdminScope } from "@/lib/hospital-admin/scope";
+import { dutyRotaLiveFor } from "@/lib/rota/feature";
+import { coverForWard } from "@/lib/rota/read";
 import {
   loadDepartments,
   loadPlaces,
@@ -55,10 +57,21 @@ export default async function WardsPage({
         doc: b.doc,
         states: Object.fromEntries(b.beds.map((x) => [x.key, x.state])),
       });
+  const now = new Date();
+  const covers = dutyRotaLiveFor(h)
+    ? new Map(
+        await Promise.all(
+          wards
+            .filter((w) => !w.archived)
+            .map(async (w) => [w.id, await coverForWard(h, w.id, now)] as const),
+        ),
+      )
+    : null;
   const items: WardItem[] = wards.map((w) => ({
     ...w,
     layout: layouts ? (layouts[w.id] ?? { published: false, draft: false }) : null,
     plan: plans.get(w.id) ?? null,
+    cover: covers?.get(w.id),
   }));
   const sp = await searchParams;
   return (

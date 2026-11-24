@@ -126,6 +126,22 @@ export const DUTY_ROTA_COPY = {
     none: "You are on no duty today or in the next 24 hours.",
     until: (t: string) => `until ${t}`,
   },
+  cover: {
+    title: "Who covers this ward now",
+    /** Where the cover came from, when it is not a post on this ward. */
+    step: {
+      ward_post: "",
+      department_post: "From the department's posts.",
+      department_head: "No one is rostered: the head of department.",
+      hospital_contacts: "No one is rostered: the hospital contacts.",
+      none: "No one is rostered and no fallback is set.",
+    },
+    line: (name: string, post: string | null, until: string | null) =>
+      [name, post, until ? `until ${until}` : null].filter(Boolean).join(" · "),
+  },
+  chip: {
+    onCall: (post: string, until: string) => `On call: ${post} until ${until}`,
+  },
   off: "The duty rota is not switched on at this hospital.",
   notFound: "That post or duty is no longer open on this rota.",
   unnamed: "Name not recorded",

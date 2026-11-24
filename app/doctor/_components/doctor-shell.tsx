@@ -57,6 +57,7 @@ export function DoctorShell({
   avatarUrl,
   workspace = false,
   criticalCount = null,
+  duty = null,
   children,
 }: {
   scope: DoctorScope;
@@ -66,6 +67,8 @@ export function DoctorShell({
   workspace?: boolean;
   /** Lab Phase 1 §5.4: open critical alerts for me, shown on every page while any is open. */
   criticalCount?: number | null;
+  /** The on-duty chip (DUTY_ROTA on, and the doctor is rostered now). */
+  duty?: ReactNode;
   children: ReactNode;
 }) {
   const navItems = workspace
@@ -179,6 +182,7 @@ export function DoctorShell({
             </div>
 
             <div className="flex items-center justify-end gap-3">
+              {duty}
               {criticalCount ? (
                 <Link
                   href="/doctor/criticals"

@@ -3,6 +3,7 @@
  * ward's live bed board (lib/wards/board.ts, ADR 0194); out of service comes from the register. Nothing here is
  * estimated: a ward without a published floor plan has no live states, and is counted only by its register.
  */
+import type { coverForWard } from "@/lib/rota/read";
 import type { BedState, WardLayout } from "@/supabase/functions/_shared/ward-layout";
 
 /** A ward's published plan and each bed's state now, by the bed's key on the plan. */
@@ -28,6 +29,8 @@ export interface WardItem {
   layout: { published: boolean; draft: boolean } | null;
   /** The live board: only for a ward with a published layout, and only with the ward builder on. */
   plan: WardPlan | null;
+  /** Who the rota plans to cover it now; only with DUTY_ROTA on. */
+  cover?: Awaited<ReturnType<typeof coverForWard>>;
 }
 
 export type Tally = Record<BedState, number>;

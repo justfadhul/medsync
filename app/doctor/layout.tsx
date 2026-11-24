@@ -4,10 +4,13 @@ import type { ReactNode } from "react";
 import { CriticalLive } from "@/components/medsync/critical-live";
 import { TideScope } from "@/components/medsync/tide-scope";
 import { ArrestAlarm } from "@/components/resus/arrest-alarm";
+import { DutyChip } from "@/components/rota/duty-chip";
 import { signedAvatarUrl } from "@/lib/avatars";
 import { requireDoctorScope } from "@/lib/doctor/scope";
 import { careRequestsLiveFor } from "@/lib/requests/feature";
 import { resusDeskV2 } from "@/lib/resus/feature";
+import { dutyRotaLiveFor } from "@/lib/rota/feature";
+import { myDuties } from "@/lib/rota/read";
 import { doctorWorkspace } from "@/lib/workspace/feature";
 import { newestAnnouncement } from "./_components/critical-alerts";
 import { DoctorShell } from "./_components/doctor-shell";
@@ -23,10 +26,17 @@ export default async function DoctorLayout({ children }: { children: ReactNode }
     signedAvatarUrl(scope.avatarPath),
     myCriticals(scope.userId, scope.hospitalId),
   ]);
+  // Rostered now (not past, not ended early); the rota is a plan, never proof of presence.
+  const duties = dutyRotaLiveFor(scope.hospitalId)
+    ? (await myDuties(scope.userId, scope.hospitalId, new Date())).filter(
+        (d) => d.state === "in_post",
+      )
+    : [];
   return (
     <DoctorShell
       scope={scope}
       avatarUrl={avatarUrl}
+      duty={duties.length ? <DutyChip duties={duties} /> : null}
       workspace={doctorWorkspace(scope.hospitalId)}
       criticalCount={criticals?.alerts.open.length ?? null}
     >
