@@ -10,12 +10,13 @@ import type {
   Post,
   PostLevel,
 } from "@/lib/rota/cover";
-import { and, asc, eq, gt, inArray, isNull, lt, lte, or } from "drizzle-orm";
+import { and, asc, desc, eq, gt, inArray, isNull, lt, lte, or, sql } from "drizzle-orm";
 import { z } from "zod";
 
 import { DUTY_ROTA_COPY } from "@/content/duty-rota";
 import { staffAffiliations } from "@/db/schema/clinician-profiles";
 import { dutyAssignments, dutyPosts } from "@/db/schema/duty-rota";
+import { hospitalDepartments } from "@/db/schema/hospital-departments";
 import { hospitalWards } from "@/db/schema/hospital-wards";
 import { criticalContacts } from "@/db/schema/lab-safety";
 import { cadres } from "@/db/schema/reference-data";
@@ -36,7 +37,7 @@ const HOUR = 3_600_000;
 
 async function inSnapshot<T>(database: EmrDb | undefined, fn: (tx: EmrTx) => Promise<T>) {
   const conn = database ?? ((await import("@/db")).db as unknown as EmrDb);
-  return conn.transaction(fn);
+  return conn.transaction(fn, { isolationLevel: "repeatable read", accessMode: "read only" });
 }
 
 /** Active leave of these people overlapping [from, to): the times, nothing else of the block. */
@@ -135,12 +136,13 @@ export async function loadCoverWorld(
           .orderBy(asc(dutyAssignments.startsAt))
       ).map(toAssignment)
     : [];
+  // Up to the last loaded duty's end: dutyState looks for leave over the whole rest of a duty, past the range.
   const leave = await leaveOf(
     tx,
     hospitalId,
     assignments.map((a) => a.userId),
     q.from,
-    q.to,
+    new Date(Math.max(q.to.getTime(), ...assignments.map((a) => a.endsAt.getTime()))),
   );
   const heads = depts.length
     ? await tx
@@ -180,7 +182,8 @@ export async function loadRotaWeek(
   posts: Post[];
   assignments: (Assignment & { name: string; state: DutyState })[];
   gaps: ReturnType<typeof gaps>;
-  eligible: { userId: string; name: string; cadre: string }[];
+  /** departmentName is null for the department's own staff, who come first (R36). */
+  eligible: { userId: string; name: string; cadre: string; departmentName: string | null }[];
 }> {
   if (
     !dutyRotaLiveFor(hospitalId) ||
@@ -215,30 +218,46 @@ export async function loadRotaWeek(
           ];
 
     const codes = [...new Set(w.posts.filter((p) => !p.archived).flatMap((p) => p.eligibleCadres))];
+    // R36: everyone live at the hospital whose cadre a post accepts, as the guard; own department first.
+    const own = sql<boolean>`${staffAffiliations.departmentId} = ${departmentId}::uuid`;
     const staff = codes.length
       ? await tx
-          .select({ userId: staffAffiliations.userId, name: users.fullName, cadre: cadres.code })
+          .select({
+            userId: staffAffiliations.userId,
+            name: users.fullName,
+            cadre: cadres.code,
+            own,
+            departmentName: hospitalDepartments.name,
+          })
           .from(staffAffiliations)
           .innerJoin(cadres, eq(cadres.id, staffAffiliations.cadreId))
+          .innerJoin(
+            hospitalDepartments,
+            eq(hospitalDepartments.id, staffAffiliations.departmentId),
+          )
           .leftJoin(users, eq(users.id, staffAffiliations.userId))
           .where(
             and(
               eq(staffAffiliations.hospitalId, hospitalId),
-              eq(staffAffiliations.departmentId, departmentId),
               inArray(staffAffiliations.state, ["active", "approved"]),
               inArray(cadres.code, codes),
             ),
           )
-          .orderBy(asc(users.fullName))
+          .orderBy(desc(own), asc(users.fullName))
       : [];
-    const eligible = [
-      ...new Map(
-        staff.map((s) => [
-          s.userId,
-          { userId: s.userId, name: s.name ?? DUTY_ROTA_COPY.unnamed, cadre: s.cadre },
-        ]),
-      ).values(),
-    ];
+    // First row per person wins: their own-department affiliation when they have one.
+    const eligible = new Map<
+      string,
+      { userId: string; name: string; cadre: string; departmentName: string | null }
+    >();
+    for (const s of staff)
+      if (!eligible.has(s.userId))
+        eligible.set(s.userId, {
+          userId: s.userId,
+          name: s.name ?? DUTY_ROTA_COPY.unnamed,
+          cadre: s.cadre,
+          departmentName: s.own ? null : s.departmentName,
+        });
 
     return {
       posts: w.posts,
@@ -248,7 +267,7 @@ export async function loadRotaWeek(
         state: dutyState(a, w.leave, now),
       })),
       gaps: holes,
-      eligible,
+      eligible: [...eligible.values()],
     };
   });
 }

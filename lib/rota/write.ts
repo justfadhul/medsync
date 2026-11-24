@@ -38,7 +38,7 @@ type Hint = keyof typeof DUTY_ROTA_COPY.refusal;
 function rotaHint(e: unknown): Hint | null {
   if (!e || typeof e !== "object") return null;
   const { code, hint, cause } = e as { code?: unknown; hint?: unknown; cause?: unknown };
-  if (code === "23514" && typeof hint === "string" && hint in DUTY_ROTA_COPY.refusal)
+  if (code === "23514" && typeof hint === "string" && Object.hasOwn(DUTY_ROTA_COPY.refusal, hint))
     return hint as Hint;
   return rotaHint(cause);
 }
@@ -84,9 +84,13 @@ async function mustMakeRota(ctx: RotaCtx, departmentId: string) {
   if (rows[0]?.ok !== true) throw new EmrWriteError("forbidden", DUTY_ROTA_COPY.refusal.rota_maker);
 }
 
-/** A live post of the actor's hospital, or nothing. */
-async function livePost(ctx: RotaCtx, postId: string) {
-  const [p] = await ctx.tx
+/**
+ * A live post of the actor's hospital, or not found. Share-locked until commit (R37), so it cannot be archived
+ * under a write in flight; archivePost reads it unlocked and relies on its guarded UPDATE instead, since two
+ * archivers each holding a share lock would deadlock on their updates.
+ */
+async function livePost(ctx: RotaCtx, postId: string, lock = true) {
+  const q = ctx.tx
     .select({ id: dutyPosts.id, departmentId: dutyPosts.departmentId })
     .from(dutyPosts)
     .where(
@@ -96,6 +100,7 @@ async function livePost(ctx: RotaCtx, postId: string) {
         isNull(dutyPosts.archivedAt),
       ),
     );
+  const [p] = lock ? await q.for("share") : await q;
   if (!p) throw notFound();
   return p;
 }
@@ -163,13 +168,16 @@ export const archivePost = (actor: RotaActor, raw: unknown, opts?: Opts) =>
     PostRef,
     raw,
     async (ctx, i) => {
-      const p = await livePost(ctx, i.postId);
+      const p = await livePost(ctx, i.postId, false);
       await mustMakeRota(ctx, p.departmentId);
-      await ctx.tx
+      // A post archived meanwhile matches nothing: not found, never the guard's raw error (R37).
+      const [row] = await ctx.tx
         .update(dutyPosts)
         .set({ archivedAt: ctx.now, archivedBy: ctx.actor.userId })
-        .where(eq(dutyPosts.id, p.id));
-      return { id: p.id };
+        .where(and(eq(dutyPosts.id, p.id), isNull(dutyPosts.archivedAt)))
+        .returning({ id: dutyPosts.id });
+      if (!row) throw notFound();
+      return row;
     },
     opts,
   );
