@@ -889,7 +889,7 @@ describe("FW-11 scope and permissions", () => {
 });
 
 describe("registry and words", () => {
-  it("the registry has eleven lanes in board order; the first seven keep keys 1–7 (E8)", () => {
+  it("the registry has thirteen lanes in board order; the first seven keep keys 1–7 (E8)", () => {
     expect(LANES.map((l) => l.id)).toEqual([
       "resus",
       "critical_results",
@@ -897,8 +897,10 @@ describe("registry and words", () => {
       "unassigned",
       "waiting",
       "in_progress",
+      "asked_of_you",
       "results_to_review",
       "to_cosign",
+      "department_consults",
       "renewal_requests",
       "needs_closing",
       "done",
@@ -910,13 +912,24 @@ describe("registry and words", () => {
       "3",
       "4",
       "5",
+      // R5: `y`, not `a` — the board already uses `a` to assign the active row.
+      "y",
       "9",
       "0",
+      "c",
       "r",
       "6",
       "7",
     ]);
     expect(new Set(LANES.map((l) => l.hotkey)).size).toBe(LANES.length);
+  });
+
+  it("request lanes show only with the flag", () => {
+    const REQUEST_LANES = ["asked_of_you", "department_consults"];
+    const off = visibleLanes({ mayAssign: true, emr: true }).map((l) => l.id);
+    expect(off.filter((id) => REQUEST_LANES.includes(id))).toEqual([]);
+    const on = visibleLanes({ mayAssign: true, emr: true, requests: true }).map((l) => l.id);
+    expect(on.filter((id) => REQUEST_LANES.includes(id))).toEqual(REQUEST_LANES);
   });
 
   it("the record's lanes show only where EMR v1 is on: flag off, the board is unchanged", () => {
@@ -931,9 +944,9 @@ describe("registry and words", () => {
       "needs_closing",
       "done",
     ]);
-    expect(visibleLanes({ mayAssign: true, emr: true, renewals: true }).map((l) => l.id)).toEqual(
-      LANES.map((l) => l.id),
-    );
+    expect(
+      visibleLanes({ mayAssign: true, emr: true, renewals: true, requests: true }).map((l) => l.id),
+    ).toEqual(LANES.map((l) => l.id));
     // Pharmacy Phase 4: the renewal lane only with PHARMACY_REPEATS on (5.1).
     expect(visibleLanes({ mayAssign: true, emr: true }).map((l) => l.id)).not.toContain(
       "renewal_requests",
@@ -1085,6 +1098,23 @@ describe("FW-2 E8 record lanes: Critical results, Results to review, To co-sign"
       }),
     );
     expect(row.lane).toBe("results_to_review");
+  });
+
+  it("a request asked of me → Asked of you, primary Answer; a department consult → Pick up", () => {
+    const mine = one(
+      input({ patients, tasks: [task("q1", "a", "request_mine", { label: "Consult · Renal" })] }),
+    );
+    expect(mine.lane).toBe("asked_of_you");
+    expect(mine.primary).toEqual({ kind: "view", label: "Answer", encounterId: "enc-a" });
+    expect(mine.stageDetail).toBe("Consult · Renal asked of you");
+    const dept = one(input({ patients, tasks: [task("q2", "a", "request_department")] }));
+    expect(dept.lane).toBe("department_consults");
+    expect(dept.primary?.label).toBe("Pick up");
+    // A restricted request (label null) is never named on the board.
+    const restricted = one(
+      input({ patients, tasks: [task("q3", "a", "request_mine", { label: null })] }),
+    );
+    expect(restricted.stageDetail).toBe("Request asked of you");
   });
 
   it("the lanes sit in registry order on a mixed board", () => {

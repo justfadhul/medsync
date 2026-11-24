@@ -63,3 +63,7 @@ export function deriveFromRows(
     request.targetDepartmentId;
   return { events, derived, departmentId };
 }
+
+/** The events of the current round: those after the last redirect. */
+export const currentRound = <E extends { kind: string }>(events: readonly E[]): E[] =>
+  events.slice(events.findLastIndex((e) => e.kind === "redirected") + 1);

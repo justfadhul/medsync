@@ -101,12 +101,20 @@ export interface FlowEncounter {
 export interface FlowTask {
   id: string;
   patientId: string;
-  kind: "critical_result" | "result_to_review" | "cosign" | "renewal";
+  kind:
+    | "critical_result"
+    | "result_to_review"
+    | "cosign"
+    | "renewal"
+    /** A care request asked of me (ADR 0537); answered on /doctor/requests. */
+    | "request_mine"
+    /** An open request to my department that anyone there may pick up (D6). */
+    | "request_department";
   /** Where it is answered: the order's or the note's encounter. */
   encounterId: string;
   /** Released, or co-signature requested. */
   atMs: number;
-  /** "Potassium", "Clerking note"; null for a restricted result, which a board never names. */
+  /** "Potassium", "Clerking note", "Consult · Renal"; null when restricted: a board never names it. */
   label: string | null;
 }
 
@@ -219,7 +227,14 @@ export interface FlowBadge {
   tone: Tone;
 }
 
-export type ItemKind = "intake" | "assignment" | "encounter" | "resus" | "result" | "cosign";
+export type ItemKind =
+  | "intake"
+  | "assignment"
+  | "encounter"
+  | "resus"
+  | "result"
+  | "cosign"
+  | "request";
 
 export interface OpenItem {
   id: string;
@@ -474,6 +489,8 @@ function buildRow(b: Bucket, ctx: Ctx): { row: PatientFlowRow; flags: IntegrityF
   const toReview = tasksOf("result_to_review");
   const toCosign = tasksOf("cosign");
   const toRenew = tasksOf("renewal");
+  const askedMine = tasksOf("request_mine");
+  const askedDept = tasksOf("request_department");
   const hasDraft = (e: FlowEncounter) => e.unsignedNoteAtMs != null;
   const draftIdle = (e: FlowEncounter) =>
     hasDraft(e) && nowMs - e.unsignedNoteAtMs! >= settings.encounterIdleMs;
@@ -719,6 +736,18 @@ function buildRow(b: Bucket, ctx: Ctx): { row: PatientFlowRow; flags: IntegrityF
       primary = take;
       overflow = [assign, retriage];
     }
+  } else if (askedMine.length > 0) {
+    // ADR 0537: a request asked of me, after In progress (answered on /doctor/requests).
+    const t = askedMine[0]!;
+    lane = "asked_of_you";
+    primaryId = t.id;
+    primary = { kind: "view", label: "Answer", encounterId: t.encounterId };
+    stageDetail =
+      askedMine.length > 1
+        ? `${plural(askedMine.length, "request")} asked of you`
+        : `${t.label ?? "Request"} asked of you`;
+    sinceMs = t.atMs;
+    reason = visitReason();
   } else if (toReview.length > 0 || toCosign.length > 0) {
     // E8: Results to review, then To co-sign — below every live stage, above closing.
     const results = toReview.length > 0;
@@ -742,6 +771,18 @@ function buildRow(b: Bucket, ctx: Ctx): { row: PatientFlowRow; flags: IntegrityF
         : `${t.label ?? "Note"} awaiting co-signature`;
     sinceMs = t.atMs;
     acuityTriage = b.intakes.map((i) => latestTriage(i)).find(Boolean) ?? null;
+    reason = visitReason();
+  } else if (askedDept.length > 0) {
+    // ADR 0537 (D6): open to anyone in my department, below To co-sign.
+    const t = askedDept[0]!;
+    lane = "department_consults";
+    primaryId = t.id;
+    primary = { kind: "view", label: "Pick up", encounterId: t.encounterId };
+    stageDetail =
+      askedDept.length > 1
+        ? `${plural(askedDept.length, "request")} for your department`
+        : `${t.label ?? "Request"} for your department`;
+    sinceMs = t.atMs;
     reason = visitReason();
   } else if (toRenew.length > 0) {
     // Pharmacy Phase 4 (5.3): answered on /doctor/renewals, below the record's lanes.
@@ -892,6 +933,21 @@ function buildRow(b: Bucket, ctx: Ctx): { row: PatientFlowRow; flags: IntegrityF
   }
   for (const t of b.tasks) {
     if (t.id === primaryId) continue;
+    if (t.kind === "request_mine" || t.kind === "request_department") {
+      const mineAsk = t.kind === "request_mine";
+      alsoOpen.push({
+        id: t.id,
+        kind: "request",
+        label: "Request",
+        detail: `${t.label ?? "Request"} · ${mineAsk ? "asked of you" : "for your department"}`,
+        sinceMs: t.atMs,
+        tone: "neutral",
+        actions: [
+          { kind: "view", label: mineAsk ? "Answer" : "Pick up", encounterId: t.encounterId },
+        ],
+      });
+      continue;
+    }
     const result = t.kind !== "cosign";
     alsoOpen.push({
       id: t.id,
@@ -946,6 +1002,8 @@ function buildRow(b: Bucket, ctx: Ctx): { row: PatientFlowRow; flags: IntegrityF
     badges.push({ text: `${plural(toReview.length, "result")} to review`, tone: "neutral" });
   if (toCosign.length > 0 && lane !== "to_cosign")
     badges.push({ text: `${plural(toCosign.length, "note")} to co-sign`, tone: "neutral" });
+  if (askedMine.length > 0 && lane !== "asked_of_you")
+    badges.push({ text: `${plural(askedMine.length, "request")} asked of you`, tone: "neutral" });
   const drafts =
     unsignedDone.length +
     visibleEncounters.filter((e) => e.state !== "completed" && draftIdle(e)).length;

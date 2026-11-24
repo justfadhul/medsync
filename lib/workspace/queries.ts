@@ -14,10 +14,12 @@ import type {
 } from "./flow";
 import type { LaneId } from "./lanes";
 import type { EmrDb } from "@/lib/emr/db";
+import type { RequestRow } from "@/lib/emr/read/requests";
 import type { BoardV2Row, ResusBoardV2Data } from "@/lib/resus/board-v2";
 import { and, eq, gte, inArray, isNotNull, isNull, ne, or, sql } from "drizzle-orm";
 
 import { endedWord } from "@/app/nurse/resus/[episodeId]/_components/v2/close-out-words";
+import { CARE_REQUEST_COPY } from "@/content/care-requests";
 import { db } from "@/db";
 import { staffAffiliations } from "@/db/schema/clinician-profiles";
 import { clinicalCosignPolicies, clinicalCosignRequests } from "@/db/schema/doctor-workspace";
@@ -37,11 +39,13 @@ import { triageRecords } from "@/db/schema/triage";
 import { users } from "@/db/schema/users";
 import { computeAgeYears } from "@/lib/age";
 import { emrV1LiveFor } from "@/lib/emr/feature";
+import { askedOfMe, forMyDepartment } from "@/lib/emr/read/requests";
 import { OPEN_RESULT_ORDER, openResultFor } from "@/lib/emr/read/results";
 import { SENIOR_CADRES } from "@/lib/emr/write/facts";
 import { PRESCRIBING_CADRES } from "@/lib/emr/write/prescriptions";
 import { criticalsLive } from "@/lib/lab/criticals/readiness";
 import { pharmacyRepeatsLiveFor } from "@/lib/pharmacy/feature";
+import { careRequestsLiveFor } from "@/lib/requests/feature";
 import { fetchResusBoardV2, OPENABLE_LOOKBACK_MS } from "@/lib/resus/board-v2";
 import { revealPatientIdentities } from "@/lib/scheduling/patient-identity";
 import { resolveTriageAuthority } from "@/lib/triage/authority";
@@ -90,6 +94,8 @@ export interface WorkspaceData {
   emr: boolean;
   /** Pharmacy Phase 4: the Renewal requests lane is shown. */
   renewals: boolean;
+  /** CARE_REQUESTS is on here: Asked of you and Consults for your department are shown (ADR 0537). */
+  requests: boolean;
 }
 
 const RESUS_DIED = ["died_after_cpr", "died_cpr_not_attempted"];
@@ -416,6 +422,7 @@ export async function loadWorkspace(args: {
     nowIso: now.toISOString(),
     emr,
     renewals: renewalsLaneFor(viewer),
+    requests: careRequestsLiveFor(viewer.hospitalId),
   };
 }
 
@@ -429,7 +436,9 @@ const RELEASED = ["final", "amended", "corrected"];
  *    here — lib/emr/write/results.ts requireResponsible's rule; a cover rota replaces both.
  *  - pending `sign_note` co-sign requests I may answer: a co-signing cadre, not my own request, and
  *    requested from my department.
- * A restricted result or note is never named on a board (label null).
+ *  - under CARE_REQUESTS: requests asked of me, and open ones to my department (ADR 0537), read
+ *    through the clinical reader so RLS decides which; a department one already asked of me is mine.
+ * A restricted result, note or request is never named on a board (label null).
  */
 export async function loadEmrTasks(database: EmrDb, viewer: WorkspaceViewer): Promise<FlowTask[]> {
   const r = diagnosticReports;
@@ -517,6 +526,9 @@ export async function loadEmrTasks(database: EmrDb, viewer: WorkspaceViewer): Pr
     ? await openAlertsSentTo(database, viewer)
     : [];
   const alertedIds = new Set(alerted.map((a) => a.reportId));
+  const requests = careRequestsLiveFor(viewer.hospitalId)
+    ? await requestTasks(database, viewer)
+    : [];
   const own = new Set(results.map((x) => x.id));
   return [
     ...alerted
@@ -555,6 +567,7 @@ export async function loadEmrTasks(database: EmrDb, viewer: WorkspaceViewer): Pr
           ]
         : [],
     ),
+    ...requests,
     ...cosigns.map(
       (x): FlowTask => ({
         id: x.id,
@@ -568,6 +581,32 @@ export async function loadEmrTasks(database: EmrDb, viewer: WorkspaceViewer): Pr
             : null,
       }),
     ),
+  ];
+}
+
+/** The two request lanes' sources; the workspace reveals the names of the rows it shows. */
+async function requestTasks(database: EmrDb, viewer: WorkspaceViewer): Promise<FlowTask[]> {
+  const opts = { database, names: false };
+  const asked = await askedOfMe(viewer, opts);
+  const dept = await forMyDepartment(viewer, opts);
+  const copy = CARE_REQUEST_COPY.read;
+  const task =
+    (kind: "request_mine" | "request_department") =>
+    (r: RequestRow): FlowTask => ({
+      id: r.id,
+      patientId: r.patientUserId,
+      kind,
+      encounterId: r.encounterId,
+      atMs: r.askedAtMs,
+      label: r.restricted
+        ? null
+        : r.kind === "consult"
+          ? copy.consult(r.departmentName)
+          : copy.review,
+    });
+  return [
+    ...asked.map(task("request_mine")),
+    ...dept.filter((r) => !r.mine).map(task("request_department")),
   ];
 }
 

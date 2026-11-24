@@ -89,6 +89,26 @@ export const CARE_REQUEST_COPY = {
     },
   },
   unroutedNote: "Reached nobody: phone the team",
+  /** The request lists and the workspace lanes (ADR 0537). A restricted request is never named. */
+  read: {
+    review: "Review",
+    consult: (department: string) => `Consult · ${department}`,
+    someone: "Someone",
+    problem: "Problem",
+    restrictedProblem: "A restricted problem: open the chart to see it",
+    event: {
+      routed: (who: string) => `Sent to ${who}`,
+      unrouted: "Reached nobody",
+      seen: (who: string) => `Seen by ${who}`,
+      accepted: (who: string) => `Accepted by ${who}`,
+      declined: (who: string, reason: string) => `Declined by ${who}: ${reason}`,
+      redirected: (department: string, reason: string) => `Redirected to ${department}: ${reason}`,
+      replied: (who: string) => `Replied by ${who}`,
+      closed: (who: string) => `Closed by ${who}`,
+      cancelled: (who: string, reason: string) => `Cancelled by ${who}: ${reason}`,
+      escalated: (level: number) => `Escalated to level ${level}`,
+    },
+  },
   /** The notice's body; like the subject, it never names the patient. */
   noticeBody: "Open your requests in MedSync to see it.",
   /** Staff names and places only, never a patient (ADR 0199). */

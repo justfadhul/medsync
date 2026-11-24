@@ -36,7 +36,7 @@ import { encrypt } from "@/lib/encryption";
 import { logger } from "@/lib/logger";
 import { canAct } from "@/lib/requests/engine";
 import { route } from "@/lib/requests/routing";
-import { deriveFromRows } from "@/lib/requests/rows";
+import { currentRound, deriveFromRows } from "@/lib/requests/rows";
 import { EmrWriteError } from "./context";
 import { insertSignedNote } from "./notes";
 import {
@@ -408,6 +408,31 @@ async function loadRequest(
     .from(careRequestEvents)
     .where(eq(careRequestEvents.requestId, requestId));
   const { events, derived, departmentId } = deriveFromRows(request, rows, now);
+  return {
+    tx,
+    actor,
+    now,
+    request,
+    events,
+    derived,
+    departmentId,
+    who: await relationTo(tx, actor, { request, derived, departmentId }, now),
+  };
+}
+
+/** The actor's relation to a request (the writer's and the reader's one rule): the current round's
+ *  recipients, and a live clinical member or the head of the department the round asks. */
+export async function relationTo(
+  tx: EmrTx | EmrDb,
+  actor: { userId: string; hospitalId: string },
+  r: {
+    request: Pick<CareRequestRow, "requesterUserId">;
+    derived: DerivedRequest;
+    departmentId: string;
+  },
+  now: Date,
+): Promise<Relation> {
+  const { request, derived, departmentId } = r;
   const [team] = await tx
     .select({ one: sql`1` })
     .from(staffAffiliations)
@@ -436,19 +461,10 @@ async function loadRequest(
     )
     .limit(1);
   return {
-    tx,
-    actor,
-    now,
-    request,
-    events,
-    derived,
-    departmentId,
-    who: {
-      requester: request.requesterUserId === actor.userId,
-      recipient: derived.recipients.includes(actor.userId),
-      teamMember: !!team,
-      head: !!head,
-    },
+    requester: request.requesterUserId === actor.userId,
+    recipient: derived.recipients.includes(actor.userId),
+    teamMember: !!team,
+    head: !!head,
   };
 }
 
@@ -503,8 +519,7 @@ async function replayedEvent(
 }
 
 /** The events of the current round (after the last redirect). */
-const roundEvents = (c: RequestCtx) =>
-  c.events.slice(c.events.findLastIndex((e) => e.kind === "redirected") + 1);
+const roundEvents = (c: RequestCtx) => currentRound(c.events);
 
 async function writeEvent(
   c: RequestCtx,
