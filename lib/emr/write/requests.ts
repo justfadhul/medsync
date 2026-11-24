@@ -17,7 +17,7 @@ import type {
   RequestKind,
 } from "@/lib/requests/engine";
 import type { Candidate, RouteCandidates } from "@/lib/requests/routing";
-import { and, asc, desc, eq, gt, inArray, isNull, lte, or, sql } from "drizzle-orm";
+import { and, asc, desc, eq, gt, inArray, isNull, lte, notInArray, or, sql } from "drizzle-orm";
 
 import { CARE_REQUEST_COPY } from "@/content/care-requests";
 import { admissions, OPEN_ADMISSION_STATUSES } from "@/db/schema/admissions";
@@ -34,6 +34,7 @@ import { JUNIOR_CADRE_CODES, SENIOR_CADRE_CODES } from "@/lib/doctor/cadres";
 import { asClinicalWriter } from "@/lib/emr/db";
 import { encrypt } from "@/lib/encryption";
 import { logger } from "@/lib/logger";
+import { PHARMACY_MAP_CADRES } from "@/lib/pharmacy/access";
 import { canAct } from "@/lib/requests/engine";
 import { route } from "@/lib/requests/routing";
 import { currentRound, deriveFromRows } from "@/lib/requests/rows";
@@ -57,7 +58,16 @@ const LIVE = ["active", "approved"] as const;
 /** How far back a phone call may be recorded, and how far ahead (clock skew). */
 const PHONED_WINDOW_MS = { past: 24 * 60 * 60_000, ahead: 5 * 60_000 };
 
-/** Clinicians with an affiliation here (any state), and whether one of them is live. */
+/** R32: pharmacists cannot receive consults in v1. The pharmacy cadres (the signed pharmacy map's) are
+ *  clinical, so every recipient and actor query also leaves them out. */
+export const notPharmacyCadre = () => notInArray(cadres.code, [...PHARMACY_MAP_CADRES]);
+
+/** R32: the pharmacy (catalogue code PHARMACY) and its dispensing points are not a team to ask. */
+export const notPharmacyDepartment = sql`(${hospitalDepartments.catalogueCode} IS DISTINCT FROM 'PHARMACY'
+  AND NOT EXISTS (SELECT 1 FROM ${hospitalDepartments} pd WHERE pd.id = ${hospitalDepartments.parentId}
+    AND pd.catalogue_code = 'PHARMACY'))`;
+
+/** Clinicians with an affiliation here (any state), and whether one of them is live. Never a pharmacy cadre. */
 async function cliniciansHere(
   tx: EmrTx,
   hospitalId: string,
@@ -76,6 +86,7 @@ async function cliniciansHere(
         inArray(staffAffiliations.userId, userIds),
         eq(staffAffiliations.hospitalId, hospitalId),
         eq(cadres.isClinical, true),
+        notPharmacyCadre(),
       ),
     )
     .groupBy(staffAffiliations.userId);
@@ -109,6 +120,7 @@ export async function loadRouteCandidates(
         eq(staffAffiliations.departmentId, q.departmentId),
         inArray(staffAffiliations.state, [...LIVE]),
         eq(cadres.isClinical, true),
+        notPharmacyCadre(),
         review ? inArray(cadres.code, [...SENIOR_CADRE_CODES]) : undefined,
       ),
     )
@@ -127,8 +139,10 @@ export async function loadRouteCandidates(
             staffAffiliations,
             eq(staffAffiliations.id, clinicalSupervision.supervisorAffiliationId),
           )
+          .innerJoin(cadres, eq(cadres.id, staffAffiliations.cadreId))
           .where(
             and(
+              notPharmacyCadre(),
               eq(clinicalSupervision.hospitalId, q.hospitalId),
               eq(clinicalSupervision.superviseeAffiliationId, q.requester.affiliationId),
               eq(clinicalSupervision.relationshipKind, "primary"),
@@ -444,6 +458,7 @@ export async function relationTo(
         eq(staffAffiliations.departmentId, departmentId),
         inArray(staffAffiliations.state, [...LIVE]),
         eq(cadres.isClinical, true),
+        notPharmacyCadre(),
       ),
     )
     .limit(1);

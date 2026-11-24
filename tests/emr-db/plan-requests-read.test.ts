@@ -63,6 +63,19 @@ describe.skipIf(!laneOn)("the Plan's request read (PGlite lane)", () => {
       suspended.affiliationId,
     ]);
     await named(cardio, "Cardiologist One");
+    // R32: pharmacists cannot receive consults in v1, and the pharmacy is not a team to ask.
+    await named(neph, "Pharmacist One", "PHARMACIST");
+    const pharmacy = await department(pg, h, "Pharmacy");
+    await pg.query(`UPDATE hospital_departments SET catalogue_code = 'PHARMACY' WHERE id = $1`, [
+      pharmacy,
+    ]);
+    const point = (
+      await pg.query<{ id: string }>(
+        `INSERT INTO hospital_departments (hospital_id, parent_id, name, slug)
+         VALUES ($1, $2, 'Main window', $3) RETURNING id`,
+        [h, pharmacy, `point-${randomUUID().slice(0, 6)}`],
+      )
+    ).rows[0]!.id;
     const ward = (
       await pg.query<{ id: string }>(
         `INSERT INTO hospital_wards (hospital_id, department_id, name, slug)
@@ -138,6 +151,8 @@ describe.skipIf(!laneOn)("the Plan's request read (PGlite lane)", () => {
       wardIds: [ward],
       staff: [{ userId: nephrologist.userId, name: "Nephrologist One", cadre: expect.any(String) }],
     });
+    expect(byId.has(pharmacy)).toBe(false);
+    expect(byId.has(point)).toBe(false);
     // The viewer is never offered to themselves; staff carry names and cadres only.
     expect(byId.get(home)!.staff).toEqual([]);
     expect(Object.keys(byId.get(cardio)!.staff[0]!).sort()).toEqual(["cadre", "name", "userId"]);

@@ -31,8 +31,15 @@ vi.mock("@/db", () => ({
 }));
 vi.mock("@/lib/resus/board-v2", () => ({ OPENABLE_LOOKBACK_MS: 0, fetchResusBoardV2: vi.fn() }));
 
-const { askedOfMe, askedOrder, forMyDepartment, requestDetail, requestsPageData, sentByMe } =
-  await import("@/lib/emr/read/requests");
+const {
+  askedOfMe,
+  askedOrder,
+  forMyDepartment,
+  redirectDepartments,
+  requestDetail,
+  requestsPageData,
+  sentByMe,
+} = await import("@/lib/emr/read/requests");
 const { loadEmrTasks } = await import("@/lib/workspace/queries");
 
 const FLAGS = ["CARE_REQUESTS", "EMR_V1", "ENCOUNTER_ENGINE_LIVE"] as const;
@@ -284,6 +291,7 @@ describe.skipIf(!laneOn)("reading care requests (PGlite lane)", () => {
     expect(detail.problems).toEqual(["Nephrotic syndrome"]);
     expect(detail.history.map((e) => e.words)).toEqual([expect.stringMatching(/^Sent to /)]);
     expect(detail.canAct.accept).toBe(true);
+    expect(detail.departmentId).toBe(renal);
     expect(detail.canAct.cancel).not.toBe(true);
     expect(detail.canOpenChart).toBe(true);
   });
@@ -314,6 +322,24 @@ describe.skipIf(!laneOn)("reading care requests (PGlite lane)", () => {
       expect.arrayContaining([expect.stringMatching(/^Home/), expect.stringMatching(/^Other/)]),
     );
     expect((await requestsPageData(requester, "not-a-uuid", opts())).detail).toBeNull();
+  });
+
+  it("pharmacy departments are never offered for Redirect (R32)", async () => {
+    const pharmacy = await department(pg, h, "Pharmacy");
+    await pg.query(`UPDATE hospital_departments SET catalogue_code = 'PHARMACY' WHERE id = $1`, [
+      pharmacy,
+    ]);
+    const point = (
+      await pg.query<{ id: string }>(
+        `INSERT INTO hospital_departments (hospital_id, parent_id, name, slug)
+         VALUES ($1, $2, 'Main window', $3) RETURNING id`,
+        [h, pharmacy, `point-${randomUUID().slice(0, 6)}`],
+      )
+    ).rows[0]!.id;
+    const ids = (await redirectDepartments(h, lane.db)).map((d) => d.id);
+    expect(ids).toContain(renal);
+    expect(ids).not.toContain(pharmacy);
+    expect(ids).not.toContain(point);
   });
 
   it("a nurse in another department sees nothing", async () => {

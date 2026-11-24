@@ -42,6 +42,7 @@ function detail(allowed: RequestAct[]): RequestDetail {
     patientName: "Test Patient",
     mrn: "TEST-001",
     wardName: "Ward A",
+    departmentId: "44444444-4444-4444-8444-444444444444",
     departmentName: "Cardiology",
     requesterName: "Dr Requester",
     requesterCadre: "Medical officer",
@@ -75,9 +76,11 @@ afterEach(() => {
   document.body.innerHTML = "";
 });
 
-const mount = async (d: RequestDetail) => {
+const mount = async (d: RequestDetail, departments?: { id: string; name: string }[]) => {
   await act(async () => {
-    root.render(h(RequestDialog, { detail: d, surface: "doctor", now: 60_000, onClose() {} }));
+    root.render(
+      h(RequestDialog, { detail: d, surface: "doctor", now: 60_000, departments, onClose() {} }),
+    );
   });
 };
 const buttons = (name: string) =>
@@ -117,5 +120,17 @@ describe("request dialog", () => {
       surface: "doctor",
       requestId: "11111111-1111-4111-8111-111111111111",
     });
+  });
+
+  it("redirect leaves out the current team by id, not by name", async () => {
+    const current = "44444444-4444-4444-8444-444444444444";
+    const twin = "55555555-5555-4555-8555-555555555555";
+    await mount(detail(["redirect"]), [
+      { id: current, name: "Cardiology" },
+      { id: twin, name: "Cardiology" },
+    ]);
+    const values = [...document.querySelectorAll("option")].map((o) => o.value);
+    expect(values).toContain(twin);
+    expect(values).not.toContain(current);
   });
 });

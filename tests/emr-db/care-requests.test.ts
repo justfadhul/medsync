@@ -166,6 +166,25 @@ describe.skipIf(!laneOn)("placing care requests (PGlite lane)", () => {
     }
   });
 
+  it("a pharmacist in the target department is not routed (R32)", async () => {
+    const dept = await department(pg, h, "Mixed");
+    const mo = await clinician(pg, { hospitalId: h, departmentId: dept });
+    await clinician(pg, { hospitalId: h, departmentId: dept, cadre: "PHARMACIST" });
+    await clinician(pg, { hospitalId: h, departmentId: dept, cadre: "PHARMACY_TECH" });
+    const v = await visit(requester);
+    const cond = await problem(v.p, v.enc);
+    const [id] = await place(requester, v, [
+      line({
+        kind: "consult",
+        targetDepartmentId: dept,
+        helpWanted: "advice",
+        reasonConditionIds: [cond],
+        question: "Synthetic question",
+      }),
+    ]);
+    expect(await routed(id!)).toEqual([{ recipient_user_id: mo.userId, step: "team", level: 0 }]);
+  });
+
   it("a review routes to seniors only", async () => {
     const med = await department(pg, h, "Medicine");
     await clinician(pg, { hospitalId: h, departmentId: med, cadre: "INTERN_DOCTOR" });
@@ -347,6 +366,18 @@ describe.skipIf(!laneOn)("placing care requests (PGlite lane)", () => {
     it("a non-clinical named person is refused", async () => {
       const desk = await reception(pg, { hospitalId: h, departmentId: home });
       expect(await refused({ namedUserIds: [desk.userId] })).toBe("invalid");
+    });
+
+    it("a named or phoned pharmacist is refused (R32)", async () => {
+      const pharmacist = await clinician(pg, {
+        hospitalId: h,
+        departmentId: home,
+        cadre: "PHARMACIST",
+      });
+      expect(await refused({ namedUserIds: [pharmacist.userId] })).toBe("invalid");
+      expect(await refused({ phoned: { userId: pharmacist.userId, at: minutes(-5) } })).toBe(
+        "invalid",
+      );
     });
 
     it("a named person at another hospital is refused", async () => {

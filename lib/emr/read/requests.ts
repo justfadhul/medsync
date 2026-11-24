@@ -23,7 +23,7 @@ import { cadres } from "@/db/schema/reference-data";
 import { users } from "@/db/schema/users";
 import { asClinicalReader } from "@/lib/emr/db";
 import { identitiesFor } from "@/lib/emr/read/results";
-import { relationTo } from "@/lib/emr/write/requests";
+import { notPharmacyDepartment, relationTo } from "@/lib/emr/write/requests";
 import { decrypt } from "@/lib/encryption";
 import { canAct } from "@/lib/requests/engine";
 import { currentRound, deriveFromRows } from "@/lib/requests/rows";
@@ -73,6 +73,8 @@ export interface RequestRow {
 }
 
 export interface RequestDetail extends RequestRow {
+  /** The department the current round asks: Redirect leaves it out by id (names are not unique). */
+  departmentId: string;
   question: string | null;
   problems: string[];
   history: { atMs: number; words: string }[];
@@ -423,6 +425,7 @@ export async function requestDetail(
 
   return {
     ...row!,
+    departmentId: l.departmentId,
     question: secret ? null : safeDecrypt(r.questionCiphertext),
     problems: problems.map((p) =>
       p.sensitivity !== "standard" && !l.chart
@@ -444,7 +447,7 @@ export async function requestDetail(
   };
 }
 
-/** The hospital's clinical teams, for Redirect: names only. */
+/** The hospital's clinical teams, for Redirect: names only, never the pharmacy (R32). */
 export async function redirectDepartments(
   hospitalId: string,
   database?: EmrDb,
@@ -458,6 +461,7 @@ export async function redirectDepartments(
         eq(hospitalDepartments.hospitalId, hospitalId),
         eq(hospitalDepartments.kind, "clinical"),
         isNull(hospitalDepartments.archivedAt),
+        notPharmacyDepartment,
       ),
     )
     .orderBy(asc(hospitalDepartments.name));

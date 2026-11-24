@@ -160,7 +160,8 @@ export function RequestDialog({
   useEffect(() => {
     if (can.seen !== true || seenFor.current === detail.id) return;
     seenFor.current = detail.id;
-    void markRequestSeen({ surface, requestId: detail.id });
+    // Best effort: a failed Seen never blocks reading the request.
+    void markRequestSeen({ surface, requestId: detail.id }).catch(() => undefined);
   }, [can.seen, detail.id, surface]);
 
   const base = { surface, requestId: detail.id };
@@ -177,7 +178,7 @@ export function RequestDialog({
   const noteField = (act: string) => (
     <Note value={notes[act] ?? ""} onChange={(v) => setNotes((n) => ({ ...n, [act]: v }))} />
   );
-  const teams = departments.filter((d) => d.name !== detail.departmentName);
+  const teams = departments.filter((d) => d.id !== detail.departmentId);
   const where = [detail.patientName ?? C.page.hiddenPatient, detail.mrn, detail.wardName].filter(
     Boolean,
   );
