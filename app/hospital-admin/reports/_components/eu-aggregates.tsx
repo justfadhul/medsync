@@ -1,4 +1,4 @@
-import type { EuReportRead } from "@/lib/eu/report-load";
+import type { EuReportRead, EuReportUnavailable } from "@/lib/eu/report-load";
 
 import { k } from "@/components/clinics-schedule/shared";
 import { Tag } from "@/components/medsync/tag";
@@ -8,12 +8,21 @@ import v from "./reports-view.module.css";
 const mins = (m: number | null) => (m === null ? W.tooFew : W.minutes(m));
 
 /** The EU indicators: neutral counts and times, each with its basis and window; no colour, no target. */
-export function EuAggregates({ read }: { read: EuReportRead }) {
+export function EuAggregates({ read }: { read: EuReportRead | EuReportUnavailable }) {
+  if ("unavailable" in read)
+    return (
+      <section className={k("su-card")} aria-labelledby="eu-heading">
+        <div className={k("su-ch")}>
+          <b id="eu-heading">{W.title}</b>
+        </div>
+        <p className={`${k("su-note")} ${v.pad}`}>{W.unavailable}</p>
+      </section>
+    );
   const { report: r, window: w, limitHours } = read;
   const spread = (s: typeof r.lengthOfStay) =>
     s.medianMin === null ? W.tooFew : W.spread(mins(s.medianMin), mins(s.p90Min), s.n);
   return (
-    <div className={k("su-card")} aria-labelledby="eu-heading">
+    <section className={k("su-card")} aria-labelledby="eu-heading">
       <div className={k("su-ch")}>
         <b id="eu-heading">{W.title}</b>
         <small>{W.stays(r.stays, w.days)}</small>
@@ -47,6 +56,6 @@ export function EuAggregates({ read }: { read: EuReportRead }) {
           <dd>{W.overBasis}</dd>
         </div>
       </dl>
-    </div>
+    </section>
   );
 }

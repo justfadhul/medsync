@@ -21,6 +21,11 @@ export interface EuReportRead {
   limitHours: number;
 }
 
+/** A read that failed for any reason but a missing table: the page says so and prints no figure. */
+export interface EuReportUnavailable {
+  unavailable: true;
+}
+
 /** Table not there yet (0311/0313 not applied): Postgres 42P01, or PostgREST's PGRST205. */
 function missingTable(e: unknown): boolean {
   const s = `${(e as { code?: string })?.code ?? ""} ${(e as { cause?: { code?: string } })?.cause?.code ?? ""} ${String(e)}`;
@@ -34,7 +39,7 @@ function missingTable(e: unknown): boolean {
 export async function fetchEuReport(
   hospitalId: string,
   days: ReportDays,
-): Promise<EuReportRead | null> {
+): Promise<EuReportRead | EuReportUnavailable | null> {
   if (!euObservationLiveFor(hospitalId)) return null;
   const window = reportWindow(days);
   try {
@@ -73,8 +78,13 @@ export async function fetchEuReport(
     );
     return { report, window, limitHours };
   } catch (e) {
-    if (!missingTable(e)) throw e;
-    logger.warn("eu.report.unavailable", { reason: String(e) });
-    return null;
+    // Name and code only: no row data in the log.
+    const err = e as { name?: string; code?: string };
+    if (missingTable(e)) {
+      logger.warn("eu.report.table_missing", { name: err.name, code: err.code });
+      return null;
+    }
+    logger.warn("eu.report.read_failed", { name: err.name, code: err.code });
+    return { unavailable: true };
   }
 }
