@@ -5,6 +5,18 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); version
 
 ## [Unreleased]
 
+### Added — The duty rota ([ADR 0534](docs/adr/0534-duty-rota-posts-and-assignments.md)) — 24 Nov 2026
+
+Posts and who is rostered on them, so a review or consult can reach the person on duty. Behind `DUTY_ROTA` (off by default; `1` or hospital ids; independent of `CARE_REQUESTS`). Wording is draft.
+
+- **Migration 0307 is GATED:** apply it before turning the flag on, with `cd <the worktree of this branch> && npm run db:migrate` (run it in the folder that holds the migration). It adds `duty_posts` and `duty_assignments` with their guard, and the foreign key from a request's routing event to its post.
+- Posts are archived, assignments ended, never edited. The rota says "rostered", never "present". The hospital admin and heads of department make it, by day and shift (Kampala time); a guard refuses a grade that does not fit, leave, double booking, a full post, and a cover on another post.
+- Leave comes from Clinics & schedule and never removes a duty: it marks it "Needs cover", in the week grid and the gap report (this week and the next 72 hours).
+- Pages: `/hospital-admin/departments/rota?department=<id>` (linked from the department) and `/doctor/rota` for heads, with the doctor's own duties. The wards page shows who covers each ward now; the doctor's top bar shows "On call: <post> until <time>".
+- Routing: when the rota is on, a review or consult goes to the person on the post first (a review: the ward's senior or consultant post, else the department's takes-consults post), before the team list. A holder who cannot take it is passed over and the skip is recorded.
+- Not built: the delegate who makes the rota, week templates and publishing, the "who covers" resolver in SQL.
+- Open for the owner/CSO: a back-dated end through the database; weekly recurring leave is ignored; all wording.
+
 ### Added — Review requests and consults ([ADR 0533](docs/adr/0533-one-request-record-for-reviews-and-consults.md), [0535](docs/adr/0535-care-team-chart-access.md), [0537](docs/adr/0537-requests-ride-the-plan-basket.md)) — 24 Nov 2026
 
 Senior review and "ask another team" become real requests, placed with the Plan and answered by a signed note. Behind `CARE_REQUESTS` (off by default; needs `EMR_V1`, the Plan entry also needs `CLERKING_PLAN_V2`). Wording is draft.
