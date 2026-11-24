@@ -33,6 +33,9 @@ describe.skipIf(!laneOn)("0306 — care_team access basis", () => {
   let target: string;
   let requester: string;
   let recipient: string;
+  let recipient2: string;
+  let newRecipient: string;
+  let cardiology: string;
   let member: string;
   let unrelated: string;
   let doctorB: string;
@@ -63,8 +66,11 @@ describe.skipIf(!laneOn)("0306 — care_team access basis", () => {
     );
   };
 
-  /** A new patient seen by the requester in Medicine, and a consult to Surgery routed to `recipient`. */
-  async function routedRequest(): Promise<{ p: string; enc: string; id: string }> {
+  /** A new patient seen by the requester in Medicine, and a consult to Surgery routed to `recipient`
+   *  (or, with `phoned`, phoned to that user at placement and routed to nobody). */
+  async function routedRequest(
+    o: { phoned?: string } = {},
+  ): Promise<{ p: string; enc: string; id: string }> {
     const p = await patient(pg);
     const enc = await encounter(pg, {
       hospitalId: hA,
@@ -77,14 +83,14 @@ describe.skipIf(!laneOn)("0306 — care_team access basis", () => {
       await pg.query<{ id: string }>(
         `INSERT INTO public.care_requests (hospital_id, patient_user_id, encounter_id, kind, target_department_id,
            urgency, help_wanted, reason_condition_ids, question_ciphertext, requester_user_id, requester_cadre,
-           requested_at, placement_id, client_key)
+           requested_at, placement_id, client_key, phoned_user_id, phoned_at)
          VALUES ($1, $2, $3, 'consult', $4, 'routine', 'advice', ARRAY[gen_random_uuid()], 'cipher', $5,
-           'MEDICAL_OFFICER', now(), gen_random_uuid(), $6)
+           'MEDICAL_OFFICER', now(), gen_random_uuid(), $6, $7::uuid, CASE WHEN $7::uuid IS NOT NULL THEN now() END)
          RETURNING id`,
-        [hA, p, enc, target, requester, randomUUID()],
+        [hA, p, enc, target, requester, randomUUID(), o.phoned ?? null],
       )
     ).rows[0]!.id;
-    await event(id, { kind: "routed", recipient_user_id: recipient, step: "named" });
+    if (!o.phoned) await event(id, { kind: "routed", recipient_user_id: recipient, step: "named" });
     return { p, enc, id };
   }
 
@@ -118,6 +124,9 @@ describe.skipIf(!laneOn)("0306 — care_team access basis", () => {
     const obstetrics = await department(pg, hA, "Obstetrics");
     requester = (await clinician(pg, { hospitalId: hA, departmentId: medicine })).userId;
     recipient = (await clinician(pg, { hospitalId: hA, departmentId: paeds })).userId;
+    recipient2 = (await clinician(pg, { hospitalId: hA, departmentId: paeds })).userId;
+    cardiology = await department(pg, hA, "Cardiology");
+    newRecipient = (await clinician(pg, { hospitalId: hA, departmentId: cardiology })).userId;
     member = (await clinician(pg, { hospitalId: hA, departmentId: target })).userId;
     unrelated = (await clinician(pg, { hospitalId: hA, departmentId: obstetrics })).userId;
     doctorB = (await clinician(pg, { hospitalId: hB, departmentId: await department(pg, hB) }))
@@ -173,12 +182,72 @@ describe.skipIf(!laneOn)("0306 — care_team access basis", () => {
     expect(await inSet(recipient, hA, r.p)).toBe(false);
   });
 
-  it("a recipient who declined keeps it while the request is open (routed recipient, as specified)", async () => {
+  it("a decliner loses it; another current-round recipient keeps it", async () => {
     const r = await routedRequest();
+    await event(r.id, { kind: "routed", recipient_user_id: recipient2, step: "named" });
     await event(r.id, { kind: "declined", actor_user_id: recipient, reason_code: "busy" });
-    expect(await basis(recipient, r.p, hA)).toBe("care_team");
-    await event(r.id, { kind: "cancelled", actor_user_id: requester, reason_code: "not_needed" });
     expect(await basis(recipient, r.p, hA)).toBeNull();
+    expect(await inSet(recipient, hA, r.p)).toBe(false);
+    expect(await basis(recipient2, r.p, hA)).toBe("care_team");
+    expect(await inSet(recipient2, hA, r.p)).toBe(true);
+  });
+
+  it("a redirect moves access to the new round; an earlier accepter keeps it", async () => {
+    const p = await patient(pg);
+    const enc = await encounter(pg, {
+      hospitalId: hA,
+      patientUserId: p,
+      clinicianUserId: requester,
+      departmentId: medicine,
+      state: "completed",
+    });
+    const id = (
+      await pg.query<{ id: string }>(
+        `INSERT INTO public.care_requests (hospital_id, patient_user_id, encounter_id, kind, target_department_id,
+           urgency, help_wanted, reason_condition_ids, question_ciphertext, requester_user_id, requester_cadre,
+           requested_at, placement_id, client_key)
+         VALUES ($1, $2, $3, 'consult', $4, 'routine', 'advice', ARRAY[gen_random_uuid()], 'cipher', $5,
+           'MEDICAL_OFFICER', now() - interval '4 hours', gen_random_uuid(), $6)
+         RETURNING id`,
+        [hA, p, enc, target, requester, randomUUID()],
+      )
+    ).rows[0]!.id;
+    const ago = (min: number) => new Date(Date.now() - min * 60_000).toISOString();
+    const redirectAt = ago(120);
+    await event(id, { kind: "routed", recipient_user_id: recipient, step: "named", at: ago(180) });
+    await event(id, { kind: "accepted", actor_user_id: member, at: ago(150) });
+    await event(id, {
+      kind: "redirected",
+      actor_user_id: member,
+      reason_code: "wrong_team",
+      redirect_department_id: cardiology,
+      at: redirectAt,
+    });
+    // Written with the redirect in one transaction: the same `at`, and still the new round.
+    await event(id, {
+      kind: "routed",
+      recipient_user_id: recipient2,
+      step: "team",
+      at: redirectAt,
+    });
+    await event(id, { kind: "routed", recipient_user_id: newRecipient, step: "team", at: ago(60) });
+
+    expect(await basis(recipient, p, hA)).toBeNull();
+    expect(await inSet(recipient, hA, p)).toBe(false);
+    expect(await basis(member, p, hA)).toBe("care_team");
+    expect(await basis(recipient2, p, hA)).toBe("care_team");
+    expect(await basis(newRecipient, p, hA)).toBe("care_team");
+    expect(await inSet(newRecipient, hA, p)).toBe(true);
+  });
+
+  it("the phoned consultant has it without being routed; a cancel ends it", async () => {
+    const r = await routedRequest({ phoned: newRecipient });
+    expect(await basis(newRecipient, r.p, hA)).toBe("care_team");
+    expect(await inSet(newRecipient, hA, r.p)).toBe(true);
+    expect(await basis(recipient, r.p, hA)).toBeNull();
+    await event(r.id, { kind: "cancelled", actor_user_id: requester, reason_code: "not_needed" });
+    expect(await basis(newRecipient, r.p, hA)).toBeNull();
+    expect(await inSet(newRecipient, hA, r.p)).toBe(false);
   });
 
   it("an unrelated clinician has none", async () => {
@@ -218,8 +287,11 @@ describe.skipIf(!laneOn)("0306 — care_team access basis", () => {
     });
     const accepted = await routedRequest();
     await event(accepted.id, { kind: "accepted", actor_user_id: member });
+    const declined = await routedRequest();
+    await event(declined.id, { kind: "declined", actor_user_id: recipient, reason_code: "busy" });
+    const phoned = await routedRequest({ phoned: member });
     for (const user of [recipient, member, unrelated, doctorB])
-      for (const p of [open.p, cancelled.p, accepted.p])
+      for (const p of [open.p, cancelled.p, accepted.p, declined.p, phoned.p])
         expect(
           { user, p, granted: (await basis(user, p, hA)) !== null },
           `basis vs set for ${user} / ${p}`,

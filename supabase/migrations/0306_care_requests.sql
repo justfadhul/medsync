@@ -11,9 +11,11 @@
 --      anyone with chart access, anyone an event names, a clinical member of the target department while
 --      the request is open, and the department's head. Never anon or authenticated.
 --   4. Audit on both tables, and both append-only.
---   5. The care_team access basis (0101's seam made real): a clinician a request was routed to, or who
---      accepted it, may open the patient's chart while the request is open, or for 30 days after its reply
---      (DEPARTMENT_WINDOW_DAYS); a cancel ends it at once. Both bodies of the rule call one helper.
+--   5. The care_team access basis (0101's seam made real): a current-round recipient who has not declined,
+--      any accepter, or the phoned consultant may open the patient's chart while the request is open, or
+--      for 30 days after its reply (DEPARTMENT_WINDOW_DAYS); a cancel ends it at once. Earlier-round
+--      recipients and decliners lose it (they still read the request, section 3). Both bodies of the rule
+--      call one helper.
 --
 -- ADDITIVE and re-runnable. No client grants: writes come from the server connection (asClinicalWriter).
 -- Reverse: restore 0101's two rule bodies; drop private.care_team_patients, the two tables and the
@@ -170,18 +172,28 @@ CREATE TRIGGER care_request_events_append_only BEFORE UPDATE OR DELETE ON public
   FOR EACH ROW EXECUTE FUNCTION public.block_modify_append_only();
 
 -- ─── 5. The care_team access basis ──────────────────────────────────────
--- Patients of this hospital's requests that name the user as a routed recipient or as the accepter, while
--- the request is open (no replied, closed or cancelled event), or replied within the last 30 days
--- (DEPARTMENT_WINDOW_DAYS, lib/encounter/scope.ts:43) and not cancelled. A cancel ends access at once.
+-- Patients of this hospital's requests where the user is (R23, least privilege) a routed recipient of the
+-- current round who has not declined in it, any accepter, or the phoned consultant; while the request is
+-- open (no replied, closed or cancelled event), or replied within the last 30 days (DEPARTMENT_WINDOW_DAYS,
+-- lib/encounter/scope.ts:43) and not cancelled. A cancel ends access at once. The current round is every
+-- event at or after the last `redirected` event's `at` (a redirect and its new routing share one now()).
 CREATE OR REPLACE FUNCTION private.care_team_patients(p_user uuid, p_hospital uuid) RETURNS SETOF uuid
 LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public, pg_temp AS $$
   SELECT DISTINCT r.patient_user_id
   FROM public.care_requests r
+  CROSS JOIN LATERAL (
+    SELECT coalesce(max(e.at), '-infinity'::timestamptz) AS since
+    FROM public.care_request_events e WHERE e.request_id = r.id AND e.kind = 'redirected') round
   WHERE r.hospital_id = p_hospital
-    AND EXISTS (SELECT 1 FROM public.care_request_events e
-                 WHERE e.request_id = r.id
-                   AND ((e.kind = 'routed' AND e.recipient_user_id = p_user)
-                     OR (e.kind = 'accepted' AND e.actor_user_id = p_user)))
+    AND (r.phoned_user_id = p_user
+      OR EXISTS (SELECT 1 FROM public.care_request_events e
+                  WHERE e.request_id = r.id AND e.kind = 'accepted' AND e.actor_user_id = p_user)
+      OR (EXISTS (SELECT 1 FROM public.care_request_events e
+                   WHERE e.request_id = r.id AND e.kind = 'routed' AND e.recipient_user_id = p_user
+                     AND e.at >= round.since)
+          AND NOT EXISTS (SELECT 1 FROM public.care_request_events e
+                           WHERE e.request_id = r.id AND e.kind = 'declined' AND e.actor_user_id = p_user
+                             AND e.at >= round.since)))
     AND NOT EXISTS (SELECT 1 FROM public.care_request_events e
                      WHERE e.request_id = r.id AND e.kind = 'cancelled')
     AND (NOT EXISTS (SELECT 1 FROM public.care_request_events e
