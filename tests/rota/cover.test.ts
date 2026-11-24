@@ -254,4 +254,62 @@ describe("rota cover engine", () => {
     expect(r.step).toBe("ward_post");
     expect(r.people.map((p) => p.userId)).toEqual(["S1", "S2"]);
   });
+
+  it("a duty ended before it starts leaves one clean gap", () => {
+    const shos = post("ward-shos", { wardId: "W", capacity: 2 });
+    const removed = duty("ward-shos", "Y", "2026-11-24", "day", {
+      endedAt: K("2026-11-24T06:00:00"),
+    });
+    const late = duty("ward-shos", "X", "2026-11-24", "day", {
+      startsAt: K("2026-11-24T09:00:00"),
+    });
+    expect(
+      gaps([shos], [removed, late], [], K("2026-11-24T05:00:00"), K("2026-11-24T17:00:00")),
+    ).toEqual([
+      { postId: "ward-shos", from: K("2026-11-24T05:00:00"), to: K("2026-11-24T09:00:00") },
+    ]);
+  });
+
+  it("only leave over the rest of the duty needs cover (R33)", () => {
+    const a = duty("ward-sho", "U", "2026-11-24", "day");
+    const morning = [
+      { userId: "U", startsAt: K("2026-11-24T08:00:00"), endsAt: K("2026-11-24T10:00:00") },
+    ];
+    // Leave already over mid-duty: not needs cover.
+    expect(dutyState(a, morning, K("2026-11-24T11:00:00"))).toBe("in_post");
+    // Before it ended, the rest of the duty still overlapped it.
+    expect(dutyState(a, morning, K("2026-11-24T09:00:00"))).toBe("needs_cover");
+    // Leave covering the rest of the duty: needs cover.
+    const afternoon = [
+      { userId: "U", startsAt: K("2026-11-24T14:00:00"), endsAt: K("2026-11-25T00:00:00") },
+    ];
+    expect(dutyState(a, afternoon, K("2026-11-24T11:00:00"))).toBe("needs_cover");
+    // Leave that ended before a future duty starts: still on the rota.
+    expect(
+      dutyState(
+        a,
+        morning.map((l) => ({
+          ...l,
+          startsAt: K("2026-11-23T08:00:00"),
+          endsAt: K("2026-11-24T08:00:00"),
+        })),
+        K("2026-11-23T20:00:00"),
+      ),
+    ).toBe("planned");
+  });
+
+  it("until stops at the holder's next leave", () => {
+    const a = duty("ward-sho", "U", "2026-11-24", "day");
+    const leave = [
+      { userId: "U", startsAt: K("2026-11-24T12:00:00"), endsAt: K("2026-11-24T20:00:00") },
+    ];
+    const r = whoCovers(world({ posts: [wardSho], assignments: [a], leave }), {
+      departmentId: "D",
+      wardId: "W",
+      at: K("2026-11-24T10:00:00"),
+    });
+    expect(r.people).toEqual([
+      { userId: "U", postId: "ward-sho", postName: "Ward 4B SHO", until: K("2026-11-24T12:00:00") },
+    ]);
+  });
 });

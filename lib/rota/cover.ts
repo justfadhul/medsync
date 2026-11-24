@@ -157,9 +157,11 @@ export function dutyState(a: Assignment, leave: Leave[], now: Date): DutyState {
   if (t >= end)
     return a.endedAt && a.endedAt.getTime() < a.endsAt.getTime() ? "ended_early" : "past";
   const start = a.startsAt.getTime();
+  // R33: only leave over the part of the duty still to come; leave already over does not flag it.
+  const from = Math.max(t, start);
   if (
     leave.some(
-      (l) => l.userId === a.userId && l.startsAt.getTime() < end && l.endsAt.getTime() > start,
+      (l) => l.userId === a.userId && l.startsAt.getTime() < end && l.endsAt.getTime() > from,
     )
   )
     return "needs_cover";
@@ -200,6 +202,8 @@ export function gaps(
               [[a.startsAt.getTime(), endOf(a)]],
             ),
         )
+        // A duty ended before it starts (endedAt <= startsAt) covers nothing.
+        .filter(([s, e]) => e > s)
         .sort((x, y) => x[0] - y[0]);
 
       const out: { postId: string; from: Date; to: Date }[] = [];
@@ -208,7 +212,7 @@ export function gaps(
         if (e <= cursor) continue;
         if (s >= hi) break;
         if (s > cursor) out.push({ postId: p.id, from: new Date(cursor), to: new Date(s) });
-        cursor = e;
+        cursor = Math.max(cursor, e);
       }
       if (cursor < hi) out.push({ postId: p.id, from: new Date(cursor), to: new Date(hi) });
       return out;
