@@ -624,20 +624,367 @@ describe.skipIf(!laneOn)("0311 — the EU stay on real SQL", () => {
     ).toMatch(/Nobody is arriving/);
   });
 
-  it("only the service role runs observe_in_eu", async () => {
-    const direct = await probe(
-      pg,
-      { userId: doctor, role: "authenticated", aal: "aal2" },
-      `SELECT public.observe_in_eu('{}'::jsonb)`,
+  it("only the service role runs the EU functions", async () => {
+    for (const fn of ["observe_in_eu", "confirm_bed_arrival", "move_eu_space", "end_eu_stay"]) {
+      const direct = await probe(
+        pg,
+        { userId: doctor, role: "authenticated", aal: "aal2" },
+        `SELECT public.${fn}('{}'::jsonb)`,
+      );
+      expect(direct.ok).toBe(false);
+      expect(!direct.ok && direct.error).toMatch(/permission denied/);
+      const grants = await pg.query<{ grantee: string }>(
+        `SELECT grantee FROM information_schema.routine_privileges
+          WHERE routine_schema = 'public' AND routine_name = $1 AND privilege_type = 'EXECUTE'`,
+        [fn],
+      );
+      expect(grants.rows.map((g) => g.grantee).filter((g) => g !== "postgres")).toEqual([
+        "service_role",
+      ]);
+    }
+  });
+
+  /* ─── R56: adoption and the space's patient ─── */
+
+  /** A triage nurse's stay for a fresh patient, responsible = the nurse; the doctor's encounter not yet started. */
+  async function triageStay(ward: string, o: Record<string, unknown> = {}) {
+    const p = await patient(pg);
+    const i = await intake(pg, { hospitalId: h, patientUserId: p });
+    const nurse = (await staff(pg, { hospitalId: h, departmentId: dept })).userId;
+    const s = await insertStay({
+      patient_user_id: p,
+      encounter_id: null,
+      intake_id: i,
+      started_by_kind: "triage_nurse",
+      decided_by: nurse,
+      responsible_user_id: nurse,
+      ward_id: ward,
+      ...o,
+    });
+    const e = await encounter(pg, { hospitalId: h, patientUserId: p, clinicianUserId: doctor });
+    return { p, i, s, e, nurse };
+  }
+
+  it("adopting a triage stay makes the doctor responsible; waiting on the same EU keeps the doctor's reason", async () => {
+    const { ward, beds } = await newWard(["R1"]);
+    const waiting = await triageStay(ward);
+    await call("observe_in_eu", {
+      encounter_id: waiting.e,
+      actor: doctor,
+      ward_id: ward,
+      space_wait_reason: "other",
+      space_wait_note_ciphertext: "enc:doctor",
+    });
+    expect(
+      await row(
+        `SELECT encounter_id, decided_by, responsible_user_id, status, space_wait_reason, space_wait_note_ciphertext
+           FROM public.eu_stays WHERE id=$1`,
+        [waiting.s],
+      ),
+    ).toEqual({
+      encounter_id: waiting.e,
+      decided_by: waiting.nurse,
+      responsible_user_id: doctor,
+      status: "awaiting_space",
+      space_wait_reason: "other",
+      space_wait_note_ciphertext: "enc:doctor",
+    });
+    // Adopted into a space: the doctor is responsible too.
+    const placed = await triageStay(ward);
+    await call("observe_in_eu", {
+      encounter_id: placed.e,
+      actor: doctor,
+      ward_id: ward,
+      bed_id: beds["R1"],
+    });
+    expect(
+      (await row(`SELECT responsible_user_id FROM public.eu_stays WHERE id=$1`, [placed.s]))
+        .responsible_user_id,
+    ).toBe(doctor);
+  });
+
+  it("an EU space is for its stay's patient", async () => {
+    const { ward, beds } = await newWard(["R1"]);
+    const s = await insertStay({ ward_id: ward });
+    const stranger = await patient(pg);
+    await expect(
+      pg.query(
+        `INSERT INTO public.bed_assignments (hospital_id, ward_id, bed_id, patient_user_id, started_by, eu_stay_id)
+         VALUES ($1, $2, $3, $4, $5, $6)`,
+        [h, ward, beds["R1"], stranger, doctor, s],
+      ),
+    ).rejects.toThrow(/stay's patient/);
+  });
+
+  /* ─── move_eu_space and end_eu_stay (0311 section 6) ─── */
+
+  const asg = (id: unknown) =>
+    row(
+      `SELECT bed_id, eu_stay_id, arrived_by, ended_at IS NOT NULL AS ended, reason
+         FROM public.bed_assignments WHERE id=$1`,
+      [id],
     );
-    expect(direct.ok).toBe(false);
-    expect(!direct.ok && direct.error).toMatch(/permission denied/);
-    const grants = await pg.query<{ grantee: string }>(
-      `SELECT grantee FROM information_schema.routine_privileges
-        WHERE routine_schema = 'public' AND routine_name = 'observe_in_eu' AND privilege_type = 'EXECUTE'`,
+  const stayRow = (id: unknown) =>
+    row(
+      `SELECT ward_id, status, decided_at, arrived_by, space_wait_reason, ended_by, end_kind, encounter_id
+         FROM public.eu_stays WHERE id=$1`,
+      [id],
     );
-    expect(grants.rows.map((g) => g.grantee).filter((g) => g !== "postgres")).toEqual([
-      "service_role",
-    ]);
+
+  it("moves resus → trolley: the EU clock keeps its start, the old space frees", async () => {
+    const { ward, beds } = await newWard(["R1", "T2"]);
+    const { e } = await visit();
+    const r = await call("observe_in_eu", {
+      encounter_id: e,
+      actor: doctor,
+      ward_id: ward,
+      bed_id: beds["R1"],
+    });
+    await call("confirm_bed_arrival", {
+      hospital_id: h,
+      assignment_id: r.assignment_id,
+      actor: doctor,
+    });
+    const before = await stayRow(r.stay_id);
+    const m = await call("move_eu_space", {
+      hospital_id: h,
+      stay_id: r.stay_id,
+      actor: doctor,
+      bed_id: beds["T2"],
+    });
+    expect(m).toMatchObject({ stay_id: r.stay_id, bed: "T2" });
+    expect(await stayRow(r.stay_id)).toEqual(before);
+    expect(await asg(r.assignment_id)).toMatchObject({ ended: true, reason: "Moved to T2" });
+    expect(await asg(m.assignment_id)).toEqual({
+      bed_id: beds["T2"],
+      eu_stay_id: r.stay_id,
+      arrived_by: doctor,
+      ended: false,
+      reason: null,
+    });
+  });
+
+  it("placing a waiting patient is one tap: Occupied at once", async () => {
+    const { ward, beds } = await newWard(["T1"]);
+    const { e } = await visit();
+    const r = await call("observe_in_eu", {
+      encounter_id: e,
+      actor: doctor,
+      ward_id: ward,
+      space_wait_reason: "no_free_bed",
+    });
+    const m = await call("move_eu_space", {
+      hospital_id: h,
+      stay_id: r.stay_id,
+      actor: doctor,
+      bed_id: beds["T1"],
+    });
+    expect((await asg(m.assignment_id)).arrived_by).toBe(doctor);
+    expect(await stayRow(r.stay_id)).toMatchObject({
+      status: "in_space",
+      arrived_by: doctor,
+      space_wait_reason: null,
+    });
+  });
+
+  it("moving an Arriving patient keeps them Arriving; out of a space, they wait with a reason", async () => {
+    const { ward, beds } = await newWard(["R1", "T1"]);
+    const { e } = await visit();
+    const r = await call("observe_in_eu", {
+      encounter_id: e,
+      actor: doctor,
+      ward_id: ward,
+      bed_id: beds["R1"],
+    });
+    const m = await call("move_eu_space", {
+      hospital_id: h,
+      stay_id: r.stay_id,
+      actor: doctor,
+      bed_id: beds["T1"],
+    });
+    expect((await asg(m.assignment_id)).arrived_by).toBeNull();
+    expect(await stayRow(r.stay_id)).toMatchObject({ status: "in_space", arrived_by: null });
+
+    const out = await call("move_eu_space", {
+      hospital_id: h,
+      stay_id: r.stay_id,
+      actor: doctor,
+      space_wait_reason: "floor",
+    });
+    expect(out).toMatchObject({ assignment_id: null, bed: null });
+    expect(await asg(m.assignment_id)).toMatchObject({
+      ended: true,
+      reason: "Moved out of a space",
+    });
+    expect(await stayRow(r.stay_id)).toMatchObject({
+      status: "awaiting_space",
+      space_wait_reason: "floor",
+    });
+  });
+
+  it("moves to another EU of the hospital, refuses a general ward", async () => {
+    const a = await newWard(["A1"]);
+    const b = await newWard(["B1"]);
+    const general = await newWard(["1"], { type: "general" });
+    const elsewhere = await newWard(["X1"], { hospitalId: await hospital(pg, "Third EU") });
+    const { p, e } = await visit();
+    const r = await call("observe_in_eu", {
+      encounter_id: e,
+      actor: doctor,
+      ward_id: a.ward,
+      space_wait_reason: "no_free_bed",
+    });
+    const move = (o: Record<string, unknown>) =>
+      refusal("move_eu_space", { hospital_id: h, stay_id: r.stay_id, actor: doctor, ...o });
+    const before = await footprint(p, e);
+    for (const w of [general, elsewhere])
+      expect(await move({ ward_id: w.ward, bed_id: Object.values(w.beds)[0] })).toBe(
+        "EU409 That is not an emergency unit at this hospital.",
+      );
+    expect(await move({ hospital_id: elsewhere.ward })).toBe(
+      "EU404 That stay is not at this hospital.",
+    );
+    expect(await move({ stay_id: randomUUID() })).toBe("EU404 That stay is not at this hospital.");
+    expect(await move({ ward_id: b.ward })).toBe(
+      "EU400 Choose a space, or say why the patient waits for one.",
+    );
+    expect(await move({ space_wait_reason: "other" })).toBe("EU400 Say why the patient waits.");
+    expect(await footprint(p, e)).toEqual(before);
+
+    // The old EU's board hears the patient leave (the stay had no space there to end).
+    const heard = async () =>
+      (
+        await row(
+          `SELECT count(*)::int AS n FROM realtime.messages WHERE topic = $1 AND payload->>'ward_id' = $2`,
+          [`ward-beds:${h}`, a.ward],
+        )
+      ).n;
+    const heardBefore = await heard();
+    const m = await call("move_eu_space", {
+      hospital_id: h,
+      stay_id: r.stay_id,
+      actor: doctor,
+      ward_id: b.ward,
+      bed_id: b.beds["B1"],
+    });
+    expect(m).toMatchObject({ bed: "B1" });
+    expect(await stayRow(r.stay_id)).toMatchObject({ ward_id: b.ward, status: "in_space" });
+    expect(await heard()).toBeGreaterThan(heardBefore as number);
+  });
+
+  const end = (e: string, o: Record<string, unknown> = {}) => ({
+    encounter_id: e,
+    actor: doctor,
+    end_kind: "home",
+    disposition: "home",
+    ...o,
+  });
+
+  it("end_eu_stay closes the visit and the stay together", async () => {
+    const { ward, beds } = await newWard(["T1"]);
+    const { e } = await visit();
+    const r = await call("observe_in_eu", {
+      encounter_id: e,
+      actor: doctor,
+      ward_id: ward,
+      bed_id: beds["T1"],
+    });
+    expect(await refusal("end_eu_stay", end(e, { end_kind: "admitted" }))).toBe(
+      "EU400 An admission ends the stay when the patient arrives on the ward.",
+    );
+    const x = await call(
+      "end_eu_stay",
+      end(e, { disposition_detail: { note: "well" }, follow_up: { kind: "none" } }),
+    );
+    expect(x).toEqual({ ended: true, stay_id: r.stay_id });
+    const enc = await row(
+      `SELECT state, ended_at IS NOT NULL AS ended, completed_by, closure_kind, disposition, disposition_detail,
+              follow_up, completion_reason FROM public.encounters WHERE id=$1`,
+      [e],
+    );
+    const wardName = (await row(`SELECT name FROM public.hospital_wards WHERE id=$1`, [ward])).name;
+    expect(enc).toEqual({
+      state: "completed",
+      ended: true,
+      completed_by: doctor,
+      closure_kind: "clinical",
+      disposition: "home",
+      disposition_detail: { note: "well", eu_stay_id: r.stay_id, eu_ward: wardName },
+      follow_up: { kind: "none" },
+      completion_reason: "ended_by_clinician",
+    });
+    expect(await stayRow(r.stay_id)).toMatchObject({
+      status: "ended",
+      end_kind: "home",
+      ended_by: doctor,
+    });
+    expect(await asg(r.assignment_id)).toMatchObject({ ended: true, reason: "Left the EU" });
+    expect(
+      (
+        await pg.query<{ label: string }>(
+          `SELECT label FROM public.encounter_events WHERE encounter_id=$1 AND kind='disposition' ORDER BY recorded_at`,
+          [e],
+        )
+      ).rows.map((x) => x.label),
+    ).toContain(`Visit completed: home, left ${wardName}`);
+  });
+
+  it("end_eu_stay ends a triage stay and stamps the encounter that closed it", async () => {
+    const { ward } = await newWard(["R1"]);
+    const t = await triageStay(ward);
+    const x = await call("end_eu_stay", end(t.e, { end_kind: "died", disposition: "deceased" }));
+    expect(x).toEqual({ ended: true, stay_id: t.s });
+    expect(await stayRow(t.s)).toMatchObject({
+      status: "ended",
+      end_kind: "died",
+      encounter_id: t.e,
+    });
+    expect(
+      (await row(`SELECT disposition FROM public.encounters WHERE id=$1`, [t.e])).disposition,
+    ).toBe("deceased");
+  });
+
+  it("end_eu_stay ignores an unrelated encounter", async () => {
+    const { ward } = await newWard(["R1"]);
+    const { p, e } = await visit();
+    const r = await call("observe_in_eu", {
+      encounter_id: e,
+      actor: doctor,
+      ward_id: ward,
+      space_wait_reason: "floor",
+    });
+    const clinic = await encounter(pg, {
+      hospitalId: h,
+      patientUserId: p,
+      clinicianUserId: doctor,
+    });
+    const before = await footprint(p, clinic);
+    expect(await call("end_eu_stay", end(clinic))).toEqual({ ended: false });
+    expect(await footprint(p, clinic)).toEqual(before);
+    expect((await stayRow(r.stay_id)).status).toBe("awaiting_space");
+    expect((await row(`SELECT state FROM public.encounters WHERE id=$1`, [clinic])).state).toBe(
+      "in_progress",
+    );
+  });
+
+  it("a stay ends once", async () => {
+    const { ward } = await newWard(["R1"]);
+    const { e } = await visit();
+    const r = await call("observe_in_eu", {
+      encounter_id: e,
+      actor: doctor,
+      ward_id: ward,
+      space_wait_reason: "floor",
+    });
+    expect(await call("end_eu_stay", end(e))).toMatchObject({ ended: true });
+    expect(await call("end_eu_stay", end(e))).toEqual({ ended: false });
+    expect(
+      await refusal("move_eu_space", {
+        hospital_id: h,
+        stay_id: r.stay_id,
+        actor: doctor,
+        space_wait_reason: "floor",
+      }),
+    ).toBe("EU409 This stay has ended.");
   });
 });
