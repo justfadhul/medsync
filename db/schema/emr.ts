@@ -419,7 +419,7 @@ export const clinicalNotes = pgTable(
   (t) => [
     check(
       "clinical_notes_note_type_check",
-      sql`${t.noteType} IN ('clerking','emergency_clerking','progress','ward_round','procedure','handover','referral','nursing','addendum','cause_of_death','medico_legal')`,
+      sql`${t.noteType} IN ('clerking','emergency_clerking','progress','ward_round','procedure','handover','referral','nursing','addendum','cause_of_death','medico_legal','consult')`,
     ),
     check("clinical_notes_state_check", sql`${t.state} IN ('draft','signed')`),
     check("clinical_notes_sensitivity_check", sql`${t.sensitivity} IN ${SENSITIVITY}`),

@@ -178,3 +178,6 @@ export * from "./patient-payments";
 
 // ─── Care mode and care programmes (migration 0301, GATED) ───
 export * from "./patient-care";
+
+// ─── Care requests: reviews and consults (migration 0306, GATED, ADR 0533) ───
+export * from "./care-requests";

@@ -34,7 +34,7 @@ export const saNotifications = pgTable(
   (t) => [
     check(
       "sa_notifications_kind_check",
-      sql`${t.kind} IN ('break_glass_access','admin_action_on_tenant','account_security')`,
+      sql`${t.kind} IN ('break_glass_access','admin_action_on_tenant','account_security','clinical_triage_alert','clinical_resus_mobilisation','clinical_resus_arrest_call','clinical_resus_idle','care_request','care_request_update','ward_incoming')`,
     ),
     index("sa_notifications_recipient_idx").on(t.recipientUserId, t.readAt, t.deliveredAt),
   ],
