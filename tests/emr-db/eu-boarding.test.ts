@@ -247,7 +247,7 @@ describe.skipIf(!laneOn)("0312 — boarding from the EU on real SQL", () => {
   });
 
   it("a patient not in the EU is admitted exactly as before", async () => {
-    const ward = await newWard(["1"]);
+    const ward = await newWard(["1", "2"]);
     const { p, e } = await visit();
     const r = await call("admit_from_encounter", {
       encounter_id: e,
@@ -292,9 +292,9 @@ describe.skipIf(!laneOn)("0312 — boarding from the EU on real SQL", () => {
         encounter_id: q.e,
         actor: doctor,
         ward_id: ward.ward,
-        bed_id: (await newWard(["1"])).beds["1"],
+        bed_id: ward.beds["2"],
       }),
-    ).toMatch(/^AD409 /);
+    ).toBe("AD409 This patient is already in a bed. The ward releases it first.");
   });
 
   it("the ward's Arrived ends the EU space and stay in one go and reuses the inpatient record", async () => {
@@ -584,12 +584,84 @@ describe.skipIf(!laneOn)("0312 — boarding from the EU on real SQL", () => {
       "AD409 This patient is in the emergency unit on another visit. Admit them from that visit.",
     );
   });
+
+  it("R62: a boarder who dies in the EU: the admission ends, no bed is held, the ward's Arrived is refused", async () => {
+    const x = await inEu();
+    const r = await call("admit_from_encounter", {
+      encounter_id: x.e,
+      actor: doctor,
+      ward_id: x.ward.ward,
+      bed_id: x.ward.beds["1"],
+    });
+    const inpatient = (
+      await row(`SELECT inpatient_encounter_id FROM public.admissions WHERE id = $1`, [
+        r.admission_id,
+      ])
+    ).inpatient_encounter_id as string;
+    expect(
+      await call("end_eu_stay", {
+        encounter_id: inpatient,
+        actor: doctor,
+        end_kind: "died",
+        disposition: "deceased",
+      }),
+    ).toEqual({ ended: true, stay_id: x.stay });
+    expect(
+      await row(`SELECT status, cancelled_by, cancel_reason FROM public.admissions WHERE id = $1`, [
+        r.admission_id,
+      ]),
+    ).toEqual({
+      status: "cancelled",
+      cancelled_by: doctor,
+      cancel_reason: "Left the EU before reaching the ward",
+    });
+    expect(
+      await row(`SELECT status, end_kind FROM public.eu_stays WHERE id = $1`, [x.stay]),
+    ).toEqual({ status: "ended", end_kind: "died" });
+    expect(await open(x.p)).toHaveLength(0);
+    expect(
+      (await row(`SELECT reason FROM public.bed_assignments WHERE id = $1`, [r.assignment_id]))
+        .reason,
+    ).toBe("Left the EU");
+    expect(
+      await refusal("confirm_bed_arrival", {
+        hospital_id: h,
+        assignment_id: r.assignment_id,
+        actor: nurse,
+      }),
+    ).toBe("AD409 Nobody is arriving in this bed.");
+  });
+
+  it("R62: a boarder on the waiting list who goes home from the EU: the admission ends", async () => {
+    const x = await inEu();
+    const r = await call("admit_from_encounter", {
+      encounter_id: x.e,
+      actor: doctor,
+      ward_id: x.ward.ward,
+      bed_wait_reason: "no_free_bed",
+    });
+    const inpatient = (
+      await row(`SELECT inpatient_encounter_id FROM public.admissions WHERE id = $1`, [
+        r.admission_id,
+      ])
+    ).inpatient_encounter_id as string;
+    await call("end_eu_stay", {
+      encounter_id: inpatient,
+      actor: doctor,
+      end_kind: "home",
+      disposition: "home",
+    });
+    expect(
+      (await row(`SELECT status FROM public.admissions WHERE id = $1`, [r.admission_id])).status,
+    ).toBe("cancelled");
+    expect(await open(x.p)).toHaveLength(0);
+  });
 });
 
 /* R57 / R61: the 0312 functions keep the lock order encounter → stay → assignment. Read from the bodies. */
 describe("0312 — lock order", () => {
   const sql = readMigration("0312_eu_boarding.sql").replace(/--[^\n]*/g, "");
-  const order = (fn: string) => {
+  const order = (fn: string, tables = ["encounters", "eu_stays", "bed_assignments"]) => {
     const start = sql.indexOf(`CREATE OR REPLACE FUNCTION public.${fn}(p jsonb)`);
     expect(start, fn).toBeGreaterThan(-1);
     const body = sql.slice(start, sql.indexOf("\n$$;", start));
@@ -598,8 +670,7 @@ describe("0312 — lock order", () => {
       const t = /\bFOR UPDATE\b/.test(stmt)
         ? /FROM public\.(\w+)/.exec(stmt)?.[1]
         : /(?<!FOR )\bUPDATE public\.(\w+)/.exec(stmt)?.[1];
-      if (t && ["encounters", "eu_stays", "bed_assignments"].includes(t) && !seen.includes(t))
-        seen.push(t);
+      if (t && tables.includes(t) && !seen.includes(t)) seen.push(t);
     }
     return seen;
   };
@@ -611,6 +682,16 @@ describe("0312 — lock order", () => {
 
   it("admit_from_encounter locks the encounter before the stay", () => {
     expect(order("admit_from_encounter")).toEqual(["encounters", "eu_stays"]);
+  });
+
+  it("end_eu_stay locks visit → stay → admission → assignment (R62)", () => {
+    expect(
+      order("end_eu_stay", ["encounters", "eu_stays", "admissions", "bed_assignments"]),
+    ).toEqual(["encounters", "eu_stays", "admissions", "bed_assignments"]);
+  });
+
+  it("confirm_bed_arrival boards only for an open stay", () => {
+    expect(sql).toContain("ON s.admission_id = a.admission_id AND s.status <> 'ended'");
   });
 
   it("the guard serialises a patient's inserts", () => {

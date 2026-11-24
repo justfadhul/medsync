@@ -18,18 +18,21 @@
 --        arrived before a ward bed is held, and is admitted only from the stay's own visit; their inpatient record
 --        opens now; the stay is stamped with the admission before the ward bed and the close.
 --      - allocate_admission_bed: a boarder on the waiting list keeps the EU space (arrived) when given a ward bed.
---      - confirm_bed_arrival: lock order encounter → stay → assignment; a boarder's Arrived ends the EU space
---        ('Arrived on <ward>') and the stay (admitted) before the ward arrival is stamped, and reuses the
---        inpatient record. release_admission_bed is unchanged: an ended admission leaves the boarder in the EU.
+--      - confirm_bed_arrival: lock order encounter → stay → assignment; a boarder's Arrived (open stay only) ends
+--        the EU space ('Arrived on <ward>') and the stay (admitted) before the ward arrival is stamped, and reuses
+--        the inpatient record. release_admission_bed is unchanged: an ended admission leaves the boarder in the EU.
 --      - move_eu_space: a boarder's Arriving ward bed is not "already in a bed".
 --      - encounters_eu_stay_close_guard: a boarder's inpatient record, while the stay is open, completes only
 --        through end_eu_stay.
+--      - end_eu_stay (R62): a boarder who leaves the EU before reaching the ward (died, home, ...) has their open
+--        admission cancelled and its Arriving ward bed ended in the same transaction (visit → stay → admission →
+--        assignment), so the ward cannot arrive them later.
 --
 -- ADDITIVE and re-runnable.
 -- Reverse (section 1): with at most one open assignment per patient, recreate 0090's
 -- bed_assignments_one_open_per_patient, then drop the two indexes of section 1.
 -- Reverse (section 2): recreate the functions of section 2 from 0311 (guard, confirm_bed_arrival, move_eu_space,
--- close guard) and 0091 (admissions_guard, admit_from_encounter, allocate_admission_bed).
+-- close guard, end_eu_stay) and 0091 (admissions_guard, admit_from_encounter, allocate_admission_bed).
 
 -- ─── 1. One Occupied plus one Arriving per patient ───────────────────────
 CREATE UNIQUE INDEX IF NOT EXISTS bed_assignments_one_occupied_per_patient
@@ -330,7 +333,7 @@ BEGIN
   -- so this read holds.
   SELECT coalesce(a.eu_stay_id, s.id) INTO v_stay
     FROM public.bed_assignments a
-    LEFT JOIN public.eu_stays s ON s.admission_id = a.admission_id
+    LEFT JOIN public.eu_stays s ON s.admission_id = a.admission_id AND s.status <> 'ended'
    WHERE a.id = (p->>'assignment_id')::uuid;
   PERFORM 1 FROM public.encounters
    WHERE id = (SELECT encounter_id FROM public.eu_stays WHERE id = v_stay)
@@ -496,5 +499,75 @@ BEGIN
       USING ERRCODE = 'check_violation', HINT = 'eu_close_with_outcome';
   END IF;
   RETURN NEW;
+END;
+$$;
+
+-- 0311's end_eu_stay, plus (R62): a boarder who leaves the EU (died, home, ...) before reaching the ward ends their
+-- open admission and its Arriving ward bed in the same transaction, so no bed is held and the ward cannot "arrive"
+-- them later. Lock order: visit → stay → admission → assignment.
+CREATE OR REPLACE FUNCTION public.end_eu_stay(p jsonb)
+RETURNS jsonb
+LANGUAGE plpgsql
+SET search_path = public, pg_temp
+AS $$
+DECLARE
+  v_actor uuid := (p->>'actor')::uuid;
+  v_enc public.encounters%ROWTYPE;
+  v_stay public.eu_stays%ROWTYPE;
+  v_ward text;
+  v_adm public.admissions%ROWTYPE;
+BEGIN
+  IF p->>'end_kind' = 'admitted' THEN
+    RAISE EXCEPTION 'EU400 An admission ends the stay when the patient arrives on the ward.'
+      USING ERRCODE = 'check_violation', HINT = 'eu_admission_ends_on_arrival';
+  END IF;
+  SELECT * INTO v_enc FROM public.encounters WHERE id = (p->>'encounter_id')::uuid FOR UPDATE;
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'EU404 Visit not found.' USING ERRCODE = 'check_violation', HINT = 'eu_visit_not_found';
+  END IF;
+  SELECT * INTO v_stay FROM public.eu_stays
+   WHERE patient_user_id = v_enc.patient_user_id AND hospital_id = v_enc.hospital_id AND status <> 'ended'
+     AND (encounter_id = v_enc.id OR encounter_id IS NULL
+          OR admission_id IN (SELECT id FROM public.admissions WHERE inpatient_encounter_id = v_enc.id))
+   FOR UPDATE;
+  -- No stay this visit may end (none, another visit's, or already ended): nothing written.
+  IF NOT FOUND THEN
+    RETURN jsonb_build_object('ended', false);
+  END IF;
+  IF v_enc.state <> 'in_progress' THEN
+    RAISE EXCEPTION 'EU409 This visit is not in progress.'
+      USING ERRCODE = 'check_violation', HINT = 'eu_visit_not_in_progress';
+  END IF;
+  SELECT name INTO v_ward FROM public.hospital_wards WHERE id = v_stay.ward_id;
+  -- R62: a boarder's open admission (and its Arriving ward bed) ends with the stay. DRAFT wording for the CSO.
+  SELECT * INTO v_adm FROM public.admissions
+   WHERE id = v_stay.admission_id AND status IN ('awaiting_bed', 'bed_allocated') FOR UPDATE;
+  IF FOUND THEN
+    UPDATE public.bed_assignments SET ended_at = now(), ended_by = v_actor, reason = 'Left the EU'
+     WHERE admission_id = v_adm.id AND ended_at IS NULL AND arrived_at IS NULL;
+    UPDATE public.admissions
+       SET status = 'cancelled', cancelled_at = now(), cancelled_by = v_actor,
+           cancel_reason = 'Left the EU before reaching the ward'
+     WHERE id = v_adm.id;
+  END IF;
+
+  UPDATE public.bed_assignments SET ended_at = now(), ended_by = v_actor, reason = 'Left the EU'
+   WHERE eu_stay_id = v_stay.id AND ended_at IS NULL;
+  UPDATE public.eu_stays
+     SET status = 'ended', ended_at = now(), ended_by = v_actor, end_kind = p->>'end_kind',
+         encounter_id = coalesce(encounter_id, v_enc.id)
+   WHERE id = v_stay.id;
+  -- As ha-complete-encounter's clinical close, plus the stay it ended.
+  UPDATE public.encounters
+     SET state = 'completed', ended_at = now(), completed_by = v_actor, closure_kind = 'clinical',
+         disposition = p->>'disposition',
+         disposition_detail = coalesce(nullif(p->'disposition_detail', 'null'::jsonb), '{}'::jsonb)
+                              || jsonb_build_object('eu_stay_id', v_stay.id, 'eu_ward', v_ward),
+         follow_up = nullif(p->'follow_up', 'null'::jsonb),
+         completion_reason = coalesce(nullif(p->>'completion_reason', ''), 'ended_by_clinician')
+   WHERE id = v_enc.id;
+  INSERT INTO public.encounter_events (encounter_id, kind, label, actor_user_id, recorded_at)
+  VALUES (v_enc.id, 'disposition', 'Visit completed: ' || (p->>'disposition') || ', left ' || v_ward, v_actor, now());
+  RETURN jsonb_build_object('ended', true, 'stay_id', v_stay.id);
 END;
 $$;
