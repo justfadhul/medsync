@@ -66,6 +66,7 @@ export const notPharmacyCadre = () => notInArray(cadres.code, [...PHARMACY_MAP_C
 export const notPharmacyDepartment = sql`(${hospitalDepartments.catalogueCode} IS DISTINCT FROM 'PHARMACY'
   AND NOT EXISTS (SELECT 1 FROM ${hospitalDepartments} pd WHERE pd.id = ${hospitalDepartments.parentId}
     AND pd.catalogue_code = 'PHARMACY'))`;
+export const isPharmacyDepartment = sql<boolean>`NOT ${notPharmacyDepartment}`;
 
 /** Clinicians with an affiliation here (any state), and whether one of them is live. Never a pharmacy cadre. */
 async function cliniciansHere(
@@ -282,7 +283,7 @@ export async function placeRequests(
     }
 
     const [dept] = await tx
-      .select({ name: hospitalDepartments.name })
+      .select({ name: hospitalDepartments.name, pharmacy: isPharmacyDepartment })
       .from(hospitalDepartments)
       .where(
         and(
@@ -291,6 +292,7 @@ export async function placeRequests(
         ),
       );
     if (!dept) throw new EmrWriteError("invalid", "That department is not at this hospital.");
+    if (dept.pharmacy) throw new EmrWriteError("invalid", CARE_REQUEST_COPY.refusal.pharmacy);
     let place = dept.name;
     if (line.wardId) {
       const [ward] = await tx
@@ -624,7 +626,7 @@ export async function redirectRequest(
   if (replay) return { id: replay };
   must(c, "redirect");
   const [dept] = await c.tx
-    .select({ id: hospitalDepartments.id })
+    .select({ id: hospitalDepartments.id, pharmacy: isPharmacyDepartment })
     .from(hospitalDepartments)
     .where(
       and(
@@ -633,6 +635,7 @@ export async function redirectRequest(
       ),
     );
   if (!dept) throw new EmrWriteError("invalid", "That department is not at this hospital.");
+  if (dept.pharmacy) throw new EmrWriteError("invalid", CARE_REQUEST_COPY.refusal.pharmacy);
   const id = await writeEvent(c, {
     kind: "redirected",
     reasonCode: i.reasonCode,

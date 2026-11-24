@@ -9,7 +9,7 @@ import type { EmrDb, EmrTx } from "@/lib/emr/db";
 import type { OrderFrequency, OrderPriority } from "@/lib/emr/orders";
 import type { PlanRx, RxEdit } from "@/lib/prescribing/plan-rx";
 import type { HelpWanted, RequestKind } from "@/lib/requests/engine";
-import { and, asc, eq, inArray, isNull, ne, sql } from "drizzle-orm";
+import { and, asc, eq, inArray, isNull, ne } from "drizzle-orm";
 
 import { CARE_REQUEST_COPY } from "@/content/care-requests";
 import { careRequestEvents, careRequests } from "@/db/schema/care-requests";
@@ -30,7 +30,7 @@ import { loadMonitoring } from "@/lib/emr/read/monitoring";
 import { loadPlanFacts } from "@/lib/emr/write/plan";
 import { encounterPrescriptions, prescribeRequirement } from "@/lib/emr/write/prescriptions";
 import { loadRepeatsPayload } from "@/lib/emr/write/repeats";
-import { notPharmacyCadre, notPharmacyDepartment } from "@/lib/emr/write/requests";
+import { isPharmacyDepartment, notPharmacyCadre } from "@/lib/emr/write/requests";
 import { decrypt } from "@/lib/encryption";
 import { labOneMenuLiveFor } from "@/lib/lab/feature";
 import { menuToday } from "@/lib/lab/one-menu-read";
@@ -151,7 +151,7 @@ export async function loadPlanRequests(
       kind: hospitalDepartments.kind,
       archivedAt: hospitalDepartments.archivedAt,
       // R32: the pharmacy is not a team to ask (it still names a placed request's target).
-      pharmacy: sql<boolean>`NOT ${notPharmacyDepartment}`,
+      pharmacy: isPharmacyDepartment,
     })
     .from(hospitalDepartments)
     .where(eq(hospitalDepartments.hospitalId, actor.hospitalId))

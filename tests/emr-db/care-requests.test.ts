@@ -380,6 +380,22 @@ describe.skipIf(!laneOn)("placing care requests (PGlite lane)", () => {
       );
     });
 
+    it("the pharmacy and its points are refused as a target (R32)", async () => {
+      const pharmacy = await department(pg, h, "Pharmacy");
+      await pg.query(`UPDATE hospital_departments SET catalogue_code = 'PHARMACY' WHERE id = $1`, [
+        pharmacy,
+      ]);
+      const point = (
+        await pg.query<{ id: string }>(
+          `INSERT INTO hospital_departments (hospital_id, parent_id, name, slug)
+           VALUES ($1, $2, 'Main window', $3) RETURNING id`,
+          [h, pharmacy, `point-${randomUUID().slice(0, 6)}`],
+        )
+      ).rows[0]!.id;
+      expect(await refused({ targetDepartmentId: pharmacy })).toBe("invalid");
+      expect(await refused({ targetDepartmentId: point })).toBe("invalid");
+    });
+
     it("a named person at another hospital is refused", async () => {
       const other = await hospital(pg, "Elsewhere");
       const far = await clinician(pg, {

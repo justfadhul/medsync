@@ -1,6 +1,8 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 
+import { PHARMACY_MAP_CADRES } from "@/lib/pharmacy/access";
+
 const sql = readFileSync("supabase/migrations/0306_care_requests.sql", "utf8");
 
 describe("migration 0306 (static)", () => {
@@ -27,5 +29,16 @@ describe("migration 0306 (static)", () => {
   it("widens the note type and notification kinds", () => {
     expect(sql).toContain("'consult'");
     expect(sql).toContain("'ward_incoming'");
+  });
+
+  it("the team read arm leaves out the pharmacy cadres, the signed map's (R32)", () => {
+    const fn = sql.slice(sql.indexOf("FUNCTION private.care_request_visible"));
+    const list = fn.match(/c\.code NOT IN \(([^)]*)\)/)?.[1];
+    expect(
+      list
+        ?.split(",")
+        .map((x) => x.trim().replace(/'/g, ""))
+        .sort(),
+    ).toEqual([...PHARMACY_MAP_CADRES].sort());
   });
 });

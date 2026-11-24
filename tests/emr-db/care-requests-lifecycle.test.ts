@@ -303,6 +303,40 @@ describe.skipIf(!laneOn)("the care request lifecycle (PGlite lane)", () => {
     expect(await stateOf(r.id)).toBe("accepted");
   });
 
+  it("the pharmacy is refused as a redirect target, and a pharmacist member cannot read (R32)", async () => {
+    const neph = await department(pg, h, "Nephrology");
+    const pharmacist = await member(neph, "PHARMACIST");
+    const decliner = await member(neph);
+    const r = await placed("consult", neph, [decliner.userId]);
+    // A pharmacist in the target department neither reads the request nor may act on it.
+    expect(await readable(pharmacist.userId, r.id)).toBe(false);
+    expect(await as(pharmacist, r.id, async (c) => c.who.teamMember)).toBe(false);
+
+    await as(decliner, r.id, (c) =>
+      declineRequest(c, { clientKey: key(), reasonCode: "needs_other_team" }),
+    );
+    const pharmacy = await department(pg, h, "Pharmacy");
+    await pg.query(`UPDATE hospital_departments SET catalogue_code = 'PHARMACY' WHERE id = $1`, [
+      pharmacy,
+    ]);
+    const point = (
+      await pg.query<{ id: string }>(
+        `INSERT INTO hospital_departments (hospital_id, parent_id, name, slug)
+         VALUES ($1, $2, 'Main window', $3) RETURNING id`,
+        [h, pharmacy, `point-${randomUUID().slice(0, 6)}`],
+      )
+    ).rows[0]!.id;
+    for (const departmentId of [pharmacy, point])
+      expect(
+        await code(
+          as(requester, r.id, (c) =>
+            redirectRequest(c, { clientKey: key(), departmentId, reasonCode: "other" }),
+          ),
+        ),
+      ).toBe("invalid");
+    expect(await stateOf(r.id)).toBe("declined");
+  });
+
   it("a person declines once per round, and a key replays only its own act", async () => {
     const neph = await department(pg, h, "Nephrology");
     const a = await member(neph);

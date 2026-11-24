@@ -11,7 +11,8 @@
 --   3. private.care_request_visible(): who reads a request through medsync_clinical_reader — the requester,
 --      anyone with chart access, anyone an event names, a clinical member of the current department (the
 --      last redirect's, else the target) while the request is open, and that department's head. Never anon
---      or authenticated.
+--      or authenticated. The pharmacy cadres (PHARMACIST, PHARMACY_TECH: data/pharmacy/permission-map.v1.json)
+--      are clinical but are not team members here: pharmacists cannot receive consults in v1 (R32).
 --   4. Audit on both tables, and both append-only.
 --   5. The care_team access basis (0101's seam made real): a current-round recipient who has not declined,
 --      any accepter, or the phoned consultant may open the patient's chart while the request is open, or
@@ -136,7 +137,9 @@ LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public, pg_temp AS $$
                            JOIN public.cadres c ON c.id = sa.cadre_id
                           WHERE sa.user_id = me.uid AND sa.hospital_id = r.hospital_id
                             AND sa.department_id = cur.dept_id
-                            AND sa.state IN ('active','approved') AND c.is_clinical))
+                            AND sa.state IN ('active','approved') AND c.is_clinical
+                            -- R32: the pharmacy cadres, as the writer's relation (lib/emr/write/requests.ts).
+                            AND c.code NOT IN ('PHARMACIST','PHARMACY_TECH')))
          OR EXISTS (SELECT 1 FROM public.department_heads h
                      WHERE h.user_id = me.uid AND h.hospital_id = r.hospital_id
                        AND h.department_id = cur.dept_id

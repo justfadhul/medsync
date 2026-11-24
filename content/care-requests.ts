@@ -53,6 +53,7 @@ export const CARE_REQUEST_COPY = {
     not_replied: "Close the request after a reply.",
     already_declined: "You have already declined this request.",
     replay_mismatch: "That key belongs to another action.",
+    pharmacy: "The pharmacy cannot be asked for a review or a consult.",
   },
   responsible: "The requesting team stays responsible for the patient.",
   /** The Plan screen (ADR 0537). */
