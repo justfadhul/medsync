@@ -48,6 +48,10 @@ const week = {
     },
   ],
   gaps: [],
+  published: false,
+  templates: [],
+  swapsToDecide: [],
+  delegates: [],
   eligible: [{ userId: USER, name: "Dr Okello", cadre: "MEDICAL_OFFICER", departmentName: null }],
   // The same duty, and one on Tuesday 1 Dec: after the shown week, inside the next 72 h.
   needsCover: [

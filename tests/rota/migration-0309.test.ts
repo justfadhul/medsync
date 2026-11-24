@@ -2,6 +2,8 @@ import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
+import { DUTY_ROTA_COPY } from "@/content/duty-rota";
+
 const sql = readFileSync("supabase/migrations/0309_duty_rota_upkeep.sql", "utf8");
 const NEW_TABLES = [
   "duty_rota_templates",
@@ -99,5 +101,15 @@ describe("migration 0309 (static)", () => {
     expect(sql).toContain(
       "pg_advisory_xact_lock(hashtext(NEW.department_id::text || NEW.week_start::text))",
     );
+  });
+
+  it("every HINT 0309 raises has words in DUTY_ROTA_COPY.refusal, and every refusal carries one", () => {
+    const hints = [...sql.matchAll(/HINT = '(\w+)'/g)].map((m) => m[1]!);
+    expect(hints.length).toBeGreaterThan(10);
+    for (const h of new Set(hints)) expect(Object.keys(DUTY_ROTA_COPY.refusal), h).toContain(h);
+    // Each RAISE EXCEPTION statement (to its semicolon) names a HINT, but the "never deleted" ones, which no
+    // app write can reach (the app never deletes).
+    for (const stmt of sql.match(/RAISE EXCEPTION[^;]*;/g) ?? [])
+      if (!/never deleted/.test(stmt)) expect(stmt, stmt).toMatch(/HINT = '\w+'/);
   });
 });

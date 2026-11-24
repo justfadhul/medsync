@@ -10,12 +10,21 @@ import type {
   Post,
   PostLevel,
 } from "@/lib/rota/cover";
+import type { TemplateLine } from "@/lib/rota/templates";
 import { and, asc, desc, eq, gt, inArray, isNull, lt, lte, or, sql } from "drizzle-orm";
 import { z } from "zod";
 
 import { DUTY_ROTA_COPY } from "@/content/duty-rota";
 import { staffAffiliations } from "@/db/schema/clinician-profiles";
-import { dutyAssignments, dutyPosts } from "@/db/schema/duty-rota";
+import {
+  dutyAssignments,
+  dutyPosts,
+  dutyRotaDelegates,
+  dutyRotaTemplates,
+  dutyRotaWeekEvents,
+  dutySwapRequestEvents,
+  dutySwapRequests,
+} from "@/db/schema/duty-rota";
 import { hospitalDepartments } from "@/db/schema/hospital-departments";
 import { hospitalWards } from "@/db/schema/hospital-wards";
 import { criticalContacts } from "@/db/schema/lab-safety";
@@ -25,6 +34,7 @@ import { departmentHeads } from "@/db/schema/services-hub";
 import { users } from "@/db/schema/users";
 import { dutyState, endOf, gaps, whoCovers } from "@/lib/rota/cover";
 import { dutyRotaLiveFor } from "@/lib/rota/feature";
+import { weekPublished } from "@/lib/rota/templates";
 
 /**
  * Rota reads (ADR 0534). One snapshot on the server connection, every query scoped to the hospital; state, gaps
@@ -172,6 +182,95 @@ export async function loadCoverWorld(
 
 const WeekQ = z.object({ hospitalId: z.uuid(), departmentId: z.uuid(), weekStart: z.iso.date() });
 
+export interface SwapLine {
+  id: string;
+  kind: "cover" | "swap";
+  postName: string;
+  askedByName: string;
+  colleagueName: string;
+  startsAt: Date;
+  endsAt: Date;
+}
+
+/**
+ * Requests with no final event (declined, approved, refused, withdrawn). `accepted: true` keeps those the colleague
+ * accepted (a maker decides them); `false` keeps those not yet answered (the colleague's "asked of you").
+ * Staff names and posts only (ADR 0199).
+ */
+async function openSwaps(
+  tx: EmrTx,
+  hospitalId: string,
+  q: { departmentId?: string; colleagueUserId?: string; accepted: boolean },
+) {
+  const rows = await tx
+    .select({
+      id: dutySwapRequests.id,
+      kind: dutySwapRequests.kind,
+      askedBy: dutySwapRequests.askedBy,
+      colleagueUserId: dutySwapRequests.colleagueUserId,
+      postName: dutyPosts.name,
+      startsAt: dutyAssignments.startsAt,
+      endsAt: dutyAssignments.endsAt,
+    })
+    .from(dutySwapRequests)
+    .innerJoin(dutyAssignments, eq(dutyAssignments.id, dutySwapRequests.assignmentId))
+    .innerJoin(dutyPosts, eq(dutyPosts.id, dutyAssignments.postId))
+    .where(
+      and(
+        eq(dutySwapRequests.hospitalId, hospitalId),
+        q.departmentId ? eq(dutyPosts.departmentId, q.departmentId) : undefined,
+        q.colleagueUserId ? eq(dutySwapRequests.colleagueUserId, q.colleagueUserId) : undefined,
+      ),
+    )
+    .orderBy(asc(dutyAssignments.startsAt));
+  if (!rows.length) return [];
+  const events = await tx
+    .select({ requestId: dutySwapRequestEvents.requestId, kind: dutySwapRequestEvents.kind })
+    .from(dutySwapRequestEvents)
+    .where(
+      inArray(
+        dutySwapRequestEvents.requestId,
+        rows.map((r) => r.id),
+      ),
+    );
+  const kinds = (id: string) => events.filter((e) => e.requestId === id).map((e) => e.kind);
+  return rows.filter((r) => {
+    const k = kinds(r.id);
+    if (k.some((x) => x !== "accepted")) return false;
+    return k.includes("accepted") === q.accepted;
+  });
+}
+
+const swapLine = (
+  r: Awaited<ReturnType<typeof openSwaps>>[number],
+  names: Map<string, string>,
+): SwapLine => ({
+  id: r.id,
+  kind: r.kind as SwapLine["kind"],
+  postName: r.postName,
+  askedByName: nameIn(names, r.askedBy),
+  colleagueName: nameIn(names, r.colleagueUserId),
+  startsAt: r.startsAt,
+  endsAt: r.endsAt,
+});
+
+/** Requests asked of this person that they have not answered yet. */
+export async function swapsAskedOfMe(
+  userId: string,
+  hospitalId: string,
+  opts?: Opts,
+): Promise<SwapLine[]> {
+  if (!dutyRotaLiveFor(hospitalId) || !z.uuid().safeParse(userId).success) return [];
+  return inSnapshot(opts?.database, async (tx) => {
+    const rows = await openSwaps(tx, hospitalId, { colleagueUserId: userId, accepted: false });
+    const names = await namesOf(
+      tx,
+      rows.flatMap((r) => [r.askedBy, r.colleagueUserId]),
+    );
+    return rows.map((r) => swapLine(r, names));
+  });
+}
+
 /** One department's week (from 00:00 Kampala on `weekStart`, seven days), with gaps over it and the next 72 h. */
 export async function loadRotaWeek(
   hospitalId: string,
@@ -186,12 +285,36 @@ export async function loadRotaWeek(
   eligible: { userId: string; name: string; cadre: string; departmentName: string | null }[];
   /** Duties needing cover over the same range as the gaps: the week and the next 72 h. */
   needsCover: (Assignment & { name: string })[];
+  /** Whether this department week is published (its latest week event is a publish). */
+  published: boolean;
+  /** The department's live template lines, for every week. */
+  templates: TemplateLine[];
+  /** Accepted by the colleague, awaiting a rota maker. Staff names and posts only. */
+  swapsToDecide: SwapLine[];
+  /** Active hand-overs of this department's rota. */
+  delegates: {
+    id: string;
+    toUserId: string;
+    name: string;
+    canPublish: boolean;
+    until: string | null;
+  }[];
 }> {
   if (
     !dutyRotaLiveFor(hospitalId) ||
     !WeekQ.safeParse({ hospitalId, departmentId, weekStart }).success
   )
-    return { posts: [], assignments: [], gaps: [], eligible: [], needsCover: [] };
+    return {
+      posts: [],
+      assignments: [],
+      gaps: [],
+      eligible: [],
+      needsCover: [],
+      published: false,
+      templates: [],
+      swapsToDecide: [],
+      delegates: [],
+    };
   const now = opts?.now ?? new Date();
   const from = new Date(`${weekStart}T00:00:00+03:00`);
   const to = new Date(from.getTime() + 7 * 24 * HOUR);
@@ -266,7 +389,72 @@ export async function loadRotaWeek(
           departmentName: s.own ? null : s.departmentName,
         });
 
+    const events = await tx
+      .select({ kind: dutyRotaWeekEvents.kind, at: dutyRotaWeekEvents.at })
+      .from(dutyRotaWeekEvents)
+      .where(
+        and(
+          eq(dutyRotaWeekEvents.hospitalId, hospitalId),
+          eq(dutyRotaWeekEvents.departmentId, departmentId),
+          eq(dutyRotaWeekEvents.weekStart, weekStart),
+        ),
+      );
+    const templates = (
+      await tx
+        .select()
+        .from(dutyRotaTemplates)
+        .where(
+          and(
+            eq(dutyRotaTemplates.hospitalId, hospitalId),
+            eq(dutyRotaTemplates.departmentId, departmentId),
+            isNull(dutyRotaTemplates.endedAt),
+          ),
+        )
+        .orderBy(asc(dutyRotaTemplates.createdAt))
+    ).map((t) => ({
+      id: t.id,
+      postId: t.postId,
+      weekdays: t.weekdays,
+      shift: t.shift as TemplateLine["shift"],
+      userId: t.userId,
+    }));
+    const delegateRows = await tx
+      .select()
+      .from(dutyRotaDelegates)
+      .where(
+        and(
+          eq(dutyRotaDelegates.hospitalId, hospitalId),
+          eq(dutyRotaDelegates.departmentId, departmentId),
+          isNull(dutyRotaDelegates.revokedAt),
+        ),
+      )
+      .orderBy(asc(dutyRotaDelegates.createdAt));
+    const toDecide = await openSwaps(tx, hospitalId, { departmentId, accepted: true });
+    const people = await namesOf(tx, [
+      ...delegateRows.map((d) => d.toUser),
+      ...toDecide.flatMap((r) => [r.askedBy, r.colleagueUserId]),
+    ]);
+
     return {
+      published: weekPublished(
+        events.map((e) => ({
+          departmentId,
+          weekStart,
+          kind: e.kind as "publish" | "unlock",
+          at: e.at,
+        })),
+        departmentId,
+        weekStart,
+      ),
+      templates,
+      swapsToDecide: toDecide.map((r) => swapLine(r, people)),
+      delegates: delegateRows.map((d) => ({
+        id: d.id,
+        toUserId: d.toUser,
+        name: nameIn(people, d.toUser),
+        canPublish: d.canPublish,
+        until: d.until,
+      })),
       posts: w.posts,
       assignments: shown.map((a) => ({
         ...a,

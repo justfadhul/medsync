@@ -309,6 +309,10 @@ describe.skipIf(!laneOn)("rota writes and reads (PGlite lane)", () => {
         gaps: [],
         eligible: [],
         needsCover: [],
+        published: false,
+        templates: [],
+        swapsToDecide: [],
+        delegates: [],
       });
       expect(await myDuties(mo, h, at, opts())).toEqual([]);
       expect(await coverForWard(h, ward, at, opts())).toEqual({ step: "none", people: [] });

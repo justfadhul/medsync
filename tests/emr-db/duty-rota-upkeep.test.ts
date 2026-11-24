@@ -391,10 +391,12 @@ describe.skipIf(!laneOn)("0309 — duty rota upkeep", () => {
     await expect(delegate(head, head)).rejects.toThrow(/duty_rota_delegates_self/);
     const id = await delegate(head, mo);
     // R49: one active delegation per person per department; only live staff of the hospital.
-    await expect(delegate(admin, mo)).rejects.toThrow(/duty_rota_delegates_one/);
-    await expect(delegate(head, await authUser(pg, "outsider"))).rejects.toThrow(/staff/);
+    expect(await refusal(delegate(admin, mo))).toBe("rota_delegate_dup");
+    expect(await refusal(delegate(head, await authUser(pg, "outsider")))).toBe(
+      "rota_delegate_staff",
+    );
     expect(await refusal(delegate(mo, c2))).toBe("rota_maker");
-    await expect(delegate(admin, c2, { until: "2020-01-01" })).rejects.toThrow(/passed/);
+    expect(await refusal(delegate(admin, c2, { until: "2020-01-01" }))).toBe("rota_delegate_until");
     const made = await assign({
       postId: onCall,
       userId: c1,

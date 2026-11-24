@@ -23,7 +23,7 @@ describe("migration 0307 (static)", () => {
   });
 
   it("the guard names every hint", () => {
-    const hints = Object.keys(DUTY_ROTA_COPY.refusal).filter((h) => h !== "rota_locked"); // rota_locked is 0309's
+    const hints = [...new Set([...sql.matchAll(/HINT = '(\w+)'/g)].map((m) => m[1]!))]; // 0309 adds its own
     expect(hints.sort()).toEqual([
       "rota_cover",
       "rota_double",
@@ -32,7 +32,7 @@ describe("migration 0307 (static)", () => {
       "rota_leave",
       "rota_maker",
     ]);
-    for (const h of hints) expect(sql).toContain(`HINT = '${h}'`);
+    for (const h of hints) expect(Object.keys(DUTY_ROTA_COPY.refusal)).toContain(h);
   });
 
   it("takes the post lock before counting, as 0273 does", () => {

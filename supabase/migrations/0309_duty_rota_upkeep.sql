@@ -106,18 +106,23 @@ BEGIN
         USING ERRCODE = 'check_violation', HINT = 'rota_maker';
     END IF;
     IF NEW.until IS NOT NULL AND NEW.until < (now() AT TIME ZONE 'Africa/Kampala')::date THEN
-      RAISE EXCEPTION 'duty_rota_delegates: the end date has passed' USING ERRCODE = 'check_violation';
+      RAISE EXCEPTION 'duty_rota_delegates: the end date has passed' USING ERRCODE = 'check_violation', HINT = 'rota_delegate_until';
     END IF;
     IF NOT EXISTS (SELECT 1 FROM public.staff_affiliations sa
                     WHERE sa.user_id = NEW.to_user AND sa.hospital_id = NEW.hospital_id
                       AND sa.state IN ('active','approved')) THEN
-      RAISE EXCEPTION 'duty_rota_delegates: only live staff of this hospital make its rota' USING ERRCODE = 'check_violation';
+      RAISE EXCEPTION 'duty_rota_delegates: only live staff of this hospital make its rota' USING ERRCODE = 'check_violation', HINT = 'rota_delegate_staff';
+    END IF;
+    -- The unique index is the backstop; this gives the usual case its words.
+    IF EXISTS (SELECT 1 FROM public.duty_rota_delegates d WHERE d.hospital_id = NEW.hospital_id
+                AND d.department_id = NEW.department_id AND d.to_user = NEW.to_user AND d.revoked_at IS NULL) THEN
+      RAISE EXCEPTION 'duty_rota_delegates: they already have this rota handed over' USING ERRCODE = 'check_violation', HINT = 'rota_delegate_dup';
     END IF;
     RETURN NEW;
   END IF;
   IF OLD.revoked_at IS NOT NULL OR NEW.revoked_at IS NULL
      OR (to_jsonb(NEW) - 'revoked_at' - 'revoked_by') <> (to_jsonb(OLD) - 'revoked_at' - 'revoked_by') THEN
-    RAISE EXCEPTION 'duty_rota_delegates: only revoking changes it' USING ERRCODE = 'check_violation';
+    RAISE EXCEPTION 'duty_rota_delegates: only revoking changes it' USING ERRCODE = 'check_violation', HINT = 'rota_changed';
   END IF;
   IF NOT private.duty_rota_owner(NEW.hospital_id, NEW.revoked_by, NEW.department_id) THEN
     RAISE EXCEPTION 'duty_rota_delegates: only the admin or the head revokes'
@@ -136,12 +141,12 @@ BEGIN
   IF TG_OP = 'DELETE' THEN RAISE EXCEPTION 'duty_rota_templates: ended, never deleted'; END IF;
   IF TG_OP = 'UPDATE' AND (OLD.ended_at IS NOT NULL OR NEW.ended_at IS NULL
      OR (to_jsonb(NEW) - 'ended_at' - 'ended_by') <> (to_jsonb(OLD) - 'ended_at' - 'ended_by')) THEN
-    RAISE EXCEPTION 'duty_rota_templates: only ending a line changes it' USING ERRCODE = 'check_violation';
+    RAISE EXCEPTION 'duty_rota_templates: only ending a line changes it' USING ERRCODE = 'check_violation', HINT = 'rota_changed';
   END IF;
   IF TG_OP = 'INSERT' AND NOT EXISTS (SELECT 1 FROM public.duty_posts p
        WHERE p.id = NEW.post_id AND p.hospital_id = NEW.hospital_id AND p.department_id = NEW.department_id
          AND p.archived_at IS NULL) THEN
-    RAISE EXCEPTION 'duty_rota_templates: the post is archived or not this department''s' USING ERRCODE = 'check_violation';
+    RAISE EXCEPTION 'duty_rota_templates: the post is archived or not this department''s' USING ERRCODE = 'check_violation', HINT = 'rota_post';
   END IF;
   IF NOT private.duty_rota_maker(NEW.hospital_id,
        CASE WHEN TG_OP = 'INSERT' THEN NEW.created_by ELSE NEW.ended_by END, NEW.department_id) THEN
@@ -193,7 +198,7 @@ BEGIN
                              AND e.week_start = NEW.week_start ORDER BY e.at DESC LIMIT 1), false);
   IF (NEW.kind = 'publish') = published THEN
     RAISE EXCEPTION 'duty_rota_week_events: the week is already %', CASE WHEN published THEN 'published' ELSE 'a draft' END
-      USING ERRCODE = 'check_violation';
+      USING ERRCODE = 'check_violation', HINT = 'rota_week_state';
   END IF;
   RETURN NEW;
 END $$;
@@ -218,7 +223,7 @@ BEGIN
   IF TG_OP = 'UPDATE' THEN
     IF OLD.ended_at IS NOT NULL OR NEW.ended_at IS NULL
        OR (to_jsonb(NEW) - 'ended_at' - 'ended_by' - 'end_reason') <> (to_jsonb(OLD) - 'ended_at' - 'ended_by' - 'end_reason') THEN
-      RAISE EXCEPTION 'duty_assignments: only ending an assignment changes it' USING ERRCODE = 'check_violation';
+      RAISE EXCEPTION 'duty_assignments: only ending an assignment changes it' USING ERRCODE = 'check_violation', HINT = 'rota_changed';
     END IF;
     IF NOT private.duty_rota_maker(NEW.hospital_id, NEW.ended_by, p.department_id) THEN
       RAISE EXCEPTION 'duty_assignments: you are not making this rota' USING ERRCODE = 'check_violation', HINT = 'rota_maker';
@@ -232,7 +237,7 @@ BEGIN
   END IF;
 
   IF p.id IS NULL OR p.hospital_id <> NEW.hospital_id OR p.archived_at IS NOT NULL THEN
-    RAISE EXCEPTION 'duty_assignments: the post is archived or not this hospital''s' USING ERRCODE = 'check_violation';
+    RAISE EXCEPTION 'duty_assignments: the post is archived or not this hospital''s' USING ERRCODE = 'check_violation', HINT = 'rota_post';
   END IF;
   IF NEW.covers_assignment_id IS NOT NULL AND NOT EXISTS (
        SELECT 1 FROM public.duty_assignments c WHERE c.id = NEW.covers_assignment_id AND c.post_id = NEW.post_id) THEN
@@ -315,7 +320,7 @@ DECLARE a public.duty_assignments;
 BEGIN
   SELECT * INTO a FROM public.duty_assignments WHERE id = NEW.assignment_id;
   IF a.id IS NULL OR a.hospital_id <> NEW.hospital_id OR a.user_id <> NEW.asked_by OR a.ended_at IS NOT NULL THEN
-    RAISE EXCEPTION 'duty_swap_requests: only the holder of a live duty asks' USING ERRCODE = 'check_violation';
+    RAISE EXCEPTION 'duty_swap_requests: only the holder of a live duty asks' USING ERRCODE = 'check_violation', HINT = 'rota_holder';
   END IF;
   IF NEW.kind = 'swap' AND NEW.swap_assignment_id IS NOT NULL AND NOT EXISTS (
        SELECT 1 FROM public.duty_assignments s

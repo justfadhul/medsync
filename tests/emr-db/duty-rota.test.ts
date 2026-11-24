@@ -386,7 +386,7 @@ describe.skipIf(!laneOn)("0307 — duty rota", () => {
     );
     expect(
       await refusal(assign({ postId: old, userId: intern, from: at(d, 8), to: at(d, 17) })),
-    ).toMatch(/archived/);
+    ).toBe("rota_post");
   });
 
   it("staff read the rota, patients and anon do not", async () => {
