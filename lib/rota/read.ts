@@ -628,6 +628,46 @@ export async function swapOptions(
   });
 }
 
+/**
+ * Departments whose rota this person makes by hand-over (0309): an unrevoked delegation, judged by the same SQL
+ * function the guard uses (private.duty_rota_maker: grantor still an owner, not lapsed), once without and once
+ * with the publish right. Owners' own departments are the caller's business. Names are departments only.
+ */
+export async function delegatedDepartments(
+  userId: string,
+  hospitalId: string,
+  opts?: Opts,
+): Promise<{ id: string; name: string; canPublish: boolean }[]> {
+  if (!dutyRotaLiveFor(hospitalId) || !z.uuid().safeParse(userId).success) return [];
+  return inSnapshot(opts?.database, async (tx) => {
+    const rows = await tx
+      .selectDistinct({ id: hospitalDepartments.id, name: hospitalDepartments.name })
+      .from(dutyRotaDelegates)
+      .innerJoin(hospitalDepartments, eq(hospitalDepartments.id, dutyRotaDelegates.departmentId))
+      .where(
+        and(
+          eq(dutyRotaDelegates.hospitalId, hospitalId),
+          eq(dutyRotaDelegates.toUser, userId),
+          isNull(dutyRotaDelegates.revokedAt),
+          isNull(hospitalDepartments.archivedAt),
+        ),
+      )
+      .orderBy(asc(hospitalDepartments.name));
+    const out: { id: string; name: string; canPublish: boolean }[] = [];
+    for (const d of rows) {
+      const res = (await tx.execute(
+        sql`SELECT private.duty_rota_maker(${hospitalId}::uuid, ${userId}::uuid, ${d.id}::uuid, false) AS maker,
+                   private.duty_rota_maker(${hospitalId}::uuid, ${userId}::uuid, ${d.id}::uuid, true) AS pub`,
+      )) as unknown as
+        | { maker: boolean; pub: boolean }[]
+        | { rows: { maker: boolean; pub: boolean }[] };
+      const r = (Array.isArray(res) ? res : res.rows)[0];
+      if (r?.maker === true) out.push({ ...d, canPublish: r.pub === true });
+    }
+    return out;
+  });
+}
+
 /** Who covers a ward now, by whoCovers's fixed order: staff names and post names only. */
 export async function coverForWard(
   hospitalId: string,

@@ -12,7 +12,13 @@ import { departmentHeads } from "@/db/schema/services-hub";
 import { requireDoctorScope } from "@/lib/doctor/scope";
 import { rotaWeekStart } from "@/lib/rota/cover";
 import { dutyRotaLiveFor } from "@/lib/rota/feature";
-import { loadRotaWeek, rotaChoices, swapOptions, swapsAskedOfMe } from "@/lib/rota/read";
+import {
+  delegatedDepartments,
+  loadRotaWeek,
+  rotaChoices,
+  swapOptions,
+  swapsAskedOfMe,
+} from "@/lib/rota/read";
 import {
   addDelegateAction,
   answerSwapAction,
@@ -62,11 +68,19 @@ export default async function DoctorRotaPage({
       ),
     )
     .orderBy(asc(hospitalDepartments.name));
+  // Owners (heads) keep every right; a hand-over carries its own publish right and cannot be passed on (R52).
+  const delegated = (await delegatedDepartments(scope.userId, scope.hospitalId)).filter(
+    (d) => !headed.some((h) => h.id === d.id),
+  );
+  const departments = [
+    ...headed.map((d) => ({ ...d, owner: true, canPublish: true })),
+    ...delegated.map((d) => ({ ...d, owner: false })),
+  ];
   const [mine, asked, rotas] = await Promise.all([
     swapOptions(scope.userId, scope.hospitalId, now),
     swapsAskedOfMe(scope.userId, scope.hospitalId),
     Promise.all(
-      headed.map(async (d) => {
+      departments.map(async (d) => {
         const [week, choices] = await Promise.all([
           loadRotaWeek(scope.hospitalId, d.id, weekStart, { now }),
           rotaChoices(scope.hospitalId, d.id),
@@ -116,8 +130,8 @@ export default async function DoctorRotaPage({
               wards={choices.wards}
               cadres={choices.cadres}
               canEdit
-              canPublish
-              canDelegate
+              canPublish={d.canPublish}
+              canDelegate={d.owner}
               viewerId={scope.userId}
               actions={actions}
             />

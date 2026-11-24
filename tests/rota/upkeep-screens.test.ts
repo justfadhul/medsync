@@ -8,6 +8,7 @@ import { DUTY_ROTA_COPY } from "@/content/duty-rota";
 /** Upkeep screens (ADR 0538): synthetic data, no database. */
 
 const { RotaWeek } = await import("@/components/rota/rota-week");
+const { MyDuties } = await import("@/components/rota/my-duties");
 const { DelegateDialog } = await import("@/components/rota/delegate-dialog");
 
 const ok = vi.fn(async () => ({ ok: true as const, id: "x", serverTime: "" }));
@@ -91,7 +92,7 @@ describe("upkeep screens", () => {
     el.remove();
     document.body.innerHTML = "";
   });
-  const grid = async (published: boolean, viewerId: string | null) => {
+  const grid = async (published: boolean, viewerId: string | null, canPublish = true) => {
     const root = createRoot(el);
     await act(async () =>
       root.render(
@@ -103,8 +104,8 @@ describe("upkeep screens", () => {
           wards: [],
           cadres: [{ code: "MEDICAL_OFFICER", name: "Medical Officer" }],
           canEdit: true,
-          canPublish: true,
-          canDelegate: true,
+          canPublish,
+          canDelegate: canPublish,
           viewerId,
           actions,
         }),
@@ -172,6 +173,48 @@ describe("upkeep screens", () => {
     ])
       expect(buttons(w)).toHaveLength(1);
     expect(document.body.textContent).toContain(DUTY_ROTA_COPY.delegate.canPublish);
+    await act(async () => root.unmount());
+  });
+
+  it("a delegate without the publish right sees no Publish or Unlock", async () => {
+    const root = await grid(false, null, false);
+    expect(buttons(DUTY_ROTA_COPY.upkeep.publish)).toHaveLength(0);
+    await act(async () => root.unmount());
+    const again = await grid(false, null, true);
+    expect(buttons(DUTY_ROTA_COPY.upkeep.publish)).toHaveLength(1);
+    await act(async () => again.unmount());
+  });
+
+  it("my duties: Ask for cover on a live duty, Accept and Decline only on what is asked", async () => {
+    const duty = {
+      id: "d1",
+      postName: "Medical on call",
+      startsAt: new Date("2026-11-25T08:00:00+03:00"),
+      endsAt: new Date("2026-11-25T17:00:00+03:00"),
+      state: "planned" as const,
+      colleagues: [],
+      theirDuties: [],
+    };
+    const past = { ...duty, id: "d2", state: "past" as const };
+    const asked = {
+      id: "r1",
+      kind: "cover" as const,
+      postName: "Medical on call",
+      askedByName: "Dr Me",
+      startsAt: duty.startsAt,
+      endsAt: duty.endsAt,
+    };
+    const root = createRoot(el);
+    const show = (asks: (typeof asked)[]) =>
+      act(async () =>
+        root.render(h(MyDuties, { duties: [duty, past], asked: asks, ask: ok, answer: ok })),
+      );
+    await show([]);
+    expect(buttons(DUTY_ROTA_COPY.upkeep.askCover)).toHaveLength(1);
+    expect(buttons(DUTY_ROTA_COPY.asked.accept)).toHaveLength(0);
+    await show([asked]);
+    expect(buttons(DUTY_ROTA_COPY.asked.accept)).toHaveLength(1);
+    expect(buttons(DUTY_ROTA_COPY.asked.decline)).toHaveLength(1);
     await act(async () => root.unmount());
   });
 });
