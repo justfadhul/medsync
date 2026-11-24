@@ -480,6 +480,7 @@ export const FLOOR = {
       referred: "Referred",
       didnt_wait: "Didn't wait",
       next_day: "Moved to the next clinic day",
+      eu: "Observed in EU",
     },
   },
 

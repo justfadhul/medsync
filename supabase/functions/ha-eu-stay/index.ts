@@ -4,7 +4,7 @@
  *   op send_to_eu: the doctor sends the patient to an EU from the close; the visit stays open.
  *     A space (bed_id) or why the patient waits for one (space_wait_reason; 'other' needs the encrypted
  *     note). One SQL transaction (observe_in_eu, 0311) writes the stay, the space and the event; an open
- *     triage stay of the patient's is adopted.
+ *     triage stay of the patient's is adopted. A visit on the clinic floor then ends there as Observed in EU.
  *
  * Auth (R58): sending is a clinical decision, so only the encounter's own clinician, with a live clinical
  * affiliation at the encounter's hospital. No admin or superadmin arm.
@@ -74,7 +74,7 @@ Deno.serve(async (request: Request) => {
   const sb = serviceClient();
   const { data: enc, error: encErr } = await sb
     .from("encounters")
-    .select("id, hospital_id, clinician_user_id, state")
+    .select("id, hospital_id, clinician_user_id, state, department_id")
     .eq("id", payload.encounter_id)
     .maybeSingle();
   if (encErr) {
@@ -135,6 +135,42 @@ Deno.serve(async (request: Request) => {
     if (words) return badRequest(words, init);
     log.error("observe_in_eu failed", { requestId, name: r.error.name, code: r.error.code });
     return serverError("sending to the EU failed", init);
+  }
+
+  // A visit on the clinic floor ends there as "Observed in EU" (Task 24), keyed by the stay's intake:
+  // observe_in_eu names one only when it is this patient's at this hospital (no intake, no floor event).
+  // Only a visit the floor already has; no name, room or note. It never fails the send.
+  const intakeId: string | null = r.data?.intake_id ?? null;
+  if (intakeId) {
+    const floorErr = await (async () => {
+      const seen = await sb
+        .from("clinic_floor_events")
+        .select("id")
+        .eq("intake_id", intakeId)
+        .limit(1)
+        .maybeSingle();
+      if (seen.error || !seen.data) return seen.error;
+      let departmentId: string | null = enc.department_id ?? null;
+      if (!departmentId) {
+        const visit = await sb
+          .from("patient_intakes")
+          .select("receiving_department_id")
+          .eq("id", intakeId)
+          .maybeSingle();
+        departmentId = visit.data?.receiving_department_id ?? null;
+      }
+      const ins = await sb.from("clinic_floor_events").insert({
+        hospital_id: enc.hospital_id,
+        intake_id: intakeId,
+        department_id: departmentId,
+        kind: "finish",
+        detail: "eu",
+        client_id: crypto.randomUUID(),
+        by_user_id: caller.id,
+      });
+      return ins.error;
+    })();
+    if (floorErr) log.error("floor finish failed (non-fatal)", { requestId, code: floorErr.code });
   }
   return ok({ stay: r.data }, init);
 });

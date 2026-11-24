@@ -62,7 +62,8 @@ export const mayRecord = (role: "doctor" | "nurse" | "incharge", kind: EventKind
   role !== "nurse" || NURSE_KINDS.has(kind);
 
 export type DoctorStatus = "in_room" | "break_10" | "break_15" | "break_30" | "away";
-export type Outcome = "home" | "pharmacy_home" | "tests_back" | "admitted" | "referred";
+/** `eu` (Observed in EU) is written by ha-eu-stay, never offered in the floor's Finish dialog (D8). */
+export type Outcome = "home" | "pharmacy_home" | "tests_back" | "admitted" | "referred" | "eu";
 
 export interface FloorEvent {
   intakeId: string | null;

@@ -67,6 +67,26 @@ describe("ha-eu-stay — send to the EU", () => {
     for (const col of ["full_name", "first_name", "surname"]) expect(src).not.toContain(col);
   });
 
+  it("a floor visit sent to the EU ends as Observed in EU: after the start, non-fatal, no name, room or note", () => {
+    const after = src.slice(src.indexOf('rpc("observe_in_eu"'));
+    const floor = after.slice(after.indexOf("r.data?.intake_id"));
+    expect(floor).toContain('.from("clinic_floor_events")');
+    expect(floor).toContain('.eq("intake_id", intakeId)');
+    expect(floor).toContain('kind: "finish"');
+    expect(floor).toContain('detail: "eu"');
+    expect(floor).toContain("client_id: crypto.randomUUID()");
+    expect(floor).toContain("by_user_id: caller.id");
+    expect(floor).toContain("(non-fatal)");
+    const insert = floor.slice(
+      floor.indexOf(".insert({"),
+      floor.indexOf("})", floor.indexOf(".insert({")),
+    );
+    for (const col of ["room", "note", "name"]) expect(insert).not.toContain(col);
+    expect(src.indexOf('detail: "eu"')).toBeLessThan(
+      src.indexOf("return ok({ stay: r.data }, init)"),
+    );
+  });
+
   it("returns words, never a raw database message", () => {
     expect(src).toContain("euRefusal(r.error)");
     expect(src).not.toMatch(/badRequest\(r\.error\.message/);
