@@ -1259,6 +1259,18 @@ export const SETTABLE_STATES = ["free", "cleaning", "reserved"] as const;
 export type SettableState = (typeof SETTABLE_STATES)[number];
 export const bedStateMeta = (s: BedState) => BED_STATES.find((x) => x.code === s)!;
 
+/**
+ * The one Arriving rule (ADR 0199, 0541): a bed is held for an admission or an EU stay and nobody has
+ * arrived. The board, the counts and the close read all use this.
+ */
+export function isArriving(a: {
+  admissionId: string | null;
+  euStayId?: string | null;
+  arrivedAt: unknown;
+}): boolean {
+  return (a.admissionId != null || a.euStayId != null) && a.arrivedAt == null;
+}
+
 export interface BedStateInput {
   closed: boolean;
   /** The open assignment; `arriving` when it was made for an admission and nobody has arrived (ADR 0199). */

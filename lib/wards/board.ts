@@ -21,7 +21,7 @@ import {
 } from "@/db/schema/ward-builder";
 import { ipcFlagsFor } from "@/lib/ipc/read";
 import { ipcLabFeedLiveFor } from "@/lib/lab/feature";
-import { roomOfBed } from "@/supabase/functions/_shared/ward-layout";
+import { isArriving, roomOfBed } from "@/supabase/functions/_shared/ward-layout";
 import { openAssignments, wardTabs } from "./data";
 import { parseLayout } from "./layout-schema";
 import { arrivingTooLong, waitingFor } from "./waiting";
@@ -238,7 +238,7 @@ export async function loadBedBoard(
     if (a)
       return {
         // ADR 0199: allocated for an admission, nobody arrived yet.
-        state: a.admissionId && !a.arrivedAt ? ("arriving" as const) : ("occupied" as const),
+        state: isArriving(a) ? ("arriving" as const) : ("occupied" as const),
         since: a.startedAt.toISOString(),
         reason: null,
         a,

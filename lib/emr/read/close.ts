@@ -15,7 +15,7 @@ import { bedAssignments, bedStateEvents } from "@/db/schema/ward-builder";
 import { asClinicalWriter } from "@/lib/emr/db";
 import { patientVisitSummaryLiveFor, prescribeV2LiveFor } from "@/lib/emr/feature";
 import { euObservationLiveFor, wardBuilderLiveFor } from "@/lib/wards/feature";
-import { bedState } from "@/supabase/functions/_shared/ward-layout";
+import { bedState, isArriving } from "@/supabase/functions/_shared/ward-layout";
 
 /*
  * What the close dialog needs from the record (ADRs 0197–0203): the wards that take admissions with their bed
@@ -80,6 +80,7 @@ export async function wardBedCounts(
         bedId: bedAssignments.bedId,
         startedAt: bedAssignments.startedAt,
         admissionId: bedAssignments.admissionId,
+        euStayId: bedAssignments.euStayId,
         arrivedAt: bedAssignments.arrivedAt,
       })
       .from(bedAssignments)
@@ -120,7 +121,7 @@ export async function wardBedCounts(
     const s = bedState({
       closed: !!b.closedAt,
       open: a
-        ? { startedAt: a.startedAt.toISOString(), arriving: !!a.admissionId && !a.arrivedAt }
+        ? { startedAt: a.startedAt.toISOString(), arriving: isArriving(a) }
         : null,
       lastEndedAt: lastEnded?.toISOString() ?? null,
       events: events

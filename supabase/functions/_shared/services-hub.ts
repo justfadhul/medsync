@@ -382,6 +382,13 @@ export const CAPABILITY_KEYS: readonly CapabilityKey[] = [
     },
   },
   {
+    key: "eu_stay_limit_hours",
+    label: "Emergency unit stay limit (hours)",
+    section: 1,
+    routing: false,
+    value: { type: "count", max: 72 },
+  },
+  {
     key: "resus_bays",
     label: "Resuscitation bays",
     section: 1,

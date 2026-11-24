@@ -139,6 +139,7 @@ export async function openAssignments(hospitalId: string, wardId: string) {
       patientUserId: bedAssignments.patientUserId,
       startedAt: bedAssignments.startedAt,
       admissionId: bedAssignments.admissionId,
+      euStayId: bedAssignments.euStayId,
       arrivedAt: bedAssignments.arrivedAt,
     })
     .from(bedAssignments)
