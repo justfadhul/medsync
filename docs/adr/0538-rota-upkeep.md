@@ -27,7 +27,8 @@ approved request through.
 4. **Cover and swap (decision: the colleague accepts, a maker approves).** `duty_swap_requests` and
    `duty_swap_request_events` (both append-only; the state is the events). The holder of a live duty asks a colleague to cover
    it, or to swap it for the colleague's duty on the same post (R35). The colleague accepts or declines; a rota maker approves
-   (only after acceptance) or refuses; the asker may withdraw an open request. Declined, approved, refused and withdrawn are
+   (only after acceptance) or refuses; the database also lets the asker withdraw an open request, but no server action or
+   screen offers it yet. Declined, approved, refused and withdrawn are
    final. Approval ends the asked duty with reason `covered` (and, for a swap, the colleague's too), each at the later of its
    start and now, and writes the colleague's cover or swap duty (and for a swap the mirror duty) in the same statement: all or
    nothing. The duty guard still checks grade, leave, double booking, room and the same post on those writes; only the week
@@ -37,8 +38,8 @@ approved request through.
    pass it on. `private.duty_rota_maker()` gains `p_publish` (default false) and the active delegate; the three-argument
    version is dropped first (R8), so 0307's guard and the tests still call it with three arguments. `private.duty_rota_owner()`
    is 0307's rule (admin or open head), which only an owner passes, and which the delegate guard uses.
-6. **Swaps send no notices in v1.** The colleague and the makers see a request on the rota page ("Asked of you", "Your
-   duties"); nobody is sent a notice, SMS or push.
+6. **Swaps send no notices in v1.** The colleague sees a request on the rota page ("Asked of you"), and the makers
+   see it once the colleague has accepted ("Swaps to decide"); nobody is sent a notice, SMS or push.
 
 ## Rulings made while building
 
@@ -75,9 +76,8 @@ approved request through.
   - **Non-doctor delegates have no page.** `/doctor/rota` is the only delegate surface, so a nurse manager or other
     non-doctor given the rota has the right in SQL but nowhere to use it.
   - **Notices for swaps** (the colleague asked, a maker to approve, the answer back) are not built.
-  - **A withdraw button** is not on screen; the action exists.
+  - **Withdrawing a request** is allowed by the database but has no server action and no button.
   - **A delegation does not expire by itself in the unique index:** an end date that has passed stops it working, but it holds
     its slot until revoked.
   - **Fill into a published week** returns one `rota_locked` skip per draft rather than refusing once up front.
-  - **A department both headed and delegated** can list twice on `/doctor/rota`.
   - **All wording** is a draft.
