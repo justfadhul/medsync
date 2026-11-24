@@ -1533,13 +1533,91 @@
         ],
         "prompted": []
       }
+    },
+    {
+      "id": "tpl.consult",
+      "version": "1.0.0",
+      "noteType": "consult",
+      "title": "Consult reply",
+      "reference": "2.12 (draft wording)",
+      "notes": "The reply to a care request (consult). Signed with this template by the consulted clinician.",
+      "sections": [
+        {
+          "id": "s01",
+          "number": "01",
+          "title": "Findings",
+          "kind": "mixed",
+          "items": [
+            {
+              "kind": "finding"
+            },
+            {
+              "kind": "exam_finding"
+            }
+          ],
+          "optional": true
+        },
+        {
+          "id": "s02",
+          "number": "02",
+          "title": "Assessment",
+          "kind": "structured",
+          "items": [
+            {
+              "kind": "problems_addressed"
+            }
+          ],
+          "optional": false
+        },
+        {
+          "id": "s03",
+          "number": "03",
+          "title": "Recommendations",
+          "kind": "mixed",
+          "items": [
+            {
+              "kind": "plan_statement"
+            }
+          ],
+          "optional": false
+        },
+        {
+          "id": "s04",
+          "number": "04",
+          "title": "Follow-up",
+          "kind": "structured",
+          "items": [
+            {
+              "kind": "follow_up"
+            }
+          ],
+          "optional": true
+        }
+      ],
+      "minimumToSign": {
+        "required": [
+          {
+            "id": "req.assessment",
+            "check": "section_has_content",
+            "message": "Add the assessment.",
+            "section": "s02"
+          },
+          {
+            "id": "req.recommendations",
+            "check": "section_has_content",
+            "message": "Add the recommendations.",
+            "section": "s03"
+          }
+        ],
+        "prompted": []
+      }
     }
   ],
   "counts": {
-    "templates": 10,
+    "templates": 11,
     "modules": 2,
-    "sections": 65,
-    "requiredRules": 27,
+    "sections": 69,
+    "requiredRules": 29,
     "promptedRules": 4
   }
 }
