@@ -18,6 +18,7 @@ import {
   liveChange,
   startChange,
 } from "../_shared/services-hub.ts";
+import { decideWardAttach, WARD_ATTACH_WORDS } from "../_shared/ward-layout.ts";
 import { assertHeadOf, HubError, loadDepartment, must, reasonOr, slugify } from "./common.ts";
 import { hasPublishedLayout, occupiedBedCount } from "./ops-wards.ts";
 
@@ -807,6 +808,18 @@ const unarchive: OpHandler = async (ctx, i) => {
   };
 };
 
+/** The database guard (migration 0310) backs the checks above for the race of two saves; its hints become words. */
+function wardWrite<T>(
+  r: { data: T; error: { message: string; hint?: string | null } | null },
+  what: string,
+): T {
+  const hint = r.error?.hint ?? "";
+  if (hint === "ward_parent_not_ordinary")
+    throw new HubError(WARD_ATTACH_WORDS.ordinaryParent, 409);
+  if (hint === "ward_has_units") throw new HubError(WARD_ATTACH_WORDS.detachFirst, 409);
+  return must(r, what);
+}
+
 const upsertWard: OpHandler = async (ctx, i) => {
   const dept = await loadDepartment(ctx, i.department_id);
   await assertPlace(ctx, i.place_id);
@@ -822,13 +835,11 @@ const upsertWard: OpHandler = async (ctx, i) => {
   ) as { id: string } | null;
   if (clash && clash.id !== i.id)
     throw new HubError(`A ward called ${i.name} already exists.`, 409);
-  const EU = "emergency_observation";
   const wardType = i.ward_type ?? null;
   // Wording is DRAFT for the CSO (content/eu/words.ts); the raw CHECK error never reaches the admin.
-  if (i.parent_ward_id && wardType !== EU)
-    throw new HubError("Only an emergency unit is attached to a ward.", 400);
+  let parentRow: { id: string; type: string | null; archived: boolean } | null = null;
   if (i.parent_ward_id) {
-    const parent = must(
+    const r = must(
       await ctx.sb
         .from("hospital_wards")
         .select("id, ward_type, archived_at")
@@ -837,12 +848,11 @@ const upsertWard: OpHandler = async (ctx, i) => {
         .maybeSingle(),
       "parent ward",
     ) as { id: string; ward_type: string | null; archived_at: string | null } | null;
-    if (!parent || parent.archived_at || parent.id === i.id || parent.ward_type === EU)
-      throw new HubError("Attach it to an ordinary ward of this hospital.", 400);
+    if (r) parentRow = { id: r.id, type: r.ward_type, archived: r.archived_at !== null };
   }
   let before: Record<string, unknown> | undefined;
   let bedCount: number = i.bed_count;
-  let clearParent = false;
+  let stored: { type: string | null } | null = null;
   if (i.id) {
     const w = must(
       await ctx.sb
@@ -855,23 +865,29 @@ const upsertWard: OpHandler = async (ctx, i) => {
     ) as (Record<string, unknown> & { bed_count: number; ward_type: string | null }) | null;
     if (!w) throw new HubError("Ward not found at this hospital.");
     before = w;
-    if ((w.ward_type === EU) !== (wardType === EU)) {
-      if ((await occupiedBedCount(ctx, { wardIds: [i.id] })) > 0)
-        throw new HubError(
-          "Move the patients out before changing whether this ward is an emergency unit.",
-          409,
-        );
-      if (wardType === EU) {
-        // R20: an emergency unit's parent is never an emergency unit.
-        const kids = await ctx.sb
-          .from("hospital_wards")
-          .select("id", { count: "exact", head: true })
-          .eq("hospital_id", ctx.hospitalId)
-          .eq("parent_ward_id", i.id);
-        if ((kids.count ?? 0) > 0)
-          throw new HubError("Detach its emergency units before making it one.", 409);
-      } else clearParent = true; // no longer a unit: drop its parent in the same write
-    }
+    stored = { type: w.ward_type };
+  }
+  const units = i.id
+    ? await ctx.sb
+        .from("hospital_wards")
+        .select("id", { count: "exact", head: true })
+        .eq("hospital_id", ctx.hospitalId)
+        .eq("parent_ward_id", i.id)
+        .is("archived_at", null)
+    : null;
+  if (units?.error) throw new Error(`ward units: ${units.error.message}`);
+  const verdict = decideWardAttach({
+    type: wardType,
+    parentId: i.parent_ward_id,
+    wardId: i.id ?? null,
+    stored,
+    parent: parentRow,
+    units: units?.count ?? 0,
+    occupied: i.id ? await occupiedBedCount(ctx, { wardIds: [i.id] }) : 0,
+  });
+  if (!verdict.ok) throw new HubError(verdict.message, verdict.status);
+  if (i.id && before) {
+    const w = before as { bed_count: number };
     if (await hasPublishedLayout(ctx, i.id)) {
       // ADR 0192 §6: a laid-out ward's count is its published layout's; the form can't change it.
       bedCount = w.bed_count;
@@ -899,11 +915,7 @@ const upsertWard: OpHandler = async (ctx, i) => {
     age_group: i.age_group ?? null,
     place_id: i.place_id ?? null,
     bed_count: bedCount,
-    ...(clearParent
-      ? { parent_ward_id: null }
-      : i.parent_ward_id !== undefined
-        ? { parent_ward_id: i.parent_ward_id }
-        : {}),
+    ...(verdict.parent !== undefined ? { parent_ward_id: verdict.parent } : {}),
   };
   return {
     audit: {
@@ -914,10 +926,10 @@ const upsertWard: OpHandler = async (ctx, i) => {
     },
     apply: async () => {
       if (i.id) {
-        must(await ctx.sb.from("hospital_wards").update(row).eq("id", i.id), "update ward");
+        wardWrite(await ctx.sb.from("hospital_wards").update(row).eq("id", i.id), "update ward");
         return { id: i.id };
       }
-      const w = must(
+      const w = wardWrite(
         await ctx.sb.from("hospital_wards").insert(row).select("id").single(),
         "insert ward",
       ) as { id: string };

@@ -1349,3 +1349,49 @@ export function mayWorkBeds(
 ): boolean {
   return who.admin || who.inChargeWardIds.includes(wardId) || who.assignedWardIds.includes(wardId);
 }
+
+/** DRAFT wording for the CSO (content/eu/words.ts mirrors the visible ones). */
+export const WARD_ATTACH_WORDS = {
+  onlyEu: "Only an emergency unit is attached to a ward.",
+  ordinaryParent: "Attach it to an ordinary ward of this hospital.",
+  movePatients: "Move the patients out before changing whether this ward is an emergency unit.",
+  detachFirst: "Detach its emergency units before making it one.",
+} as const;
+
+export type WardAttachVerdict =
+  | { ok: true; parent: string | null | undefined }
+  | { ok: false; status: 400 | 409; message: string };
+
+/**
+ * upsert_ward's rule for the attached-to ward and the ward type (ADR 0539), pure. `parent` is the row the new
+ * parent id points at, read for this hospital only (null: none there); `stored` is the ward being edited (null: a
+ * new ward); `units` counts unarchived EUs attached to it; `occupied` counts open bed assignments in it.
+ * `parent` in the verdict is what to write: a value, null to clear, undefined to leave it as stored.
+ */
+export function decideWardAttach(i: {
+  type: string | null;
+  parentId: string | null | undefined;
+  wardId: string | null;
+  stored: { type: string | null } | null;
+  parent: { id: string; type: string | null; archived: boolean } | null;
+  units: number;
+  occupied: number;
+}): WardAttachVerdict {
+  const EU = "emergency_observation";
+  const no = (status: 400 | 409, message: string): WardAttachVerdict => ({
+    ok: false,
+    status,
+    message,
+  });
+  if (i.parentId && i.type !== EU) return no(400, WARD_ATTACH_WORDS.onlyEu);
+  if (i.parentId) {
+    const p = i.parent;
+    if (!p || p.id !== i.parentId || p.archived || p.id === i.wardId || p.type === EU)
+      return no(400, WARD_ATTACH_WORDS.ordinaryParent);
+  }
+  if (i.stored && (i.stored.type === EU) !== (i.type === EU)) {
+    if (i.occupied > 0) return no(409, WARD_ATTACH_WORDS.movePatients);
+    if (i.type === EU && i.units > 0) return no(409, WARD_ATTACH_WORDS.detachFirst);
+  }
+  return { ok: true, parent: i.type === EU ? i.parentId : null };
+}
