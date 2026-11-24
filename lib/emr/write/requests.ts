@@ -103,9 +103,10 @@ async function cliniciansHere(
 
 /**
  * Who holds the post at `at` when the rota is on (ADR 0534), by whoCovers's post steps only: a review the
- * ward's, else the department's, senior posts; a consult the department's takes-consults post. A review never
- * reaches a junior holder (R7, dropped as on the team list); a holder not live clinical here is skipped and
- * recorded (R25). The read runs in a savepoint: a failure falls through to the team list, never unplaces.
+ * ward's, else the department's, senior posts; a consult the department's takes-consults post. A holder who
+ * cannot take it (not live clinical here, R25, or a junior on a review, R7) is skipped and recorded; when no
+ * ward holder can, the department's post answers before the team list (R38). The read runs in a savepoint: a
+ * failure falls through to the team list, never unplaces.
  */
 async function postHolders(
   tx: EmrTx,
@@ -120,26 +121,38 @@ async function postHolders(
         from: q.at,
         to: new Date(q.at.getTime() + 1),
       });
-      const cover = whoCovers(
-        w,
-        review
-          ? {
-              departmentId: q.departmentId,
-              wardId: q.wardId,
-              levels: ["senior", "consultant"],
-              at: q.at,
-            }
-          : { departmentId: q.departmentId, at: q.at },
-      );
-      if (cover.step !== "ward_post" && cover.step !== "department_post") return [];
-      const ids = cover.people.map((p) => p.userId);
-      const live = await cliniciansHere(sp, q.hospitalId, ids);
-      const senior = review
-        ? await cliniciansHere(sp, q.hospitalId, ids, SENIOR_CADRE_CODES)
-        : live;
-      return cover.people
-        .filter((p) => !live.get(p.userId) || senior.get(p.userId))
-        .map((p) => ({ userId: p.userId, active: live.get(p.userId) ?? false, postId: p.postId }));
+      const holders = async (wardId: string | null) => {
+        const cover = whoCovers(w, {
+          departmentId: q.departmentId,
+          wardId,
+          levels: review ? ["senior", "consultant"] : undefined,
+          at: q.at,
+        });
+        if (cover.step !== "ward_post" && cover.step !== "department_post") return null;
+        const ids = cover.people.map((p) => p.userId);
+        const ok = await cliniciansHere(
+          sp,
+          q.hospitalId,
+          ids,
+          review ? SENIOR_CADRE_CODES : undefined,
+        );
+        return {
+          step: cover.step,
+          people: cover.people.map(
+            (p): Candidate => ({
+              userId: p.userId,
+              active: ok.get(p.userId) ?? false,
+              postId: p.postId,
+            }),
+          ),
+        };
+      };
+      const first = await holders(review ? q.wardId : null);
+      if (!first) return [];
+      if (first.step === "department_post" || first.people.some((p) => p.active))
+        return first.people;
+      // Ahead of the department's holders, so route() records the ward's unusable ones as skips.
+      return [...first.people, ...((await holders(null))?.people ?? [])];
     });
   } catch (e) {
     logger.warn("care_request.rota_read_failed", {

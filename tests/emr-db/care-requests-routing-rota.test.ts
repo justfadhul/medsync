@@ -232,6 +232,39 @@ describe.skipIf(!laneOn)("routing to post holders (PGlite lane)", () => {
     ]);
   });
 
+  it("no usable ward holder passes up to the department's on-call holder, skips recorded (R38)", async () => {
+    process.env.DUTY_ROTA = "1";
+    const t = await team("Gastro");
+    const ward = (
+      await pg.query<{ id: string }>(
+        `INSERT INTO public.hospital_wards (hospital_id, department_id, name, slug) VALUES ($1, $2, 'Ward 7', $3)
+         RETURNING id`,
+        [h, t.d, `ward-${randomUUID().slice(0, 8)}`],
+      )
+    ).rows[0]!.id;
+    const intern = (
+      await clinician(pg, { hospitalId: h, departmentId: t.d, cadre: "INTERN_DOCTOR" })
+    ).userId;
+    const wardPost = await post({
+      departmentId: t.d,
+      wardId: ward,
+      level: "senior",
+      cadres: ["INTERN_DOCTOR"],
+    });
+    await assign(wardPost, intern);
+    const onCall = await post({
+      departmentId: t.d,
+      level: "consultant",
+      cadres: ["CONSULTANT"],
+      takesConsults: true,
+    });
+    await assign(onCall, t.cons);
+    const rows = await routed(await place({ targetDepartmentId: t.d, wardId: ward }));
+    expect(rows).toEqual([
+      { recipient_user_id: t.cons, step: "post", post_id: onCall, skipped_user_ids: [intern] },
+    ]);
+  });
+
   it("a review skips a junior holder and uses the senior team list (R7)", async () => {
     process.env.DUTY_ROTA = "1";
     const t = await team("Surgery");
