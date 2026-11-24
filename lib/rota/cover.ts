@@ -69,7 +69,7 @@ export interface CoverWorld {
 }
 
 /** The instant the duty really stops: its planned end, or an earlier end. */
-const endOf = (a: Assignment): number =>
+export const endOf = (a: Assignment): number =>
   Math.min(a.endsAt.getTime(), a.endedAt?.getTime() ?? Infinity);
 const onLeave = (userId: string, leave: Leave[], t: number) =>
   leave.some((l) => l.userId === userId && l.startsAt.getTime() <= t && t < l.endsAt.getTime());

@@ -1,0 +1,348 @@
+import "server-only";
+
+import type { EmrDb, EmrTx } from "@/lib/emr/db";
+import type {
+  Assignment,
+  CoverStep,
+  CoverWorld,
+  DutyState,
+  Leave,
+  Post,
+  PostLevel,
+} from "@/lib/rota/cover";
+import { and, asc, eq, gt, inArray, isNull, lt, lte, or } from "drizzle-orm";
+import { z } from "zod";
+
+import { DUTY_ROTA_COPY } from "@/content/duty-rota";
+import { staffAffiliations } from "@/db/schema/clinician-profiles";
+import { dutyAssignments, dutyPosts } from "@/db/schema/duty-rota";
+import { hospitalWards } from "@/db/schema/hospital-wards";
+import { criticalContacts } from "@/db/schema/lab-safety";
+import { cadres } from "@/db/schema/reference-data";
+import { availabilityBlocks } from "@/db/schema/scheduling";
+import { departmentHeads } from "@/db/schema/services-hub";
+import { users } from "@/db/schema/users";
+import { dutyState, endOf, gaps, whoCovers } from "@/lib/rota/cover";
+import { dutyRotaLiveFor } from "@/lib/rota/feature";
+
+/**
+ * Rota reads (ADR 0534). One snapshot on the server connection, every query scoped to the hospital; state, gaps
+ * and cover come from lib/rota/cover.ts, never re-derived here. ADR 0199: staff names and places only, never a
+ * patient. Leave is read as times only: no notes, no label, never the reason. Flag off, every read is empty.
+ */
+
+type Opts = { database?: EmrDb; now?: Date };
+const HOUR = 3_600_000;
+
+async function inSnapshot<T>(database: EmrDb | undefined, fn: (tx: EmrTx) => Promise<T>) {
+  const conn = database ?? ((await import("@/db")).db as unknown as EmrDb);
+  return conn.transaction(fn);
+}
+
+/** Active leave of these people overlapping [from, to): the times, nothing else of the block. */
+async function leaveOf(
+  tx: EmrTx,
+  hospitalId: string,
+  userIds: string[],
+  from: Date,
+  to: Date,
+): Promise<Leave[]> {
+  if (!userIds.length) return [];
+  return tx
+    .select({
+      userId: availabilityBlocks.clinicianUserId,
+      startsAt: availabilityBlocks.startsAt,
+      endsAt: availabilityBlocks.endsAt,
+    })
+    .from(availabilityBlocks)
+    .where(
+      and(
+        eq(availabilityBlocks.hospitalId, hospitalId),
+        inArray(availabilityBlocks.clinicianUserId, [...new Set(userIds)]),
+        eq(availabilityBlocks.kind, "leave"),
+        eq(availabilityBlocks.state, "active"),
+        lt(availabilityBlocks.startsAt, to),
+        gt(availabilityBlocks.endsAt, from),
+      ),
+    );
+}
+
+async function namesOf(tx: EmrTx, userIds: string[]): Promise<Map<string, string>> {
+  if (!userIds.length) return new Map();
+  const rows = await tx
+    .select({ id: users.id, name: users.fullName })
+    .from(users)
+    .where(inArray(users.id, [...new Set(userIds)]));
+  return new Map(rows.map((r) => [r.id, r.name]));
+}
+const nameIn = (m: Map<string, string>, id: string) => m.get(id) ?? DUTY_ROTA_COPY.unnamed;
+
+const toAssignment = (a: typeof dutyAssignments.$inferSelect): Assignment => ({
+  id: a.id,
+  postId: a.postId,
+  userId: a.userId,
+  startsAt: a.startsAt,
+  endsAt: a.endsAt,
+  kind: a.kind as Assignment["kind"],
+  coversAssignmentId: a.coversAssignmentId,
+  endedAt: a.endedAt,
+});
+
+/**
+ * The cover world for some departments over [from, to): their posts, the assignments overlapping the range,
+ * the holders' leave in it, the heads in office at `from`, and the hospital contacts (critical_contacts level 2).
+ */
+export async function loadCoverWorld(
+  tx: EmrTx,
+  hospitalId: string,
+  q: { departmentIds: string[]; from: Date; to: Date },
+): Promise<CoverWorld> {
+  const depts = q.departmentIds;
+  const postRows = depts.length
+    ? await tx
+        .select()
+        .from(dutyPosts)
+        .where(and(eq(dutyPosts.hospitalId, hospitalId), inArray(dutyPosts.departmentId, depts)))
+    : [];
+  const posts: Post[] = postRows.map((p) => ({
+    id: p.id,
+    departmentId: p.departmentId,
+    wardId: p.wardId,
+    name: p.name,
+    level: p.level as PostLevel,
+    eligibleCadres: p.eligibleCadres,
+    takesConsults: p.takesConsults,
+    escalatesToPostId: p.escalatesToPostId,
+    capacity: p.capacity,
+    archived: p.archivedAt !== null,
+  }));
+  const assignments = posts.length
+    ? (
+        await tx
+          .select()
+          .from(dutyAssignments)
+          .where(
+            and(
+              eq(dutyAssignments.hospitalId, hospitalId),
+              inArray(
+                dutyAssignments.postId,
+                posts.map((p) => p.id),
+              ),
+              lt(dutyAssignments.startsAt, q.to),
+              gt(dutyAssignments.endsAt, q.from),
+            ),
+          )
+          .orderBy(asc(dutyAssignments.startsAt))
+      ).map(toAssignment)
+    : [];
+  const leave = await leaveOf(
+    tx,
+    hospitalId,
+    assignments.map((a) => a.userId),
+    q.from,
+    q.to,
+  );
+  const heads = depts.length
+    ? await tx
+        .select({
+          departmentId: departmentHeads.departmentId,
+          userId: departmentHeads.userId,
+          acting: departmentHeads.acting,
+        })
+        .from(departmentHeads)
+        .where(
+          and(
+            eq(departmentHeads.hospitalId, hospitalId),
+            inArray(departmentHeads.departmentId, depts),
+            lte(departmentHeads.startsAt, q.from),
+            or(isNull(departmentHeads.endsAt), gt(departmentHeads.endsAt, q.from)),
+          ),
+        )
+        .orderBy(asc(departmentHeads.acting), asc(departmentHeads.startsAt))
+    : [];
+  const contacts = await tx
+    .select({ userId: criticalContacts.userId })
+    .from(criticalContacts)
+    .where(and(eq(criticalContacts.hospitalId, hospitalId), eq(criticalContacts.level, 2)))
+    .orderBy(asc(criticalContacts.position));
+  return { posts, assignments, leave, heads, hospitalContacts: contacts.map((c) => c.userId) };
+}
+
+const WeekQ = z.object({ hospitalId: z.uuid(), departmentId: z.uuid(), weekStart: z.iso.date() });
+
+/** One department's week (from 00:00 Kampala on `weekStart`, seven days), with gaps over it and the next 72 h. */
+export async function loadRotaWeek(
+  hospitalId: string,
+  departmentId: string,
+  weekStart: string,
+  opts?: Opts,
+): Promise<{
+  posts: Post[];
+  assignments: (Assignment & { name: string; state: DutyState })[];
+  gaps: ReturnType<typeof gaps>;
+  eligible: { userId: string; name: string; cadre: string }[];
+}> {
+  if (
+    !dutyRotaLiveFor(hospitalId) ||
+    !WeekQ.safeParse({ hospitalId, departmentId, weekStart }).success
+  )
+    return { posts: [], assignments: [], gaps: [], eligible: [] };
+  const now = opts?.now ?? new Date();
+  const from = new Date(`${weekStart}T00:00:00+03:00`);
+  const to = new Date(from.getTime() + 7 * 24 * HOUR);
+  const soon = new Date(now.getTime() + 72 * HOUR);
+
+  return inSnapshot(opts?.database, async (tx) => {
+    const lo = new Date(Math.min(from.getTime(), now.getTime()));
+    const hi = new Date(Math.max(to.getTime(), soon.getTime()));
+    const w = await loadCoverWorld(tx, hospitalId, {
+      departmentIds: [departmentId],
+      from: lo,
+      to: hi,
+    });
+    const shown = w.assignments.filter((a) => a.startsAt < to && a.endsAt > from);
+    const names = await namesOf(
+      tx,
+      shown.map((a) => a.userId),
+    );
+    // One sweep when the week and the next 72 h touch, so a gap across their seam is not split in two.
+    const holes =
+      from < soon && now < to
+        ? gaps(w.posts, w.assignments, w.leave, lo, hi)
+        : [
+            ...gaps(w.posts, w.assignments, w.leave, now, soon),
+            ...gaps(w.posts, w.assignments, w.leave, from, to),
+          ];
+
+    const codes = [...new Set(w.posts.filter((p) => !p.archived).flatMap((p) => p.eligibleCadres))];
+    const staff = codes.length
+      ? await tx
+          .select({ userId: staffAffiliations.userId, name: users.fullName, cadre: cadres.code })
+          .from(staffAffiliations)
+          .innerJoin(cadres, eq(cadres.id, staffAffiliations.cadreId))
+          .leftJoin(users, eq(users.id, staffAffiliations.userId))
+          .where(
+            and(
+              eq(staffAffiliations.hospitalId, hospitalId),
+              eq(staffAffiliations.departmentId, departmentId),
+              inArray(staffAffiliations.state, ["active", "approved"]),
+              inArray(cadres.code, codes),
+            ),
+          )
+          .orderBy(asc(users.fullName))
+      : [];
+    const eligible = [
+      ...new Map(
+        staff.map((s) => [
+          s.userId,
+          { userId: s.userId, name: s.name ?? DUTY_ROTA_COPY.unnamed, cadre: s.cadre },
+        ]),
+      ).values(),
+    ];
+
+    return {
+      posts: w.posts,
+      assignments: shown.map((a) => ({
+        ...a,
+        name: nameIn(names, a.userId),
+        state: dutyState(a, w.leave, now),
+      })),
+      gaps: holes,
+      eligible,
+    };
+  });
+}
+
+const kampalaMidnight = (now: Date) =>
+  new Date(`${new Date(now.getTime() + 3 * HOUR).toISOString().slice(0, 10)}T00:00:00+03:00`);
+
+/** The duty chip: the person's duties held today (Kampala) and over the next 24 h. */
+export async function myDuties(
+  userId: string,
+  hospitalId: string,
+  now: Date,
+  opts?: Opts,
+): Promise<{ postName: string; until: Date; state: DutyState }[]> {
+  if (!dutyRotaLiveFor(hospitalId) || !z.uuid().safeParse(userId).success) return [];
+  const from = kampalaMidnight(now);
+  const to = new Date(now.getTime() + 24 * HOUR);
+  return inSnapshot(opts?.database, async (tx) => {
+    const rows = await tx
+      .select({ a: dutyAssignments, postName: dutyPosts.name })
+      .from(dutyAssignments)
+      .innerJoin(dutyPosts, eq(dutyPosts.id, dutyAssignments.postId))
+      .where(
+        and(
+          eq(dutyAssignments.hospitalId, hospitalId),
+          eq(dutyAssignments.userId, userId),
+          lt(dutyAssignments.startsAt, to),
+          gt(dutyAssignments.endsAt, from),
+        ),
+      )
+      .orderBy(asc(dutyAssignments.startsAt));
+    // R34: the held window is [startsAt, endOf); empty (cancelled before it started) holds nothing.
+    const held = rows
+      .map((r) => ({ a: toAssignment(r.a), postName: r.postName }))
+      .filter(({ a }) => endOf(a) > Math.max(a.startsAt.getTime(), from.getTime()));
+    if (!held.length) return [];
+    const leave = await leaveOf(
+      tx,
+      hospitalId,
+      [userId],
+      from,
+      new Date(Math.max(...held.map(({ a }) => a.endsAt.getTime()))),
+    );
+    return held.map(({ a, postName }) => ({
+      postName,
+      until: new Date(endOf(a)),
+      state: dutyState(a, leave, now),
+    }));
+  });
+}
+
+/** Who covers a ward now, by whoCovers's fixed order: staff names and post names only. */
+export async function coverForWard(
+  hospitalId: string,
+  wardId: string,
+  now: Date,
+  opts?: Opts,
+): Promise<{
+  step: CoverStep;
+  people: { name: string; postName: string | null; until: string | null }[];
+}> {
+  const none = { step: "none" as const, people: [] };
+  if (!dutyRotaLiveFor(hospitalId) || !z.uuid().safeParse(wardId).success) return none;
+  return inSnapshot(opts?.database, async (tx) => {
+    const [ward] = await tx
+      .select({ departmentId: hospitalWards.departmentId })
+      .from(hospitalWards)
+      .where(and(eq(hospitalWards.id, wardId), eq(hospitalWards.hospitalId, hospitalId)));
+    if (!ward) return none;
+    const postDepts = await tx
+      .selectDistinct({ departmentId: dutyPosts.departmentId })
+      .from(dutyPosts)
+      .where(and(eq(dutyPosts.hospitalId, hospitalId), eq(dutyPosts.wardId, wardId)));
+    const departmentIds = [
+      ...new Set([ward.departmentId, ...postDepts.map((p) => p.departmentId)]),
+    ].filter((d): d is string => d !== null);
+    // A duty lasts at most a week (the "week" shift), so a holder's next leave before it ends falls in range.
+    const w = await loadCoverWorld(tx, hospitalId, {
+      departmentIds,
+      from: now,
+      to: new Date(now.getTime() + 7 * 24 * HOUR),
+    });
+    const cover = whoCovers(w, { departmentId: ward.departmentId ?? "", wardId, at: now });
+    const names = await namesOf(
+      tx,
+      cover.people.map((p) => p.userId),
+    );
+    return {
+      step: cover.step,
+      people: cover.people.map((p) => ({
+        name: nameIn(names, p.userId),
+        postName: p.postName,
+        until: p.until?.toISOString() ?? null,
+      })),
+    };
+  });
+}

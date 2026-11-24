@@ -28,4 +28,7 @@ export const DUTY_ROTA_COPY = {
     rota_locked: "This week is published. Change it through a cover or swap request.",
   },
   plannedNotPresent: "Rostered, not confirmed present.",
+  off: "The duty rota is not switched on at this hospital.",
+  notFound: "That post or duty is no longer open on this rota.",
+  unnamed: "Name not recorded",
 } as const;
