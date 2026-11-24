@@ -4,8 +4,9 @@
 --   1. duty_rota_templates: a week template line (post, weekdays 1–7, shift, maybe a person), as
 --      lib/rota/templates.ts. Ended, never edited or deleted (0265's rule); written by a rota maker.
 --   2. duty_rota_delegates: the admin or an open head hands a department's rota to a colleague, until a
---      day or until revoked, with or without publish rights. Revoked, never deleted. A delegate does not
---      pass it on.
+--      day or until revoked, with or without publish rights, to live staff of the hospital, one active
+--      delegation per person per department. Revoked, never deleted. A delegate does not pass it on, and
+--      the delegation lapses when its grantor is no longer the admin or a head of that department (R49).
 --   3. private.duty_rota_maker() gains p_publish (DEFAULT false) and the active delegate. The three-argument
 --      version is DROPPED first (R8): a second overload would make every three-argument call ambiguous.
 --      0307's guard, lib/rota/write.ts and the tests keep calling it with three arguments, through the default.
@@ -15,7 +16,10 @@
 --      rights writes one; an unlock gives its reason. private.duty_week_published() reads it.
 --   5. private.duty_assignment_guard(), replaced: 0307's rules unchanged, plus inserting into or ending a
 --      duty in a published week is refused (rota_locked), unless an approved request makes the change
---      (duty.rota_via = 'request', 0273's pattern). That path still passes every other rule.
+--      (duty.rota_via = 'request', 0273's pattern), and then only for a cover-shaped write: an insert naming
+--      the duty it covers, an end with reason 'covered' (R48). That path still passes every other rule. The
+--      guard holds the department week's advisory key shared before the check; publishing takes it
+--      exclusively (R50).
 --   6. duty_swap_requests and duty_swap_request_events: the holder asks a colleague to cover a duty, or to
 --      swap it for the colleague's duty on the same post (R35). The colleague accepts or declines, a rota
 --      maker approves (only after acceptance) or refuses, the asker may withdraw; the state is the events,
@@ -61,7 +65,9 @@ CREATE TABLE IF NOT EXISTS public.duty_rota_delegates (
   CONSTRAINT duty_rota_delegates_self CHECK (from_user <> to_user),
   CONSTRAINT duty_rota_delegates_revoke_shape CHECK ((revoked_at IS NULL) = (revoked_by IS NULL))
 );
-CREATE INDEX IF NOT EXISTS duty_rota_delegates_to ON public.duty_rota_delegates (hospital_id, to_user, department_id);
+-- One active delegation per person per department (0273's prd_one); revoke it to hand over anew.
+CREATE UNIQUE INDEX IF NOT EXISTS duty_rota_delegates_one
+  ON public.duty_rota_delegates (hospital_id, department_id, to_user) WHERE revoked_at IS NULL;
 
 -- ─── 3. Who makes the rota ───────────────────────────────────────────────
 -- 0307's rule, unchanged: the hospital admin, or an open head (substantive or acting) of the department.
@@ -84,6 +90,7 @@ RETURNS boolean LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public, p
       OR EXISTS (SELECT 1 FROM public.duty_rota_delegates d
                   WHERE d.hospital_id = p_hospital AND d.department_id = p_department AND d.to_user = p_user
                     AND d.revoked_at IS NULL
+                    AND private.duty_rota_owner(d.hospital_id, d.from_user, d.department_id)
                     AND (d.until IS NULL OR d.until >= (now() AT TIME ZONE 'Africa/Kampala')::date)
                     AND (NOT p_publish OR d.can_publish));
 $$;
@@ -100,6 +107,11 @@ BEGIN
     END IF;
     IF NEW.until IS NOT NULL AND NEW.until < (now() AT TIME ZONE 'Africa/Kampala')::date THEN
       RAISE EXCEPTION 'duty_rota_delegates: the end date has passed' USING ERRCODE = 'check_violation';
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM public.staff_affiliations sa
+                    WHERE sa.user_id = NEW.to_user AND sa.hospital_id = NEW.hospital_id
+                      AND sa.state IN ('active','approved')) THEN
+      RAISE EXCEPTION 'duty_rota_delegates: only live staff of this hospital make its rota' USING ERRCODE = 'check_violation';
     END IF;
     RETURN NEW;
   END IF;
@@ -196,9 +208,13 @@ LANGUAGE plpgsql SET search_path = public, pg_temp AS $$
 DECLARE
   p public.duty_posts; taken int;
   via boolean := coalesce(current_setting('duty.rota_via', true) = 'request', false);
+  wk date := date_trunc('week', NEW.starts_at AT TIME ZONE 'Africa/Kampala')::date;
 BEGIN
   IF TG_OP = 'DELETE' THEN RAISE EXCEPTION 'duty_assignments: ended, never deleted'; END IF;
   SELECT * INTO p FROM public.duty_posts WHERE id = NEW.post_id;
+  -- R50: the department week's key, shared; publishing takes it exclusively, so a publish waits for
+  -- writes in flight and no write lands in a week that is being published.
+  PERFORM pg_advisory_xact_lock_shared(hashtext(p.department_id::text || wk::text));
   IF TG_OP = 'UPDATE' THEN
     IF OLD.ended_at IS NOT NULL OR NEW.ended_at IS NULL
        OR (to_jsonb(NEW) - 'ended_at' - 'ended_by' - 'end_reason') <> (to_jsonb(OLD) - 'ended_at' - 'ended_by' - 'end_reason') THEN
@@ -207,7 +223,9 @@ BEGIN
     IF NOT private.duty_rota_maker(NEW.hospital_id, NEW.ended_by, p.department_id) THEN
       RAISE EXCEPTION 'duty_assignments: you are not making this rota' USING ERRCODE = 'check_violation', HINT = 'rota_maker';
     END IF;
-    IF NOT via AND private.duty_week_published(NEW.hospital_id, p.department_id, NEW.starts_at) THEN
+    -- R48: the request path only ends a duty as covered.
+    IF NOT (via AND NEW.end_reason = 'covered')
+       AND private.duty_week_published(NEW.hospital_id, p.department_id, NEW.starts_at) THEN
       RAISE EXCEPTION 'duty_assignments: this week is published' USING ERRCODE = 'check_violation', HINT = 'rota_locked';
     END IF;
     RETURN NEW;
@@ -224,7 +242,9 @@ BEGIN
   IF NOT private.duty_rota_maker(NEW.hospital_id, NEW.created_by, p.department_id) THEN
     RAISE EXCEPTION 'duty_assignments: you are not making this rota' USING ERRCODE = 'check_violation', HINT = 'rota_maker';
   END IF;
-  IF NOT via AND private.duty_week_published(NEW.hospital_id, p.department_id, NEW.starts_at) THEN
+  -- R48: the request path only writes a cover or swap.
+  IF NOT (via AND NEW.covers_assignment_id IS NOT NULL)
+     AND private.duty_week_published(NEW.hospital_id, p.department_id, NEW.starts_at) THEN
     RAISE EXCEPTION 'duty_assignments: this week is published' USING ERRCODE = 'check_violation', HINT = 'rota_locked';
   END IF;
   IF NOT EXISTS (SELECT 1 FROM public.staff_affiliations sa JOIN public.cadres c ON c.id = sa.cadre_id

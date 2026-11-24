@@ -1,4 +1,5 @@
-import { readFileSync } from "node:fs";
+import { readdirSync, readFileSync, statSync } from "node:fs";
+import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
 const sql = readFileSync("supabase/migrations/0309_duty_rota_upkeep.sql", "utf8");
@@ -62,5 +63,41 @@ describe("migration 0309 (static)", () => {
           `BEFORE UPDATE OR DELETE ON public\\.${t}\\s+FOR EACH ROW EXECUTE FUNCTION public\\.block_modify_append_only`,
         ),
       );
+  });
+
+  it("the lock gives way only to cover-shaped writes (R48)", () => {
+    const guard = sql.slice(sql.indexOf("FUNCTION private.duty_assignment_guard"));
+    expect(guard).toContain("via AND NEW.end_reason = 'covered'");
+    expect(guard).toContain("via AND NEW.covers_assignment_id IS NOT NULL");
+  });
+
+  it("no app code sets the request bypass (R48)", () => {
+    const files = (dir: string): string[] =>
+      readdirSync(dir).flatMap((f) => {
+        const p = join(dir, f);
+        return statSync(p).isDirectory() ? files(p) : [p];
+      });
+    for (const f of [...files("lib"), ...files("app")].filter((f) => /\.(ts|tsx)$/.test(f)))
+      expect(readFileSync(f, "utf8"), f).not.toContain("duty.rota_via");
+  });
+
+  it("one active delegation per person per department (R49)", () => {
+    expect(sql).toMatch(
+      /CREATE UNIQUE INDEX IF NOT EXISTS duty_rota_delegates_one\s+ON public\.duty_rota_delegates \(hospital_id, department_id, to_user\) WHERE revoked_at IS NULL;/,
+    );
+    expect(sql).toContain(
+      "AND private.duty_rota_owner(d.hospital_id, d.from_user, d.department_id)",
+    );
+  });
+
+  it("the week's shared lock precedes the rota_locked check; publish takes the same key (R50)", () => {
+    const key = "hashtext(p.department_id::text || wk::text)";
+    const guard = sql.slice(sql.indexOf("FUNCTION private.duty_assignment_guard"));
+    const shared = guard.indexOf(`pg_advisory_xact_lock_shared(${key})`);
+    expect(shared).toBeGreaterThan(-1);
+    expect(shared).toBeLessThan(guard.indexOf("'rota_locked'"));
+    expect(sql).toContain(
+      "pg_advisory_xact_lock(hashtext(NEW.department_id::text || NEW.week_start::text))",
+    );
   });
 });

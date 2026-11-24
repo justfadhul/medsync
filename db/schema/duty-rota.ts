@@ -9,6 +9,7 @@ import {
   smallint,
   text,
   timestamp,
+  uniqueIndex,
   uuid,
 } from "drizzle-orm/pg-core";
 
@@ -181,7 +182,9 @@ export const dutyRotaDelegates = pgTable(
       "duty_rota_delegates_revoke_shape",
       sql`(${t.revokedAt} IS NULL) = (${t.revokedBy} IS NULL)`,
     ),
-    index("duty_rota_delegates_to").on(t.hospitalId, t.toUser, t.departmentId),
+    uniqueIndex("duty_rota_delegates_one")
+      .on(t.hospitalId, t.departmentId, t.toUser)
+      .where(sql`${t.revokedAt} IS NULL`),
   ],
 );
 

@@ -188,9 +188,9 @@ describe.skipIf(!laneOn)("0309 — duty rota upkeep", () => {
     );
     await expect(week({ weekStart: "2027-02-02", kind: "publish" })).rejects.toThrow(/week_start/);
     // Only a rota maker publishes or unlocks.
-    await expect(
-      week({ weekStart: monday, kind: "unlock", reason: "Fix", by: mo }),
-    ).rejects.toThrow(/publish/);
+    expect(await refusal(week({ weekStart: monday, kind: "unlock", reason: "Fix", by: mo }))).toBe(
+      "rota_maker",
+    );
     await week({ weekStart: monday, kind: "unlock", reason: "Dr B is on study leave" });
     expect(await refusal(end(held))).toBe("allowed");
     // The full guard still holds in an unlocked week.
@@ -337,6 +337,36 @@ describe.skipIf(!laneOn)("0309 — duty rota upkeep", () => {
         assign({ postId: ward, userId: c2, from: at("2027-03-17", 8), to: at("2027-03-17", 17) }),
       ),
     ).toBe("rota_locked");
+    // R48: even with duty.rota_via set, only cover-shaped writes pass the lock.
+    const viaRequest = (q: string, params: unknown[]) =>
+      pg.transaction(async (tx) => {
+        await tx.query(`SELECT set_config('duty.rota_via', 'request', true)`);
+        await tx.query(q, params);
+      });
+    expect(
+      await refusal(
+        viaRequest(
+          `INSERT INTO public.duty_assignments (hospital_id, post_id, user_id, starts_at, ends_at, kind, created_by)
+           VALUES ($1, $2, $3, $4, $5, 'rostered', $6)`,
+          [hA, ward, c2, at("2027-03-18", 8), at("2027-03-18", 17), admin],
+        ),
+      ),
+    ).toBe("rota_locked");
+    const coverId = (
+      await pg.query<{ id: string }>(
+        `SELECT id FROM public.duty_assignments WHERE covers_assignment_id = $1`,
+        [a],
+      )
+    ).rows[0]!.id;
+    expect(
+      await refusal(
+        viaRequest(
+          `UPDATE public.duty_assignments SET ended_at = starts_at, ended_by = $2, end_reason = 'Cancelled'
+            WHERE id = $1`,
+          [coverId, admin],
+        ),
+      ),
+    ).toBe("rota_locked");
   });
 
   it("a delegate can make the rota; a revoked one cannot", async () => {
@@ -360,6 +390,9 @@ describe.skipIf(!laneOn)("0309 — duty rota upkeep", () => {
     expect(await refusal(delegate(c1, mo))).toBe("rota_maker");
     await expect(delegate(head, head)).rejects.toThrow(/duty_rota_delegates_self/);
     const id = await delegate(head, mo);
+    // R49: one active delegation per person per department; only live staff of the hospital.
+    await expect(delegate(admin, mo)).rejects.toThrow(/duty_rota_delegates_one/);
+    await expect(delegate(head, await authUser(pg, "outsider"))).rejects.toThrow(/staff/);
     expect(await refusal(delegate(mo, c2))).toBe("rota_maker");
     await expect(delegate(admin, c2, { until: "2020-01-01" })).rejects.toThrow(/passed/);
     const made = await assign({
@@ -420,6 +453,33 @@ describe.skipIf(!laneOn)("0309 — duty rota upkeep", () => {
         }),
       ),
     ).toBe("rota_maker");
+    // A revoked delegation frees the person for a new one.
+    expect(await refusal(delegate(head, mo))).toBe("allowed");
+  });
+
+  it("a delegation lapses when its grantor steps down", async () => {
+    const maker = (u: string) =>
+      pg
+        .query<{
+          ok: boolean;
+        }>(`SELECT private.duty_rota_maker($1::uuid, $2::uuid, $3::uuid) AS ok`, [hA, u, surgery])
+        .then((r) => r.rows[0]!.ok);
+    await pg.query(
+      `INSERT INTO public.department_heads (hospital_id, department_id, user_id) VALUES ($1, $2, $3)`,
+      [hA, surgery, c1],
+    );
+    await pg.query(
+      `INSERT INTO public.duty_rota_delegates (hospital_id, department_id, from_user, to_user, can_publish)
+       VALUES ($1, $2, $3, $4, true)`,
+      [hA, surgery, c1, c2],
+    );
+    expect(await maker(c2)).toBe(true);
+    await pg.query(
+      `UPDATE public.department_heads SET ends_at = now() WHERE department_id = $1 AND user_id = $2`,
+      [surgery, c1],
+    );
+    expect(await maker(c1)).toBe(false);
+    expect(await maker(c2)).toBe(false);
   });
 
   it("a delegate without publish rights cannot publish", async () => {
@@ -439,7 +499,7 @@ describe.skipIf(!laneOn)("0309 — duty rota upkeep", () => {
       ),
     ).toBe("allowed");
     // …only the one with publish rights publishes.
-    await expect(week({ weekStart: monday, kind: "publish", by: c2 })).rejects.toThrow(/publish/);
+    expect(await refusal(week({ weekStart: monday, kind: "publish", by: c2 }))).toBe("rota_maker");
     await week({ weekStart: monday, kind: "publish", by: c3 });
     expect(
       await refusal(
@@ -485,7 +545,11 @@ describe.skipIf(!laneOn)("0309 — duty rota upkeep", () => {
       pg
         .query<{
           ok: boolean;
-        }>(`SELECT private.duty_rota_maker($1::uuid, $2::uuid, $3::uuid) AS ok`, [hA, head, medicine])
+        }>(`SELECT private.duty_rota_maker($1::uuid, $2::uuid, $3::uuid) AS ok`, [
+          hA,
+          head,
+          medicine,
+        ])
         .then((r) => r.rows[0]!.ok);
     expect(await three()).toBe(true);
     // Re-running 0307 brings back its overload; re-running 0309 after it drops it again.
