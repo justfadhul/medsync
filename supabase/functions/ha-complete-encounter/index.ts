@@ -43,6 +43,10 @@
  *   as below, except step 4: a patient waiting for a bed is still nursed where they are, so nursing assignments end
  *   on arrival (confirm_bed_arrival), not here. `follow_up` may be `booked` (ADR 0202).
  *
+ * EU (0311, ADR 0541): an open EU stay this visit may end (its own, or a triage stay with no encounter) ends
+ *   with a clinical close in ONE SQL transaction (`end_eu_stay`), then the cascade runs in full. A close with no
+ *   outcome, or an admission (boarding, later), is refused while the stay is open, so no stay is orphaned.
+ *
  * Auth: the clinician on the encounter, hospital_admin (scoped), or
  * superadmin. (Nurses cannot complete a doctor's encounter; if a
  * nurse needs to close an encounter the doctor is the right caller.)
@@ -60,6 +64,7 @@ import {
   serverError,
   unauthorized,
 } from "../_shared/errors.ts";
+import { euRefusal } from "../_shared/eu.ts";
 import { requireHospitalAdminScope } from "../_shared/hospital-admin-scope.ts";
 import { makeLogger } from "../_shared/logger.ts";
 import { networkContext, recordSaAudit } from "../_shared/sa-audit.ts";
@@ -192,6 +197,36 @@ Deno.serve(async (request: Request) => {
     if (!scope.ok) return forbidden(init, scope.reason);
   }
 
+  // EU (ADR 0541): the open stay this visit may end, its own or a triage stay with no encounter yet. Another
+  // visit's stay is left alone. Before 0311 the table is missing (42P01): no stay, the close is as before.
+  const euLookup = await sb
+    .from("eu_stays")
+    .select("id")
+    .eq("patient_user_id", enc.patient_user_id)
+    .eq("hospital_id", enc.hospital_id)
+    .neq("status", "ended")
+    .or(`encounter_id.eq.${enc.id},encounter_id.is.null`)
+    .maybeSingle();
+  if (euLookup.error && euLookup.error.code !== "42P01") {
+    log.error("eu stay lookup failed", { requestId, code: euLookup.error.code });
+    return serverError("encounter update failed", init);
+  }
+  const euStayId = euLookup.error ? null : ((euLookup.data?.id as string | undefined) ?? null);
+  if (euStayId && !clinical) {
+    return badRequest(
+      "This patient is in the emergency unit. Close the visit with an outcome; that ends the EU stay.",
+      init,
+    );
+  }
+  if (euStayId && admission) {
+    return badRequest(
+      "Admitting a patient who is in the emergency unit comes with boarding, which is not switched on yet.",
+      init,
+    );
+  }
+  // Died is stored as the existing 'deceased' (ADR 0115 reads it) [H]; the stay's end_kind keeps 'died'.
+  const storedDisposition = input.disposition === "died" ? "deceased" : input.disposition;
+
   const { ipAddress, userAgent } = networkContext(request);
   try {
     await recordSaAudit({
@@ -265,13 +300,58 @@ Deno.serve(async (request: Request) => {
     }
   }
 
+  // 1b. EU: the space, the stay, the close and its event, in one SQL transaction (end_eu_stay). It finds no
+  //     stay if it ended meanwhile ({ ended: false }); the close below then runs as usual.
+  let euEnded = false;
+  if (euStayId && clinical) {
+    const r = await sb.rpc("end_eu_stay", {
+      p: {
+        encounter_id: enc.id,
+        actor: caller.id,
+        end_kind: input.disposition,
+        disposition: storedDisposition,
+        disposition_detail: input.disposition_detail ?? null,
+        follow_up: input.follow_up ?? null,
+        completion_reason: input.completion_reason ?? null,
+      },
+    });
+    if (r.error) {
+      const words = euRefusal(r.error);
+      if (words) return badRequest(words, init);
+      log.error("end_eu_stay failed", { requestId, name: r.error.name, code: r.error.code });
+      return serverError("encounter update failed", init);
+    }
+    const ended = r.data as { ended?: boolean; stay_id?: string } | null;
+    euEnded = ended?.ended === true;
+    if (euEnded) {
+      try {
+        await recordSaAudit({
+          actorId: caller.id,
+          action: "end_eu_stay",
+          targetKind: "encounter",
+          targetId: enc.id,
+          reason: input.reason,
+          requestId,
+          ipAddress,
+          userAgent,
+          afterData: { stay_id: ended?.stay_id ?? euStayId, end_kind: input.disposition },
+        });
+      } catch (e) {
+        // The stay is ended; a missing second audit row is logged, never a lost close.
+        log.warn("end_eu_stay audit failed (non-fatal)", {
+          requestId,
+          name: e instanceof Error ? e.name : "unknown",
+        });
+      }
+    }
+  }
+
   // 1. Close the encounter. The state guard makes a double submit a no-op, not a second close.
   const emr = clinical
     ? {
         completed_by: caller.id,
         closure_kind: "clinical",
-        // Died is stored as the existing 'deceased' (ADR 0115 reads it) [H].
-        disposition: input.disposition === "died" ? "deceased" : input.disposition,
+        disposition: storedDisposition,
         disposition_detail: input.disposition_detail ?? null,
         follow_up: input.follow_up ?? null,
       }
@@ -291,7 +371,7 @@ Deno.serve(async (request: Request) => {
       .eq("id", enc.id);
     if (error) log.warn("follow-up write failed (non-fatal)", { requestId, reason: error.message });
   }
-  if (!admitted) {
+  if (!admitted && !euEnded) {
     const { data: closed, error: e1 } = await sb
       .from("encounters")
       .update({
@@ -309,7 +389,7 @@ Deno.serve(async (request: Request) => {
     }
     if (!closed?.length) return badRequest("The encounter was closed meanwhile.", init);
   }
-  if (!admitted && (clinical || administrative)) {
+  if (!admitted && !euEnded && (clinical || administrative)) {
     const { error: eEv } = await sb.from("encounter_events").insert({
       encounter_id: enc.id,
       kind: "disposition",
