@@ -26,6 +26,31 @@ describe.each(FLOORS)("templates on a $w × $h floor", (floor) => {
   );
 });
 
+describe.each(FLOORS)("EU template on a $w × $h floor", (floor) => {
+  it("is valid and nothing blocks", () => {
+    const doc = presetsFor(floor, { eu: true })[0]!.build();
+    const parsed = parseLayout(doc);
+    expect(parsed.ok ? "ok" : parsed.error).toBe("ok");
+    expect(layoutChecks(doc, "emergency_observation").filter((c) => c.blocking && !c.ok)).toEqual(
+      [],
+    );
+  });
+});
+
+it("the EU template is offered only when asked, first", () => {
+  expect(presetsFor({ w: 42, h: 32 }).map((p) => p.id)).toEqual(["open", "bays", "hdu", "empty"]);
+  expect(presetsFor({ w: 42, h: 32 }, { eu: true })[0]!.id).toBe("eu");
+});
+it.each([
+  { w: 42, h: 32 },
+  { w: 60, h: 40 },
+])("the EU template passes its own EU checks on $w × $h", (floor) => {
+  const doc = presetsFor(floor, { eu: true })[0]!.build();
+  const c = layoutChecks(doc, "emergency_observation");
+  for (const code of ["resus_services", "resus_trolley_reach", "eu_isolation"])
+    expect(c.find((x) => x.code === code)?.ok).toBe(true);
+});
+
 describe("what the templates record", () => {
   const [open, bays, hdu, empty] = presetsFor({ w: 42, h: 32 }).map((p) => p.build());
   it("the open ward: 18 beds, heads to the wall, no services, a station and a trolley, nothing overlapping", () => {

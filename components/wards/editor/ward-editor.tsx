@@ -87,6 +87,7 @@ import { reconcile } from "@/lib/wards/reconcile";
 import {
   bedRect,
   emptyLayout,
+  EU_WARD_TYPE,
   fixtureRect,
   FLOOR_DEFAULT,
   renumberBeds,
@@ -648,7 +649,13 @@ export function WardEditor({
     () => (doc ? layoutChecks(doc, data.ward.wardType, data.ward.ageGroup) : []),
     [doc, data.ward.wardType, data.ward.ageGroup],
   );
-  const presets = useMemo(() => presetsFor(doc?.floor ?? FLOOR_DEFAULT), [doc?.floor]);
+  const euOn = !!data.euLive && data.ward.wardType === EU_WARD_TYPE;
+  // Chair and resus are offered only when the EU flag is live and this is an EU ward.
+  const spaceWardType = euOn ? EU_WARD_TYPE : null;
+  const presets = useMemo(
+    () => presetsFor(doc?.floor ?? FLOOR_DEFAULT, { eu: euOn }),
+    [doc?.floor, euOn],
+  );
   const ghost: PlanGhost | null = useMemo(() => {
     if (!doc || !state.hover || state.tool === "select") return null;
     const cell = { x: Math.floor(state.hover.fx), y: Math.floor(state.hover.fy) };
@@ -915,7 +922,7 @@ export function WardEditor({
               onRow={(row) => dispatch({ type: "row", row })}
               presets={presets}
               onPreset={(p) => edit(p.build(), null)}
-              wardType={data.ward.wardType}
+              wardType={spaceWardType}
             />
           </aside>
 
@@ -1079,7 +1086,7 @@ export function WardEditor({
                 selected={selected}
                 onChange={(d) => edit(d)}
                 onSelect={(ref) => dispatch({ type: "select", ref })}
-                wardType={data.ward.wardType}
+                wardType={spaceWardType}
               />
             ) : (
               <WardInspector
@@ -1105,7 +1112,7 @@ export function WardEditor({
         <StartPanel
           wardName={data.ward.name}
           registerBeds={data.register.filter((b) => !b.archivedAt).length}
-          presets={presetsFor(FLOOR_DEFAULT)}
+          presets={presetsFor(FLOOR_DEFAULT, { eu: euOn })}
           onRegister={() => void startFromRegister()}
           onPreset={startFrom}
           error={startError}

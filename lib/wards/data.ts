@@ -46,6 +46,8 @@ export interface LayoutEditorData {
   published: { version: number; publishedAt: string } | null;
   register: RegisterBed[];
   occupiedBedIds: string[];
+  /** EU_OBSERVATION is live for this hospital (set by the page). */
+  euLive?: boolean;
 }
 
 /** The ward's tabs: active wards, with whether each has a published layout. */
