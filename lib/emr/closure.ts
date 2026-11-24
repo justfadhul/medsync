@@ -6,6 +6,8 @@
 import type { PlanDraft } from "@/lib/clerking/plan/draft";
 import type { DispositionCode } from "@/lib/emr/encounter";
 
+import { EU_SEND } from "@/content/eu/words";
+
 /** Why an admitted patient waits for a bed. DRAFT wording for the CSO (ADR 0198 §5). */
 export const WAIT_REASON_WORDS = {
   no_free_bed: "No free bed",
@@ -58,8 +60,8 @@ export function planStart(plan: PlanDraft | undefined | null): PlanStart {
       : d.kind === "refer" && d.referTo
         ? `${PLAN_WORDS.refer} · ${d.referTo}`
         : d.kind === "observe_eu" && d.ward
-        ? `${PLAN_WORDS.observe_eu} · ${d.ward}`
-        : PLAN_WORDS[d.kind]!;
+          ? `${PLAN_WORDS.observe_eu} · ${d.ward}`
+          : PLAN_WORDS[d.kind]!;
   switch (d.kind) {
     case "discharge":
       return { ...none, code: "home", said };
@@ -244,9 +246,8 @@ export function euStart(start: PlanStart): EuDraft {
 }
 
 export function euBlocker(e: EuDraft): string | null {
-  if (!e.wardId) return "Choose the emergency unit.";
-  if (!e.bedId && !e.waitReason) return "Choose a space, or say why the patient waits for one.";
-  if (!e.bedId && e.waitReason === "other" && !e.waitNote.trim())
-    return "Say why the patient waits.";
+  if (!e.wardId) return EU_SEND.chooseUnit;
+  if (!e.bedId && !e.waitReason) return EU_SEND.chooseSpace;
+  if (!e.bedId && e.waitReason === "other" && !e.waitNote.trim()) return EU_SEND.sayWhy;
   return null;
 }

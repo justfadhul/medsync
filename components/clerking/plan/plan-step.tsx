@@ -21,6 +21,7 @@ import { MonitoringChartsView } from "@/components/emr/chart/monitoring/monitori
 import { StatusWord } from "@/components/emr/status-word";
 import { Button } from "@/components/ui/button";
 import { CARE_REQUEST_COPY } from "@/content/care-requests";
+import { EU_SEND } from "@/content/eu/words";
 import { PRESCRIBER_PHARMACY_COPY } from "@/content/pharmacy-prescriber";
 import { words } from "@/lib/clerking/impression/board";
 import { REASON_WORDS, statusWord } from "@/lib/clerking/plan/checklist";
@@ -135,9 +136,10 @@ export function placeWords(n: number, m: number, k: number): string {
  * drops the line and asks why.
  */
 /** The department a review goes to: the admit ward's, else the viewer's own; none, no line. */
-function reviewTarget(v: PlanView, x: PlanDraft) {
+export function reviewTarget(v: PlanView, x: PlanDraft) {
   const rq = v.payload.requests;
-  const wardId = x.disposition?.wardId ?? null;
+  // Only an admit ward is a review's place: an EU chosen under Observe in EU is not (R11).
+  const wardId = x.disposition?.kind === "admit" ? (x.disposition.wardId ?? null) : null;
   return (
     (wardId && rq?.departments.find((d) => d.wardIds.includes(wardId))) ||
     rq?.departments.find((d) => d.id === rq.ownDepartmentId) ||
@@ -164,7 +166,7 @@ function pickSenior(v: PlanView, id: SeniorReview | "not_needed") {
     const { seniorReviewNotNeeded: _n, ...rest } = x;
     // A review already placed at this visit is the request: the time is only recorded.
     if (reviewPlaced(v)) return { ...rest, seniorReview: id };
-    const wardId = x.disposition?.wardId ?? null;
+    const wardId = x.disposition?.kind === "admit" ? (x.disposition.wardId ?? null) : null;
     const dept = reviewTarget(v, x);
     const line: PlanRequestLine | null = dept
       ? {
@@ -272,6 +274,32 @@ function Where({
                   className={inputClass}
                 />
               </div>
+            )
+          ) : null}
+          {d.disposition?.kind === "observe_eu" && v.payload.euWards ? (
+            v.payload.euWards.length ? (
+              <div role="group" aria-label={EU_SEND.planChoose} className="flex flex-wrap gap-1.5">
+                {v.payload.euWards.map((w) => (
+                  <Toggle
+                    key={w.id}
+                    on={d.disposition?.wardId === w.id}
+                    disabled={!editable}
+                    onPress={() =>
+                      onPlan((x) => ({
+                        ...x,
+                        disposition: { kind: "observe_eu", ward: w.name, wardId: w.id },
+                      }))
+                    }
+                  >
+                    {w.name}
+                    {w.counts ? (
+                      <span className="text-muted-foreground font-normal"> · {w.counts}</span>
+                    ) : null}
+                  </Toggle>
+                ))}
+              </div>
+            ) : (
+              <p className="text-caption text-muted-foreground">{EU_SEND.planNone}</p>
             )
           ) : null}
           {d.disposition?.kind === "refer" ? (

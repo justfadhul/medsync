@@ -25,7 +25,7 @@ import { TEST_UUIDS } from "@/lib/clerking/impression/load";
 import { countsWords } from "@/lib/emr/closure";
 import { asClinicalReader, asClinicalWriter } from "@/lib/emr/db";
 import { emrPrescribingLive, prescribeV2LiveFor } from "@/lib/emr/feature";
-import { admittingWards } from "@/lib/emr/read/close";
+import { admittingWards, euWards } from "@/lib/emr/read/close";
 import { loadMonitoring } from "@/lib/emr/read/monitoring";
 import { loadPlanFacts } from "@/lib/emr/write/plan";
 import { encounterPrescriptions, prescribeRequirement } from "@/lib/emr/write/prescriptions";
@@ -45,6 +45,7 @@ import { drugById } from "@/lib/prescribing/formulary";
 import { willRead } from "@/lib/prescribing/plan-rx";
 import { careRequestsLiveFor } from "@/lib/requests/feature";
 import { deriveFromRows } from "@/lib/requests/rows";
+import { euObservationLiveFor } from "@/lib/wards/feature";
 
 /**
  * The Plan's payload for the desk (ADR 0184): what step 10 reads back from the record. Loaded only
@@ -265,6 +266,9 @@ export async function loadPlanPayload(
         encounterId: input.encounterId,
       });
       const wards = await admittingWards(tx, actor.hospitalId);
+      const eu = euObservationLiveFor(actor.hospitalId)
+        ? await euWards(tx, actor.hospitalId)
+        : null;
       // Pharmacy Phase 3 (5.3): the signed pairs and this patient's current medicines, behind the flag.
       const interactions = pharmacyInteractionsLiveFor(actor.hospitalId)
         ? await interactionContextFor(tx, actor.hospitalId, input.patientUserId, input.now)
@@ -327,6 +331,7 @@ export async function loadPlanPayload(
         requests,
         repeats,
         wards: wards.map((w) => ({ id: w.id, name: w.name, counts: countsWords(w.counts) })),
+        eu,
         interactions,
         cosign,
         reasons,
@@ -443,6 +448,15 @@ export async function loadPlanPayload(
       requests: owner.requests?.placed ?? [],
     },
     wards: owner.wards,
+    ...(owner.eu
+      ? {
+          euWards: owner.eu.map((w) => ({
+            id: w.id,
+            name: w.name,
+            counts: countsWords(w.counts),
+          })),
+        }
+      : {}),
     intern: actor.cadreCode === "INTERN_DOCTOR",
     facts: {
       ageYears: owner.facts.ageYears,

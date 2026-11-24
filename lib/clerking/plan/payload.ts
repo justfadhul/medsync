@@ -21,6 +21,8 @@ export interface PlanPayload {
   /** The hospital's ward names, for Admit. */
   /** The wards that take admissions; counts (words) with WARD_BUILDER on (ADR 0197 §5). */
   wards: { id: string; name: string; counts: string | null }[];
+  /** EU_OBSERVATION (ADR 0541): the emergency units "Observe in EU" offers; absent with the flag off. */
+  euWards?: { id: string; name: string; counts: string | null }[];
   /** The viewer is an intern: discharging with NEWS2 of 5 or more needs a senior to agree. */
   intern: boolean;
   facts: {
