@@ -6,7 +6,7 @@ import type {
   DeskSnapshot,
 } from "@/app/nurse/resus/[episodeId]/_components/v2/types";
 import type { BayProfile, CareLevel, CareUnit, EpisodePhase, OutcomeCode } from "@/lib/resus/model";
-import { and, asc, eq, inArray } from "drizzle-orm";
+import { and, asc, eq, inArray, isNull } from "drizzle-orm";
 
 import { db } from "@/db";
 import { hospitalDepartments } from "@/db/schema/hospital-departments";
@@ -192,7 +192,15 @@ export async function loadDeskV2(args: {
       .select({ id: hospitalBeds.id, space: hospitalBeds.label, ward: hospitalWards.name })
       .from(hospitalBeds)
       .innerJoin(hospitalWards, eq(hospitalWards.id, hospitalBeds.wardId))
-      .where(inArray(hospitalBeds.id, linked)))
+      .where(
+        and(
+          inArray(hospitalBeds.id, linked),
+          eq(hospitalBeds.bedType, "resus"),
+          isNull(hospitalBeds.archivedAt),
+          isNull(hospitalWards.archivedAt),
+          eq(hospitalWards.wardType, "emergency_observation"),
+        ),
+      ))
       places.set(r.id, { ward: r.ward, space: r.space });
   const bayProfiles: BayProfile[] = bays.map((b) => ({
     id: b.id,

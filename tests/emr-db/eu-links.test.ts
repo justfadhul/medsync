@@ -547,8 +547,15 @@ describe.skipIf(!laneOn)("0313 — a resus bay and a care unit point at the draw
     const w = (
       await pg.query<{ id: string }>(
         `INSERT INTO public.hospital_wards (hospital_id, department_id, name, slug, bed_count, ward_type)
-         VALUES ($1, $2, $3, $4, 1, $5) RETURNING id`,
-        [hid, hid === h ? dept : await department(pg, hid), `W ${s}`, `w-${s}`, type],
+         VALUES ($1, $2, $3, $4, $6, $5) RETURNING id`,
+        [
+          hid,
+          hid === h ? dept : await department(pg, hid),
+          `W ${s}`,
+          `w-${s}`,
+          type,
+          Object.keys(beds).length,
+        ],
       )
     ).rows[0]!.id;
     const ids: Record<string, string> = {};
@@ -609,18 +616,78 @@ describe.skipIf(!laneOn)("0313 — a resus bay and a care unit point at the draw
       ).toContain("Choose a resus space of an emergency unit.");
   });
 
-  it("one space serves one bay; archiving the bed row's delete sets the link null", async () => {
+  it("one space serves one bay", async () => {
     const eu = await ward(h, "emergency_observation", { R1: "resus" });
     const a = await bay(h);
     const b = await bay(h);
     await linkBay(a, eu.ids.R1!);
     await expect(linkBay(b, eu.ids.R1!)).rejects.toThrow();
-    await pg.query(`DELETE FROM public.hospital_beds WHERE id = $1`, [eu.ids.R1]);
-    const r = await pg.query<{ bed_id: string | null }>(
-      `SELECT bed_id FROM public.resus_bay_profiles WHERE id = $1`,
-      [a],
+  });
+
+  const bayLink = async (b: string) =>
+    (
+      await pg.query<{ bed_id: string | null }>(
+        `SELECT bed_id FROM public.resus_bay_profiles WHERE id = $1`,
+        [b],
+      )
+    ).rows[0]!.bed_id;
+
+  it("R66: archiving the space, re-typing it (a republish) or moving it clears the bay's link", async () => {
+    const eu = await ward(h, "emergency_observation", { A: "resus", T: "resus", M: "resus" });
+    const other = await ward(h, "emergency_observation", { X: "standard" });
+    const [a, t, m] = [await bay(h), await bay(h), await bay(h)];
+    await linkBay(a, eu.ids.A!);
+    await linkBay(t, eu.ids.T!);
+    await linkBay(m, eu.ids.M!);
+    await pg.query(`UPDATE public.hospital_beds SET archived_at = now() WHERE id = $1`, [eu.ids.A]);
+    await pg.query(`UPDATE public.hospital_beds SET bed_type = 'couch' WHERE id = $1`, [eu.ids.T]);
+    await pg.query(`UPDATE public.hospital_wards SET bed_count = 2 WHERE id = $1`, [other.w]);
+    await pg.query(`UPDATE public.hospital_beds SET ward_id = $2 WHERE id = $1`, [
+      eu.ids.M,
+      other.w,
+    ]);
+    expect([await bayLink(a), await bayLink(t), await bayLink(m)]).toEqual([null, null, null]);
+  });
+
+  it("R66: a ward re-typed away from an emergency unit, or archived, clears its bays and units", async () => {
+    const e1 = await ward(h, "emergency_observation", { R: "resus" });
+    const e2 = await ward(h, "emergency_observation", { R: "resus" });
+    const [b1, b2] = [await bay(h), await bay(h)];
+    await linkBay(b1, e1.ids.R!);
+    await linkBay(b2, e2.ids.R!);
+    const g = await ward(h, "general", { B: "standard" });
+    const u = await unit(h);
+    await pg.query(`UPDATE public.hospital_care_units SET ward_id = $2 WHERE id = $1`, [u, g.w]);
+    await pg.query(`UPDATE public.hospital_wards SET ward_type = 'general' WHERE id = $1`, [e1.w]);
+    await pg.query(`UPDATE public.hospital_wards SET archived_at = now() WHERE id = $1`, [e2.w]);
+    await pg.query(`UPDATE public.hospital_wards SET archived_at = now() WHERE id = $1`, [g.w]);
+    expect([await bayLink(b1), await bayLink(b2)]).toEqual([null, null]);
+    const r = await pg.query<{ ward_id: string | null }>(
+      `SELECT ward_id FROM public.hospital_care_units WHERE id = $1`,
+      [u],
     );
-    expect(r.rows[0]!.bed_id).toBeNull();
+    expect(r.rows[0]!.ward_id).toBeNull();
+  });
+
+  it("R66: an archived space or ward is refused at link time", async () => {
+    const eu = await ward(h, "emergency_observation", { R1: "resus" });
+    const g = await ward(h, "general", { B1: "standard" });
+    await pg.query(`UPDATE public.hospital_beds SET archived_at = now() WHERE id = $1`, [
+      eu.ids.R1,
+    ]);
+    await pg.query(`UPDATE public.hospital_wards SET archived_at = now() WHERE id = $1`, [g.w]);
+    expect(
+      await fails(`UPDATE public.resus_bay_profiles SET bed_id = $2 WHERE id = $1`, [
+        await bay(h),
+        eu.ids.R1,
+      ]),
+    ).toContain("Choose a resus space of an emergency unit.");
+    expect(
+      await fails(`UPDATE public.hospital_care_units SET ward_id = $2 WHERE id = $1`, [
+        await unit(h),
+        g.w,
+      ]),
+    ).toContain("Choose a ward of this hospital.");
   });
 
   it("a care unit links to a ward of its hospital only", async () => {

@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 
-import { bayLabel } from "@/lib/resus/bay-label";
+import { bayLabel, withLiveLinks } from "@/lib/resus/bay-label";
 
 const read = (p: string) => readFileSync(resolve(process.cwd(), p), "utf8");
 const strip = (s: string) => s.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
@@ -37,5 +37,20 @@ describe("bayLabel", () => {
   it("names the ward and space when linked", () => {
     expect(bayLabel({ ...b, ward: "EU", space: "R2" })).toBe("EU R2 · ZOLL X");
     expect(bayLabel({ ...b, deviceModel: null, ward: "EU", space: "R2" })).toBe("EU R2");
+  });
+});
+
+describe("withLiveLinks", () => {
+  it("unlinks a bay whose space is not a live resus space, keeps the rest", () => {
+    const bays = [
+      { id: "a", bedId: "live" },
+      { id: "b", bedId: "gone" },
+      { id: "c", bedId: null },
+    ];
+    expect(withLiveLinks(bays, ["live"])).toEqual([
+      { id: "a", bedId: "live" },
+      { id: "b", bedId: null },
+      { id: "c", bedId: null },
+    ]);
   });
 });

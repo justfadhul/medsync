@@ -6,6 +6,7 @@ import { db } from "@/db";
 import { hospitalWards } from "@/db/schema/hospital-wards";
 import { resusBayProfiles } from "@/db/schema/resus";
 import { hospitalBeds } from "@/db/schema/services-hub";
+import { withLiveLinks } from "@/lib/resus/bay-label";
 
 /** The resus spaces of a hospital's emergency units, and its active resus bays (D7). Read only with the EU flag on. */
 export async function loadResusDesk(hospitalId: string) {
@@ -19,6 +20,7 @@ export async function loadResusDesk(hospitalId: string) {
           eq(hospitalBeds.hospitalId, hospitalId),
           eq(hospitalBeds.bedType, "resus"),
           isNull(hospitalBeds.archivedAt),
+          isNull(hospitalWards.archivedAt),
           inArray(hospitalWards.wardType, ["emergency_observation"]),
         ),
       )
@@ -33,7 +35,13 @@ export async function loadResusDesk(hospitalId: string) {
       .where(and(eq(resusBayProfiles.hospitalId, hospitalId), eq(resusBayProfiles.active, true)))
       .orderBy(asc(resusBayProfiles.bayLabel)),
   ]);
-  return { spaces, bays };
+  return {
+    spaces,
+    bays: withLiveLinks(
+      bays,
+      spaces.map((x) => x.id),
+    ),
+  };
 }
 
 export type ResusDesk = Awaited<ReturnType<typeof loadResusDesk>>;

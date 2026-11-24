@@ -20,12 +20,17 @@
 --      hospital_care_units.ward_id (a ward of the same hospital), both ON DELETE SET NULL; a trigger refuses a link
 --      across hospitals, to a non-resus space or to a non-EU ward ("EU400 " words). Audit verbs 'link_resus_bay'
 --      and 'link_care_unit' (the section 3 list kept verbatim). The admin ops in ha-services-hub write them.
+--      R66: a link must outlive no rule it was checked against: the guards also refuse an archived space or ward, and
+--      triggers on hospital_beds (archived, or no longer a resus space, or moved) and hospital_wards (archived, or no
+--      longer an emergency unit) clear the dependent bay/unit link in the same statement (audited by the bay's and
+--      the unit's own audit trigger).
 --
 -- ADDITIVE and re-runnable.
 -- Reverse: restore 0101's phi_access_basis_check (after removing any 'eu_staff' rows); restore 0295's
 -- clinic_floor_events detail list only while no 'eu' row exists (that log is append-only); drop
 -- send_to_eu_resus(jsonb) and restore 0311's audit list (after removing any 'send_to_eu_resus' rows); re-run 0311's
--- observe_in_eu and 0312's end_eu_stay and admit_from_encounter definitions; drop the two link triggers and the
+-- observe_in_eu and 0312's end_eu_stay and admit_from_encounter definitions; drop the two link guards, the two
+-- clearing triggers (eu_links_clear_bed, eu_links_clear_ward) and the
 -- columns resus_bay_profiles.bed_id / hospital_care_units.ward_id (after clearing them) and restore the audit list
 -- without 'link_resus_bay', 'link_care_unit' (after removing any such rows).
 
@@ -585,8 +590,8 @@ BEGIN
   IF NEW.bed_id IS NOT NULL AND NOT EXISTS (
        SELECT 1 FROM public.hospital_beds b
          JOIN public.hospital_wards w ON w.id = b.ward_id
-        WHERE b.id = NEW.bed_id AND b.hospital_id = NEW.hospital_id AND b.bed_type = 'resus'
-          AND w.hospital_id = NEW.hospital_id AND w.ward_type = 'emergency_observation') THEN
+        WHERE b.id = NEW.bed_id AND b.hospital_id = NEW.hospital_id AND b.bed_type = 'resus' AND b.archived_at IS NULL
+          AND w.archived_at IS NULL AND w.hospital_id = NEW.hospital_id AND w.ward_type = 'emergency_observation') THEN
     RAISE EXCEPTION 'EU400 Choose a resus space of an emergency unit.'
       USING ERRCODE = 'check_violation', HINT = 'eu_bay_link';
   END IF;
@@ -604,7 +609,8 @@ SET search_path = public, pg_temp
 AS $$
 BEGIN
   IF NEW.ward_id IS NOT NULL AND NOT EXISTS (
-       SELECT 1 FROM public.hospital_wards w WHERE w.id = NEW.ward_id AND w.hospital_id = NEW.hospital_id) THEN
+       SELECT 1 FROM public.hospital_wards w WHERE w.id = NEW.ward_id AND w.hospital_id = NEW.hospital_id
+                AND w.archived_at IS NULL) THEN
     RAISE EXCEPTION 'EU400 Choose a ward of this hospital.'
       USING ERRCODE = 'check_violation', HINT = 'eu_unit_link';
   END IF;
@@ -680,3 +686,45 @@ ALTER TABLE public.sa_audit_log ADD CONSTRAINT sa_audit_log_action_check CHECK (
     'link_resus_bay', 'link_care_unit'
   )
 );
+
+-- R66: beds are archived, never deleted, so ON DELETE SET NULL never runs. When a space stops being a live resus
+-- space of an emergency unit (layout publish archives it or re-types it; the ward is archived or re-typed), the
+-- bay's link is cleared in the same statement. SECURITY DEFINER so a publish run by any role can clear it; it never
+-- raises, and the bay's own audit trigger records the update.
+CREATE OR REPLACE FUNCTION public.eu_links_clear_bed()
+RETURNS trigger
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, pg_temp
+AS $$
+BEGIN
+  IF NEW.archived_at IS NOT NULL OR NEW.bed_type IS DISTINCT FROM 'resus' OR NEW.ward_id IS DISTINCT FROM OLD.ward_id THEN
+    UPDATE public.resus_bay_profiles SET bed_id = NULL WHERE bed_id = NEW.id;
+  END IF;
+  RETURN NULL;
+END;
+$$;
+DROP TRIGGER IF EXISTS eu_links_clear_bed ON public.hospital_beds;
+CREATE TRIGGER eu_links_clear_bed AFTER UPDATE OF archived_at, bed_type, ward_id ON public.hospital_beds
+  FOR EACH ROW EXECUTE FUNCTION public.eu_links_clear_bed();
+
+CREATE OR REPLACE FUNCTION public.eu_links_clear_ward()
+RETURNS trigger
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, pg_temp
+AS $$
+BEGIN
+  IF NEW.archived_at IS NOT NULL THEN
+    UPDATE public.hospital_care_units SET ward_id = NULL WHERE ward_id = NEW.id;
+  END IF;
+  IF NEW.archived_at IS NOT NULL OR NEW.ward_type IS DISTINCT FROM 'emergency_observation' THEN
+    UPDATE public.resus_bay_profiles SET bed_id = NULL
+     WHERE bed_id IN (SELECT id FROM public.hospital_beds WHERE ward_id = NEW.id);
+  END IF;
+  RETURN NULL;
+END;
+$$;
+DROP TRIGGER IF EXISTS eu_links_clear_ward ON public.hospital_wards;
+CREATE TRIGGER eu_links_clear_ward AFTER UPDATE OF archived_at, ward_type ON public.hospital_wards
+  FOR EACH ROW EXECUTE FUNCTION public.eu_links_clear_ward();
