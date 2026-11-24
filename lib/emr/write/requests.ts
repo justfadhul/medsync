@@ -1,9 +1,21 @@
 import "server-only";
 
 import type { WriteCtx } from "./context";
+import type { WriteResult } from "./orders";
+import type { CareRequestRow } from "@/db/schema/care-requests";
 import type { PlanRequestLine } from "@/lib/clerking/plan/draft";
-import type { EmrTx } from "@/lib/emr/db";
-import type { RequestKind } from "@/lib/requests/engine";
+import type { EmrActor } from "@/lib/emr/actor";
+import type { EmrDb, EmrTx } from "@/lib/emr/db";
+import type {
+  CancelReason,
+  DeclineReason,
+  DerivedRequest,
+  RedirectReason,
+  Relation,
+  RequestAct,
+  RequestEvent,
+  RequestKind,
+} from "@/lib/requests/engine";
 import type { Candidate, RouteCandidates } from "@/lib/requests/routing";
 import { and, asc, desc, eq, gt, inArray, isNull, lte, or, sql } from "drizzle-orm";
 
@@ -19,11 +31,20 @@ import { cadres } from "@/db/schema/reference-data";
 import { saNotifications } from "@/db/schema/sa-notifications";
 import { departmentHeads } from "@/db/schema/services-hub";
 import { JUNIOR_CADRE_CODES, SENIOR_CADRE_CODES } from "@/lib/doctor/cadres";
+import { asClinicalWriter } from "@/lib/emr/db";
 import { encrypt } from "@/lib/encryption";
 import { logger } from "@/lib/logger";
+import { canAct, deriveRequest } from "@/lib/requests/engine";
 import { route } from "@/lib/requests/routing";
 import { EmrWriteError } from "./context";
-import { checkReasonConditions, openEncounter, replayed } from "./orders";
+import { insertSignedNote } from "./notes";
+import {
+  checkReasonConditions,
+  openEncounter,
+  ORDERING_CADRES,
+  replayed,
+  requireCadre,
+} from "./orders";
 
 /**
  * Placing care requests (ADR 0533): reviews and consults from the Plan. Each line is written once,
@@ -164,7 +185,7 @@ export async function loadRouteCandidates(
  * logged, never thrown. Subjects carry the place, never the patient (ADR 0199).
  */
 export async function notifyRecipients(
-  ctx: WriteCtx,
+  ctx: Pick<WriteCtx, "tx" | "now">,
   requestId: string,
   userIds: string[],
   kind: "care_request" | "care_request_update",
@@ -192,6 +213,32 @@ export async function notifyRecipients(
   } catch (e) {
     logger.warn("care_request.notify_failed", { requestId, reason: String(e) });
   }
+}
+
+/** The `routed` rows of one routing round (one row with no recipient when it reached nobody), with its
+ *  skips; returns the recipients. */
+async function writeRouting(
+  ctx: Pick<WriteCtx, "tx" | "now" | "actor">,
+  requestId: string,
+  routed: ReturnType<typeof route>,
+): Promise<string[]> {
+  const base = {
+    requestId,
+    hospitalId: ctx.actor.hospitalId,
+    kind: "routed",
+    at: ctx.now,
+    level: 0,
+    step: routed.step,
+    skippedUserIds: routed.skipped.map((k) => k.userId),
+  };
+  await ctx.tx
+    .insert(careRequestEvents)
+    .values(
+      routed.recipients.length
+        ? routed.recipients.map((r) => ({ ...base, recipientUserId: r.userId, postId: r.postId }))
+        : [{ ...base, recipientUserId: null, postId: null }],
+    );
+  return routed.recipients.map((r) => r.userId);
 }
 
 /**
@@ -321,32 +368,384 @@ export async function placeRequests(
       wardId: line.wardId,
       at: now,
     });
-    const routed = route(candidates, actor.userId);
-    const base = {
-      requestId: id,
-      hospitalId,
-      kind: "routed",
-      at: now,
-      level: 0,
-      step: routed.step,
-      skippedUserIds: routed.skipped.map((k) => k.userId),
-    };
-    await tx
-      .insert(careRequestEvents)
-      .values(
-        routed.recipients.length
-          ? routed.recipients.map((r) => ({ ...base, recipientUserId: r.userId, postId: r.postId }))
-          : [{ ...base, recipientUserId: null, postId: null }],
-      );
-
-    await notifyRecipients(
-      ctx,
-      id,
-      routed.recipients.map((r) => r.userId),
-      "care_request",
-      place,
-    );
+    const routed = await writeRouting(ctx, id, route(candidates, actor.userId));
+    await notifyRecipients(ctx, id, routed, "care_request", place);
     ids.push(id);
   }
   return ids;
+}
+
+/* ─── The lifecycle: seen, accept, decline, redirect, reply, close, cancel ─── */
+
+export interface RequestCtx {
+  tx: EmrTx;
+  actor: EmrActor;
+  now: Date;
+  request: CareRequestRow;
+  events: RequestEvent[];
+  derived: DerivedRequest;
+  who: Relation;
+  /** The department the current round asks: the last redirect's, else the request's. */
+  departmentId: string;
+}
+
+/** Locks the request (this hospital's) and derives its state and the actor's relation to it. */
+async function loadRequest(
+  tx: EmrTx,
+  actor: EmrActor,
+  requestId: string,
+  now: Date,
+): Promise<RequestCtx> {
+  const [request] = await tx
+    .select()
+    .from(careRequests)
+    .where(and(eq(careRequests.id, requestId), eq(careRequests.hospitalId, actor.hospitalId)))
+    .for("update");
+  if (!request) throw new EmrWriteError("not_found", "Request not found here.");
+  // A redirect and its new routing share one `at`: the redirect sorts first, so its routing is the new round.
+  const rows = await tx
+    .select()
+    .from(careRequestEvents)
+    .where(eq(careRequestEvents.requestId, requestId))
+    .orderBy(asc(careRequestEvents.at), sql`${careRequestEvents.kind} <> 'redirected'`);
+  const events: RequestEvent[] = rows.map((e) => ({
+    kind: e.kind as RequestEvent["kind"],
+    at: e.at,
+    actorUserId: e.actorUserId,
+    recipientUserId: e.recipientUserId,
+    level: e.level,
+    step: e.step as RequestEvent["step"],
+    postId: e.postId,
+    reasonCode: e.reasonCode,
+    noteId: e.noteId,
+  }));
+  const departmentId =
+    rows.findLast((e) => e.kind === "redirected")?.redirectDepartmentId ??
+    request.targetDepartmentId;
+  const derived = deriveRequest(
+    {
+      requesterUserId: request.requesterUserId,
+      requestedAt: request.requestedAt,
+      phoned:
+        request.phonedUserId && request.phonedAt
+          ? { userId: request.phonedUserId, at: request.phonedAt }
+          : null,
+      dueAt: null,
+    },
+    events,
+    now,
+  );
+  const [team] = await tx
+    .select({ one: sql`1` })
+    .from(staffAffiliations)
+    .innerJoin(cadres, eq(cadres.id, staffAffiliations.cadreId))
+    .where(
+      and(
+        eq(staffAffiliations.userId, actor.userId),
+        eq(staffAffiliations.hospitalId, actor.hospitalId),
+        eq(staffAffiliations.departmentId, departmentId),
+        inArray(staffAffiliations.state, [...LIVE]),
+        eq(cadres.isClinical, true),
+      ),
+    )
+    .limit(1);
+  const [head] = await tx
+    .select({ one: sql`1` })
+    .from(departmentHeads)
+    .where(
+      and(
+        eq(departmentHeads.userId, actor.userId),
+        eq(departmentHeads.hospitalId, actor.hospitalId),
+        eq(departmentHeads.departmentId, departmentId),
+        lte(departmentHeads.startsAt, now),
+        or(isNull(departmentHeads.endsAt), gt(departmentHeads.endsAt, now)),
+      ),
+    )
+    .limit(1);
+  return {
+    tx,
+    actor,
+    now,
+    request,
+    events,
+    derived,
+    departmentId,
+    who: {
+      requester: request.requesterUserId === actor.userId,
+      recipient: derived.recipients.includes(actor.userId),
+      teamMember: !!team,
+      head: !!head,
+    },
+  };
+}
+
+/**
+ * One lifecycle act on one request, in one writer transaction with the request row locked. Seen,
+ * accept, decline, redirect, close and cancel need no chart basis (reply does: replyToRequest).
+ */
+export async function withRequestWrite<T>(
+  actor: EmrActor,
+  requestId: string,
+  fn: (c: RequestCtx) => Promise<T>,
+  opts?: { database?: EmrDb; now?: Date },
+): Promise<T> {
+  if (!actor.isClinical) throw new EmrWriteError("forbidden", "Not a clinical role.");
+  return asClinicalWriter(
+    { userId: actor.userId, hospitalId: actor.hospitalId },
+    async (tx) => fn(await loadRequest(tx, actor, requestId, opts?.now ?? new Date())),
+    opts?.database,
+  );
+}
+
+function must(c: RequestCtx, act: RequestAct): void {
+  const ok = canAct(c.derived, act, c.who);
+  if (ok === true) return;
+  const r = CARE_REQUEST_COPY.refusal;
+  throw new EmrWriteError(
+    ok === r.not_asked || ok === r.requester_only ? "forbidden" : "conflict",
+    ok,
+  );
+}
+
+/** The event this client key already wrote on this request, if any. */
+async function replayedEvent(c: RequestCtx, clientKey: string): Promise<string | null> {
+  const [e] = await c.tx
+    .select({ id: careRequestEvents.id, requestId: careRequestEvents.requestId })
+    .from(careRequestEvents)
+    .where(eq(careRequestEvents.clientKey, clientKey));
+  if (!e) return null;
+  if (e.requestId !== c.request.id)
+    throw new EmrWriteError("conflict", "That key belongs to another request.");
+  return e.id;
+}
+
+async function writeEvent(
+  c: RequestCtx,
+  e: Omit<typeof careRequestEvents.$inferInsert, "requestId" | "hospitalId" | "at" | "actorUserId">,
+): Promise<string> {
+  const [row] = await c.tx
+    .insert(careRequestEvents)
+    .values({
+      ...e,
+      requestId: c.request.id,
+      hospitalId: c.request.hospitalId,
+      at: c.now,
+      actorUserId: c.actor.userId,
+    })
+    .returning({ id: careRequestEvents.id });
+  return row!.id;
+}
+
+/** The place a notice names: the ward, else the department (never the patient, ADR 0199). */
+async function placeOf(c: RequestCtx, departmentId = c.departmentId): Promise<string> {
+  if (c.request.wardId) {
+    const [w] = await c.tx
+      .select({ name: hospitalWards.name })
+      .from(hospitalWards)
+      .where(eq(hospitalWards.id, c.request.wardId));
+    if (w) return w.name;
+  }
+  const [d] = await c.tx
+    .select({ name: hospitalDepartments.name })
+    .from(hospitalDepartments)
+    .where(eq(hospitalDepartments.id, departmentId));
+  return d?.name ?? "";
+}
+
+const tidy = (note: string | undefined) => (note?.trim() ? encrypt(note.trim()) : null);
+
+/** Idempotent per person per round; only a routed recipient's look counts as seen. */
+export async function markSeen(c: RequestCtx): Promise<void> {
+  must(c, "seen");
+  if (!c.who.recipient) return;
+  const since = c.events.findLastIndex((e) => e.kind === "redirected");
+  const already = c.events
+    .slice(since + 1)
+    .some((e) => e.kind === "seen" && e.actorUserId === c.actor.userId);
+  if (!already) await writeEvent(c, { kind: "seen" });
+}
+
+export async function acceptRequest(
+  c: RequestCtx,
+  i: { clientKey: string; expectInMin: 15 | 30 | 60 | null },
+): Promise<{ id: string }> {
+  const replay = await replayedEvent(c, i.clientKey);
+  if (replay) return { id: replay };
+  must(c, "accept");
+  const expectAt = i.expectInMin ? new Date(c.now.getTime() + i.expectInMin * 60_000) : null;
+  return { id: await writeEvent(c, { kind: "accepted", expectAt, clientKey: i.clientKey }) };
+}
+
+export async function declineRequest(
+  c: RequestCtx,
+  i: { clientKey: string; reasonCode: DeclineReason; note?: string },
+): Promise<{ id: string }> {
+  const replay = await replayedEvent(c, i.clientKey);
+  if (replay) return { id: replay };
+  must(c, "decline");
+  const id = await writeEvent(c, {
+    kind: "declined",
+    reasonCode: i.reasonCode,
+    noteCiphertext: tidy(i.note),
+    clientKey: i.clientKey,
+  });
+  await notifyRecipients(
+    c,
+    c.request.id,
+    [c.request.requesterUserId],
+    "care_request_update",
+    await placeOf(c),
+  );
+  return { id };
+}
+
+/** Requester only, after a decline: a new round, routed afresh to the new department (no named people). */
+export async function redirectRequest(
+  c: RequestCtx,
+  i: { clientKey: string; departmentId: string; reasonCode: RedirectReason; note?: string },
+): Promise<{ id: string }> {
+  const replay = await replayedEvent(c, i.clientKey);
+  if (replay) return { id: replay };
+  must(c, "redirect");
+  const [dept] = await c.tx
+    .select({ id: hospitalDepartments.id })
+    .from(hospitalDepartments)
+    .where(
+      and(
+        eq(hospitalDepartments.id, i.departmentId),
+        eq(hospitalDepartments.hospitalId, c.actor.hospitalId),
+      ),
+    );
+  if (!dept) throw new EmrWriteError("invalid", "That department is not at this hospital.");
+  const id = await writeEvent(c, {
+    kind: "redirected",
+    reasonCode: i.reasonCode,
+    noteCiphertext: tidy(i.note),
+    redirectDepartmentId: i.departmentId,
+    clientKey: i.clientKey,
+  });
+  const candidates = await loadRouteCandidates(c.tx, {
+    hospitalId: c.actor.hospitalId,
+    departmentId: i.departmentId,
+    kind: c.request.kind as RequestKind,
+    namedUserIds: [],
+    requester: {
+      userId: c.actor.userId,
+      affiliationId: c.actor.affiliationId,
+      cadreCode: c.actor.cadreCode,
+    },
+    wardId: c.request.wardId,
+    at: c.now,
+  });
+  const recipients = await writeRouting(c, c.request.id, route(candidates, c.actor.userId));
+  await notifyRecipients(
+    c,
+    c.request.id,
+    recipients,
+    "care_request",
+    await placeOf(c, i.departmentId),
+  );
+  return { id };
+}
+
+/** Requester only, until a reply. The current recipients are told. */
+export async function cancelRequest(
+  c: RequestCtx,
+  i: { clientKey: string; reasonCode: CancelReason; note?: string },
+): Promise<{ id: string }> {
+  const replay = await replayedEvent(c, i.clientKey);
+  if (replay) return { id: replay };
+  must(c, "cancel");
+  const id = await writeEvent(c, {
+    kind: "cancelled",
+    reasonCode: i.reasonCode,
+    noteCiphertext: tidy(i.note),
+    clientKey: i.clientKey,
+  });
+  await notifyRecipients(
+    c,
+    c.request.id,
+    c.derived.recipients,
+    "care_request_update",
+    await placeOf(c),
+  );
+  return { id };
+}
+
+/** Requester only, after a reply. */
+export async function closeRequest(
+  c: RequestCtx,
+  i: { clientKey: string },
+): Promise<{ id: string }> {
+  const replay = await replayedEvent(c, i.clientKey);
+  if (replay) return { id: replay };
+  must(c, "close");
+  return { id: await writeEvent(c, { kind: "closed", clientKey: i.clientKey }) };
+}
+
+/** Who may sign a reply: the clerking cadres plus the allied cadres a consult reaches. */
+export const REPLY_CADRES: readonly string[] = [
+  ...ORDERING_CADRES,
+  "PHYSIOTHERAPIST",
+  "NUTRITIONIST",
+];
+
+/**
+ * The reply is a signed note on the request's encounter, open or not (the patient may have been admitted
+ * since): tpl.consult for a consult, tpl.ward_round for a review. The same transaction writes `replied`
+ * (naming the note) and, on "No follow-up needed", `closed`. Runs in withPatientWrite: the replier needs
+ * chart access, which accepting grants (care_team).
+ */
+export async function replyToRequest(
+  ctx: WriteCtx,
+  i: {
+    patientUserId: string;
+    requestId: string;
+    clientKey: string;
+    findings?: string;
+    assessment: string;
+    recommendations: string;
+    followUp: boolean;
+  },
+): Promise<WriteResult & { noteId: string }> {
+  requireCadre(ctx, REPLY_CADRES, "reply to a request");
+  const c = await loadRequest(ctx.tx, ctx.actor, i.requestId, ctx.now);
+  if (c.request.patientUserId !== i.patientUserId)
+    throw new EmrWriteError("not_found", "Request not found for this patient.");
+  const replay = await replayedEvent(c, i.clientKey);
+  if (replay) {
+    const [e] = await ctx.tx
+      .select({ noteId: careRequestEvents.noteId })
+      .from(careRequestEvents)
+      .where(eq(careRequestEvents.id, replay));
+    return { id: c.request.id, noteId: e!.noteId! };
+  }
+  must(c, "reply");
+  const text = (t: string | undefined) => (t?.trim() ? { narrative: t.trim() } : undefined);
+  const consult = c.request.kind === "consult";
+  const sections = Object.fromEntries(
+    Object.entries(
+      consult
+        ? { s01: text(i.findings), s02: text(i.assessment), s03: text(i.recommendations) }
+        : { s01: text(i.findings), s03: text(i.assessment), s04: text(i.recommendations) },
+    ).filter(([, v]) => v),
+  ) as Record<string, { narrative: string }>;
+  const noteId = await insertSignedNote(ctx, {
+    patientUserId: i.patientUserId,
+    encounterId: c.request.encounterId,
+    templateId: consult ? "tpl.consult" : "tpl.ward_round",
+    content: { sections },
+    sensitivity: c.request.sensitivity === "restricted" ? "restricted" : "standard",
+    clientKey: `${i.clientKey}:note`,
+  });
+  await writeEvent(c, { kind: "replied", noteId, clientKey: i.clientKey });
+  if (!i.followUp) await writeEvent(c, { kind: "closed", clientKey: `${i.clientKey}:closed` });
+  await notifyRecipients(
+    c,
+    c.request.id,
+    [c.request.requesterUserId],
+    "care_request_update",
+    await placeOf(c),
+  );
+  return { id: c.request.id, noteId };
 }
