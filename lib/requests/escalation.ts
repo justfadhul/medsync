@@ -1,5 +1,8 @@
 import type { RequestKind } from "@/lib/requests/engine";
 
+import { CARE_REQUEST_COPY } from "@/content/care-requests";
+import { ago } from "@/lib/workspace/words";
+
 /** The signed clock times (D4), in minutes. The planner only says what is due; it never accepts, answers or closes. */
 export interface RequestTimes {
   reviewNowAcceptMin: number;
@@ -84,4 +87,31 @@ export function overdue(r: OpenRequest, t: RequestTimes | null, now: Date): bool
     !r.replied &&
     now > replyDueSameDay(r.requestedAt)
   );
+}
+
+const kampalaTime = (d: Date) =>
+  d.toLocaleTimeString("en-GB", {
+    timeZone: "Africa/Kampala",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  });
+
+/**
+ * The due words on a request (R41: from the live signed times, never the stored due_at). With nothing
+ * signed there is no due time, so the words are elapsed ones (ADR 0244 §1). `due` is `dueAt()`'s; `overdue`
+ * is `overdue()`'s, which also covers the urgent consult's day end (no due time, just "Overdue").
+ */
+export function dueWords(a: {
+  signed: boolean;
+  due: Date | null;
+  overdue: boolean;
+  askedAt: Date;
+  now: Date;
+}): string | null {
+  const P = CARE_REQUEST_COPY.page;
+  if (!a.signed) return P.asked(ago(a.now.getTime() - a.askedAt.getTime()));
+  if (a.due && a.due > a.now) return P.dueBy(kampalaTime(a.due));
+  if (a.due && a.overdue) return P.overdueBy(ago(a.now.getTime() - a.due.getTime()));
+  return a.overdue ? P.overdue : null;
 }

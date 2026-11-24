@@ -2,11 +2,12 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
 import { StaffNotices } from "@/components/medsync/staff-notices";
+import { DelayedBanner } from "@/components/requests/delayed-banner";
 import { RequestsView } from "@/components/requests/requests-view";
 import { CARE_REQUEST_COPY } from "@/content/care-requests";
 import { requireDoctorScope } from "@/lib/doctor/scope";
 import { requireEmrActor } from "@/lib/emr/actor";
-import { requestsPageData } from "@/lib/emr/read/requests";
+import { escalationsDelayed, requestsPageData } from "@/lib/emr/read/requests";
 import { myNotices } from "@/lib/notices/read";
 import { careRequestsLiveFor } from "@/lib/requests/feature";
 
@@ -28,9 +29,10 @@ export default async function DoctorRequestsPage({
   const actor = await requireEmrActor("doctor");
   const at = new Date();
   const now = at.getTime();
-  const [data, notices] = await Promise.all([
+  const [data, notices, delayed] = await Promise.all([
     requestsPageData(actor, (await searchParams).request, { now: at }),
     myNotices(actor.userId, ["care_request", "care_request_update"]),
+    escalationsDelayed(actor, { now: at }),
   ]);
   return (
     <div className="mx-auto flex w-full max-w-5xl flex-col gap-6 px-6 py-8 lg:py-10">
@@ -43,6 +45,7 @@ export default async function DoctorRequestsPage({
           {P.lead} {CARE_REQUEST_COPY.responsible}
         </p>
       </header>
+      <DelayedBanner show={delayed} />
       <StaffNotices notices={notices} />
       <RequestsView surface="doctor" now={now} {...data} />
     </div>

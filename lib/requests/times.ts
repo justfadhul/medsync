@@ -19,10 +19,10 @@ import { D4_DEFAULTS } from "@/lib/requests/escalation";
 type Actor = { userId: string; hospitalId: string };
 const invalid = (m: string) => new EmrWriteError("invalid", m);
 
-export async function signedRequestTimes(
+export async function signedRequestTimesAt(
   tx: EmrTx,
   hospitalId: string,
-): Promise<RequestTimes | null> {
+): Promise<{ times: RequestTimes; signedAt: Date | null } | null> {
   const [v] = await tx
     .select()
     .from(crrv)
@@ -30,12 +30,22 @@ export async function signedRequestTimes(
     .limit(1);
   return v
     ? {
-        reviewNowAcceptMin: v.reviewNowAcceptMin,
-        review1hAcceptMin: v.review1hAcceptMin,
-        consultUrgentAcceptMin: v.consultUrgentAcceptMin,
-        routineReplyMin: v.routineReplyMin,
+        times: {
+          reviewNowAcceptMin: v.reviewNowAcceptMin,
+          review1hAcceptMin: v.review1hAcceptMin,
+          consultUrgentAcceptMin: v.consultUrgentAcceptMin,
+          routineReplyMin: v.routineReplyMin,
+        },
+        signedAt: v.csoSignedAt,
       }
     : null;
+}
+
+export async function signedRequestTimes(
+  tx: EmrTx,
+  hospitalId: string,
+): Promise<RequestTimes | null> {
+  return (await signedRequestTimesAt(tx, hospitalId))?.times ?? null;
 }
 
 const minutes = (n: number, what: string) => {

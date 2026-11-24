@@ -5,6 +5,16 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); version
 
 ## [Unreleased]
 
+### Added — Escalation of unanswered requests ([ADR 0536](docs/adr/0536-escalation-of-unanswered-requests.md)) — 24 Nov 2026
+
+A review or consult nobody takes up moves to the next person, on the lab's one-minute tick. No flag: with no signed response times there is no automatic escalation. Wording is draft.
+
+- **Migration 0308 is GATED:** apply it before the response times can be saved, with `cd <the worktree of this branch> && npm run db:migrate` (run it in the folder that holds the migration). It adds `care_request_response_versions`, `care_requests.due_at`, and lets `escalation_heartbeats` record `care_requests`. The owner sets the scheduler up once with `private.schedule_lab_escalations(url)` from 0106.
+- The clock (approved D4): a review "now" 15 min and "within 1 h" 60 min until accepted; an urgent consult 120 min until accepted (and overdue if unreplied by the end of the day); routine 1440 min until replied. Level 1 is the post above, else the department head; level 2 the hospital contacts. An empty level is passed at once. The requester is told at each step.
+- The times are set by the hospital admin and countersigned by the CSO (`/hospital-admin/departments/rota/response-times`, `/admin/care-request-signoffs`); each signer signs exactly the numbers shown. Signing never makes open requests escalate at once. A fully declined request never escalates; one escalation per request, even with two runs at once.
+- Requests lists show "Due by 14:30", "Overdue by 25 min" (a neutral tag with a clock, never red) or, with nothing signed, "Asked 40 min ago". A banner, "Escalations may be delayed", shows when the scheduler has not run for three minutes.
+- Open for the owner/CSO: the numbers each hospital signs; all wording; a nav link to the two sign pages; who is asked when no head is set.
+
 ### Added — The duty rota ([ADR 0534](docs/adr/0534-duty-rota-posts-and-assignments.md)) — 24 Nov 2026
 
 Posts and who is rostered on them, so a review or consult can reach the person on duty. Behind `DUTY_ROTA` (off by default; `1` or hospital ids; independent of `CARE_REQUESTS`). Wording is draft.

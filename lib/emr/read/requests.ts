@@ -25,10 +25,18 @@ import { asClinicalReader } from "@/lib/emr/db";
 import { identitiesFor } from "@/lib/emr/read/results";
 import { notPharmacyDepartment, relationTo } from "@/lib/emr/write/requests";
 import { decrypt } from "@/lib/encryption";
+import { heartbeatStale } from "@/lib/lab/criticals/escalation";
 import { logger } from "@/lib/logger";
 import { canAct } from "@/lib/requests/engine";
-import { errorCode, runCareRequestEscalations } from "@/lib/requests/escalation-run";
+import { dueAt, dueWords, overdue as overdueAt } from "@/lib/requests/escalation";
+import {
+  errorCode,
+  lastRequestHeartbeat,
+  openRequestOf,
+  runCareRequestEscalations,
+} from "@/lib/requests/escalation-run";
 import { currentRound, deriveFromRows } from "@/lib/requests/rows";
+import { signedRequestTimesAt } from "@/lib/requests/times";
 
 /**
  * Reading care requests (ADR 0537): Asked of you, For your department, Sent by you, and one request.
@@ -53,7 +61,10 @@ export interface RequestRow {
   urgency: string;
   helpWanted: HelpWanted | null;
   stateWord: string;
+  /** From the live signed times (R41), never the stored due_at. */
   overdue: boolean;
+  /** "Due by 14:30", "Overdue by 25 min", or "Asked 40 min ago" while nothing is signed. */
+  dueWords: string | null;
   patientUserId: string;
   encounterId: string;
   patientName: string | null;
@@ -103,6 +114,8 @@ interface Loaded {
   events: RequestEvent[];
   derived: DerivedRequest;
   departmentId: string;
+  /** The planner's view with the live signed times: overdue and due words (R41). */
+  due: { signed: boolean; due: Date | null; overdue: boolean };
   /** The viewer has a chart basis for the patient (accessible_patient_ids, as the reader). */
   chart: boolean;
 }
@@ -173,15 +186,23 @@ async function visible(viewer: Viewer, where: SQL | undefined, opts: Opts): Prom
               ),
             )
         : [];
-      return rows.map(({ request, chart }) => ({
-        request,
-        chart: !!chart,
-        ...deriveFromRows(
+      const signed = rows.length ? await signedRequestTimesAt(tx, viewer.hospitalId) : null;
+      return rows.map(({ request, chart }) => {
+        const mine = events.filter((e) => e.requestId === request.id);
+        const derived = deriveFromRows(request, mine, now);
+        const open = openRequestOf(request, mine, signed?.signedAt ?? null, now);
+        const live = isOpen(derived.derived);
+        return {
           request,
-          events.filter((e) => e.requestId === request.id),
-          now,
-        ),
-      }));
+          chart: !!chart,
+          ...derived,
+          due: {
+            signed: !!signed,
+            due: live ? dueAt(open, signed?.times ?? null) : null,
+            overdue: live && overdueAt(open, signed?.times ?? null, now),
+          },
+        };
+      });
     },
     opts.database,
   );
@@ -242,7 +263,12 @@ async function rowsOf(viewer: Viewer, loaded: Loaded[], opts: Opts): Promise<Req
       urgency: r.urgency,
       helpWanted: r.helpWanted as HelpWanted | null,
       stateWord: CARE_REQUEST_COPY.state[l.derived.state],
-      overdue: l.derived.overdue,
+      overdue: l.due.overdue,
+      dueWords: dueWords({
+        ...l.due,
+        askedAt: r.requestedAt,
+        now: opts.now ?? new Date(),
+      }),
       patientUserId: r.patientUserId,
       encounterId: r.encounterId,
       patientName: secret ? null : (who.get(r.patientUserId)?.name ?? null),
@@ -277,6 +303,27 @@ async function escalateLazily(viewer: Viewer, opts: Opts): Promise<void> {
       reason: e instanceof Error ? e.name : "unknown",
       code: errorCode(e),
     });
+  }
+}
+
+/**
+ * Whether to show "Escalations may be delayed": response times are signed and the scheduler's last
+ * care-request run is stale. Fails soft: a read that fails shows no banner.
+ */
+export async function escalationsDelayed(viewer: Viewer, opts: Opts = {}): Promise<boolean> {
+  try {
+    return await asClinicalReader(
+      { userId: viewer.userId, hospitalId: viewer.hospitalId },
+      async (tx) =>
+        (await signedRequestTimesAt(tx, viewer.hospitalId)) !== null &&
+        heartbeatStale(await lastRequestHeartbeat(tx), opts.now ?? new Date()),
+      opts.database,
+    );
+  } catch (e) {
+    logger.warn("care_request.delayed_banner_failed", {
+      reason: e instanceof Error ? e.name : "unknown",
+    });
+    return false;
   }
 }
 

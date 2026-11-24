@@ -44,7 +44,7 @@ function RequestLine({
           {list === "sent"
             ? P.to(row.departmentName)
             : P.from(row.requesterName ?? CARE_REQUEST_COPY.read.someone, row.requesterCadre)}{" "}
-          · {P.asked(ago(now - row.askedAtMs))}
+          · {row.dueWords ?? P.asked(ago(now - row.askedAtMs))}
         </span>
         {row.questionFirstLine ? (
           <p className="text-body-s text-foreground truncate">{row.questionFirstLine}</p>

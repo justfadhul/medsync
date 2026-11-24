@@ -133,6 +133,9 @@ export const CARE_REQUEST_COPY = {
     hiddenPatient: "Restricted request: patient not shown",
     overdue: "Overdue",
     open: "Open",
+    delayed: "Escalations may be delayed. Phone the team for anything urgent.",
+    dueBy: (time: string) => `Due by ${time}`,
+    overdueBy: (ago: string) => `Overdue by ${ago}`,
   },
   dialog: {
     question: "The question",
