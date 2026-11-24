@@ -201,28 +201,42 @@ Deno.serve(async (request: Request) => {
   // EU (ADR 0541): the open stay this visit may end, its own or a triage stay with no encounter yet. Another
   // visit's stay is left alone. Before 0311 the table is missing (42P01, or PGRST205 from PostgREST 12.2+): no stay, the close is as before.
   const missingTable = (code?: string) => code === "42P01" || code === "PGRST205";
-  // A boarder's stay belongs to the admission whose inpatient encounter is this one (0312).
-  const boardAdm = await sb
-    .from("admissions")
-    .select("id")
-    .eq("inpatient_encounter_id", enc.id)
-    .maybeSingle();
-  if (boardAdm.error && !missingTable(boardAdm.error.code)) {
-    log.error("admission lookup failed", { requestId, code: boardAdm.error.code });
-    return serverError("encounter update failed", init);
-  }
-  const boardArm = boardAdm.data?.id ? `,admission_id.eq.${boardAdm.data.id}` : "";
-  const euLookup = await sb
-    .from("eu_stays")
-    .select("id")
-    .eq("patient_user_id", enc.patient_user_id)
-    .eq("hospital_id", enc.hospital_id)
-    .neq("status", "ended")
-    .or(`encounter_id.eq.${enc.id},encounter_id.is.null${boardArm}`)
-    .maybeSingle();
+  const stayLookup = (or: string) =>
+    sb
+      .from("eu_stays")
+      .select("id")
+      .eq("patient_user_id", enc.patient_user_id)
+      .eq("hospital_id", enc.hospital_id)
+      .neq("status", "ended")
+      .or(or)
+      .maybeSingle();
+  let euLookup = await stayLookup(`encounter_id.eq.${enc.id},encounter_id.is.null`);
   if (euLookup.error && !missingTable(euLookup.error.code)) {
     log.error("eu stay lookup failed", { requestId, code: euLookup.error.code });
     return serverError("encounter update failed", init);
+  }
+  // A boarder's stay belongs to the admission whose inpatient encounter is this one (0312). Looked up only
+  // when nothing was found; a failure here is logged and the close goes on without the boarder arm.
+  if (!euLookup.error && !euLookup.data) {
+    const boardAdm = await sb
+      .from("admissions")
+      .select("id")
+      .eq("inpatient_encounter_id", enc.id)
+      .maybeSingle();
+    if (boardAdm.error) {
+      log.warn("admission lookup failed (non-fatal)", {
+        requestId,
+        name: boardAdm.error.name,
+        code: boardAdm.error.code,
+      });
+    } else if (boardAdm.data?.id) {
+      const boarder = await stayLookup(`admission_id.eq.${boardAdm.data.id}`);
+      if (boarder.error) {
+        log.error("eu stay lookup failed", { requestId, code: boarder.error.code });
+        return serverError("encounter update failed", init);
+      }
+      euLookup = boarder;
+    }
   }
   const euStayId = missingTable(euLookup.error?.code)
     ? null
@@ -313,7 +327,8 @@ Deno.serve(async (request: Request) => {
   // 1b. EU: the space, the stay, the close and its event, in one SQL transaction (end_eu_stay). It finds no
   //     stay if it ended meanwhile ({ ended: false }); the close below then runs as usual.
   let euEnded = false;
-  if (euStayId && clinical) {
+  // An admission keeps the stay open: the patient boards until they arrive on the ward (0312).
+  if (euStayId && clinical && !admission) {
     const r = await sb.rpc("end_eu_stay", {
       p: {
         encounter_id: enc.id,

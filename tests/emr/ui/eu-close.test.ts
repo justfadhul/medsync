@@ -50,6 +50,7 @@ describe("Send to EU at the close", () => {
   let root: ReturnType<typeof createRoot>;
   const sendToEu = vi.fn();
   beforeEach(() => {
+    vi.useFakeTimers({ toFake: ["Date"] });
     (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
     sendToEu.mockReset();
     sendToEu.mockResolvedValue(ok({ stayId: "s1", bed: null }));
@@ -58,6 +59,7 @@ describe("Send to EU at the close", () => {
     root = createRoot(host);
   });
   afterEach(() => {
+    vi.useRealTimers();
     act(() => root.unmount());
     document.body.innerHTML = "";
   });
@@ -152,6 +154,7 @@ describe("Send to EU at the close", () => {
   });
 
   it("boarding: the stay line says Admitted, the ward and how long the patient has waited", async () => {
+    vi.setSystemTime(new Date("2026-11-24T08:00:00Z"));
     await show({
       live: true,
       wards: WARDS,
@@ -163,9 +166,9 @@ describe("Send to EU at the close", () => {
         arriving: false,
         since: "2026-11-24T07:05:00Z",
         boarding: true,
-        admit: { wardName: "Ward 4", since: "2020-01-01T00:00:00Z" },
+        admit: { wardName: "Ward 4", since: "2026-11-24T05:49:59Z" },
       },
     });
-    expect(document.body.textContent).toMatch(/Admitted · Ward 4 · waiting \d/);
+    expect(document.body.textContent).toContain("Admitted · Ward 4 · waiting 2 h 10 min");
   });
 });

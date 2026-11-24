@@ -45,6 +45,7 @@ import {
   WAIT_REASON_WORDS,
 } from "@/lib/emr/closure";
 import { DISPOSITION_CODES } from "@/lib/emr/encounter";
+import { durationWords } from "@/lib/eu/clock";
 import { cn } from "@/lib/utils";
 import { bedStateMeta } from "@/supabase/functions/_shared/ward-layout";
 import { ChoiceChips, PRESS } from "../orders/choice-chips";
@@ -103,12 +104,6 @@ const clock = (iso: string) =>
     minute: "2-digit",
     timeZone: "Africa/Kampala",
   }).format(new Date(iso));
-
-/** "2 h 10 min" since an instant. */
-const waited = (iso: string) => {
-  const m = Math.max(0, Math.round((Date.now() - new Date(iso).getTime()) / 60_000));
-  return m >= 60 ? `${Math.floor(m / 60)} h ${m % 60} min` : `${m} min`;
-};
 
 const timeWords = (iso: string) =>
   new Intl.DateTimeFormat("en-GB", {
@@ -222,6 +217,7 @@ function CloseStep({
   const [e, setE] = useState<EuDraft>(() => euStart(start));
   const setEu = useCallback((patch: Partial<EuDraft>) => setE((x) => ({ ...x, ...patch })), []);
   const stay = c.eu.stay;
+  const [now] = useState(() => Date.now());
   const sendHere = start.observe && c.eu.live && !stay;
   const euWhy = euBlocker(e);
   const send = () =>
@@ -297,7 +293,10 @@ function CloseStep({
       {stay ? (
         <p className="text-body-s text-foreground">
           {stay.boarding && stay.admit
-            ? EU_SEND.boarding(stay.admit.wardName, waited(stay.admit.since))
+            ? EU_SEND.boarding(
+                stay.admit.wardName,
+                durationWords(now - Date.parse(stay.admit.since)),
+              )
             : stay.status === "in_space"
               ? EU_SEND.inSpace(stay.wardName, stay.bedLabel, clock(stay.since))
               : EU_SEND.awaiting(stay.wardName)}

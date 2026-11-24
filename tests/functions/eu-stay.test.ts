@@ -82,12 +82,14 @@ describe("ha-complete-encounter — the close ends the EU stay", () => {
     expect(src).toContain('.from("eu_stays")');
     expect(src).toContain('.eq("patient_user_id", enc.patient_user_id)');
     expect(src).toContain('.neq("status", "ended")');
-    expect(src).toContain("encounter_id.eq.${enc.id},encounter_id.is.null${boardArm}");
+    expect(src).toContain("encounter_id.eq.${enc.id},encounter_id.is.null");
     expect(src).toContain(
       'const missingTable = (code?: string) => code === "42P01" || code === "PGRST205";',
     );
     expect(src.match(/missingTable\(euLookup\.error/g)?.length).toBe(2);
-    expect(src).toContain("missingTable(boardAdm.error.code)");
+    // The boarder lookup runs only when the first finds nothing, and its failure never fails a close.
+    expect(src).toContain("if (!euLookup.error && !euLookup.data) {");
+    expect(src).toContain("admission lookup failed (non-fatal)");
   });
 
   it("a close refused by the database's EU guard returns its words (R59)", () => {
@@ -112,6 +114,15 @@ describe("ha-complete-encounter — the close ends the EU stay", () => {
     expect(src).toContain('.eq("inpatient_encounter_id", enc.id)');
     expect(src).toContain("admission_id.eq.");
     expect(src).toContain("PGRST205");
+  });
+
+  it("an admission never reaches end_eu_stay: the stay stays open as a boarder", () => {
+    expect(src).toContain("if (euStayId && clinical && !admission) {");
+    // admit_from_encounter (1a) comes before, and the only end_eu_stay call is behind that guard.
+    expect(src.indexOf('rpc("admit_from_encounter"')).toBeLessThan(
+      src.indexOf('rpc("end_eu_stay"'),
+    );
+    expect(src.match(/rpc\("end_eu_stay"/g)?.length).toBe(1);
   });
 
   it("ends the stay with the close, after the audit, end_kind and disposition from one input", () => {
