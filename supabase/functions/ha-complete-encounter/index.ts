@@ -198,22 +198,6 @@ Deno.serve(async (request: Request) => {
     if (!scope.ok) return forbidden(init, scope.reason);
   }
 
-  // The intake of this visit's triage, if any: it names the visit for a triage EU stay (R65) and closes the intake (3).
-  let triageIntakeId: string | null = null;
-  if (enc.triage_record_id) {
-    const { data: tr, error: trErr } = await sb
-      .from("triage_records")
-      .select("intake_id")
-      .eq("id", enc.triage_record_id)
-      .maybeSingle();
-    if (trErr) {
-      log.error("triage lookup failed", { requestId, name: trErr.name, code: trErr.code });
-      return serverError("encounter update failed", init);
-    }
-    triageIntakeId = (tr?.intake_id as string | null | undefined) ?? null;
-  }
-  const encIntakeId = (enc.visit_id as string | null) ?? triageIntakeId;
-
   // EU (ADR 0541): the open stay this visit may end, its own or a triage stay with no encounter yet whose intake is
   // this visit's (R65). Another visit's stay is left alone. Before 0311 the table is missing (42P01, or PGRST205 from PostgREST 12.2+): no stay, the close is as before.
   const missingTable = (code?: string) => code === "42P01" || code === "PGRST205";
@@ -226,11 +210,42 @@ Deno.serve(async (request: Request) => {
       .neq("status", "ended")
       .or(or)
       .maybeSingle();
-  // Built from database uuids only (the encounter row and its triage record).
+  const euFail = (code?: string) => {
+    log.error("eu stay lookup failed", { requestId, code });
+    return serverError("encounter update failed", init);
+  };
+  // R65: a triage stay is this visit's when its intake is the encounter's visit_id, else its triage's intake, or
+  // the intake naming this encounter (the queue start), as end_eu_stay (0313). Looked for only when the patient has
+  // an open triage stay here; a failed link lookup then fails the close rather than leave a resus space held.
+  let triageStayId: string | null = null;
+  const triageStay = await sb
+    .from("eu_stays")
+    .select("id, intake_id, intake:patient_intakes!intake_id(encounter_id)")
+    .eq("patient_user_id", enc.patient_user_id)
+    .eq("hospital_id", enc.hospital_id)
+    .neq("status", "ended")
+    .is("encounter_id", null)
+    .maybeSingle();
+  if (triageStay.error && !missingTable(triageStay.error.code))
+    return euFail(triageStay.error.code);
+  if (triageStay.data) {
+    const named = triageStay.data.intake as { encounter_id: string | null } | null;
+    let mine = enc.visit_id === triageStay.data.intake_id || named?.encounter_id === enc.id;
+    if (!mine && !enc.visit_id && enc.triage_record_id) {
+      const tr = await sb
+        .from("triage_records")
+        .select("id")
+        .eq("id", enc.triage_record_id)
+        .eq("intake_id", triageStay.data.intake_id)
+        .maybeSingle();
+      if (tr.error) return euFail(tr.error.code);
+      mine = !!tr.data;
+    }
+    if (mine) triageStayId = triageStay.data.id as string;
+  }
+  // Built from database uuids only.
   let euLookup = await stayLookup(
-    encIntakeId
-      ? `encounter_id.eq.${enc.id},and(encounter_id.is.null,intake_id.eq.${encIntakeId})`
-      : `encounter_id.eq.${enc.id}`,
+    triageStayId ? `encounter_id.eq.${enc.id},id.eq.${triageStayId}` : `encounter_id.eq.${enc.id}`,
   );
   if (euLookup.error && !missingTable(euLookup.error.code)) {
     log.error("eu stay lookup failed", { requestId, code: euLookup.error.code });
@@ -481,6 +496,15 @@ Deno.serve(async (request: Request) => {
   //    rather than by date: a ticket declared before midnight and seen after
   //    it is still this visit's. The department is the fallback only for an
   //    unbooked visit, so a second clinic's ticket survives a booked one.
+  let triageIntakeId: string | null = null;
+  if (enc.triage_record_id) {
+    const { data: tr } = await sb
+      .from("triage_records")
+      .select("intake_id")
+      .eq("id", enc.triage_record_id)
+      .maybeSingle();
+    triageIntakeId = (tr?.intake_id as string | null | undefined) ?? null;
+  }
   const intakeLinks = [`encounter_id.eq.${enc.id}`];
   if (triageIntakeId) intakeLinks.push(`id.eq.${triageIntakeId}`);
   if (enc.appointment_id) intakeLinks.push(`appointment_id.eq.${enc.appointment_id}`);

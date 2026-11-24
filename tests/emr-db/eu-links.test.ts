@@ -335,6 +335,95 @@ describe.skipIf(!laneOn)("0313 — triage sends to EU resus", () => {
     expect(after.ended_at).not.toBeNull();
   });
 
+  /* R65 follow-up: the doctor's queue start links the visit only by stamping the intake (patient_intakes.encounter_id),
+     with no visit_id or triage record on the encounter. That encounter adopts and ends its triage stay. */
+  it("the encounter the intake names (the queue start) adopts and ends its triage stay; another does not", async () => {
+    const { ward, beds } = await newWard({ R1: "resus" });
+    const { p, i } = await triaged(2);
+    const r = await call({ hospital_id: h, intake_id: i, bed_id: beds["R1"], actor: nurse });
+    const fn = async (name: string, payload: Record<string, unknown>) => {
+      try {
+        return (
+          await pg.query<{ r: Record<string, unknown> }>(`SELECT public.${name}($1::jsonb) AS r`, [
+            JSON.stringify(payload),
+          ])
+        ).rows[0]!.r;
+      } catch (e) {
+        return (e as Error).message;
+      }
+    };
+    const queued = await encounter(pg, {
+      hospitalId: h,
+      patientUserId: p,
+      clinicianUserId: doctor,
+    });
+    await pg.query(`UPDATE public.patient_intakes SET encounter_id = $2 WHERE id = $1`, [
+      i,
+      queued,
+    ]);
+    const other = await encounter(pg, { hospitalId: h, patientUserId: p, clinicianUserId: doctor });
+    const end = (e: string) => ({
+      encounter_id: e,
+      actor: doctor,
+      end_kind: "home",
+      disposition: "home",
+    });
+
+    expect(await fn("end_eu_stay", end(other))).toEqual({ ended: false });
+    expect(
+      await fn("observe_in_eu", {
+        encounter_id: other,
+        actor: doctor,
+        ward_id: ward,
+        bed_id: beds["R1"],
+      }),
+    ).toBe("EU409 This patient is already in the EU.");
+
+    expect(
+      await fn("observe_in_eu", {
+        encounter_id: queued,
+        actor: doctor,
+        ward_id: ward,
+        bed_id: beds["R1"],
+      }),
+    ).toMatchObject({ stay_id: r.stay_id, adopted: true, bed: "R1" });
+    expect(await fn("end_eu_stay", end(queued))).toEqual({ ended: true, stay_id: r.stay_id });
+    expect(
+      await row(
+        `SELECT s.status, s.encounter_id, a.ended_at IS NOT NULL AS freed
+           FROM public.eu_stays s JOIN public.bed_assignments a ON a.eu_stay_id = s.id WHERE s.id = $1`,
+        [r.stay_id],
+      ),
+    ).toEqual({ status: "ended", encounter_id: queued, freed: true });
+  });
+
+  it("an unadopted triage stay ends with the queue-start encounter's close", async () => {
+    const { beds } = await newWard({ R1: "resus" });
+    const { p, i } = await triaged(1);
+    const r = await call({ hospital_id: h, intake_id: i, bed_id: beds["R1"], actor: nurse });
+    const queued = await encounter(pg, {
+      hospitalId: h,
+      patientUserId: p,
+      clinicianUserId: doctor,
+    });
+    await pg.query(`UPDATE public.patient_intakes SET encounter_id = $2 WHERE id = $1`, [
+      i,
+      queued,
+    ]);
+    expect(
+      (
+        await pg.query<{ r: unknown }>(`SELECT public.end_eu_stay($1::jsonb) AS r`, [
+          JSON.stringify({
+            encounter_id: queued,
+            actor: doctor,
+            end_kind: "died",
+            disposition: "deceased",
+          }),
+        ])
+      ).rows[0]!.r,
+    ).toEqual({ ended: true, stay_id: r.stay_id });
+  });
+
   it("only the service role runs it", async () => {
     const direct = await probe(
       pg,

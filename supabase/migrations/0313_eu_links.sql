@@ -12,8 +12,9 @@
 --      the space as Arriving; the doctor's Send to EU later adopts it (observe_in_eu, 0311). Service role only
 --      (ha-eu-stay); audit verb 'send_to_eu_resus' (0311's sa_audit_log_action_check list kept verbatim).
 --   4. R65: a triage stay (no encounter, the intake named) is adopted (observe_in_eu, 0311) and ended
---      (end_eu_stay, 0312) only by an encounter of that visit (encounters.visit_id, or its triage's intake); another
---      visit of the patient leaves it, and the resus space, alone. Both bodies are redefined verbatim but for that.
+--      (end_eu_stay, 0312) only by an encounter of that visit (encounters.visit_id, or its triage's intake, or the
+--      intake whose encounter_id names it: the queue start); another visit of the patient leaves it, and the resus
+--      space, alone. Both bodies are redefined verbatim but for that.
 --   Later sections come from Task 26.
 --
 -- ADDITIVE and re-runnable.
@@ -203,7 +204,8 @@ ALTER TABLE public.sa_audit_log ADD CONSTRAINT sa_audit_log_action_check CHECK (
 -- A triage stay has no encounter, only its intake. 0312's end_eu_stay ended it for ANY encounter of the patient at
 -- the hospital, and 0311's observe_in_eu adopted it from any, so an unrelated clinic visit could release the resus
 -- space. Both bodies verbatim, except: the triage stay is matched only by an encounter whose visit is the stay's
--- intake (encounters.visit_id, or the intake of its triage record, as observe_in_eu already names the intake).
+-- intake (encounters.visit_id, or the intake of its triage record, as observe_in_eu already names the intake), or
+-- that the stay's intake names (patient_intakes.encounter_id, stamped by the doctor's queue start).
 -- Another visit's close finds no stay; its Send to EU is refused as "already in the EU". Grants are kept.
 
 -- 0311's observe_in_eu, plus R65 on the adoption.
@@ -258,10 +260,13 @@ BEGIN
   SELECT * INTO v_stay FROM public.eu_stays
    WHERE patient_user_id = v_enc.patient_user_id AND status <> 'ended' FOR UPDATE;
   -- Only a triage stay at this hospital is adopted; any other open stay means the patient is in an EU already.
-  -- R65: and only by an encounter of the triage's visit (its visit_id, or its triage's intake).
+  -- R65: and only by an encounter of the triage's visit (its visit_id, or its triage's intake, or the intake that
+  -- names this encounter: the doctor's queue start).
   IF FOUND AND (v_stay.encounter_id IS NOT NULL OR v_stay.hospital_id <> v_enc.hospital_id
-                OR v_stay.intake_id IS DISTINCT FROM coalesce(v_enc.visit_id,
-                     (SELECT t.intake_id FROM public.triage_records t WHERE t.id = v_enc.triage_record_id))) THEN
+                OR NOT (coalesce(v_stay.intake_id = coalesce(v_enc.visit_id,
+                          (SELECT t.intake_id FROM public.triage_records t WHERE t.id = v_enc.triage_record_id)), false)
+                        OR EXISTS (SELECT 1 FROM public.patient_intakes i
+                                    WHERE i.id = v_stay.intake_id AND i.encounter_id = v_enc.id))) THEN
     RAISE EXCEPTION 'EU409 This patient is already in the EU.'
       USING ERRCODE = 'check_violation', HINT = 'eu_already_in_eu';
   END IF;
@@ -390,8 +395,9 @@ BEGIN
      AND (encounter_id = v_enc.id
           -- R65: a triage stay (no encounter) only for an encounter of the triage's visit.
           OR (encounter_id IS NULL
-              AND intake_id = coalesce(v_enc.visit_id,
-                    (SELECT t.intake_id FROM public.triage_records t WHERE t.id = v_enc.triage_record_id)))
+              AND (intake_id = coalesce(v_enc.visit_id,
+                     (SELECT t.intake_id FROM public.triage_records t WHERE t.id = v_enc.triage_record_id))
+                   OR intake_id IN (SELECT i.id FROM public.patient_intakes i WHERE i.encounter_id = v_enc.id)))
           OR admission_id IN (SELECT id FROM public.admissions WHERE inpatient_encounter_id = v_enc.id))
    FOR UPDATE;
   -- No stay this visit may end (none, another visit's, or already ended): nothing written.

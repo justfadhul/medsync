@@ -158,11 +158,38 @@ describe("ha-complete-encounter — the close ends the EU stay", () => {
     expect(src).toContain(
       '"id, hospital_id, patient_user_id, clinician_user_id, state, appointment_id, department_id, triage_record_id, visit_id"',
     );
-    expect(src).toContain("const encIntakeId = (enc.visit_id as string | null) ?? triageIntakeId;");
     expect(src).toContain(
-      "`encounter_id.eq.${enc.id},and(encounter_id.is.null,intake_id.eq.${encIntakeId})`",
+      "triageStayId ? `encounter_id.eq.${enc.id},id.eq.${triageStayId}` : `encounter_id.eq.${enc.id}`",
     );
-    expect(src.indexOf('.from("triage_records")')).toBeLessThan(src.indexOf('.from("eu_stays")'));
+  });
+
+  it("R65: a triage stay is this visit's by visit_id, its triage's intake, or the intake naming this encounter", () => {
+    const eu = src.slice(src.indexOf("let triageStayId"), src.indexOf("let euLookup"));
+    // Looked for only when the patient has an open triage stay here: a non-EU close gains no query and no failure.
+    expect(eu).toContain('.is("encounter_id", null)');
+    expect(eu.indexOf("if (triageStay.data) {")).toBeLessThan(
+      eu.indexOf('.from("triage_records")'),
+    );
+    expect(eu).toContain(
+      '.select("id, intake_id, intake:patient_intakes!intake_id(encounter_id)")',
+    );
+    expect(eu).toContain(
+      "let mine = enc.visit_id === triageStay.data.intake_id || named?.encounter_id === enc.id;",
+    );
+    expect(eu).toContain("if (!mine && !enc.visit_id && enc.triage_record_id) {");
+    expect(eu).toContain('.eq("intake_id", triageStay.data.intake_id)');
+    // A failed link lookup fails the close visibly, never leaving a resus space silently held.
+    expect(src).toMatch(
+      /const euFail = \(code\?: string\) => \{\s*log\.error\([^)]*\);\s*return serverError\("encounter update failed", init\);/,
+    );
+    expect(eu.match(/return euFail\(/g)?.length).toBe(2);
+    // The intake close (step 3) keeps its own non-fatal triage lookup.
+    const step3 = src.slice(src.indexOf("let triageIntakeId"), src.indexOf("const intakeLinks"));
+    expect(step3).toContain('.from("triage_records")');
+    expect(step3).not.toContain("serverError");
+  });
+
+  it("finds a missing table as none", () => {
     expect(src).toContain(
       'const missingTable = (code?: string) => code === "42P01" || code === "PGRST205";',
     );

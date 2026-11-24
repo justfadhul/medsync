@@ -1076,11 +1076,14 @@ describe.skipIf(!laneOn)("0311 — the EU stay on real SQL", () => {
 });
 
 /* R57: one lock order across 0311's EU functions, encounter → stay → assignment, so two of them never deadlock.
-   PGlite has one connection, so the order is read from the function bodies. */
+   PGlite has one connection, so the order is read from the function bodies: the newest definition (0311–0313). */
 describe("0311 — lock order", () => {
-  const sql = readMigration("0311_eu_stays.sql").replace(/--[^\n]*/g, "");
+  const sql = ["0311_eu_stays.sql", "0312_eu_boarding.sql", "0313_eu_links.sql"]
+    .map(readMigration)
+    .join("\n")
+    .replace(/--[^\n]*/g, "");
   const order = (fn: string) => {
-    const start = sql.indexOf(`CREATE OR REPLACE FUNCTION public.${fn}(p jsonb)`);
+    const start = sql.lastIndexOf(`CREATE OR REPLACE FUNCTION public.${fn}(p jsonb)`);
     const body = sql.slice(start, sql.indexOf("\n$$;", start));
     const seen: string[] = [];
     for (const stmt of body.split(";")) {
@@ -1099,6 +1102,7 @@ describe("0311 — lock order", () => {
   });
 
   it("confirm_bed_arrival locks the stay before the assignment", () => {
-    expect(order("confirm_bed_arrival")).toEqual(["eu_stays", "bed_assignments"]);
+    // 0312's definition locks the boarder's encounter first (eu-boarding reads it too).
+    expect(order("confirm_bed_arrival")).toEqual(["encounters", "eu_stays", "bed_assignments"]);
   });
 });

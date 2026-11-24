@@ -658,11 +658,15 @@ describe.skipIf(!laneOn)("0312 — boarding from the EU on real SQL", () => {
   });
 });
 
-/* R57 / R61: the 0312 functions keep the lock order encounter → stay → assignment. Read from the bodies. */
+/* R57 / R61: the 0312 functions keep the lock order encounter → stay → assignment. Read from the newest body
+   (0313 redefines end_eu_stay). */
 describe("0312 — lock order", () => {
-  const sql = readMigration("0312_eu_boarding.sql").replace(/--[^\n]*/g, "");
+  const sql = ["0312_eu_boarding.sql", "0313_eu_links.sql"]
+    .map(readMigration)
+    .join("\n")
+    .replace(/--[^\n]*/g, "");
   const order = (fn: string, tables = ["encounters", "eu_stays", "bed_assignments"]) => {
-    const start = sql.indexOf(`CREATE OR REPLACE FUNCTION public.${fn}(p jsonb)`);
+    const start = sql.lastIndexOf(`CREATE OR REPLACE FUNCTION public.${fn}(p jsonb)`);
     expect(start, fn).toBeGreaterThan(-1);
     const body = sql.slice(start, sql.indexOf("\n$$;", start));
     const seen: string[] = [];
