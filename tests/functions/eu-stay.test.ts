@@ -69,22 +69,22 @@ describe("ha-eu-stay — send to the EU", () => {
 
   it("a floor visit sent to the EU ends as Observed in EU: after the start, non-fatal, no name, room or note", () => {
     const after = src.slice(src.indexOf('rpc("observe_in_eu"'));
-    const floor = after.slice(after.indexOf("r.data?.intake_id"));
+    const call = after.indexOf("floorFinishEu(");
+    expect(call).toBeGreaterThan(after.indexOf("r.data?.intake_id"));
+    expect(call).toBeLessThan(after.indexOf("return ok({ stay: r.data }, init)"));
+    const floor = src.slice(src.indexOf("async function floorFinishEu("));
     expect(floor).toContain('.from("clinic_floor_events")');
     expect(floor).toContain('.eq("intake_id", intakeId)');
     expect(floor).toContain('kind: "finish"');
     expect(floor).toContain('detail: "eu"');
     expect(floor).toContain("client_id: crypto.randomUUID()");
-    expect(floor).toContain("by_user_id: caller.id");
+    expect(floor).toContain("by_user_id: byUserId");
     expect(floor).toContain("(non-fatal)");
     const insert = floor.slice(
       floor.indexOf(".insert({"),
       floor.indexOf("})", floor.indexOf(".insert({")),
     );
     for (const col of ["room", "note", "name"]) expect(insert).not.toContain(col);
-    expect(src.indexOf('detail: "eu"')).toBeLessThan(
-      src.indexOf("return ok({ stay: r.data }, init)"),
-    );
   });
 
   it("returns words, never a raw database message", () => {
@@ -92,6 +92,57 @@ describe("ha-eu-stay — send to the EU", () => {
     expect(src).not.toMatch(/badRequest\(r\.error\.message/);
     expect(src).not.toMatch(/serverError\([^)]*\.message/);
     expect(src).toContain("return ok({ stay: r.data }, init)");
+  });
+});
+
+describe("ha-eu-stay — triage sends a Level 1–2 patient to EU resus (D4)", () => {
+  const src = stripComments(fn("ha-eu-stay"));
+  const op = src.slice(src.indexOf("async function sendToEuResus("));
+
+  it("is its own op, routed before the encounter path", () => {
+    expect(src).toContain('op: z.literal("send_to_eu_resus")');
+    expect(src).toMatch(/if \(parsed\.data\.op === "send_to_eu_resus"\)\s*return sendToEuResus\(/);
+    expect(src.indexOf('parsed.data.op === "send_to_eu_resus"')).toBeLessThan(
+      src.indexOf('.from("encounters")'),
+    );
+  });
+
+  it("the caller is triage-capable clinical staff at the body's hospital (as requireTriageScope)", () => {
+    const auth = op.slice(0, op.indexOf("recordSaAudit({"));
+    expect(auth).toContain('.from("staff_affiliations")');
+    expect(auth).toContain('.eq("user_id", callerId)');
+    expect(auth).toContain('.eq("hospital_id", p.hospital_id)');
+    expect(auth).toContain('.in("state", ["active", "approved"])');
+    expect(auth).toContain('.eq("cadres.is_clinical", true)');
+    expect(auth).toContain('.from("clinical_cosign_policies")');
+    expect(auth).toContain('.eq("action_kind", "triage_patient")');
+    expect(auth).toContain('.eq("requirement", "allowed")');
+    expect(auth.match(/return forbidden\(init\);/g)?.length).toBe(2);
+    expect(auth).not.toContain("hospital_admin");
+  });
+
+  it("refuses with the flag off, before the audit", () => {
+    const flag = op.indexOf('euObservationOn(Deno.env.get("EU_OBSERVATION"), p.hospital_id)');
+    expect(flag).toBeGreaterThan(-1);
+    expect(flag).toBeLessThan(op.indexOf("recordSaAudit({"));
+  });
+
+  it("audits send_to_eu_resus on the intake, then the rpc with the actor set after the spread", () => {
+    expect(op).toContain('action: "send_to_eu_resus"');
+    expect(op).toContain('targetKind: "patient_intake"');
+    expect(op.indexOf('action: "send_to_eu_resus"')).toBeLessThan(
+      op.indexOf('rpc("send_to_eu_resus"'),
+    );
+    expect(op).toContain("p: { ...p, actor: callerId }");
+  });
+
+  it("returns words for a refusal, never the database's", () => {
+    expect(op).toContain("euRefusal(r.error)");
+    expect(op).not.toMatch(/serverError\([^)]*\.message/);
+  });
+
+  it("the floor's visit ends as Observed in EU, after the start, through the same writer", () => {
+    expect(op.indexOf("floorFinishEu(")).toBeGreaterThan(op.indexOf('rpc("send_to_eu_resus"'));
   });
 });
 

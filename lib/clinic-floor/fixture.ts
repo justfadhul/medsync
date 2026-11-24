@@ -79,6 +79,8 @@ export interface FloorData {
   people: FloorPerson[];
   events: FloorEvent[];
   preAlerts: { id: string; name: string; what: string; km: string }[];
+  /** D4: the free resus spaces of the hospital's EUs, offered at Level 1–2; empty with the EU off. */
+  euResus: { bedId: string; label: string; wardName: string }[];
   /** Median-free demo: the fixture never pretends to measure. */
   fixture: boolean;
 }
@@ -706,6 +708,7 @@ export function busyMorning(role: Role = "doctor"): FloorData {
       { id: "p1", name: "Joyce Akello", what: "Bleeding · pregnant", km: "2.1 km" },
       { id: "p2", name: "Man, about 60", what: "Chest pain · hard to breathe", km: "5.4 km" },
     ],
+    euResus: [],
     fixture: true,
   };
 }

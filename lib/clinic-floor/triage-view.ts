@@ -356,3 +356,9 @@ export function doctorLoad(
     return { queue, state: "break", until: st.until };
   return { queue, state: mine.some((r) => r.step === "with") ? "with" : "free", until: null };
 }
+
+/* ─── Send to EU resus (D4) ─────────────────────────────────────────── */
+
+/** The free EU resus spaces, offered only at Level 1 or 2 (the server refuses any other). */
+export const euResusChoices = <T>(level: AcuityLevel | null, spaces: readonly T[]): readonly T[] =>
+  level != null && level <= 2 ? spaces : [];

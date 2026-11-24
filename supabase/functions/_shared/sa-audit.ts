@@ -179,6 +179,8 @@ export type SaAuditAction =
   | "send_to_eu"
   | "move_eu_space"
   | "end_eu_stay"
+  // 0313: triage sends a Level 1–2 patient to EU resus (D4)
+  | "send_to_eu_resus"
   // 0291: a walk-in registered at the desk (written in SQL by migration 0291, ADR 0475)
   | "register_patient"
   // 0292: the desk's claim code, and the patient taking the record over (written in SQL, ADR 0475)

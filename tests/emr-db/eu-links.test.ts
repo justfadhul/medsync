@@ -1,0 +1,287 @@
+/**
+ * Migration 0313 section 3 on the PGlite lane (ADR 0541, D4): triage sends a Level 1–2 patient straight to a free
+ * resus space of an EU. The stay is the triage nurse's (no encounter, the intake named); the doctor's later Send to
+ * EU adopts it. Service role only. Runs only with EMR_PGLITE=1 (see _pglite.ts).
+ */
+import { randomUUID } from "node:crypto";
+import type { Pg } from "./_pglite";
+import { beforeAll, describe, expect, it } from "vitest";
+
+import {
+  bootLane,
+  department,
+  encounter,
+  hospital,
+  intake,
+  laneOn,
+  patient,
+  probe,
+  staff,
+} from "./_pglite";
+
+const BOOT_MS = 180_000;
+
+describe.skipIf(!laneOn)("0313 — triage sends to EU resus", () => {
+  let pg: Pg;
+  let h: string;
+  let h2: string;
+  let dept: string;
+  let nurse: string;
+  let doctor: string;
+
+  beforeAll(async () => {
+    pg = (await bootLane()).pg;
+    h = await hospital(pg, "EU resus");
+    h2 = await hospital(pg, "Elsewhere");
+    dept = await department(pg, h);
+    nurse = (await staff(pg, { hospitalId: h, departmentId: dept, cadre: "NURSE" })).userId;
+    doctor = (await staff(pg, { hospitalId: h, departmentId: dept })).userId;
+  }, BOOT_MS);
+
+  const call = async (payload: Record<string, unknown>) =>
+    (
+      await pg.query<{ r: Record<string, string | boolean | null> }>(
+        `SELECT public.send_to_eu_resus($1::jsonb) AS r`,
+        [JSON.stringify(payload)],
+      )
+    ).rows[0]!.r;
+  const refusal = async (payload: Record<string, unknown>) => {
+    try {
+      await call(payload);
+    } catch (e) {
+      return (e as Error).message;
+    }
+    throw new Error("expected a refusal");
+  };
+  const row = async (sql: string, params: unknown[]) =>
+    (await pg.query<Record<string, unknown>>(sql, params)).rows[0]!;
+
+  /** A fresh EU (or another ward type) with its own spaces, each `label: bed_type`. */
+  async function newWard(
+    spaces: Record<string, string>,
+    o: { hospitalId?: string; type?: string } = {},
+  ): Promise<{ ward: string; beds: Record<string, string> }> {
+    const hid = o.hospitalId ?? h;
+    const s = randomUUID().slice(0, 8);
+    const ward = (
+      await pg.query<{ id: string }>(
+        `INSERT INTO public.hospital_wards (hospital_id, department_id, name, slug, bed_count, ward_type)
+         VALUES ($1, $2, $3, $4, $5, $6) RETURNING id`,
+        [
+          hid,
+          hid === h ? dept : await department(pg, hid),
+          `Unit ${s}`,
+          `unit-${s}`,
+          Object.keys(spaces).length,
+          o.type ?? "emergency_observation",
+        ],
+      )
+    ).rows[0]!.id;
+    const beds: Record<string, string> = {};
+    for (const [label, type] of Object.entries(spaces))
+      beds[label] = (
+        await pg.query<{ id: string }>(
+          `INSERT INTO public.hospital_beds (hospital_id, ward_id, label, bed_type)
+           VALUES ($1, $2, $3, $4) RETURNING id`,
+          [hid, ward, label, type],
+        )
+      ).rows[0]!.id;
+    return { ward, beds };
+  }
+
+  /** A patient at triage: an arrived intake, triaged at `level` (none when null). */
+  async function triaged(level: number | null, hospitalId = h) {
+    const p = await patient(pg);
+    const i = await intake(pg, { hospitalId, patientUserId: p });
+    if (level != null)
+      await pg.query(
+        `INSERT INTO public.triage_records (intake_id, patient_user_id, hospital_id, ruleset, vitals_snapshot,
+                                            computed_level, computed_breakdown, assigned_level, triaged_by_user_id)
+         VALUES ($1, $2, $3, 'adult_news2', '{}'::jsonb, $4, '{}'::jsonb, $4, $5)`,
+        [i, p, hospitalId, level, nurse],
+      );
+    return { p, i };
+  }
+
+  it("a Level 2 patient goes to a free resus space: a triage stay, no encounter, an Arriving space", async () => {
+    const { ward, beds } = await newWard({ R1: "resus" });
+    const { p, i } = await triaged(2);
+    const r = await call({ hospital_id: h, intake_id: i, bed_id: beds["R1"], actor: nurse });
+    expect(r).toMatchObject({ bed: "R1", intake_id: i, hospital_id: h });
+    expect(
+      await row(
+        `SELECT started_by_kind, encounter_id, intake_id, ward_id, status, decided_by, responsible_user_id,
+                arrived_at FROM public.eu_stays WHERE id = $1`,
+        [r.stay_id],
+      ),
+    ).toEqual({
+      started_by_kind: "triage_nurse",
+      encounter_id: null,
+      intake_id: i,
+      ward_id: ward,
+      status: "in_space",
+      decided_by: nurse,
+      responsible_user_id: nurse,
+      arrived_at: null,
+    });
+    expect(
+      await row(
+        `SELECT bed_id, eu_stay_id, encounter_id, arrived_at, ended_at FROM public.bed_assignments WHERE id = $1`,
+        [r.assignment_id],
+      ),
+    ).toEqual({
+      bed_id: beds["R1"],
+      eu_stay_id: r.stay_id,
+      encounter_id: null,
+      arrived_at: null,
+      ended_at: null,
+    });
+    expect(
+      (await pg.query(`SELECT 1 FROM public.eu_stays WHERE patient_user_id = $1`, [p])).rows.length,
+    ).toBe(1);
+  });
+
+  it("Level 1 goes too; Level 3 and an untriaged visit are refused, nothing written", async () => {
+    const { beds } = await newWard({ R1: "resus", R2: "resus", R3: "resus" });
+    const one = await triaged(1);
+    await expect(
+      call({ hospital_id: h, intake_id: one.i, bed_id: beds["R1"], actor: nurse }),
+    ).resolves.toMatchObject({ bed: "R1" });
+    for (const level of [3, null]) {
+      const { p, i } = await triaged(level);
+      expect(
+        await refusal({ hospital_id: h, intake_id: i, bed_id: beds["R2"], actor: nurse }),
+      ).toBe("EU409 Only a Level 1 or 2 patient goes straight to EU resus.");
+      expect(
+        (await pg.query(`SELECT 1 FROM public.eu_stays WHERE patient_user_id = $1`, [p])).rows,
+      ).toEqual([]);
+    }
+  });
+
+  it("the latest triage decides: re-triaged from 2 to 3 is refused", async () => {
+    const { beds } = await newWard({ R1: "resus" });
+    const { p, i } = await triaged(2);
+    await pg.query(
+      `INSERT INTO public.triage_records (intake_id, patient_user_id, hospital_id, ruleset, vitals_snapshot,
+                                          computed_level, computed_breakdown, assigned_level, triaged_at)
+       VALUES ($1, $2, $3, 'adult_news2', '{}'::jsonb, 3, '{}'::jsonb, 3, now() + interval '1 minute')`,
+      [i, p, h],
+    );
+    expect(
+      await refusal({ hospital_id: h, intake_id: i, bed_id: beds["R1"], actor: nurse }),
+    ).toMatch(/^EU409 Only a Level 1 or 2/);
+  });
+
+  it("a trolley, a non-EU resus bed and another hospital's space are not a resus space", async () => {
+    const eu = await newWard({ T1: "standard", C1: "chair" });
+    const ward = await newWard({ X1: "resus" }, { type: "general" });
+    const other = await newWard({ R1: "resus" }, { hospitalId: h2 });
+    for (const bed of [eu.beds["T1"], eu.beds["C1"], ward.beds["X1"], other.beds["R1"]]) {
+      const { i } = await triaged(2);
+      expect(await refusal({ hospital_id: h, intake_id: i, bed_id: bed, actor: nurse })).toBe(
+        "EU409 Choose a resus space.",
+      );
+    }
+  });
+
+  it("an occupied, cleaning or closed resus space is refused in words", async () => {
+    const { beds } = await newWard({ R1: "resus", R2: "resus", R3: "resus" });
+    const first = await triaged(2);
+    await call({ hospital_id: h, intake_id: first.i, bed_id: beds["R1"], actor: nurse });
+    const { i } = await triaged(2);
+    expect(await refusal({ hospital_id: h, intake_id: i, bed_id: beds["R1"], actor: nurse })).toBe(
+      "AD409 Bed R1 was just taken. Choose another.",
+    );
+    await pg.query(
+      `INSERT INTO public.bed_state_events (hospital_id, bed_id, state, set_by)
+       SELECT hospital_id, id, 'cleaning', $2 FROM public.hospital_beds WHERE id = $1`,
+      [beds["R2"], nurse],
+    );
+    expect(await refusal({ hospital_id: h, intake_id: i, bed_id: beds["R2"], actor: nurse })).toBe(
+      "AD409 Bed R2 is being cleaned just now. Choose another.",
+    );
+    await pg.query(
+      `UPDATE public.hospital_beds SET closed_at = now(), closed_reason = 'Broken' WHERE id = $1`,
+      [beds["R3"]],
+    );
+    expect(await refusal({ hospital_id: h, intake_id: i, bed_id: beds["R3"], actor: nurse })).toBe(
+      "EU409 Choose a resus space.",
+    );
+  });
+
+  it("a visit at another hospital, or one not at triage, is not this hospital's", async () => {
+    const { beds } = await newWard({ R1: "resus" });
+    const away = await triaged(2, h2);
+    expect(
+      await refusal({ hospital_id: h, intake_id: away.i, bed_id: beds["R1"], actor: nurse }),
+    ).toBe("EU404 That visit is not at this hospital.");
+    const done = await triaged(2);
+    await pg.query(`UPDATE public.patient_intakes SET status = 'completed' WHERE id = $1`, [
+      done.i,
+    ]);
+    expect(
+      await refusal({ hospital_id: h, intake_id: done.i, bed_id: beds["R1"], actor: nurse }),
+    ).toBe("EU404 That visit is not at this hospital.");
+  });
+
+  it("a patient already in the EU, or in a bed, is refused", async () => {
+    const { beds } = await newWard({ R1: "resus", R2: "resus" });
+    const { i } = await triaged(2);
+    await call({ hospital_id: h, intake_id: i, bed_id: beds["R1"], actor: nurse });
+    expect(await refusal({ hospital_id: h, intake_id: i, bed_id: beds["R2"], actor: nurse })).toBe(
+      "EU409 This patient is already in the EU.",
+    );
+  });
+
+  it("the doctor's Send to EU later adopts the triage stay, keeping the space", async () => {
+    const { ward, beds } = await newWard({ R1: "resus" });
+    const { p, i } = await triaged(2);
+    const r = await call({ hospital_id: h, intake_id: i, bed_id: beds["R1"], actor: nurse });
+    const e = await encounter(pg, { hospitalId: h, patientUserId: p, clinicianUserId: doctor });
+    const a = (
+      await pg.query<{ r: Record<string, unknown> }>(
+        `SELECT public.observe_in_eu($1::jsonb) AS r`,
+        [JSON.stringify({ encounter_id: e, actor: doctor, ward_id: ward, bed_id: beds["R1"] })],
+      )
+    ).rows[0]!.r;
+    expect(a).toMatchObject({ stay_id: r.stay_id, adopted: true, bed: "R1", intake_id: i });
+    expect(
+      await row(
+        `SELECT encounter_id, responsible_user_id, started_by_kind, decided_by FROM public.eu_stays WHERE id = $1`,
+        [r.stay_id],
+      ),
+    ).toEqual({
+      encounter_id: e,
+      responsible_user_id: doctor,
+      started_by_kind: "triage_nurse",
+      decided_by: nurse,
+    });
+  });
+
+  it("only the service role runs it", async () => {
+    const direct = await probe(
+      pg,
+      { userId: nurse, role: "authenticated", aal: "aal2" },
+      `SELECT public.send_to_eu_resus('{}'::jsonb)`,
+    );
+    expect(direct.ok).toBe(false);
+    expect(!direct.ok && direct.error).toMatch(/permission denied/);
+    const grants = await pg.query<{ grantee: string }>(
+      `SELECT grantee FROM information_schema.routine_privileges
+        WHERE routine_schema = 'public' AND routine_name = 'send_to_eu_resus' AND privilege_type = 'EXECUTE'`,
+    );
+    expect(grants.rows.map((g) => g.grantee).filter((g) => g !== "postgres")).toEqual([
+      "service_role",
+    ]);
+  });
+
+  it("send_to_eu_resus is an audit verb", async () => {
+    await expect(
+      pg.query(
+        `INSERT INTO public.sa_audit_log (actor_id, action, target_kind, target_id, reason)
+         VALUES ($1, 'send_to_eu_resus', 'patient_intake', $2, 'Level 2 to EU resus')`,
+        [nurse, randomUUID()],
+      ),
+    ).resolves.toBeTruthy();
+  });
+});

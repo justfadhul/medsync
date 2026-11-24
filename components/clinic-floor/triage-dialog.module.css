@@ -891,7 +891,8 @@
   color: var(--tr5fg);
   border-color: var(--tr5edge);
 }
-.levels button:disabled {
+.levels button:disabled,
+.dlg .chip:disabled {
   opacity: 0.45;
   cursor: not-allowed;
 }

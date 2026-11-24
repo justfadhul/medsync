@@ -123,11 +123,14 @@ const SendSchema = z.object({
   departmentId: z.string().uuid().nullable(),
   doctorUserId: z.string().uuid().nullable(),
   note: z.string().trim().max(280).nullable(),
+  /** D4: a free EU resus space, for a Level 1–2 patient only. */
+  euBedId: z.string().uuid().nullable().optional(),
 });
 
 /**
  * Triage on the floor: the engine action first (unchanged), then the floor's event carrying the engine's re-check
  * band and where they were sent. `formData` holds the engine payload (`payload`) and the floor's (`floor`).
+ * A Level 1–2 patient with an EU resus space chosen is then sent there (D4, ha-eu-stay `send_to_eu_resus`).
  */
 export async function triageOnFloorAction(
   prev: TriageSubmitState,
@@ -170,8 +173,27 @@ export async function triageOnFloorAction(
         skipDepartment: f.departmentId === scope.departmentId,
       }).catch((e) => logger.warn("clinic_floor.alert_failed", { reason: String(e) }));
   }
+  // D4: after the floor has the visit, so its "Observed in EU" lands on it. The level is the saved one; the
+  // function checks it again, with the space and the caller. A refusal comes back beside the saved triage.
+  let euError: string | null = null;
+  if (f.euBedId && (res.assignedLevel ?? 5) <= 2) {
+    const scope = await requireTriageScope();
+    const eu = await callEdge(
+      "ha-eu-stay",
+      {
+        op: "send_to_eu_resus",
+        hospital_id: scope.hospitalId,
+        intake_id: f.intakeId,
+        bed_id: f.euBedId,
+        reason: `Triage Level ${res.assignedLevel}: straight to EU resus.`,
+      },
+      "clinic_floor.eu_resus",
+    );
+    if (!eu.ok) euError = eu.error;
+  }
   // The triage record is saved and audited either way; the floor event is replayable by its client id.
-  return ev.ok ? res : { ...res, error: ev.error };
+  if (!ev.ok) return { ...res, error: ev.error };
+  return euError ? { ...res, error: euError } : res;
 }
 
 const FollowUpSchema = z.object({

@@ -5,7 +5,7 @@ import type { EventKind, FloorEvent } from "./model";
 import type { Reading, TriageRow } from "./trends";
 import type { TriageScope } from "@/lib/triage/scope";
 import type { AcuityLevel, TriageInput, TriageVitals } from "@/lib/triage/types";
-import { and, asc, eq, gte, inArray, isNotNull, lt, ne, notInArray } from "drizzle-orm";
+import { and, asc, eq, gte, inArray, isNotNull, isNull, lt, ne, notInArray } from "drizzle-orm";
 
 import { FLOOR } from "@/content/clinic-floor/floor";
 import { db } from "@/db";
@@ -13,6 +13,7 @@ import { clinicFloorEvents } from "@/db/schema/clinic-floor";
 import { clinicSessions } from "@/db/schema/clinic-sessions";
 import { clinicalPhiAccessLog } from "@/db/schema/doctor-workspace";
 import { encounterOrders, encounterResults } from "@/db/schema/encounter";
+import { hospitalWards } from "@/db/schema/hospital-wards";
 import { patientIntakes } from "@/db/schema/patient-intakes";
 import { patientProfiles } from "@/db/schema/patient-profiles";
 import { appointments } from "@/db/schema/scheduling";
@@ -28,6 +29,8 @@ import { kampala } from "@/lib/reception/desk/model";
 import { createClient } from "@/lib/supabase/server";
 import { runTriage } from "@/lib/triage/engine";
 import { recommend } from "@/lib/triage/recommend";
+import { loadBedBoard } from "@/lib/wards/board";
+import { euObservationLiveFor } from "@/lib/wards/feature";
 import { ETA_BAND_LABEL } from "@/supabase/functions/_shared/pre-arrival";
 import { engineContext, floorSex } from "./model";
 import { triageReadings } from "./trends";
@@ -320,8 +323,41 @@ export async function loadFloorData(
       const a = preAlertOf({ ...p, etaLabel: ETA_BAND_LABEL[p.etaBand] });
       return { id: a.id, name: a.who || a.name, what: a.what, km: a.eta };
     }),
+    // The waiting-room screen (codes only, S3) gets none.
+    euResus: readings ? await freeEuResus(scope.hospitalId) : [],
     fixture: false,
   };
+}
+
+/**
+ * D4: the free resus spaces of the hospital's active, open EUs, for triage's Send to EU resus. The board read
+ * with `patients: "none"` (no patient leaves it); empty with the EU off.
+ */
+async function freeEuResus(hospitalId: string): Promise<FloorData["euResus"]> {
+  if (!euObservationLiveFor(hospitalId)) return [];
+  const eus = await db
+    .select({ id: hospitalWards.id })
+    .from(hospitalWards)
+    .where(
+      and(
+        eq(hospitalWards.hospitalId, hospitalId),
+        eq(hospitalWards.wardType, "emergency_observation"),
+        eq(hospitalWards.state, "active"),
+        isNull(hospitalWards.archivedAt),
+        isNull(hospitalWards.closedAt),
+      ),
+    )
+    .orderBy(asc(hospitalWards.name));
+  const boards = await Promise.all(
+    eus.map((w) => loadBedBoard(hospitalId, w.id, { patients: "none" })),
+  );
+  return boards.flatMap((b) =>
+    b
+      ? b.beds
+          .filter((x) => x.type === "resus" && x.state === "free")
+          .map((x) => ({ bedId: x.bedId, label: x.label, wardName: b.ward.name }))
+      : [],
+  );
 }
 
 /**

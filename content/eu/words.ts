@@ -113,3 +113,11 @@ export const EU_LIST = {
     units: "Emergency units",
   },
 } as const;
+
+/** Triage sends a Level 1–2 patient straight to a free EU resus space (D4). DRAFT wording for the CSO. */
+export const EU_RESUS = {
+  title: "Send to EU resus",
+  chip: (ward: string, space: string) => `${ward} · ${space}`,
+  offline: "Needs a connection",
+  sent: (ward: string, space: string) => `Sent to EU resus · ${ward} · ${space}.`,
+} as const;
