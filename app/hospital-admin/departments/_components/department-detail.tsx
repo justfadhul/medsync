@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useState } from "react";
 
 import { Chip, ChipRow, Field, k, Seg, Toggle } from "@/components/clinics-schedule/shared";
+import { DUTY_ROTA_COPY } from "@/content/duty-rota";
 import { DEPTS } from "@/content/hospital-admin/departments";
 import { fill } from "@/content/lab-workspace-v2";
 import { PHARMACY } from "@/content/pharmacy";
@@ -825,6 +826,18 @@ function Inside({ dept, data }: { dept: DepartmentRow; data: DepartmentsData }) 
           <p className={k("su-note")}>{D.noWards}</p>
         )}
       </div>
+
+      {data.rotaLive ? (
+        <div className={k("su-sec")}>
+          <span className={k("cap")}>{DUTY_ROTA_COPY.page.title}</span>
+          <Link
+            href={`/hospital-admin/departments/rota?department=${dept.id}`}
+            className={`${k("btn", "sm", "q")} ${d.start}`}
+          >
+            {DUTY_ROTA_COPY.page.open}
+          </Link>
+        </div>
+      ) : null}
 
       <div className={k("su-sec")}>
         <span className={k("cap")}>{D.unitsCap[which]}</span>

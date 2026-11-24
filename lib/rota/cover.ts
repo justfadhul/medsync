@@ -30,6 +30,25 @@ export function windowFor(day: string, shift: Shift): { startsAt: Date; endsAt: 
   return { startsAt, endsAt: new Date(startsAt.getTime() + hours * HOUR) };
 }
 
+const DAY = 24 * HOUR;
+export const addDays = (day: string, n: number) =>
+  new Date(Date.parse(`${day}T00:00:00Z`) + n * DAY).toISOString().slice(0, 10);
+
+/** The Monday a rota week starts on: `param` when it is a Monday, else the Monday of `now`'s Kampala week. */
+export function rotaWeekStart(param: string | undefined, now: Date): string {
+  const d = new Date(`${param}T00:00:00Z`);
+  if (
+    param &&
+    /^\d{4}-\d{2}-\d{2}$/.test(param) &&
+    !Number.isNaN(d.getTime()) &&
+    d.toISOString().slice(0, 10) === param &&
+    d.getUTCDay() === 1
+  )
+    return param;
+  const k = new Date(now.getTime() + 3 * HOUR); // Kampala wall clock in the UTC fields
+  return new Date(k.getTime() - ((k.getUTCDay() + 6) % 7) * DAY).toISOString().slice(0, 10);
+}
+
 export interface Post {
   id: string;
   departmentId: string;

@@ -365,3 +365,38 @@ export async function coverForWard(
     };
   });
 }
+
+/** What the rota editor offers: the department's wards (and any ward its posts sit on), and the clinical grades. */
+export async function rotaChoices(
+  hospitalId: string,
+  departmentId: string,
+  opts?: Opts,
+): Promise<{ wards: { id: string; name: string }[]; cadres: { code: string; name: string }[] }> {
+  if (!dutyRotaLiveFor(hospitalId) || !z.uuid().safeParse(departmentId).success)
+    return { wards: [], cadres: [] };
+  return inSnapshot(opts?.database, async (tx) => {
+    const postWards = tx
+      .select({ id: dutyPosts.wardId })
+      .from(dutyPosts)
+      .where(and(eq(dutyPosts.hospitalId, hospitalId), eq(dutyPosts.departmentId, departmentId)));
+    const wards = await tx
+      .select({ id: hospitalWards.id, name: hospitalWards.name })
+      .from(hospitalWards)
+      .where(
+        and(
+          eq(hospitalWards.hospitalId, hospitalId),
+          or(
+            and(eq(hospitalWards.departmentId, departmentId), isNull(hospitalWards.archivedAt)),
+            inArray(hospitalWards.id, postWards),
+          ),
+        ),
+      )
+      .orderBy(asc(hospitalWards.name));
+    const grades = await tx
+      .select({ code: cadres.code, name: cadres.name })
+      .from(cadres)
+      .where(eq(cadres.isClinical, true))
+      .orderBy(asc(cadres.sortOrder));
+    return { wards, cadres: grades };
+  });
+}
