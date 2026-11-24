@@ -5,6 +5,7 @@ import { WARDS } from "@/content/hospital-admin/wards";
 import { requireHospitalAdminScope } from "@/lib/hospital-admin/scope";
 import { dutyRotaLiveFor } from "@/lib/rota/feature";
 import { coverForWard } from "@/lib/rota/read";
+import { soft } from "@/lib/rota/soft";
 import {
   loadDepartments,
   loadPlaces,
@@ -63,7 +64,7 @@ export default async function WardsPage({
         await Promise.all(
           wards
             .filter((w) => !w.archived)
-            .map(async (w) => [w.id, await coverForWard(h, w.id, now)] as const),
+            .map(async (w) => [w.id, await soft(coverForWard(h, w.id, now), undefined)] as const),
         ),
       )
     : null;

@@ -11,6 +11,7 @@ import { careRequestsLiveFor } from "@/lib/requests/feature";
 import { resusDeskV2 } from "@/lib/resus/feature";
 import { dutyRotaLiveFor } from "@/lib/rota/feature";
 import { myDuties } from "@/lib/rota/read";
+import { soft } from "@/lib/rota/soft";
 import { doctorWorkspace } from "@/lib/workspace/feature";
 import { newestAnnouncement } from "./_components/critical-alerts";
 import { DoctorShell } from "./_components/doctor-shell";
@@ -22,16 +23,16 @@ export const metadata: Metadata = {
 
 export default async function DoctorLayout({ children }: { children: ReactNode }) {
   const scope = await requireDoctorScope();
-  const [avatarUrl, criticals] = await Promise.all([
+  const [avatarUrl, criticals, duties] = await Promise.all([
     signedAvatarUrl(scope.avatarPath),
     myCriticals(scope.userId, scope.hospitalId),
+    // Rostered now (not past, not ended early); the rota is a plan, never proof of presence.
+    dutyRotaLiveFor(scope.hospitalId)
+      ? soft(myDuties(scope.userId, scope.hospitalId, new Date()), []).then((ds) =>
+          ds.filter((d) => d.state === "in_post"),
+        )
+      : [],
   ]);
-  // Rostered now (not past, not ended early); the rota is a plan, never proof of presence.
-  const duties = dutyRotaLiveFor(scope.hospitalId)
-    ? (await myDuties(scope.userId, scope.hospitalId, new Date())).filter(
-        (d) => d.state === "in_post",
-      )
-    : [];
   return (
     <DoctorShell
       scope={scope}
