@@ -32,15 +32,15 @@ Builds on [ADR 0191](0191-ward-layout-document-and-versioning.md) and the ward b
    parent `FOR SHARE` (or the ward's own row `FOR UPDATE` when it becomes an EU), so two concurrent saves cannot leave an EU
    under an EU. `ops-structure.ts` turns the two hints into the app's own words (409); a raw database message does not reach
    the admin. 0310 had not shipped on this branch, so the guard is in 0310 itself.
-5. **An EU leaves Admit, with the flag on (D5).** `admittingWards` (`lib/emr/read/close.ts`) drops wards of type
-   `emergency_observation` through `admitsHere(wardType, euLive)`, so the close dialog's Admit step does not offer one. It
+5. **An EU leaves Admit, whatever the flag (D5, R71).** `admittingWards` (`lib/emr/read/close.ts`) drops wards of type
+   `emergency_observation` through `admitsHere(wardType)`, so the close dialog's Admit step does not offer one. It
    applies the rule before it counts beds, so the board is not queried for EUs.
 6. **Which things the flag gates.** `euObservationLiveFor(hospitalId)` (`lib/wards/feature.ts`): `EU_OBSERVATION` is `1` or a
    comma list of hospital ids, off by default, and only where `WARD_BUILDER` and `ENCOUNTER_CLOSE_V2` are both live. The flag
    gates what an admin and a clinician see: the "Attached to" choice, the Emergency unit template and the chair and resus
-   entries in the editor, and the removal of EUs from Admit. **Not gated by the flag** (they run for any EU ward, or any ward,
+   entries in the editor. **Not gated by the flag** (they run for any EU ward, or any ward,
    because `ha-services-hub` cannot read app flags): the EU layout checks (ADR 0540), the blocking refusal of chair or resus
-   spaces on a non-EU ward, and the attach and type-change rules above, with the guard.
+   spaces on a non-EU ward, the attach and type-change rules above, with the guard, and the removal of EUs from Admit.
 
 ## Rulings made while building
 
@@ -57,8 +57,8 @@ Builds on [ADR 0191](0191-ward-layout-document-and-versioning.md) and the ward b
 - **Deploy order:** apply migration 0310 (`cd <worktree> && npm run db:migrate`, run in the folder that holds it), deploy
   `ha-services-hub`, then set `EU_OBSERVATION`. The function names the new column, so deploying it first fails on a database
   without 0310.
-- Nothing yet refuses an admission *into* an EU on the server; the close dialog only stops offering it. The server refusal
-  belongs to Phase 3.
+- The server refuses an admission *into* an EU whatever the flag (0312 and 0313, `AD409`), and the close dialog never offers
+  one (R71). Applying 0312 ends admissions into any existing ward of type Emergency observation.
 - Archiving a ward does not clear the EUs attached to it: the ward form then shows "Not attached" for the stale id and a save
   is refused until the admin picks another or none. (Deferred.)
 - Open for the owner or CSO, not decided here:

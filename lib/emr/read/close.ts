@@ -160,12 +160,12 @@ export async function wardBedCounts(
   return out;
 }
 
-/** An emergency unit observes; it does not admit (with EU_OBSERVATION on). */
-export function admitsHere(wardType: string | null, euLive: boolean): boolean {
-  return !(euLive && wardType === "emergency_observation");
+/** An emergency unit observes; it never admits, whatever the flag (0312 refuses it on the server). */
+export function admitsHere(wardType: string | null): boolean {
+  return wardType !== "emergency_observation";
 }
 
-/** The wards that take admissions: active, not archived, not closed, not an emergency unit (flag on). */
+/** The wards that take admissions: active, not archived, not closed, not an emergency unit. */
 export async function admittingWards(tx: EmrTx, hospitalId: string): Promise<CloseWard[]> {
   const rows = await tx
     .select({ id: hospitalWards.id, name: hospitalWards.name, wardType: hospitalWards.wardType })
@@ -179,8 +179,7 @@ export async function admittingWards(tx: EmrTx, hospitalId: string): Promise<Clo
       ),
     )
     .orderBy(asc(hospitalWards.name));
-  const euLive = euObservationLiveFor(hospitalId);
-  const wards = rows.filter((r) => admitsHere(r.wardType, euLive));
+  const wards = rows.filter((r) => admitsHere(r.wardType));
   const counts = wardBuilderLiveFor(hospitalId)
     ? await wardBedCounts(
         tx,

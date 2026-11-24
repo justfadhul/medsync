@@ -11,7 +11,7 @@ The hospital admin's Reports page gains an Emergency unit section: deaths in the
 
 **Owner steps for Observe in EU (ADRs 0539–0544):**
 
-0. Apply migrations 0306–0313 on production **before merging this branch**, because merging deploys the app; deploy the functions only after them too. The existing pages read the new columns even with every flag off: without 0310, 0311 and 0313 the resus desk, the admin Departments and Wards pages, the live bed board, the close dialog and the hub's ward operations (bed release, ward edits) fail.
+0. Apply migrations 0306–0313 on production **before merging this branch**, because merging deploys the app; deploy the functions only after them too. The existing pages read the new columns even with every flag off: without 0310, 0311 and 0313 the resus desk, the admin Departments and Wards pages, the live bed board, the close dialog and the hub's ward operations (bed release, ward edits) fail. Applying 0312 also ends admissions into any ward of type Emergency observation, whatever the flag; the close dialog no longer offers them.
 1. Apply migrations 0310, 0311, 0312 and 0313 in order, from this branch's worktree: `cd /Users/carolinemurizihiwe/Desktop/medsync/.claude/worktrees/admin-clinics-harmonize-efe20d && npm run db:migrate`. All four are GATED.
 2. Deploy the functions `ha-services-hub`, `ha-eu-stay` and `ha-complete-encounter`.
 3. Set the function secret `EU_OBSERVATION` to match the app flag.
