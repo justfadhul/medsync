@@ -9,8 +9,9 @@
 --   2. clinical_notes.note_type gains 'consult' (the reply note); sa_notifications.kind gains
 --      'care_request', 'care_request_update' and 'ward_incoming' (0068's seven kept verbatim).
 --   3. private.care_request_visible(): who reads a request through medsync_clinical_reader — the requester,
---      anyone with chart access, anyone an event names, a clinical member of the target department while
---      the request is open, and the department's head. Never anon or authenticated.
+--      anyone with chart access, anyone an event names, a clinical member of the current department (the
+--      last redirect's, else the target) while the request is open, and that department's head. Never anon
+--      or authenticated.
 --   4. Audit on both tables, and both append-only.
 --   5. The care_team access basis (0101's seam made real): a current-round recipient who has not declined,
 --      any accepter, or the phoned consultant may open the patient's chart while the request is open, or
@@ -120,6 +121,11 @@ LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public, pg_temp AS $$
   WITH me AS (SELECT private.current_user_id() AS uid, private.current_hospital_id() AS hid)
   SELECT EXISTS (
     SELECT 1 FROM me JOIN public.care_requests r ON r.id = p_request AND r.hospital_id = me.hid
+     -- The department the current round asks (R26): the writer's teamMember/head use the same one.
+     CROSS JOIN LATERAL (SELECT coalesce(
+       (SELECT e.redirect_department_id FROM public.care_request_events e
+         WHERE e.request_id = r.id AND e.kind = 'redirected' ORDER BY e.at DESC LIMIT 1),
+       r.target_department_id) AS dept_id) cur
      WHERE me.uid IS NOT NULL
        AND (r.requester_user_id = me.uid
          OR EXISTS (SELECT 1 FROM public.care_request_events e
@@ -129,11 +135,11 @@ LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public, pg_temp AS $$
              AND EXISTS (SELECT 1 FROM public.staff_affiliations sa
                            JOIN public.cadres c ON c.id = sa.cadre_id
                           WHERE sa.user_id = me.uid AND sa.hospital_id = r.hospital_id
-                            AND sa.department_id = r.target_department_id
+                            AND sa.department_id = cur.dept_id
                             AND sa.state IN ('active','approved') AND c.is_clinical))
          OR EXISTS (SELECT 1 FROM public.department_heads h
                      WHERE h.user_id = me.uid AND h.hospital_id = r.hospital_id
-                       AND h.department_id = r.target_department_id
+                       AND h.department_id = cur.dept_id
                        AND h.starts_at <= now() AND (h.ends_at IS NULL OR h.ends_at > now()))
          OR r.patient_user_id IN (SELECT private.accessible_patient_ids())));
 $$;

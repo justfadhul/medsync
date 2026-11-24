@@ -51,6 +51,8 @@ export const CARE_REQUEST_COPY = {
     not_declined: "Only a declined request can be redirected.",
     not_accepted: "Accept the request before replying.",
     not_replied: "Close the request after a reply.",
+    already_declined: "You have already declined this request.",
+    replay_mismatch: "That key belongs to another action.",
   },
   responsible: "The requesting team stays responsible for the patient.",
   unroutedNote: "Reached nobody: phone the team",

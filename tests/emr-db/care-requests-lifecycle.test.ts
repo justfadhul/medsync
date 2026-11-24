@@ -9,6 +9,7 @@ import type { EmrActor } from "@/lib/emr/actor";
 import type { RequestCtx } from "@/lib/emr/write/requests";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
+import { CARE_REQUEST_COPY } from "@/content/care-requests";
 import { declineRequestAction } from "@/lib/emr/actions/requests";
 import { withPatientWrite } from "@/lib/emr/write/context";
 import {
@@ -69,6 +70,7 @@ describe.skipIf(!laneOn)("the care request lifecycle (PGlite lane)", () => {
   async function placed(
     kind: "review" | "consult",
     targetDepartmentId: string,
+    namedUserIds: string[] = [],
   ): Promise<{ id: string; p: string; enc: string }> {
     const p = await patient(pg);
     const enc = await encounter(pg, {
@@ -95,7 +97,7 @@ describe.skipIf(!laneOn)("the care request lifecycle (PGlite lane)", () => {
       kind,
       targetDepartmentId,
       wardId: null,
-      namedUserIds: [],
+      namedUserIds,
       urgency: kind === "consult" ? "urgent_today" : "now",
       helpWanted: kind === "consult" ? "advice" : null,
       reasonConditionIds,
@@ -164,6 +166,25 @@ describe.skipIf(!laneOn)("the care request lifecycle (PGlite lane)", () => {
         h,
       ])
     ).rows[0]!.b;
+
+  const readable = async (user: string, id: string) => {
+    const r = await probe(
+      pg,
+      { userId: user, role: "medsync_clinical_reader", hospitalId: h },
+      `SELECT id FROM care_requests WHERE id = $1`,
+      [id],
+    );
+    if (!r.ok) throw new Error(r.error);
+    return r.rows.length === 1;
+  };
+  const noticesOf = async (id: string, user: string) =>
+    (
+      await pg.query<{ kind: string }>(
+        `SELECT kind FROM sa_notifications WHERE related_id = $1 AND recipient_user_id = $2
+          ORDER BY delivered_at, kind`,
+        [id, user],
+      )
+    ).rows.map((n) => n.kind);
 
   beforeAll(async () => {
     process.env.MEDSYNC_PHI_KEY ??= generateKey();
@@ -244,10 +265,12 @@ describe.skipIf(!laneOn)("the care request lifecycle (PGlite lane)", () => {
 
   it("redirect starts a new round", async () => {
     const neph = await department(pg, h, "Nephrology");
-    const decliner = await member(neph);
+    const nephUnrouted = await member(neph); // named routing wins, so the team is not asked
+    // Named and outside both departments: their read can only come through the event arm.
+    const decliner = await member(await department(pg, h, "Elsewhere"));
     const cardio = await department(pg, h, "Cardiology");
     const cardiologist = await member(cardio);
-    const r = await placed("consult", neph);
+    const r = await placed("consult", neph, [decliner.userId]);
     await as(decliner, r.id, (c) =>
       declineRequest(c, { clientKey: key(), reasonCode: "needs_other_team" }),
     );
@@ -259,21 +282,18 @@ describe.skipIf(!laneOn)("the care request lifecycle (PGlite lane)", () => {
         note: "Murmur on review.",
       }),
     );
+    const cardioUnrouted = await member(cardio); // joined after the routing
 
     const now = await as(requester, r.id, async (c) => c.derived);
     expect(now.round).toBe(1);
     expect(now.state).toBe("sent");
     expect(now.recipients).toEqual([cardiologist.userId]);
 
-    // The old recipient leaves "asked of you" but still reads the request.
+    // The old recipient leaves "asked of you" but still reads the request (R26: the current department reads).
     expect(await as(decliner, r.id, async (c) => c.who.recipient)).toBe(false);
-    const read = await probe(
-      pg,
-      { userId: decliner.userId, role: "medsync_clinical_reader", hospitalId: h },
-      `SELECT id FROM care_requests WHERE id = $1`,
-      [r.id],
-    );
-    expect(read).toMatchObject({ ok: true, rows: [{ id: r.id }] });
+    expect(await readable(decliner.userId, r.id)).toBe(true);
+    expect(await readable(cardioUnrouted.userId, r.id)).toBe(true);
+    expect(await readable(nephUnrouted.userId, r.id)).toBe(false);
     expect(
       await code(
         as(decliner, r.id, (c) => acceptRequest(c, { clientKey: key(), expectInMin: null })),
@@ -281,6 +301,35 @@ describe.skipIf(!laneOn)("the care request lifecycle (PGlite lane)", () => {
     ).toBe("forbidden");
     await as(cardiologist, r.id, (c) => acceptRequest(c, { clientKey: key(), expectInMin: 15 }));
     expect(await stateOf(r.id)).toBe("accepted");
+  });
+
+  it("a person declines once per round, and a key replays only its own act", async () => {
+    const neph = await department(pg, h, "Nephrology");
+    const a = await member(neph);
+    const b = await member(neph);
+    const r = await placed("consult", neph);
+    const k = key();
+    const first = await as(a, r.id, (c) =>
+      declineRequest(c, { clientKey: k, reasonCode: "not_our_specialty" }),
+    );
+    expect(
+      await code(as(a, r.id, (c) => declineRequest(c, { clientKey: key(), reasonCode: "other" }))),
+    ).toBe("conflict");
+    expect(
+      await code(as(a, r.id, (c) => acceptRequest(c, { clientKey: k, expectInMin: null }))),
+    ).toBe("conflict");
+    expect(
+      await code(as(b, r.id, (c) => declineRequest(c, { clientKey: k, reasonCode: "other" }))),
+    ).toBe("conflict");
+    expect(
+      await as(a, r.id, (c) =>
+        declineRequest(c, { clientKey: k, reasonCode: "not_our_specialty" }),
+      ),
+    ).toEqual(first);
+    // Accepting after one's own decline stays allowed.
+    await as(a, r.id, (c) => acceptRequest(c, { clientKey: key(), expectInMin: 30 }));
+    expect(await stateOf(r.id)).toBe("accepted");
+    expect((await events(r.id)).filter((e) => e.kind === "declined")).toHaveLength(1);
   });
 
   it("reply signs a consult note and closes on no follow-up", async () => {
@@ -341,29 +390,53 @@ describe.skipIf(!laneOn)("the care request lifecycle (PGlite lane)", () => {
     const neph = await department(pg, h, "Nephrology");
     const mo = await member(neph);
     const r = await placed("consult", neph);
+    const owner = await member(neph); // joined after the routing: the owner is no recipient
+    await as(owner, r.id, (c) => acceptRequest(c, { clientKey: key(), expectInMin: null }));
+    // Chart access that outlives the request, so the reply is refused for being finished.
+    await encounter(pg, {
+      hospitalId: h,
+      patientUserId: r.p,
+      clinicianUserId: owner.userId,
+      departmentId: neph,
+    });
     await as(requester, r.id, (c) =>
       cancelRequest(c, { clientKey: key(), reasonCode: "no_longer_needed" }),
     );
     expect(await stateOf(r.id)).toBe("cancelled");
-    const tries = [
-      as(mo, r.id, markSeen),
-      as(mo, r.id, (c) => acceptRequest(c, { clientKey: key(), expectInMin: null })),
-      as(mo, r.id, (c) => declineRequest(c, { clientKey: key(), reasonCode: "other" })),
-      as(requester, r.id, (c) =>
-        redirectRequest(c, { clientKey: key(), departmentId: neph, reasonCode: "other" }),
-      ),
-      as(requester, r.id, (c) => closeRequest(c, { clientKey: key() })),
-      as(requester, r.id, (c) => cancelRequest(c, { clientKey: key(), reasonCode: "other" })),
-      reply(mo, r, false),
+    expect(await noticesOf(r.id, owner.userId)).toEqual(["care_request_update"]);
+    expect(await basis(owner.userId, r.p)).not.toBeNull();
+
+    const tries: (() => Promise<unknown>)[] = [
+      () => as(mo, r.id, markSeen),
+      () => as(mo, r.id, (c) => acceptRequest(c, { clientKey: key(), expectInMin: null })),
+      () => as(mo, r.id, (c) => declineRequest(c, { clientKey: key(), reasonCode: "other" })),
+      () =>
+        as(requester, r.id, (c) =>
+          redirectRequest(c, { clientKey: key(), departmentId: neph, reasonCode: "other" }),
+        ),
+      () => as(requester, r.id, (c) => closeRequest(c, { clientKey: key() })),
+      () => as(requester, r.id, (c) => cancelRequest(c, { clientKey: key(), reasonCode: "other" })),
+      () => reply(owner, r, false),
     ];
-    for (const t of tries) expect(await code(t)).toMatch(/^(conflict|forbidden)$/);
-    expect((await events(r.id)).map((e) => e.kind).sort()).toEqual(["cancelled", "routed"]);
+    for (const t of tries)
+      expect(
+        await t().then(
+          () => "done",
+          (e: Error) => e.message,
+        ),
+      ).toBe(CARE_REQUEST_COPY.refusal.final);
+    expect((await events(r.id)).map((e) => e.kind).sort()).toEqual([
+      "accepted",
+      "cancelled",
+      "routed",
+    ]);
   });
 
   it("only the requester cancels", async () => {
     const neph = await department(pg, h, "Nephrology");
     const mo = await member(neph);
     const r = await placed("consult", neph);
+    await as(mo, r.id, (c) => acceptRequest(c, { clientKey: key(), expectInMin: 15 }));
     expect(
       await code(as(mo, r.id, (c) => cancelRequest(c, { clientKey: key(), reasonCode: "other" }))),
     ).toBe("forbidden");
@@ -371,10 +444,7 @@ describe.skipIf(!laneOn)("the care request lifecycle (PGlite lane)", () => {
       cancelRequest(c, { clientKey: key(), reasonCode: "entered_in_error" }),
     );
     expect(await stateOf(r.id)).toBe("cancelled");
-    const notice = await pg.query<{ kind: string }>(
-      `SELECT kind FROM sa_notifications WHERE related_id = $1 AND recipient_user_id = $2 ORDER BY delivered_at`,
-      [r.id, mo.userId],
-    );
-    expect(notice.rows.map((n) => n.kind)).toEqual(["care_request", "care_request_update"]);
+    // The owner is also a recipient: one notice, not two.
+    expect(await noticesOf(r.id, mo.userId)).toEqual(["care_request", "care_request_update"]);
   });
 });

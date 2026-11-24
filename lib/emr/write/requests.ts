@@ -507,17 +507,31 @@ function must(c: RequestCtx, act: RequestAct): void {
   );
 }
 
-/** The event this client key already wrote on this request, if any. */
-async function replayedEvent(c: RequestCtx, clientKey: string): Promise<string | null> {
+/** The event this client key already wrote, if any: only the same act by the same person on this
+ *  request counts as the replay (R27), never a key alone. */
+async function replayedEvent(
+  c: RequestCtx,
+  clientKey: string,
+  kind: RequestEvent["kind"],
+): Promise<string | null> {
   const [e] = await c.tx
-    .select({ id: careRequestEvents.id, requestId: careRequestEvents.requestId })
+    .select({
+      id: careRequestEvents.id,
+      requestId: careRequestEvents.requestId,
+      kind: careRequestEvents.kind,
+      actorUserId: careRequestEvents.actorUserId,
+    })
     .from(careRequestEvents)
     .where(eq(careRequestEvents.clientKey, clientKey));
   if (!e) return null;
-  if (e.requestId !== c.request.id)
-    throw new EmrWriteError("conflict", "That key belongs to another request.");
+  if (e.requestId !== c.request.id || e.kind !== kind || e.actorUserId !== c.actor.userId)
+    throw new EmrWriteError("conflict", CARE_REQUEST_COPY.refusal.replay_mismatch);
   return e.id;
 }
+
+/** The events of the current round (after the last redirect). */
+const roundEvents = (c: RequestCtx) =>
+  c.events.slice(c.events.findLastIndex((e) => e.kind === "redirected") + 1);
 
 async function writeEvent(
   c: RequestCtx,
@@ -558,10 +572,7 @@ const tidy = (note: string | undefined) => (note?.trim() ? encrypt(note.trim()) 
 export async function markSeen(c: RequestCtx): Promise<void> {
   must(c, "seen");
   if (!c.who.recipient) return;
-  const since = c.events.findLastIndex((e) => e.kind === "redirected");
-  const already = c.events
-    .slice(since + 1)
-    .some((e) => e.kind === "seen" && e.actorUserId === c.actor.userId);
+  const already = roundEvents(c).some((e) => e.kind === "seen" && e.actorUserId === c.actor.userId);
   if (!already) await writeEvent(c, { kind: "seen" });
 }
 
@@ -569,7 +580,7 @@ export async function acceptRequest(
   c: RequestCtx,
   i: { clientKey: string; expectInMin: 15 | 30 | 60 | null },
 ): Promise<{ id: string }> {
-  const replay = await replayedEvent(c, i.clientKey);
+  const replay = await replayedEvent(c, i.clientKey, "accepted");
   if (replay) return { id: replay };
   must(c, "accept");
   const expectAt = i.expectInMin ? new Date(c.now.getTime() + i.expectInMin * 60_000) : null;
@@ -580,9 +591,11 @@ export async function declineRequest(
   c: RequestCtx,
   i: { clientKey: string; reasonCode: DeclineReason; note?: string },
 ): Promise<{ id: string }> {
-  const replay = await replayedEvent(c, i.clientKey);
+  const replay = await replayedEvent(c, i.clientKey, "declined");
   if (replay) return { id: replay };
   must(c, "decline");
+  if (roundEvents(c).some((e) => e.kind === "declined" && e.actorUserId === c.actor.userId))
+    throw new EmrWriteError("conflict", CARE_REQUEST_COPY.refusal.already_declined);
   const id = await writeEvent(c, {
     kind: "declined",
     reasonCode: i.reasonCode,
@@ -604,7 +617,7 @@ export async function redirectRequest(
   c: RequestCtx,
   i: { clientKey: string; departmentId: string; reasonCode: RedirectReason; note?: string },
 ): Promise<{ id: string }> {
-  const replay = await replayedEvent(c, i.clientKey);
+  const replay = await replayedEvent(c, i.clientKey, "redirected");
   if (replay) return { id: replay };
   must(c, "redirect");
   const [dept] = await c.tx
@@ -648,12 +661,12 @@ export async function redirectRequest(
   return { id };
 }
 
-/** Requester only, until a reply. The current recipients are told. */
+/** Requester only, until a reply. The current recipients and the owner are told. */
 export async function cancelRequest(
   c: RequestCtx,
   i: { clientKey: string; reasonCode: CancelReason; note?: string },
 ): Promise<{ id: string }> {
-  const replay = await replayedEvent(c, i.clientKey);
+  const replay = await replayedEvent(c, i.clientKey, "cancelled");
   if (replay) return { id: replay };
   must(c, "cancel");
   const id = await writeEvent(c, {
@@ -662,13 +675,9 @@ export async function cancelRequest(
     noteCiphertext: tidy(i.note),
     clientKey: i.clientKey,
   });
-  await notifyRecipients(
-    c,
-    c.request.id,
-    c.derived.recipients,
-    "care_request_update",
-    await placeOf(c),
-  );
+  const told = new Set(c.derived.recipients);
+  if (c.derived.ownerUserId) told.add(c.derived.ownerUserId);
+  await notifyRecipients(c, c.request.id, [...told], "care_request_update", await placeOf(c));
   return { id };
 }
 
@@ -677,7 +686,7 @@ export async function closeRequest(
   c: RequestCtx,
   i: { clientKey: string },
 ): Promise<{ id: string }> {
-  const replay = await replayedEvent(c, i.clientKey);
+  const replay = await replayedEvent(c, i.clientKey, "closed");
   if (replay) return { id: replay };
   must(c, "close");
   return { id: await writeEvent(c, { kind: "closed", clientKey: i.clientKey }) };
@@ -712,7 +721,7 @@ export async function replyToRequest(
   const c = await loadRequest(ctx.tx, ctx.actor, i.requestId, ctx.now);
   if (c.request.patientUserId !== i.patientUserId)
     throw new EmrWriteError("not_found", "Request not found for this patient.");
-  const replay = await replayedEvent(c, i.clientKey);
+  const replay = await replayedEvent(c, i.clientKey, "replied");
   if (replay) {
     const [e] = await ctx.tx
       .select({ noteId: careRequestEvents.noteId })
