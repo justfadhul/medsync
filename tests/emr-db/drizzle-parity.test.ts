@@ -49,7 +49,6 @@ const LEGACY_STALE_CHECKS = new Set([
   "user_roles_role_check",
   "sa_audit_log_action_check",
   "sa_audit_log_target_kind_check",
-  "sa_notifications_kind_check",
 ]);
 
 const dialect = new PgDialect();

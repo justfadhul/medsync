@@ -5,6 +5,18 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); version
 
 ## [Unreleased]
 
+### Added — Review requests and consults ([ADR 0533](docs/adr/0533-one-request-record-for-reviews-and-consults.md), [0535](docs/adr/0535-care-team-chart-access.md), [0537](docs/adr/0537-requests-ride-the-plan-basket.md)) — 24 Nov 2026
+
+Senior review and "ask another team" become real requests, placed with the Plan and answered by a signed note. Behind `CARE_REQUESTS` (off by default; needs `EMR_V1`, the Plan entry also needs `CLERKING_PLAN_V2`). Wording is draft.
+
+- **Migration 0306 is GATED:** apply it before turning the flag on, with `cd <the worktree of this branch> && npm run db:migrate` (run it in the folder that holds the migration). It adds `care_requests` and `care_request_events`, the `consult` note type, three notice kinds, and the `care_team` chart-access basis.
+- One request record for both kinds, state derived from its events. Seen is not acknowledged; accept, decline (with a reason), redirect, reply, close and cancel are separate acts. The requesting team stays responsible.
+- Routing: named people, then the team list (reviews to senior cadres), the requester's supervisor, the department head, hospital contacts, else "Reached nobody: phone the team". Skips are recorded. No request reaches a pharmacist.
+- Requests ride the Plan basket and Place, all or nothing. "Not needed" asks why. The nurse in charge is told at admission.
+- Chart access for the people asked, while open and 30 days after the reply; decliners and earlier rounds lose it but still read the request. Every open is logged.
+- The doctor workspace board gains "Asked of you" and "Consults for your department" lanes; doctors and clinicians both get a requests page (`/doctor/requests`, `/clinician/requests`); a staff notices list. Restricted requests without a chart basis are nameless, with no MRN.
+- Open for the owner/CSO: restricted (HIV/TB) requests readable by the whole target department; chart access with no time limit on an open request; Phase 1 consults with no named person reach the whole department; all wording.
+
 ### Changed — Clinic floor: triage is a centred pop-up with scores, the NEWS2 map and trends — 23 Nov 2026
 
 From the owner's approved clickable prototype ([ADR 0531](docs/adr/0531-clinic-floor-triage-is-a-pop-up.md)); it replaces the floor's triage side panel. Seen on localhost with example patients at a test hospital. Wording is draft.
