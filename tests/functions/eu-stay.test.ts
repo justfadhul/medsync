@@ -19,18 +19,30 @@ const RETRY = "Someone changed this patient just now. Try again.";
 describe("ha-eu-stay — send to the EU", () => {
   const src = stripComments(fn("ha-eu-stay"));
 
-  it("authorises exactly as ha-complete-encounter", () => {
-    expect(src).toContain("caller.id === enc.clinician_user_id");
-    expect(src).toContain('hasRole(caller.id, "hospital_admin", enc.hospital_id)');
-    expect(src).toContain("requireHospitalAdminScope(caller.id, enc.hospital_id)");
+  // R58: sending to the EU is a clinical decision, the encounter's own clinician's.
+  it("an admin or superadmin caller is forbidden: no admin arm", () => {
+    expect(src).not.toContain("hospital_admin");
+    expect(src).not.toContain("superadmin");
+    expect(src).not.toContain("requireHospitalAdminScope");
+    expect(src).not.toContain("hasRole");
   });
 
-  it("the encounter's clinician must still be clinical staff at the encounter's hospital", () => {
-    const own = src.slice(src.indexOf("caller.id === enc.clinician_user_id"));
-    expect(own).toContain('.from("staff_affiliations")');
-    expect(own).toContain('.eq("hospital_id", enc.hospital_id)');
-    expect(own).toContain('.eq("cadres.is_clinical", true)');
-    expect(own).toContain("isOwner = !!aff");
+  it("another clinician is forbidden: only the encounter's clinician", () => {
+    expect(src).toContain("if (caller.id !== enc.clinician_user_id) return forbidden(init);");
+  });
+
+  it("the owner is allowed only with a live clinical affiliation at the encounter's hospital", () => {
+    const own = src.slice(src.indexOf("if (caller.id !== enc.clinician_user_id)"));
+    const aff = own.slice(
+      own.indexOf('.from("staff_affiliations")'),
+      own.indexOf("recordSaAudit({"),
+    );
+    expect(aff).toContain('.eq("user_id", caller.id)');
+    expect(aff).toContain('.eq("hospital_id", enc.hospital_id)');
+    expect(aff).toContain('.in("state", ["active", "approved"])');
+    expect(aff).toContain('.eq("cadres.is_clinical", true)');
+    expect(aff).toContain("code: affErr.code");
+    expect(aff).toContain("if (!aff) return forbidden(init);");
   });
 
   it("refuses when the flag is off, before anything is written", () => {
@@ -71,7 +83,17 @@ describe("ha-complete-encounter — the close ends the EU stay", () => {
     expect(src).toContain('.eq("patient_user_id", enc.patient_user_id)');
     expect(src).toContain('.neq("status", "ended")');
     expect(src).toContain(".or(`encounter_id.eq.${enc.id},encounter_id.is.null`)");
-    expect(src).toContain('"42P01"');
+    expect(src).toContain(
+      'const missingTable = (code?: string) => code === "42P01" || code === "PGRST205";',
+    );
+    expect(src.match(/missingTable\(euLookup\.error/g)?.length).toBe(2);
+  });
+
+  it("a close refused by the database's EU guard returns its words (R59)", () => {
+    const update = src.slice(src.indexOf('.update({\n        state: "completed"'));
+    expect(update).toMatch(
+      /if \(e1\) \{\s*const words = euRefusal\(e1\);\s*if \(words\) return badRequest\(words, init\);/,
+    );
   });
 
   it("refuses a non-clinical close and an admission while the patient is in the EU, before the audit", () => {

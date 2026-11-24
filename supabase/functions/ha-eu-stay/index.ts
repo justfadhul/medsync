@@ -6,14 +6,14 @@
  *     note). One SQL transaction (observe_in_eu, 0311) writes the stay, the space and the event; an open
  *     triage stay of the patient's is adopted.
  *
- * Auth as ha-complete-encounter: the clinician on the encounter (still clinical staff at its hospital),
- * hospital_admin (scoped), or superadmin.
+ * Auth (R58): sending is a clinical decision, so only the encounter's own clinician, with a live clinical
+ * affiliation at the encounter's hospital. No admin or superadmin arm.
  * Off (EU_OBSERVATION not set for the hospital) it refuses. Refusals return the SQL's words after
  * "EU4xx "; a deadlock asks to try again; a database message never reaches the caller or the log.
  */
 import { z } from "npm:zod@4.4.3";
 
-import { getCaller, hasRole, serviceClient } from "../_shared/auth.ts";
+import { getCaller, serviceClient } from "../_shared/auth.ts";
 import { preflight } from "../_shared/cors.ts";
 import {
   badRequest,
@@ -26,7 +26,6 @@ import {
   unauthorized,
 } from "../_shared/errors.ts";
 import { euObservationOn, euRefusal } from "../_shared/eu.ts";
-import { requireHospitalAdminScope } from "../_shared/hospital-admin-scope.ts";
 import { makeLogger } from "../_shared/logger.ts";
 import { networkContext, recordSaAudit } from "../_shared/sa-audit.ts";
 
@@ -84,28 +83,22 @@ Deno.serve(async (request: Request) => {
   }
   if (!enc) return notFound(init, "encounter not found");
 
-  const isSuperadmin = await hasRole(caller.id, "superadmin");
-  // The encounter's clinician, still clinical staff at its hospital (ha-start-encounter's affiliation check).
-  let isOwner = caller.id === enc.clinician_user_id;
-  if (isOwner && !isSuperadmin) {
-    const { data: aff } = await sb
-      .from("staff_affiliations")
-      .select("id, cadres!inner(is_clinical)")
-      .eq("user_id", caller.id)
-      .eq("hospital_id", enc.hospital_id)
-      .in("state", ["active", "approved"])
-      .eq("cadres.is_clinical", true)
-      .limit(1)
-      .maybeSingle();
-    isOwner = !!aff;
+  // A clinical decision (R58): only the encounter's own clinician, still clinical staff at its hospital.
+  if (caller.id !== enc.clinician_user_id) return forbidden(init);
+  const { data: aff, error: affErr } = await sb
+    .from("staff_affiliations")
+    .select("id, cadres!inner(is_clinical)")
+    .eq("user_id", caller.id)
+    .eq("hospital_id", enc.hospital_id)
+    .in("state", ["active", "approved"])
+    .eq("cadres.is_clinical", true)
+    .limit(1)
+    .maybeSingle();
+  if (affErr) {
+    log.error("affiliation read failed", { requestId, code: affErr.code });
+    return serverError("affiliation read failed", init);
   }
-  if (!isSuperadmin && !isOwner) {
-    if (!(await hasRole(caller.id, "hospital_admin", enc.hospital_id))) {
-      return forbidden(init);
-    }
-    const scope = await requireHospitalAdminScope(caller.id, enc.hospital_id);
-    if (!scope.ok) return forbidden(init, scope.reason);
-  }
+  if (!aff) return forbidden(init);
   if (!euObservationOn(Deno.env.get("EU_OBSERVATION"), enc.hospital_id)) {
     return conflict("The emergency unit is not switched on at this hospital.", init);
   }

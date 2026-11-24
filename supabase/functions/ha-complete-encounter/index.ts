@@ -198,7 +198,8 @@ Deno.serve(async (request: Request) => {
   }
 
   // EU (ADR 0541): the open stay this visit may end, its own or a triage stay with no encounter yet. Another
-  // visit's stay is left alone. Before 0311 the table is missing (42P01): no stay, the close is as before.
+  // visit's stay is left alone. Before 0311 the table is missing (42P01, or PGRST205 from PostgREST 12.2+): no stay, the close is as before.
+  const missingTable = (code?: string) => code === "42P01" || code === "PGRST205";
   const euLookup = await sb
     .from("eu_stays")
     .select("id")
@@ -207,11 +208,13 @@ Deno.serve(async (request: Request) => {
     .neq("status", "ended")
     .or(`encounter_id.eq.${enc.id},encounter_id.is.null`)
     .maybeSingle();
-  if (euLookup.error && euLookup.error.code !== "42P01") {
+  if (euLookup.error && !missingTable(euLookup.error.code)) {
     log.error("eu stay lookup failed", { requestId, code: euLookup.error.code });
     return serverError("encounter update failed", init);
   }
-  const euStayId = euLookup.error ? null : ((euLookup.data?.id as string | undefined) ?? null);
+  const euStayId = missingTable(euLookup.error?.code)
+    ? null
+    : ((euLookup.data?.id as string | undefined) ?? null);
   if (euStayId && !clinical) {
     return badRequest(
       "This patient is in the emergency unit. Close the visit with an outcome; that ends the EU stay.",
@@ -276,9 +279,10 @@ Deno.serve(async (request: Request) => {
       },
     });
     if (r.error) {
-      const m = /^AD(400|404|409) (.*)$/s.exec(r.error.message);
-      if (m) return badRequest(m[2]!, init);
-      log.error("admission failed", { requestId, reason: r.error.message });
+      // AD4xx words, and the EU guard's (a stay sent meanwhile, R59); never the database's message.
+      const words = euRefusal(r.error);
+      if (words) return badRequest(words, init);
+      log.error("admission failed", { requestId, name: r.error.name, code: r.error.code });
       return serverError("admission failed", init);
     }
     admitted = r.data as Record<string, unknown>;
@@ -384,7 +388,10 @@ Deno.serve(async (request: Request) => {
       .in("state", fromStates)
       .select("id");
     if (e1) {
-      log.error("encounter update failed", { requestId, reason: e1.message });
+      // A stay sent meanwhile: the database's EU guard refuses the close in words (0311 section 8, R59).
+      const words = euRefusal(e1);
+      if (words) return badRequest(words, init);
+      log.error("encounter update failed", { requestId, name: e1.name, code: e1.code });
       return serverError("encounter update failed", init);
     }
     if (!closed?.length) return badRequest("The encounter was closed meanwhile.", init);

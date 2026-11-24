@@ -1014,6 +1014,48 @@ describe.skipIf(!laneOn)("0311 — the EU stay on real SQL", () => {
     expect(await refusal("end_eu_stay", end(done))).toBe("EU409 This visit is not in progress.");
     expect(await stayRow(t.s)).toEqual(before);
   });
+
+  /* R59: a close that raced a send (it looked for a stay before observe_in_eu committed one) is refused under the
+     encounter's row lock, so no open stay is left on a completed visit. */
+  it("completing a visit whose stay is open is refused; end_eu_stay and other visits still complete", async () => {
+    const { ward, beds } = await newWard(["T1"]);
+    const { p, e } = await visit();
+    const r = await call("observe_in_eu", {
+      encounter_id: e,
+      actor: doctor,
+      ward_id: ward,
+      bed_id: beds["T1"],
+    });
+    const complete = (id: string) =>
+      pg.query(`UPDATE public.encounters SET state = 'completed', ended_at = now() WHERE id = $1`, [
+        id,
+      ]);
+    await expect(complete(e)).rejects.toThrow(
+      "EU409 This patient is in the emergency unit. Close the visit with an outcome; that ends the EU stay.",
+    );
+    expect((await row(`SELECT state FROM public.encounters WHERE id=$1`, [e])).state).toBe(
+      "in_progress",
+    );
+    expect((await stayRow(r.stay_id)).status).toBe("in_space");
+
+    // Another visit of the same patient (a clinic the same day) closes as usual and leaves the stay alone.
+    const clinic = await encounter(pg, {
+      hospitalId: h,
+      patientUserId: p,
+      clinicianUserId: doctor,
+    });
+    await complete(clinic);
+    expect((await row(`SELECT state FROM public.encounters WHERE id=$1`, [clinic])).state).toBe(
+      "completed",
+    );
+    expect((await stayRow(r.stay_id)).status).toBe("in_space");
+
+    // The stay's own close ends the stay first, in the same transaction, so it passes.
+    expect(await call("end_eu_stay", end(e))).toMatchObject({ ended: true });
+    expect((await row(`SELECT state FROM public.encounters WHERE id=$1`, [e])).state).toBe(
+      "completed",
+    );
+  });
 });
 
 /* R57: one lock order across 0311's EU functions, encounter → stay → assignment, so two of them never deadlock.

@@ -17,9 +17,11 @@
 --      and confirm_bed_arrival widened to an EU space.
 --   6. move_eu_space and end_eu_stay (the stay ends with the close of its own encounter, in one transaction).
 --   7. Audit verbs (send_to_eu, move_eu_space, end_eu_stay) and grants: the functions run on the service role only.
+--   8. encounters_eu_stay_close_guard: a visit whose own stay is open completes only through end_eu_stay (R59).
 --
 -- ADDITIVE and re-runnable.
--- Reverse: drop bed_assignments.eu_stay_id (and its check), restore 0091's arrival check and guard; drop eu_stays.
+-- Reverse: drop encounters_eu_stay_close_guard; drop bed_assignments.eu_stay_id (and its check), restore 0091's
+-- arrival check and guard; drop eu_stays.
 
 -- ─── 1. eu_stays ─────────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS public.eu_stays (
@@ -660,3 +662,27 @@ BEGIN
     EXECUTE format('GRANT EXECUTE ON FUNCTION public.%s TO service_role', f);
   END LOOP;
 END $$;
+
+-- ─── 8. A visit with an open stay closes only through end_eu_stay (R59) ─
+-- A close that looked for a stay before observe_in_eu committed one is refused here, under the encounter's row
+-- lock, so no open stay is left on a completed visit. end_eu_stay ends the stay before it closes the visit, in the
+-- same transaction, so it passes; a stay that boards (admission_id set) is ended by the arrival, not here.
+CREATE OR REPLACE FUNCTION public.encounters_eu_stay_close_guard()
+  RETURNS trigger
+  LANGUAGE plpgsql
+  SECURITY DEFINER
+  SET search_path = ''
+AS $$
+BEGIN
+  IF NEW.state = 'completed' AND OLD.state IS DISTINCT FROM 'completed'
+     AND EXISTS (SELECT 1 FROM public.eu_stays
+                  WHERE encounter_id = NEW.id AND status <> 'ended' AND admission_id IS NULL) THEN
+    RAISE EXCEPTION 'EU409 This patient is in the emergency unit. Close the visit with an outcome; that ends the EU stay.'
+      USING ERRCODE = 'check_violation', HINT = 'eu_close_with_outcome';
+  END IF;
+  RETURN NEW;
+END;
+$$;
+DROP TRIGGER IF EXISTS encounters_eu_stay_close_guard ON public.encounters;
+CREATE TRIGGER encounters_eu_stay_close_guard BEFORE UPDATE OF state ON public.encounters
+  FOR EACH ROW EXECUTE FUNCTION public.encounters_eu_stay_close_guard();
