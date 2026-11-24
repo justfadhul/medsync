@@ -708,6 +708,7 @@ describe.skipIf(!laneOn)("the prescriber answers the pharmacy (PGlite lane)", ()
           encounterId: v.enc,
           orders: [],
           prescriptions: [rx],
+          requests: [],
           observationFrequency: null,
           measureUrine: false,
         }),

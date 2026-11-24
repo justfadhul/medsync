@@ -2,12 +2,13 @@
 
 import { z } from "zod";
 
-import { OBS_FREQUENCIES, PlanOrderLineSchema } from "@/lib/clerking/plan/draft";
+import { OBS_FREQUENCIES, PlanOrderLineSchema, PlanRequestLineSchema } from "@/lib/clerking/plan/draft";
 import { clerkingPlanV2LiveFor, emrPrescribingLive } from "@/lib/emr/feature";
 import { EmrWriteError } from "@/lib/emr/write/context";
 import { runEmrWrite } from "@/lib/emr/write/orders";
 import * as write from "@/lib/emr/write/plan";
 import { PlanRxSchema } from "@/lib/prescribing/plan-rx";
+import { careRequestsLiveFor } from "@/lib/requests/feature";
 
 /**
  * The Plan's writes (ADRs 0184, 0186, 0189). Zod → requireEmrActor → EMR_V1 → CLERKING_PLAN_V2
@@ -25,6 +26,7 @@ const PlacePlan = z.object({
   encounterId: uuid,
   orders: z.array(PlanOrderLineSchema).max(40),
   prescriptions: z.array(PlanRxSchema).max(40),
+  requests: z.array(PlanRequestLineSchema).max(10).default([]),
   observationFrequency: obs,
   measureUrine: z.boolean(),
 });
@@ -45,6 +47,8 @@ export async function placePlan(raw: unknown) {
     if (!clerkingPlanV2LiveFor(ctx.actor.hospitalId)) throw new EmrWriteError("config", OFF);
     if (input.prescriptions.length && !emrPrescribingLive(ctx.actor.hospitalId))
       throw new EmrWriteError("config", RX_OFF);
+    if (input.requests.length && !careRequestsLiveFor(ctx.actor.hospitalId))
+      throw new EmrWriteError("config", "Requests are not switched on here.");
     return write.placePlan(ctx, input);
   });
 }

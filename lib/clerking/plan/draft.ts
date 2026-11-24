@@ -23,7 +23,7 @@ export const DISPOSITIONS = ["admit", "observe_eu", "refer", "discharge"] as con
 export type Disposition = (typeof DISPOSITIONS)[number];
 export const OBS_FREQUENCIES = ["continuous", "hourly", "4h", "12h"] as const;
 export type ObsFrequencyChoice = (typeof OBS_FREQUENCIES)[number];
-export const SENIOR_REVIEW = ["now", "within_1h", "routine"] as const;
+export const SENIOR_REVIEW = REVIEW_URGENCIES;
 export type SeniorReview = (typeof SENIOR_REVIEW)[number];
 
 export const PlanOrderLineSchema = z.object({
@@ -119,8 +119,11 @@ export const PlanSchema = z.object({
     .object({
       orders: z.array(PlanOrderLineSchema).max(40),
       prescriptions: z.array(PlanBasketRxSchema).max(40),
+      requests: z.array(PlanRequestLineSchema).max(10).optional(),
     })
     .optional(),
+  /** Why no senior review is asked for (the checklist's other way to settle it). */
+  seniorReviewNotNeeded: text(300).optional(),
   talkedThrough: z.record(id, z.boolean()).optional(),
   followUp: z
     .object({
@@ -140,4 +143,8 @@ export type PlanDraft = z.infer<typeof PlanSchema>;
 
 export const EMPTY_PLAN: PlanDraft = {};
 
-export const basketOf = (d: PlanDraft) => d.basket ?? { orders: [], prescriptions: [] };
+export const basketOf = (d: PlanDraft) => ({
+  orders: d.basket?.orders ?? [],
+  prescriptions: d.basket?.prescriptions ?? [],
+  requests: d.basket?.requests ?? [],
+});

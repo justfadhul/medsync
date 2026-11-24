@@ -12,7 +12,7 @@ import { z } from "zod";
 import { ContentV2Keys } from "@/lib/clerking/payload";
 import { checklist, planFingerprint, planStatus, statusWord } from "@/lib/clerking/plan/checklist";
 import { composePlanLines } from "@/lib/clerking/plan/compose";
-import { PlanRequestLineSchema, PlanSchema } from "@/lib/clerking/plan/draft";
+import { basketOf, PlanRequestLineSchema, PlanSchema } from "@/lib/clerking/plan/draft";
 import {
   lessOftenThanRequired,
   requiredObservation,
@@ -419,6 +419,11 @@ describe("request lines in the basket (ADR 0537)", () => {
     reasonConditionIds: [],
     question: "",
   };
+
+  it("drafts saved before requests still parse", () => {
+    const d = PlanSchema.parse({ basket: { orders: [], prescriptions: [] } });
+    expect(basketOf(d).requests).toEqual([]);
+  });
 
   it("a consult line needs help wanted, a problem and a question", () => {
     expect(PlanRequestLineSchema.safeParse(consult).success).toBe(true);
