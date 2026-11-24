@@ -67,4 +67,20 @@ describe("euReport", () => {
     expect(r.lengthOfStay).toEqual({ medianMin: 60, p90Min: 60, n: 20 });
     expect(r.overLimit.denominator).toBe(20);
   });
+  it("an unparsable decidedAt does not corrupt the measures", () => {
+    const r = euReport([...many(20, () => ({ endedAt: iso(60) })), stay({ decidedAt: "nonsense" })], window, 24);
+    expect(r.lengthOfStay).toEqual({ medianMin: 60, p90Min: 60, n: 20 });
+    expect(r.overLimit.denominator).toBe(20);
+  });
+  it("a death before arrival, or with an unparsable time, counts in noArrivalTime only", () => {
+    const before = stay({ hospitalArrivedAt: iso(100), endedAt: iso(50), endKind: "died" });
+    const nan = stay({ hospitalArrivedAt: "nonsense", endedAt: iso(50), endKind: "died" });
+    expect(euReport([before, nan], window, 24).deaths).toEqual({ within2h: 0, within8h: 0, within24h: 0, noArrivalTime: 2 });
+  });
+  it("a length-of-stay-skewed admitted stay still counts in boarding", () => {
+    const s = many(20, () => ({ endKind: "admitted", decidedAt: iso(100), admissionDecidedAt: iso(0), endedAt: iso(60) }));
+    const r = euReport(s, window, 24);
+    expect(r.lengthOfStay.n).toBe(0);
+    expect(r.boarding).toEqual({ medianMin: 60, p90Min: 60, n: 20 });
+  });
 });

@@ -50,21 +50,22 @@ export function euReport(stays: EuReportStay[], window: ReportWindow, limitHours
   for (const s of inWindow) {
     if (!s.endedAt) continue;
     const end = Date.parse(s.endedAt);
+    const usable = (d: number) => Number.isFinite(d) && d >= 0;
     if (s.endKind === "died") {
-      if (!s.hospitalArrivedAt) deaths.noArrivalTime++;
+      // noArrivalTime means no usable arrival time (null, unparsable, or after the end).
+      const d = s.hospitalArrivedAt ? end - Date.parse(s.hospitalArrivedAt) : NaN;
+      if (!usable(d)) deaths.noArrivalTime++;
       else {
-        const d = end - Date.parse(s.hospitalArrivedAt);
         if (d <= 2 * HOUR_MS) deaths.within2h++;
         if (d <= 8 * HOUR_MS) deaths.within8h++;
         if (d <= 24 * HOUR_MS) deaths.within24h++;
       }
     }
     const los = end - Date.parse(s.decidedAt);
-    if (los < 0) continue; // clock skew: counted nowhere
-    stayMs.push(los);
+    if (usable(los)) stayMs.push(los);
     if (s.endKind === "admitted" && s.admissionDecidedAt) {
       const b = end - Date.parse(s.admissionDecidedAt);
-      if (b >= 0) boardMs.push(b);
+      if (usable(b)) boardMs.push(b);
     }
   }
   return {
