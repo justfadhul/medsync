@@ -8,6 +8,7 @@ import {
   nurseAssignBed,
   nurseConfirmArrival,
   nurseReleaseAdmissionBed,
+  nurseMoveEuSpace,
   nurseReleaseBed,
   nurseSetBedState,
 } from "./actions";
@@ -19,6 +20,7 @@ const ACTIONS = {
   allocate: nurseAllocateAdmissionBed,
   confirmArrival: nurseConfirmArrival,
   releaseAdmission: nurseReleaseAdmissionBed,
+  moveEu: nurseMoveEuSpace,
 };
 const LINKS = {
   crumbs: [{ label: "Nursing", href: "/nurse" }],

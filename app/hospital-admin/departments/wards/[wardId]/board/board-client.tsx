@@ -9,6 +9,7 @@ import {
   adminAssignBed,
   adminConfirmArrival,
   adminReleaseAdmissionBed,
+  adminMoveEuSpace,
   adminReleaseBed,
   adminSetBedState,
 } from "../actions";
@@ -22,6 +23,7 @@ const ACTIONS = {
   allocate: adminAllocateAdmissionBed,
   confirmArrival: adminConfirmArrival,
   releaseAdmission: adminReleaseAdmissionBed,
+  moveEu: adminMoveEuSpace,
 };
 const LINKS = {
   crumbs: [{ label: WARDS.builder.crumb, href: `${HUB}/wards` }],

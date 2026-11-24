@@ -173,6 +173,7 @@ export function boardData(
       services: [...b.services],
       roomKind: room?.kind ?? null,
       roomName: room?.name ?? null,
+      type: b.type,
       patient: arriving
         ? {
             name: viewer === "names" ? `Patient ${arriving.n}` : null,
@@ -191,6 +192,7 @@ export function boardData(
       admissionId: arriving
         ? `00000000-0000-4000-8000-${String(7000 + i).padStart(12, "0")}`
         : null,
+      euStayId: null,
       admittedBy: arriving ? "Dr Example Admitting" : null,
     };
   });

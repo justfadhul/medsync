@@ -1,6 +1,7 @@
 "use client";
 
 import type { SimpleResult } from "@/components/wards/editor/ward-editor";
+import type { WaitReason } from "@/lib/emr/closure";
 import type { BoardBed, BoardData, BoardWaiting } from "@/lib/wards/board";
 import type { BedState, SettableState } from "@/supabase/functions/_shared/ward-layout";
 import type { PointerEvent } from "react";
@@ -10,11 +11,15 @@ import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { XIcon } from "lucide-react";
 
 import { StatusWord } from "@/components/emr/status-word";
+import { EditorDialog } from "@/components/medsync/editor-dialog";
 import { Button } from "@/components/ui/button";
+import { DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { planAspect, PlanView } from "@/components/wards/plan/plan-view";
 import { PlanZoomControls, PlanZoomFrame, usePlanZoom } from "@/components/wards/plan/plan-zoom";
 import { WardHeader } from "@/components/wards/ward-header";
+import { EU_BOARD } from "@/content/eu/words";
 import { cn } from "@/lib/utils";
+import { moveTargets } from "@/lib/wards/eu-move";
 import { useBedBoardLive } from "@/lib/wards/use-board-live";
 import { ARRIVING_ATTENTION_MS, WAIT_REASON_WORDS } from "@/lib/wards/waiting";
 import { ago } from "@/lib/workspace/words";
@@ -51,6 +56,12 @@ export interface BoardActions {
     admissionId: string,
     reason: string,
     outcome: "wait" | "end",
+  ) => Promise<SimpleResult>;
+  /** An EU stay moves to a free space of this unit, or waits for one (only where the EU is live). */
+  moveEu?: (
+    wardId: string,
+    stayId: string,
+    target: { bedId?: string; waitReason?: WaitReason; waitNote?: string },
   ) => Promise<SimpleResult>;
 }
 
@@ -305,6 +316,7 @@ export function BedBoard({
                 mayAct={mayAct}
                 candidates={data.candidates}
                 waiting={data.waiting}
+                freeBeds={moveTargets(data.beds)}
                 actions={actions}
                 autoFocus={focusPanel}
                 onClose={() => {
@@ -432,6 +444,7 @@ function BedPanel({
   mayAct,
   candidates,
   waiting,
+  freeBeds,
   actions,
   autoFocus,
   onClose,
@@ -442,6 +455,8 @@ function BedPanel({
   mayAct: boolean;
   candidates: BoardData["candidates"];
   waiting: BoardData["waiting"];
+  /** This unit's free spaces, for Move. */
+  freeBeds: BoardBed[];
   actions: BoardActions;
   /** Focus the bed's heading on mount: chosen from a list, or back after an action changed it. */
   autoFocus: boolean;
@@ -464,6 +479,7 @@ function BedPanel({
   const [why, setWhy] = useState("");
   const [cancelling, setCancelling] = useState(false);
   const [outcome, setOutcome] = useState<"wait" | "end" | null>(null);
+  const [moving, setMoving] = useState(false);
   const run = (fn: () => Promise<SimpleResult>) => {
     setError(null);
     start(async () => {
@@ -488,6 +504,9 @@ function BedPanel({
   const out = bed.state === "out";
   // Free, Cleaning and Reserved: the states ward staff set, and where a patient can be put.
   const settable = !occupied && !arriving && !out;
+  // An EU space ends by the visit closing or a move, never Release; Move needs the action the page passed.
+  const eu = bed.euStayId != null;
+  const mayMove = mayAct && eu && !!actions.moveEu && !!bed.assignmentId;
   // An admission takes only a Free bed (the allocation refuses Cleaning and Reserved).
   const offer = bed.state === "free" ? waiting : [];
 
@@ -556,7 +575,7 @@ function BedPanel({
         </section>
       ) : null}
 
-      {mayAct && arriving && bed.assignmentId && bed.admissionId ? (
+      {mayAct && arriving && bed.assignmentId && (bed.admissionId || eu) ? (
         <Section title="When the patient is here">
           <div className="flex flex-wrap gap-2">
             <Button
@@ -566,20 +585,24 @@ function BedPanel({
             >
               Arrived
             </Button>
-            <Button
-              size="sm"
-              variant="secondary"
-              disabled={pending}
-              aria-expanded={cancelling}
-              onClick={() => setCancelling((v) => !v)}
-            >
-              Cancel…
-            </Button>
+            {bed.admissionId ? (
+              <Button
+                size="sm"
+                variant="secondary"
+                disabled={pending}
+                aria-expanded={cancelling}
+                onClick={() => setCancelling((v) => !v)}
+              >
+                Cancel…
+              </Button>
+            ) : null}
           </div>
           <p className="text-caption text-muted-foreground font-normal">
-            Arrived makes the bed Occupied and opens the patient&rsquo;s inpatient record.
+            {eu
+              ? EU_BOARD.arrivedNote
+              : "Arrived makes the bed Occupied and opens the patient\u2019s inpatient record."}
           </p>
-          {cancelling ? (
+          {cancelling && bed.admissionId ? (
             <div className="flex flex-col gap-1.5">
               <label htmlFor="cancel-why" className="text-caption text-ink-700">
                 Why the bed is no longer held
@@ -678,7 +701,31 @@ function BedPanel({
         </Section>
       ) : null}
 
-      {mayAct && occupied && bed.assignmentId ? (
+      {mayMove && (occupied || arriving) ? (
+        <Section title={EU_BOARD.moveSection}>
+          <div className="flex flex-wrap gap-2">
+            <Button
+              size="sm"
+              variant="secondary"
+              disabled={pending}
+              onClick={() => setMoving(true)}
+            >
+              {EU_BOARD.move}
+            </Button>
+          </div>
+          <MoveEuDialog
+            open={moving}
+            onOpenChange={setMoving}
+            from={bed.label}
+            freeBeds={freeBeds.filter((b) => b.key !== bed.key)}
+            pending={pending}
+            error={error}
+            onMove={(target) => run(() => actions.moveEu!(wardId, bed.euStayId!, target))}
+          />
+        </Section>
+      ) : null}
+
+      {mayAct && occupied && bed.assignmentId && !eu ? (
         <Section title="Take the patient out of this bed">
           <label htmlFor="release-why" className="text-caption text-ink-700">
             Why
@@ -805,6 +852,110 @@ function BedPanel({
 }
 
 /* ─── one admitted patient waiting for a bed ─────────────────────────── */
+
+/** Move an EU patient: a free space of this unit as a chip, or the reason they wait for one. */
+function MoveEuDialog({
+  open,
+  onOpenChange,
+  from,
+  freeBeds,
+  pending,
+  error,
+  onMove,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  from: string;
+  freeBeds: BoardBed[];
+  pending: boolean;
+  error: string | null;
+  onMove: (target: { bedId?: string; waitReason?: WaitReason; waitNote?: string }) => void;
+}) {
+  const [bedId, setBedId] = useState<string | null>(null);
+  const [reason, setReason] = useState<WaitReason | null>(null);
+  const [note, setNote] = useState("");
+  const to = freeBeds.find((b) => b.bedId === bedId);
+  return (
+    <EditorDialog open={open} onOpenChange={onOpenChange} width="medium">
+      <DialogHeader className="p-4 pb-0">
+        <DialogTitle>{EU_BOARD.moveTitle(from)}</DialogTitle>
+      </DialogHeader>
+      <div className="flex flex-col gap-4 overflow-y-auto p-4">
+        <Section title={EU_BOARD.moveSpace}>
+          {freeBeds.length ? (
+            <div className="flex flex-wrap gap-1.5">
+              {freeBeds.map((b) => (
+                <Chip
+                  key={b.bedId}
+                  on={bedId === b.bedId}
+                  disabled={pending}
+                  onClick={() => {
+                    setBedId(b.bedId);
+                    setReason(null);
+                  }}
+                >
+                  {b.label}
+                </Chip>
+              ))}
+            </div>
+          ) : (
+            <p className="text-caption text-ink-600 font-normal">{EU_BOARD.noFreeSpace}</p>
+          )}
+        </Section>
+        <Section title={EU_BOARD.moveWait}>
+          <ChipChoice
+            label={EU_BOARD.waitWhy}
+            value={reason}
+            options={(Object.keys(WAIT_REASON_WORDS) as WaitReason[]).map((value) => ({
+              value,
+              label: WAIT_REASON_WORDS[value],
+            }))}
+            onChange={(v) => {
+              setReason(v);
+              setBedId(null);
+            }}
+          />
+          {reason ? (
+            <>
+              <label htmlFor="move-wait-note" className="text-caption text-ink-700">
+                {EU_BOARD.waitNote}
+              </label>
+              <input
+                id="move-wait-note"
+                className={inputClass}
+                value={note}
+                maxLength={500}
+                onChange={(e) => setNote(e.target.value)}
+              />
+            </>
+          ) : null}
+        </Section>
+        {error ? <CautionNote alert>{error}</CautionNote> : null}
+        {!to && !reason ? (
+          <p className="text-caption text-ink-600 font-normal">{EU_BOARD.chooseSpace}</p>
+        ) : null}
+      </div>
+      <DialogFooter className="p-4 pt-0">
+        <Button variant="ghost" size="sm" onClick={() => onOpenChange(false)}>
+          {EU_BOARD.keep}
+        </Button>
+        <Button
+          size="sm"
+          disabled={pending || (!to && !reason)}
+          onClick={() =>
+            onMove(
+              to
+                ? { bedId: to.bedId }
+                : { waitReason: reason!, ...(note.trim() ? { waitNote: note.trim() } : {}) },
+            )
+          }
+        >
+          {to ? EU_BOARD.moveSpaceAction(to.label) : EU_BOARD.moveWaitAction}
+        </Button>
+      </DialogFooter>
+    </EditorDialog>
+  );
+}
 
 function WaitingRow({
   w,

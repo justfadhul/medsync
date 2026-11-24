@@ -34,3 +34,21 @@ export const EU_SEND = {
   chooseSpace: "Choose a space, or say why the patient waits for one.",
   sayWhy: "Say why the patient waits.",
 } as const;
+
+/** The ward board: an EU space is Arrived and Moved, never Released. */
+export const EU_BOARD = {
+  arrivedNote:
+    "Arrived makes the space Occupied. The patient stays on their visit; nothing opens on an inpatient record.",
+  moveSection: "Move the patient",
+  move: "Move…",
+  moveTitle: (from: string) => `Move the patient out of ${from}`,
+  moveSpace: "To a free space",
+  noFreeSpace: "No free space in this unit now.",
+  moveWait: "Or wait for a space",
+  waitWhy: "Why the patient waits",
+  waitNote: "Note (optional)",
+  moveSpaceAction: (to: string) => `Move to ${to}`,
+  moveWaitAction: "Move to the waiting list",
+  keep: "Keep them here",
+  chooseSpace: "Choose a space, or say why the patient waits for one.",
+} as const;
