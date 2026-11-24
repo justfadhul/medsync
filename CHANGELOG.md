@@ -5,6 +5,28 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); version
 
 ## [Unreleased]
 
+### Added — Rota upkeep ([ADR 0538](docs/adr/0538-rota-upkeep.md)) — 24 Nov 2026
+
+Week templates, publishing, cover and swap requests, and a delegate who makes the rota. Behind `DUTY_ROTA`. Wording is draft.
+
+- **Migration 0309 is GATED:** apply it before using these, with `cd <the worktree of this branch> && npm run db:migrate` (run it in the folder that holds the migration). It adds `duty_rota_templates`, `duty_rota_delegates`, `duty_rota_week_events`, `duty_swap_requests` and `duty_swap_request_events`, replaces the assignment guard, and gives `private.duty_rota_maker()` a publish argument.
+- Templates fill a week with drafts, skipping any window the person already holds; a refused draft is reported and never stops the rest. A maker publishes a week and unlocks it with a reason; a published week refuses new or ended duties.
+- Cover and swap: the holder asks a colleague, the colleague accepts or declines, a rota maker approves or refuses; approval changes the rota in one step, all or nothing, and only for a cover-shaped write. No notices in v1.
+- Delegate: the admin or a head hands the rota over, with or without publish, until a day or revoked; it lapses when the grantor stops being an owner; live staff only; one per person per department. Delegates reach `/doctor/rota` and cannot hand it on.
+- Every refusal has words on screen, never a database message.
+- Open for the owner/CSO: non-doctor delegates (nurse managers) have no page yet; no notices for swaps; all wording.
+
+Later (Phase 5, not built):
+
+- FHIR ServiceRequest/Task/DocumentReference projection (`lib/emr/fhir.ts:461`);
+- staff SMS;
+- moving resus mobilisation (`lib/resus/mobilise.ts`) and the lab level-1 ladder onto the rota, with the SQL twin of `whoCovers`;
+- optional sign-on;
+- the D12 first-contact clinician;
+- the turnaround report;
+- the redirect prompt on admission cancel or ward change;
+- the admin activity-feed lines for the rota.
+
 ### Added — Escalation of unanswered requests ([ADR 0536](docs/adr/0536-escalation-of-unanswered-requests.md)) — 24 Nov 2026
 
 A review or consult nobody takes up moves to the next person, on the lab's one-minute tick. No flag: with no signed response times there is no automatic escalation. Wording is draft.
