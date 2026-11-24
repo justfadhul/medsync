@@ -20,3 +20,14 @@ export async function euStayLimitHours(hospitalId: string): Promise<number> {
   const v = row?.v;
   return typeof v === "number" && Number.isInteger(v) && v >= 1 ? v : EU_STAY_LIMIT_DEFAULT_HOURS;
 }
+
+/** The hospital's triage system code (`sats`, `etat`, ...) for the level words; null when unset. */
+export async function euTriageSystem(hospitalId: string): Promise<string | null> {
+  const [row] = await db
+    .select({ v: capabilityValues.value })
+    .from(capabilityValues)
+    .where(
+      and(eq(capabilityValues.hospitalId, hospitalId), eq(capabilityValues.key, "triage_system")),
+    );
+  return typeof row?.v === "string" ? row.v : null;
+}

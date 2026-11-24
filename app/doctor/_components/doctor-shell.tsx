@@ -8,7 +8,7 @@ import { Avatar } from "@/components/medsync/avatar";
 import { SIDEBAR_CLASS } from "@/components/medsync/sidebar-class";
 import { SidebarSearch, SidebarWorkspace } from "@/components/medsync/sidebar-nav";
 import { Tag } from "@/components/medsync/tag";
-import { DOCTOR_FEATURE_AREAS, doctorFeaturePath, WORKSPACE_NAV } from "../_lib/features";
+import { DOCTOR_FEATURE_AREAS, doctorFeaturePath, EU_NAV, WORKSPACE_NAV } from "../_lib/features";
 import { DoctorCommandBar, DoctorSidebarItem } from "./doctor-sidebar-item";
 import { EmergencyInlineLink } from "./emergency-inline-link";
 import { FullBleedGate } from "./full-bleed-gate";
@@ -58,6 +58,7 @@ export function DoctorShell({
   workspace = false,
   criticalCount = null,
   duty = null,
+  eu = false,
   children,
 }: {
   scope: DoctorScope;
@@ -69,15 +70,18 @@ export function DoctorShell({
   criticalCount?: number | null;
   /** The on-duty chip (DUTY_ROTA on, and the doctor is rostered now). */
   duty?: ReactNode;
+  /** EU_OBSERVATION is live for this hospital: the Emergency unit entry shows. */
+  eu?: boolean;
   children: ReactNode;
 }) {
-  const navItems = workspace
+  const baseNav = workspace
     ? WORKSPACE_NAV
     : DOCTOR_FEATURE_AREAS.filter((f) => {
         if (f.visibleTo === "senior") return scope.isSenior;
         if (f.visibleTo === "consultant") return scope.isConsultantLevel;
         return true;
       });
+  const navItems = eu ? [...baseNav, EU_NAV] : baseNav;
 
   return (
     <div className="bg-background text-foreground flex min-h-svh w-full">

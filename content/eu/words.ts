@@ -74,3 +74,42 @@ export const EU_LEVEL_WORDS = {
   etat: ["Emergency", "Priority", "Priority", "Queue", "Queue"],
   own: ["Red", "Orange", "Yellow", "Green", "Green"],
 } as const;
+
+/** The EU list on the boards and the doctor's EU view. DRAFT wording for the CSO. */
+export const EU_LIST = {
+  view: "Board view",
+  plan: "Plan",
+  list: "List",
+  title: "Emergency unit list",
+  needsAttention: "Needs attention",
+  empty: "Nobody is in this unit now.",
+  noSpace: "Waiting for a space",
+  overLimit: (hours: number) => `Over ${hours} h`,
+  resultsBack: "Results back",
+  resus: "Open resus",
+  noMrn: "No MRN",
+  continuous: "Continuous",
+  notSet: "Not set",
+  overdue: "overdue",
+  none: "None",
+  col: {
+    space: "Space",
+    patient: "Patient",
+    level: "Urgency",
+    inHospital: "In hospital",
+    inEu: "In EU",
+    inSpace: "In space",
+    boarding: "Boarding",
+    clinician: "Responsible clinician",
+    nextObs: "Next obs due",
+    results: "Results",
+    status: "Status",
+    resus: "Resus",
+  },
+  doctor: {
+    title: "Emergency unit",
+    noUnits: "This hospital has no emergency unit set up.",
+    notOnDuty: "The EU list shows to the EU doctor on duty, from the duty rota.",
+    units: "Emergency units",
+  },
+} as const;

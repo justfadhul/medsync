@@ -3,11 +3,14 @@
  * for the unit tests and the styleguide screenshots. Ids are fixed so snapshots are stable. MRNs are
  * made up in the MRN-YYYY-NNNNN shape; "Patient Three-3" style names are synthetic.
  */
+import type { EuListData } from "@/components/wards/board/eu-list";
+import type { EuStayInput } from "@/lib/eu/board";
 import type { BoardData } from "@/lib/wards/board";
 import type { LayoutEditorData } from "@/lib/wards/data";
 import type { RegisterBed } from "@/lib/wards/reconcile";
 import type { BedState, WardLayout } from "@/supabase/functions/_shared/ward-layout";
 
+import { euTracking } from "@/lib/eu/board";
 import { presetsFor } from "@/lib/wards/presets";
 import { arrivingTooLong } from "@/lib/wards/waiting";
 import { roomOfBed } from "@/supabase/functions/_shared/ward-layout";
@@ -232,4 +235,70 @@ export function boardData(
     ],
     needsAttention: arrivingTooLong(beds, BOARD_NOW),
   };
+}
+
+/** The EU list on synthetic stays: one over the limit, one waiting, one boarding. Names only when `names`. */
+export function euListData(names = true): EuListData {
+  const h = 3_600_000;
+  const at = (ms: number) => new Date(BOARD_NOW - ms).toISOString();
+  const base = {
+    wardId: FX.ward,
+    hospitalArrivedAt: null,
+    arriving: false,
+    obsFrequency: "hourly" as const,
+    resultsReady: false,
+    admission: null,
+    resusEpisodeId: null,
+    waitReason: null,
+    responsibleName: "Dr Example Admitting",
+  };
+  const who = (n: number) => ({
+    name: names ? `Patient ${n}` : null,
+    mrn: names ? `MRN-2026-0${1000 + n}` : null,
+  });
+  const stays: EuStayInput[] = [
+    {
+      ...base,
+      ...who(1),
+      stayId: "e1",
+      patientUserId: "p1",
+      status: "in_space",
+      decidedAt: at(26 * h),
+      hospitalArrivedAt: at(27 * h),
+      spaceStartedAt: at(25 * h),
+      bedLabel: "R1",
+      level: 2,
+      lastObsAt: at(30 * 60_000),
+      resultsReady: true,
+    },
+    {
+      ...base,
+      ...who(2),
+      stayId: "e2",
+      patientUserId: "p2",
+      status: "awaiting_space",
+      decidedAt: at(2 * h),
+      spaceStartedAt: null,
+      bedLabel: null,
+      level: 3,
+      lastObsAt: null,
+      waitReason: "no_free_bed",
+    },
+    {
+      ...base,
+      ...who(3),
+      stayId: "e3",
+      patientUserId: "p3",
+      status: "in_space",
+      decidedAt: at(5 * h),
+      spaceStartedAt: at(4 * h),
+      bedLabel: "R3",
+      level: 1,
+      lastObsAt: at(2 * h),
+      resusEpisodeId: "ep3",
+      admission: { wardName: "Medical Ward 1", decidedAt: at(h), status: "awaiting_bed" },
+    },
+  ];
+  const t = euTracking(stays, BOARD_NOW, 24);
+  return { rows: t.rows, needsAttention: t.needsAttention, limitHours: 24, names };
 }

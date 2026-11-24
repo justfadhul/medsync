@@ -1,5 +1,6 @@
 "use client";
 
+import type { EuListData } from "@/components/wards/board/eu-list";
 import type { SimpleResult } from "@/components/wards/editor/ward-editor";
 import type { WaitReason } from "@/lib/emr/closure";
 import type { BoardBed, BoardData, BoardWaiting } from "@/lib/wards/board";
@@ -14,10 +15,11 @@ import { StatusWord } from "@/components/emr/status-word";
 import { EditorDialog } from "@/components/medsync/editor-dialog";
 import { Button } from "@/components/ui/button";
 import { DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { EuList } from "@/components/wards/board/eu-list";
 import { planAspect, PlanView } from "@/components/wards/plan/plan-view";
 import { PlanZoomControls, PlanZoomFrame, usePlanZoom } from "@/components/wards/plan/plan-zoom";
 import { WardHeader } from "@/components/wards/ward-header";
-import { EU_BOARD } from "@/content/eu/words";
+import { EU_BOARD, EU_LIST } from "@/content/eu/words";
 import { cn } from "@/lib/utils";
 import { moveTargets } from "@/lib/wards/eu-move";
 import { useBedBoardLive } from "@/lib/wards/use-board-live";
@@ -138,6 +140,7 @@ export function BedBoard({
   initialSelected = null,
   live: liveOn = true,
   fit = "screen",
+  eu,
 }: {
   data: BoardData;
   hospitalId: string;
@@ -149,11 +152,22 @@ export function BedBoard({
   live?: boolean;
   /** `frame`: fill the admin frame's page (phase 2 of ADR 0520) instead of the screen under a 3rem top bar. */
   fit?: "screen" | "frame";
+  /** The EU tracking list for EU staff (ADR 0541): adds a Plan | List segment. Absent, the board is as it was. */
+  eu?: {
+    data: EuListData;
+    nowMs: number;
+    links: { resus: (episodeId: string) => string | null };
+    triageSystem?: string | null;
+    /** The view it opens in (the styleguide fixture). */
+    initialView?: "plan" | "list";
+  };
 }) {
   const router = useRouter();
   const zoom = usePlanZoom();
   const live = useBedBoardLive(hospitalId, data.ward.id, liveOn);
   const [selectedKey, setSelectedKey] = useState<string | null>(initialSelected);
+  const [view, setView] = useState<"plan" | "list">(eu?.initialView ?? "plan");
+  const showList = !!eu && view === "list";
   // A bed chosen from a list or a chip takes focus to its panel (the button that was pressed is
   // gone); closing the panel brings it back to that bed in "Every bed".
   const [focusPanel, setFocusPanel] = useState(false);
@@ -265,43 +279,76 @@ export function BedBoard({
                 Choose a bed to see its services or change its state. The layout is locked here
                 {links.layout ? "; switch to Build to edit it." : "."}
               </p>
-              <PlanZoomControls z={zoom} />
+              {eu ? (
+                <div role="group" aria-label={EU_LIST.view} className="flex gap-1">
+                  {(["plan", "list"] as const).map((v) => (
+                    <button
+                      key={v}
+                      type="button"
+                      aria-pressed={view === v}
+                      onClick={() => setView(v)}
+                      className={cn(
+                        "text-label focus-visible:shadow-focus h-7 rounded-sm border px-2.5 outline-none",
+                        view === v
+                          ? "bg-teal-tint text-teal-text border-teal-700"
+                          : "border-ink-300 bg-card text-foreground hover:bg-ink-50",
+                      )}
+                    >
+                      {EU_LIST[v]}
+                    </button>
+                  ))}
+                </div>
+              ) : null}
+              {showList ? null : <PlanZoomControls z={zoom} />}
             </div>
-            <div className="bg-ink-100 flex min-h-[280px] flex-1 flex-col p-3">
-              <PlanZoomFrame z={zoom} aspect={planAspect(data.doc.floor)} className="flex-1">
-                <PlanView
-                  doc={data.doc}
-                  mode="live"
-                  label={`Bed board of ${data.ward.name}: ${counts.occupied} of ${inService} beds occupied, ${counts.arriving} arriving, ${counts.free} free`}
-                  states={states}
-                  selected={selected ? { kind: "bed", key: selected.key } : null}
-                  className="h-full w-full"
-                  onPointerDown={onPointerDown}
+            {showList && eu ? (
+              <div className="bg-ink-100 min-h-0 flex-1 overflow-y-auto">
+                <EuList
+                  data={eu.data}
+                  nowMs={eu.nowMs}
+                  links={eu.links}
+                  triageSystem={eu.triageSystem}
                 />
-              </PlanZoomFrame>
-            </div>
-            <div className="border-border bg-card flex min-h-10 flex-wrap items-center gap-x-5 gap-y-1.5 border-t px-3 py-1.5">
-              {(
-                [
-                  [`${counts.occupied}/${inService}`, "occupied"],
-                  [String(counts.arriving), "arriving"],
-                  [String(counts.free), "free"],
-                  [String(counts.cleaning), "cleaning"],
-                  [String(counts.reserved), "reserved"],
-                  [String(counts.out), "out of service"],
-                ] as const
-              ).map(([v, l]) => (
-                <span
-                  key={l}
-                  className="text-caption text-muted-foreground inline-flex items-baseline gap-1.5 font-normal"
-                >
-                  <span className="text-foreground font-mono text-[14px] font-medium tabular-nums">
-                    {v}
-                  </span>
-                  {l}
-                </span>
-              ))}
-            </div>
+              </div>
+            ) : (
+              <>
+                <div className="bg-ink-100 flex min-h-[280px] flex-1 flex-col p-3">
+                  <PlanZoomFrame z={zoom} aspect={planAspect(data.doc.floor)} className="flex-1">
+                    <PlanView
+                      doc={data.doc}
+                      mode="live"
+                      label={`Bed board of ${data.ward.name}: ${counts.occupied} of ${inService} beds occupied, ${counts.arriving} arriving, ${counts.free} free`}
+                      states={states}
+                      selected={selected ? { kind: "bed", key: selected.key } : null}
+                      className="h-full w-full"
+                      onPointerDown={onPointerDown}
+                    />
+                  </PlanZoomFrame>
+                </div>
+                <div className="border-border bg-card flex min-h-10 flex-wrap items-center gap-x-5 gap-y-1.5 border-t px-3 py-1.5">
+                  {(
+                    [
+                      [`${counts.occupied}/${inService}`, "occupied"],
+                      [String(counts.arriving), "arriving"],
+                      [String(counts.free), "free"],
+                      [String(counts.cleaning), "cleaning"],
+                      [String(counts.reserved), "reserved"],
+                      [String(counts.out), "out of service"],
+                    ] as const
+                  ).map(([v, l]) => (
+                    <span
+                      key={l}
+                      className="text-caption text-muted-foreground inline-flex items-baseline gap-1.5 font-normal"
+                    >
+                      <span className="text-foreground font-mono text-[14px] font-medium tabular-nums">
+                        {v}
+                      </span>
+                      {l}
+                    </span>
+                  ))}
+                </div>
+              </>
+            )}
           </main>
 
           <aside

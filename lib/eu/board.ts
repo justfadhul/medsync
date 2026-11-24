@@ -2,12 +2,13 @@
  * The EU tracking rows (ADR 0541): status words, next obs due and the "Needs attention" list. Pure: `nowMs` is
  * passed in; the clocks and the limit rule are `lib/eu/clock`. Over the limit only flags (D2).
  */
+import type { EuClocks } from "./clock";
 import type { ObsFrequencyChoice } from "@/lib/clerking/plan/draft";
 import type { WaitReason } from "@/lib/emr/closure";
 import type { AcuityLevel } from "@/lib/triage/types";
 
 import { EU_TRACK } from "@/content/eu/words";
-import { type EuClocks, euClocks, overLimit } from "./clock";
+import { euClocks, overLimit } from "./clock";
 
 export const EU_ARRIVING_ATTENTION_MS = 3_600_000;
 export const EU_BOARDING_ATTENTION_MS = 12 * 3_600_000;
@@ -50,6 +51,8 @@ export interface EuStayInput {
   waitReason: WaitReason | null;
   name: string | null;
   mrn: string | null;
+  /** The stay's responsible clinician (staff name); the list's column. */
+  responsibleName?: string | null;
 }
 
 export interface EuTrackingRow extends EuStayInput {
@@ -71,7 +74,10 @@ export function euTracking(
   stays: EuStayInput[],
   nowMs: number,
   limitHours: number,
-): { rows: EuTrackingRow[]; needsAttention: { stayId: string; code: AttentionCode; words: string }[] } {
+): {
+  rows: EuTrackingRow[];
+  needsAttention: { stayId: string; code: AttentionCode; words: string }[];
+} {
   const words = (c: AttentionCode): string =>
     ({
       over_limit: EU_TRACK.overLimit(limitHours),
@@ -94,7 +100,8 @@ export function euTracking(
     const due = every === null ? null : Date.parse(s.lastObsAt ?? s.decidedAt) + every;
     const attention: AttentionCode[] = [];
     if (overLimit(clocks.inEuMs, limitHours)) attention.push("over_limit");
-    if (s.arriving && (clocks.inSpaceMs ?? 0) > EU_ARRIVING_ATTENTION_MS) attention.push("arriving_long");
+    if (s.arriving && (clocks.inSpaceMs ?? 0) > EU_ARRIVING_ATTENTION_MS)
+      attention.push("arriving_long");
     if (due !== null && nowMs > due) attention.push("obs_overdue");
     if ((clocks.boardingMs ?? 0) > EU_BOARDING_ATTENTION_MS) attention.push("boarding_long");
     if (s.status === "awaiting_space") attention.push("waiting_space");

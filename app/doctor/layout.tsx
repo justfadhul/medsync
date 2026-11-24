@@ -12,6 +12,7 @@ import { resusDeskV2 } from "@/lib/resus/feature";
 import { dutyRotaLiveFor } from "@/lib/rota/feature";
 import { myDuties } from "@/lib/rota/read";
 import { soft } from "@/lib/rota/soft";
+import { euObservationLiveFor } from "@/lib/wards/feature";
 import { doctorWorkspace } from "@/lib/workspace/feature";
 import { newestAnnouncement } from "./_components/critical-alerts";
 import { DoctorShell } from "./_components/doctor-shell";
@@ -39,6 +40,7 @@ export default async function DoctorLayout({ children }: { children: ReactNode }
       avatarUrl={avatarUrl}
       duty={duties.length ? <DutyChip duties={duties} /> : null}
       workspace={doctorWorkspace(scope.hospitalId)}
+      eu={euObservationLiveFor(scope.hospitalId)}
       criticalCount={criticals?.alerts.open.length ?? null}
     >
       <TideScope group="doctor">{children}</TideScope>

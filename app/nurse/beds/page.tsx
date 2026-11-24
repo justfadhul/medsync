@@ -1,10 +1,12 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
+import { mayReadEuNames } from "@/lib/eu/cover";
+import { loadEuList } from "@/lib/eu/list";
 import { requireNurseScope } from "@/lib/nurse/scope";
 import { loadBedBoard } from "@/lib/wards/board";
 import { nurseWardIds, nurseWardTabs } from "@/lib/wards/data";
-import { wardBuilderLiveFor } from "@/lib/wards/feature";
+import { euObservationLiveFor, wardBuilderLiveFor } from "@/lib/wards/feature";
 import { NurseBoardClient } from "./board-client";
 
 export const metadata: Metadata = { title: "Bed board · Nurse · MedSync" };
@@ -39,5 +41,22 @@ export default async function NurseBedsPage({
   const tabs = await nurseWardTabs(scope.hospitalId, wardIds);
   const data = await loadBedBoard(scope.hospitalId, wardId, { patients: "names", tabs });
   if (!data) notFound();
-  return <NurseBoardClient key={wardId} data={data} hospitalId={scope.hospitalId} />;
+  // An EU ward gets the tracking list (ADR 0541); the nurse is on this ward by construction.
+  const eu =
+    data.ward.wardType === "emergency_observation" && euObservationLiveFor(scope.hospitalId)
+      ? await loadEuList(scope.hospitalId, wardId, {
+          userId: scope.userId,
+          names: mayReadEuNames(
+            {
+              admin: false,
+              inChargeWardIds: scope.inChargeWardIds,
+              assignedWardIds: wardIds,
+              onDutyDoctor: false,
+            },
+            wardId,
+          ),
+          surface: "nurse",
+        })
+      : null;
+  return <NurseBoardClient key={wardId} data={data} hospitalId={scope.hospitalId} eu={eu} />;
 }

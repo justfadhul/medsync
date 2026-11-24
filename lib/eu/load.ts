@@ -78,6 +78,7 @@ type StayRow = {
   intake_id: string | null;
   space_wait_reason: WaitReason | null;
   admission_id: string | null;
+  responsible_user_id: string | null;
 };
 
 export async function loadEuBoard(
@@ -95,7 +96,7 @@ export async function loadEuBoard(
   const { data, error } = await supabase
     .from("eu_stays")
     .select(
-      "id, patient_user_id, status, decided_at, encounter_id, intake_id, space_wait_reason, admission_id",
+      "id, patient_user_id, status, decided_at, encounter_id, intake_id, space_wait_reason, admission_id, responsible_user_id",
     )
     .eq("hospital_id", hospitalId)
     .eq("ward_id", wardId)
@@ -161,9 +162,12 @@ async function stayInputs(
   const intakes = stays.flatMap((s) => (s.intake_id ? [s.intake_id] : []));
   const encs = stays.flatMap((s) => (s.encounter_id ? [s.encounter_id] : []));
   const adms = stays.flatMap((s) => (s.admission_id ? [s.admission_id] : []));
+  const responsible = [
+    ...new Set(stays.flatMap((s) => (s.responsible_user_id ? [s.responsible_user_id] : []))),
+  ];
   const earliest = new Date(Math.min(...stays.map((s) => Date.parse(s.decided_at))));
 
-  const [arrived, levels, notes, obs, released, admitted, resus, spaces, people] =
+  const [arrived, levels, notes, obs, released, admitted, resus, spaces, people, staff] =
     await Promise.all([
       intakes.length
         ? db
@@ -273,6 +277,11 @@ async function stayInputs(
             .leftJoin(users, eq(users.id, patientProfiles.id))
             .where(inArray(patientProfiles.id, patients))
         : [],
+      // Staff names only, for the list's responsible-clinician column.
+      db
+        .select({ id: users.id, name: users.fullName })
+        .from(users)
+        .where(inArray(users.id, responsible)),
     ]);
 
   const iso = (d: Date | string | null | undefined) => (d ? new Date(d).toISOString() : null);
@@ -323,6 +332,7 @@ async function stayInputs(
       waitReason: s.space_wait_reason,
       name: who?.name ?? null,
       mrn: names ? (who?.mrn ?? null) : null,
+      responsibleName: staff.find((u) => u.id === s.responsible_user_id)?.name ?? null,
     };
   });
 }
