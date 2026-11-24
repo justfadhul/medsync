@@ -8,7 +8,8 @@
  *
  *   op send_to_eu_resus (D4): triage sends a Level 1–2 patient straight to a free resus space of an EU. One SQL
  *     transaction (send_to_eu_resus, 0313) writes the triage nurse's stay (no encounter, the intake named) and the
- *     Arriving space; the doctor's Send to EU later adopts it. The floor's visit then ends as Observed in EU.
+ *     Arriving space; the doctor's Send to EU later adopts it. The floor's visit stays in the doctor's line (R70)
+ *     until the doctor's encounter of that visit adopts or ends the stay, which ends it as Observed in EU.
  *
  * Auth (R58): sending is a clinical decision, so only the encounter's own clinician, with a live clinical
  * affiliation at the encounter's hospital. No admin or superadmin arm. send_to_eu_resus: triage-capable clinical
@@ -30,6 +31,7 @@ import {
   serverError,
   unauthorized,
 } from "../_shared/errors.ts";
+import { floorFinishEu } from "../_shared/eu-floor.ts";
 import { euObservationOn, euRefusal } from "../_shared/eu.ts";
 import { makeLogger } from "../_shared/logger.ts";
 import { networkContext, recordSaAudit } from "../_shared/sa-audit.ts";
@@ -156,60 +158,18 @@ Deno.serve(async (request: Request) => {
   // A visit on the clinic floor ends there as "Observed in EU" (Task 24), keyed by the stay's intake:
   // observe_in_eu names one only when it is this patient's at this hospital (no intake, no floor event).
   const intakeId: string | null = r.data?.intake_id ?? null;
-  if (intakeId)
-    await floorFinishEu(
+  if (intakeId) {
+    const err = await floorFinishEu(
       sb,
       enc.hospital_id,
       intakeId,
       enc.department_id ?? null,
       caller.id,
-      requestId,
     );
+    if (err) log.error("floor finish failed (non-fatal)", { requestId, code: err.code });
+  }
   return ok({ stay: r.data }, init);
 });
-
-/**
- * The floor's visit ends as "Observed in EU" (Task 24): only a visit the floor already has, keyed by its intake;
- * no name, room or note. The department is the visit's, else the intake's receiving clinic. It never fails a send.
- */
-async function floorFinishEu(
-  sb: ReturnType<typeof serviceClient>,
-  hospitalId: string,
-  intakeId: string,
-  department: string | null,
-  byUserId: string,
-  requestId: string,
-): Promise<void> {
-  const err = await (async () => {
-    const seen = await sb
-      .from("clinic_floor_events")
-      .select("id")
-      .eq("intake_id", intakeId)
-      .limit(1)
-      .maybeSingle();
-    if (seen.error || !seen.data) return seen.error;
-    let departmentId = department;
-    if (!departmentId) {
-      const visit = await sb
-        .from("patient_intakes")
-        .select("receiving_department_id")
-        .eq("id", intakeId)
-        .maybeSingle();
-      departmentId = visit.data?.receiving_department_id ?? null;
-    }
-    const ins = await sb.from("clinic_floor_events").insert({
-      hospital_id: hospitalId,
-      intake_id: intakeId,
-      department_id: departmentId,
-      kind: "finish",
-      detail: "eu",
-      client_id: crypto.randomUUID(),
-      by_user_id: byUserId,
-    });
-    return ins.error;
-  })();
-  if (err) log.error("floor finish failed (non-fatal)", { requestId, code: err.code });
-}
 
 /**
  * Triage sends a Level 1–2 patient to EU resus (D4). The level, the visit, the space and the patient are the SQL
@@ -287,6 +247,5 @@ async function sendToEuResus(
     log.error("send_to_eu_resus failed", { requestId, name: r.error.name, code: r.error.code });
     return serverError("sending to EU resus failed", init);
   }
-  await floorFinishEu(sb, p.hospital_id, p.intake_id, null, callerId, requestId);
   return ok({ stay: r.data }, init);
 }

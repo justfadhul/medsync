@@ -14,12 +14,16 @@ Builds on [ADR 0541](0541-the-eu-stay-observe-stays-open.md) (the stay and the c
    stay open as a boarder ([ADR 0542](0542-boarding-in-the-eu.md)), ended when the ward confirms arrival
    (`confirm_bed_arrival`) or by `end_eu_stay` if the patient leaves first (R62). A visit on
    the clinic floor then ends there as "Observed in EU": `clinic_floor_events_detail_check` gains `eu` (0313 section 2) and
-   `ha-eu-stay` writes that finish, because the floor's own Finish dialog never offers it.
+   `ha-eu-stay` writes that finish, because the floor's own Finish dialog never offers it (`_shared/eu-floor.ts`; a visit
+   the floor already finished keeps its outcome).
 2. **The triage nurse sends a Level 1 or 2 patient to EU resus spaces only (D4).** `send_to_eu_resus` (op of `ha-eu-stay`,
    SQL function of 0313 section 3) takes the intake's latest triage and refuses any level above 2 ("Only a Level 1 or 2
    patient goes straight to EU resus."). The space must be a live resus space of an active, open emergency unit of the
    hospital. The stay is the nurse's: no encounter, the intake named, the space Arriving. Triage-capable means a live
    clinical affiliation whose cadre the hospital's policy allows to `triage_patient`. Audit verb `send_to_eu_resus`.
+   The triage send does not finish the floor visit (R70): the patient stays in the doctor's line, and the floor visit
+   ends as "Observed in EU" when the doctor's encounter of that visit adopts the stay (Send to EU, or an admission) or
+   ends it with the close (`ha-complete-encounter`).
 3. **A triage stay is adopted by the doctor's Send to EU.** `observe_in_eu` takes the open triage stay of that patient: the
    stay gets the encounter, `responsible_user_id` becomes the adopting doctor (R56), and a same-ward awaiting-space stay keeps
    the doctor's wait reason.

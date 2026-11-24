@@ -65,6 +65,7 @@ import {
   serverError,
   unauthorized,
 } from "../_shared/errors.ts";
+import { floorFinishEu } from "../_shared/eu-floor.ts";
 import { euRefusal } from "../_shared/eu.ts";
 import { requireHospitalAdminScope } from "../_shared/hospital-admin-scope.ts";
 import { makeLogger } from "../_shared/logger.ts";
@@ -219,6 +220,7 @@ Deno.serve(async (request: Request) => {
   // an open triage stay here (a non-EU close gains one eu_stays read); a failed link lookup then fails the close
   // rather than leave a resus space held.
   let triageStayId: string | null = null;
+  let triageStayIntake: string | null = null;
   const triageStay = await sb
     .from("eu_stays")
     .select("id, intake_id")
@@ -251,7 +253,10 @@ Deno.serve(async (request: Request) => {
       if (named.error) return euFail(named.error.code);
       mine = !!named.data;
     }
-    if (mine) triageStayId = triageStay.data.id as string;
+    if (mine) {
+      triageStayId = triageStay.data.id as string;
+      triageStayIntake = triageStay.data.intake_id as string;
+    }
   }
   // Built from database uuids only.
   let euLookup = await stayLookup(
@@ -415,6 +420,19 @@ Deno.serve(async (request: Request) => {
         });
       }
     }
+  }
+
+  // R70: triage's send left the floor visit in the doctor's line; this visit has now admitted (adopting the stay) or
+  // ended its triage stay, so the floor visit ends as Observed in EU (Task 24). Never fails the close.
+  if (triageStayIntake && euStayId === triageStayId && (admitted || euEnded)) {
+    const err = await floorFinishEu(
+      sb,
+      enc.hospital_id,
+      triageStayIntake,
+      enc.department_id ?? null,
+      caller.id,
+    );
+    if (err) log.error("floor finish failed (non-fatal)", { requestId, code: err.code });
   }
 
   // 1. Close the encounter. The state guard makes a double submit a no-op, not a second close.

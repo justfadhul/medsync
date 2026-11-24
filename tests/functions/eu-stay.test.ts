@@ -72,14 +72,19 @@ describe("ha-eu-stay — send to the EU", () => {
     const call = after.indexOf("floorFinishEu(");
     expect(call).toBeGreaterThan(after.indexOf("r.data?.intake_id"));
     expect(call).toBeLessThan(after.indexOf("return ok({ stay: r.data }, init)"));
-    const floor = src.slice(src.indexOf("async function floorFinishEu("));
+    expect(src).toContain('import { floorFinishEu } from "../_shared/eu-floor.ts"');
+    expect(after).toContain('log.error("floor finish failed (non-fatal)"');
+    const floor = stripComments(
+      readFileSync(resolve(process.cwd(), "supabase/functions/_shared/eu-floor.ts"), "utf8"),
+    );
     expect(floor).toContain('.from("clinic_floor_events")');
     expect(floor).toContain('.eq("intake_id", intakeId)');
     expect(floor).toContain('kind: "finish"');
     expect(floor).toContain('detail: "eu"');
     expect(floor).toContain("client_id: crypto.randomUUID()");
     expect(floor).toContain("by_user_id: byUserId");
-    expect(floor).toContain("(non-fatal)");
+    // A visit the floor has already finished keeps its outcome: no second finish.
+    expect(floor).toContain('seen.data.some((e: { kind: string }) => e.kind === "finish")');
     const insert = floor.slice(
       floor.indexOf(".insert({"),
       floor.indexOf("})", floor.indexOf(".insert({")),
@@ -141,8 +146,9 @@ describe("ha-eu-stay — triage sends a Level 1–2 patient to EU resus (D4)", (
     expect(op).not.toMatch(/serverError\([^)]*\.message/);
   });
 
-  it("the floor's visit ends as Observed in EU, after the start, through the same writer", () => {
-    expect(op.indexOf("floorFinishEu(")).toBeGreaterThan(op.indexOf('rpc("send_to_eu_resus"'));
+  // R70: the floor visit stays in the doctor's line; the doctor's encounter of that visit adopts or ends the stay.
+  it("does not finish the floor's visit: the patient stays in the doctor's line", () => {
+    expect(op).not.toContain("floorFinishEu(");
   });
 });
 
@@ -250,6 +256,24 @@ describe("ha-complete-encounter — the close ends the EU stay", () => {
     // Nursing ends for an EU close (only an admission keeps it).
     expect(src).toContain('.from("nursing_assignments")');
     expect(src).toMatch(/let naCount: number \| null = 0;\s*if \(!admitted\) \{/);
+  });
+});
+
+describe("ha-complete-encounter — the floor visit of a triage stay (R70)", () => {
+  const src = stripComments(fn("ha-complete-encounter"));
+
+  it("keeps the triage stay's intake when it is this visit's", () => {
+    expect(src).toContain("triageStayIntake = triageStay.data.intake_id as string");
+  });
+
+  it("ends the floor visit as Observed in EU once this visit admits or ends the triage stay, non-fatal", () => {
+    expect(src).toContain('import { floorFinishEu } from "../_shared/eu-floor.ts"');
+    const at = src.indexOf("floorFinishEu(");
+    expect(at).toBeGreaterThan(src.indexOf('rpc("end_eu_stay"'));
+    const block = src.slice(src.lastIndexOf("if (", at), at);
+    expect(block).toContain("euStayId === triageStayId");
+    expect(block).toContain("(admitted || euEnded)");
+    expect(src.slice(at)).toContain('log.error("floor finish failed (non-fatal)"');
   });
 });
 
