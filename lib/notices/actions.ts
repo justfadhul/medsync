@@ -15,11 +15,12 @@ const Dismiss = z.object({ id: z.uuid() });
 /** Dismisses one of the signed-in user's own notices; anyone else's row is never touched. */
 export async function dismissNotice(raw: unknown): Promise<ActionResult> {
   const parsed = Dismiss.safeParse(raw);
-  if (!parsed.success) return { ok: false, code: "invalid", error: "Invalid input." };
+  if (!parsed.success)
+    return { ok: false, code: "invalid", error: CARE_REQUEST_COPY.notices.invalid };
   const {
     data: { user },
   } = await (await createClient()).auth.getUser();
-  if (!user) return { ok: false, code: "forbidden", error: "Sign in again." };
+  if (!user) return { ok: false, code: "forbidden", error: CARE_REQUEST_COPY.notices.signIn };
   const now = new Date();
   const done = await db
     .update(saNotifications)

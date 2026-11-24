@@ -271,7 +271,7 @@ export async function notifyWardIncoming(ctx: WriteCtx, admissionId: string): Pr
         .where(
           and(
             eq(wardInChargeAssignments.wardId, ward.id),
-            isNull(wardInChargeAssignments.endsAt),
+            or(isNull(wardInChargeAssignments.endsAt), gt(wardInChargeAssignments.endsAt, ctx.now)),
             lte(wardInChargeAssignments.startsAt, ctx.now),
           ),
         );

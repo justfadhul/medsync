@@ -50,12 +50,12 @@ describe.skipIf(!laneOn)("the nurse in charge is told at admission (PGlite lane)
     return { id, name };
   }
 
-  const inCharge = async (wardId: string, acting: boolean) => {
+  const inCharge = async (wardId: string, acting: boolean, endsAt: string | null = null) => {
     const u = await authUser(pg, "nurse");
     await pg.query(
-      `INSERT INTO public.ward_in_charge_assignments (hospital_id, ward_id, nurse_user_id, acting)
-       VALUES ($1, $2, $3, $4)`,
-      [h, wardId, u, acting],
+      `INSERT INTO public.ward_in_charge_assignments (hospital_id, ward_id, nurse_user_id, acting, ends_at)
+       VALUES ($1, $2, $3, $4, $5::timestamptz)`,
+      [h, wardId, u, acting, endsAt],
     );
     return u;
   };
@@ -154,6 +154,14 @@ describe.skipIf(!laneOn)("the nurse in charge is told at admission (PGlite lane)
       expect(n.body).toBe(CARE_REQUEST_COPY.wardIncomingBody);
       expect(`${n.subject} ${n.body}`).not.toContain(p);
     }
+  });
+
+  it("an acting in-charge with a future end is told", async () => {
+    flags(true);
+    const ward = await makeWard();
+    const acting = await inCharge(ward.id, true, new Date(Date.now() + 86_400_000).toISOString());
+    const { admissionId } = await admit(ward.id);
+    expect((await sent(admissionId)).map((r) => r.recipient_user_id)).toEqual([acting]);
   });
 
   it("no in-charge, no notice, no error", async () => {
