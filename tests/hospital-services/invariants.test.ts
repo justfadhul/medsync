@@ -75,8 +75,9 @@ describe("ha-services-hub — the contract's action pattern (Law 10)", () => {
       .map((m) => m[1])
       .sort();
     // 31 hub ops + the ward builder's 7 (ADRs 0191–0196) + the admission's 3 (ADRs 0199–0200)
-    // + the pharmacy's dispensing point (ADR 0236) + the EU's move between spaces (ADR 0541).
-    expect(declared.length).toBe(43);
+    // + the pharmacy's dispensing point (ADR 0236) + the EU's move between spaces (ADR 0541)
+    // + the EU's two links (resus bay, care unit; ADR 0544).
+    expect(declared.length).toBe(45);
     expect(handled).toEqual(declared);
   });
 });

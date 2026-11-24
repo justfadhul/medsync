@@ -1,6 +1,7 @@
 "use client";
 
 import type { WardFilter, WardItem } from "../_lib/model";
+import type { ResusDesk } from "../_lib/resus-desk";
 import type { Option } from "./shared";
 import type { BedState } from "@/supabase/functions/_shared/ward-layout";
 import Link from "next/link";
@@ -40,6 +41,7 @@ export function WardsView({
   wards,
   builder,
   euLive,
+  resus,
   departments,
   nurses,
   places,
@@ -49,6 +51,7 @@ export function WardsView({
   wards: WardItem[];
   builder: boolean;
   euLive: boolean;
+  resus: ResusDesk | null;
   departments: Option[];
   nurses: { userId: string; name: string; cadre: string | null }[];
   places: Option[];
@@ -213,6 +216,7 @@ export function WardsView({
           key={ward.id}
           w={ward}
           builder={builder}
+          resus={resus}
           parents={parents}
           departments={departments}
           nurses={nurses}

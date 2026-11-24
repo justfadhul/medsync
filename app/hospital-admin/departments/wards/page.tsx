@@ -17,6 +17,7 @@ import { loadBedBoard } from "@/lib/wards/board";
 import { layoutStatusByWard, wardTabs } from "@/lib/wards/data";
 import { euObservationLiveFor, wardBuilderLiveFor } from "@/lib/wards/feature";
 import { WardsView } from "./_components/wards-view";
+import { loadResusDesk } from "./_lib/resus-desk";
 
 export const metadata: Metadata = { title: WARDS.title };
 export const dynamic = "force-dynamic";
@@ -68,6 +69,7 @@ export default async function WardsPage({
         ),
       )
     : null;
+  const resus = euObservationLiveFor(h) ? await loadResusDesk(h) : null;
   const items: WardItem[] = wards.map((w) => ({
     ...w,
     layout: layouts ? (layouts[w.id] ?? { published: false, draft: false }) : null,
@@ -80,6 +82,7 @@ export default async function WardsPage({
       wards={items}
       builder={builder}
       euLive={euObservationLiveFor(h)}
+      resus={resus}
       departments={departments
         .filter((d) => d.parentId === null && !d.archived)
         .map((d) => ({ id: d.id, name: d.name }))}

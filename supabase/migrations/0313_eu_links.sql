@@ -16,13 +16,18 @@
 --      intake whose encounter_id names it: the queue start); another visit of the patient leaves it, and the resus
 --      space, alone, and admit_from_encounter (0312) boards it only from that visit (else its existing AD409 "on
 --      another visit" words). The three bodies are redefined verbatim but for that.
---   Later sections come from Task 26.
+--   5. D7: resus_bay_profiles.bed_id (a resus space of an EU ward of the same hospital; one bay per space) and
+--      hospital_care_units.ward_id (a ward of the same hospital), both ON DELETE SET NULL; a trigger refuses a link
+--      across hospitals, to a non-resus space or to a non-EU ward ("EU400 " words). Audit verbs 'link_resus_bay'
+--      and 'link_care_unit' (the section 3 list kept verbatim). The admin ops in ha-services-hub write them.
 --
 -- ADDITIVE and re-runnable.
 -- Reverse: restore 0101's phi_access_basis_check (after removing any 'eu_staff' rows); restore 0295's
 -- clinic_floor_events detail list only while no 'eu' row exists (that log is append-only); drop
 -- send_to_eu_resus(jsonb) and restore 0311's audit list (after removing any 'send_to_eu_resus' rows); re-run 0311's
--- observe_in_eu and 0312's end_eu_stay and admit_from_encounter definitions.
+-- observe_in_eu and 0312's end_eu_stay and admit_from_encounter definitions; drop the two link triggers and the
+-- columns resus_bay_profiles.bed_id / hospital_care_units.ward_id (after clearing them) and restore the audit list
+-- without 'link_resus_bay', 'link_care_unit' (after removing any such rows).
 
 -- ─── 1. Log an EU list name truthfully ───────────────────────────────────
 ALTER TABLE public.clinical_phi_access_log DROP CONSTRAINT IF EXISTS phi_access_basis_check;
@@ -561,3 +566,117 @@ BEGIN
                             'patient_user_id', v_enc.patient_user_id, 'hospital_id', v_enc.hospital_id);
 END;
 $$;
+
+-- ─── 5. Resus bays and care units link to the drawn EU (D7) ───────────────
+ALTER TABLE public.resus_bay_profiles
+  ADD COLUMN IF NOT EXISTS bed_id uuid REFERENCES public.hospital_beds(id) ON DELETE SET NULL;
+CREATE UNIQUE INDEX IF NOT EXISTS rbp_bed_unique ON public.resus_bay_profiles (bed_id) WHERE bed_id IS NOT NULL;
+ALTER TABLE public.hospital_care_units
+  ADD COLUMN IF NOT EXISTS ward_id uuid REFERENCES public.hospital_wards(id) ON DELETE SET NULL;
+
+-- No client can link across hospitals: the bay's space must be a resus space of an emergency_observation ward of
+-- the bay's own hospital; the unit's ward must be of the unit's hospital.
+CREATE OR REPLACE FUNCTION public.resus_bay_link_guard()
+RETURNS trigger
+LANGUAGE plpgsql
+SET search_path = public, pg_temp
+AS $$
+BEGIN
+  IF NEW.bed_id IS NOT NULL AND NOT EXISTS (
+       SELECT 1 FROM public.hospital_beds b
+         JOIN public.hospital_wards w ON w.id = b.ward_id
+        WHERE b.id = NEW.bed_id AND b.hospital_id = NEW.hospital_id AND b.bed_type = 'resus'
+          AND w.hospital_id = NEW.hospital_id AND w.ward_type = 'emergency_observation') THEN
+    RAISE EXCEPTION 'EU400 Choose a resus space of an emergency unit.'
+      USING ERRCODE = 'check_violation', HINT = 'eu_bay_link';
+  END IF;
+  RETURN NEW;
+END;
+$$;
+DROP TRIGGER IF EXISTS resus_bay_link_guard ON public.resus_bay_profiles;
+CREATE TRIGGER resus_bay_link_guard BEFORE INSERT OR UPDATE OF bed_id, hospital_id ON public.resus_bay_profiles
+  FOR EACH ROW EXECUTE FUNCTION public.resus_bay_link_guard();
+
+CREATE OR REPLACE FUNCTION public.care_unit_link_guard()
+RETURNS trigger
+LANGUAGE plpgsql
+SET search_path = public, pg_temp
+AS $$
+BEGIN
+  IF NEW.ward_id IS NOT NULL AND NOT EXISTS (
+       SELECT 1 FROM public.hospital_wards w WHERE w.id = NEW.ward_id AND w.hospital_id = NEW.hospital_id) THEN
+    RAISE EXCEPTION 'EU400 Choose a ward of this hospital.'
+      USING ERRCODE = 'check_violation', HINT = 'eu_unit_link';
+  END IF;
+  RETURN NEW;
+END;
+$$;
+DROP TRIGGER IF EXISTS care_unit_link_guard ON public.hospital_care_units;
+CREATE TRIGGER care_unit_link_guard BEFORE INSERT OR UPDATE OF ward_id, hospital_id ON public.hospital_care_units
+  FOR EACH ROW EXECUTE FUNCTION public.care_unit_link_guard();
+
+-- Section 3's verbs verbatim + this section's.
+ALTER TABLE public.sa_audit_log DROP CONSTRAINT IF EXISTS sa_audit_log_action_check;
+ALTER TABLE public.sa_audit_log ADD CONSTRAINT sa_audit_log_action_check CHECK (
+  action IN (
+    'approve_staff_affiliation', 'reject_staff_affiliation', 'approve_hospital_application',
+    'reject_hospital_application', 'cross_tenant_read', 'cross_tenant_export', 'elevate_admin',
+    'create_superadmin', 'demote_admin', 'break_glass_open', 'break_glass_close',
+    'four_eyes_request', 'four_eyes_confirm', 'four_eyes_cancel', 'activate_hospital',
+    'suspend_user', 'reset_user_mfa', 'deactivate_user', 'reactivate_user', 'export_audit_log',
+    'sa_create_hospital', 'sa_invite_hospital_admin', 'hospital_admin_claimed',
+    'request_staff_info', 'suspend_staff_affiliation', 'deactivate_staff_affiliation',
+    'reactivate_staff_affiliation', 'reset_staff_mfa', 'assign_staff_role', 'invite_staff',
+    'revoke_staff_invitation', 'book_appointment', 'confirm_appointment_request',
+    'decline_appointment_request', 'cancel_appointment', 'reschedule_appointment',
+    'mark_no_show', 'mark_arrived', 'start_encounter', 'complete_encounter',
+    'propose_urgent_appointment', 'record_walkin', 'set_clinician_availability',
+    'cancel_clinician_availability', 'update_clinician_settings', 'update_department_policy',
+    'override_out_of_hours_booking', 'assign_supervision', 'end_supervision', 'cosign_request',
+    'cosign_approve', 'cosign_return', 'cosign_cancel', 'cosign_expire', 'update_cosign_policy',
+    'phi_access_break_glass', 'record_observation', 'correct_observation',
+    'administer_medication', 'withhold_medication', 'submit_handover', 'assign_patient_to_nurse',
+    'unassign_patient_from_nurse', 'assign_ward_in_charge', 'end_ward_in_charge',
+    'escalate_to_medical_team', 'register_intake', 'update_intake', 'cancel_intake',
+    'check_in_patient', 'patient_declare_intake', 'compute_triage', 'assign_triage',
+    'override_triage', 'adjust_triage_baseline', 'open_resus_episode', 'conclude_resus_episode',
+    'record_resus_event', 'correct_resus_event', 'assign_resus_role', 'end_resus_role',
+    'mobilise_resus_team', 'detect_resus_arrest', 'set_emergency_phone', 'rate_visit',
+    'update_service_line', 'update_session_template', 'cancel_session', 'book_on_behalf',
+    'reconcile_identity', 'unreconcile_identity', 'add_booking_agent', 'join_waitlist',
+    'accept_waitlist_offer', 'accept_rebooking', 'confirm_attendance', 'set_session_delay',
+    'sms_stop', 'set_service_line_fee', 'submit_symptoms', 'emergency_interrupt_shown',
+    'emergency_declined', 'emergency_call_tapped', 'request_same_day', 'create_pre_arrival',
+    'update_pre_arrival', 'sign_catalog_version', 'verify_emergency_contact',
+    'set_hospital_emergency_settings', 'set_resus_phase', 'stop_resuscitation', 'confirm_death',
+    'set_resus_disposition', 'cancel_resus_episode', 'close_resus_administratively',
+    'reactivate_resus', 'record_resus_arrest_record', 'submit_resus_debrief',
+    'record_resus_after_death_task', 'update_resus_settings', 'retire_assignment',
+    'verify_hospital_application',
+    -- 0080: the Departments & services hub
+    'update_department', 'set_department_live', 'set_start_department', 'assign_department_head',
+    'end_department_head', 'archive_structure', 'unarchive_structure', 'update_ward', 'update_beds',
+    'update_place', 'update_diagnostics', 'set_capability', 'verify_capability', 'reject_capability',
+    'report_availability', 'add_closure', 'lift_closure', 'apply_service_preset',
+    'import_legacy_services',
+    -- 0090: the ward builder and the bed board
+    'save_ward_layout', 'publish_ward_layout', 'set_bed_state', 'assign_bed', 'release_bed',
+    -- 0091: admission with a bed
+    'admit_patient', 'allocate_bed', 'confirm_arrival', 'cancel_allocation',
+    -- 0291: a walk-in registered at the desk
+    'register_patient',
+    -- 0292: the desk's claim code, and the patient taking the record over
+    'issue_claim_code', 'claim_desk_record',
+    -- 0294: the reception desk
+    'desk_identity_check', 'close_day', 'undo_close_day', 'desk_switch_user', 'desk_set_pin', 'desk_pin_locked',
+    -- 0296: clinics and schedule
+    'cs_draft', 'cs_undo', 'cs_publish', 'cs_schedule', 'cs_cancel_schedule', 'cs_restore', 'cs_pause',
+    'cs_leave_decision', 'cs_pair_device', 'cs_unpair_device', 'cs_switch_user',
+    -- 0311: the EU stay
+    'send_to_eu', 'move_eu_space', 'end_eu_stay',
+    -- 0313: triage sends to EU resus
+    'send_to_eu_resus',
+    -- 0313: resus bays and care units link to the EU
+    'link_resus_bay', 'link_care_unit'
+  )
+);

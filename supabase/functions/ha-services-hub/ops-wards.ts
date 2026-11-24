@@ -81,6 +81,18 @@ export const WardOpSchema = z.discriminatedUnion("op", [
     space_wait_note_ciphertext: z.string().max(4000).optional(),
     reason,
   }),
+  z.object({
+    op: z.literal("link_resus_bay"),
+    bay_profile_id: uuid,
+    bed_id: uuid.nullable(),
+    reason,
+  }),
+  z.object({
+    op: z.literal("link_care_unit"),
+    care_unit_id: uuid,
+    ward_id: uuid.nullable(),
+    reason,
+  }),
   z.object({ op: z.literal("allocate_admission_bed"), admission_id: uuid, bed_id: uuid, reason }),
   z.object({ op: z.literal("confirm_arrival"), assignment_id: uuid, reason }),
   z.object({
@@ -740,6 +752,107 @@ const moveEuSpace: OpHandler = async (ctx, i) => {
   };
 };
 
+/** Admin ops (not in WARD_STAFF_OPS): a resus bay points at a resus space of an EU, a care unit at a ward (D7). */
+const linkResusBay: OpHandler = async (ctx, i) => {
+  const bay = must(
+    await ctx.sb
+      .from("resus_bay_profiles")
+      .select("id, bay_label")
+      .eq("id", i.bay_profile_id)
+      .eq("hospital_id", ctx.hospitalId)
+      .maybeSingle(),
+    "resus bay",
+  ) as { id: string; bay_label: string } | null;
+  if (!bay) throw new HubError("That resus bay isn't at this hospital.");
+  if (i.bed_id) {
+    const b = must(
+      await ctx.sb
+        .from("hospital_beds")
+        .select("id, bed_type, archived_at, hospital_wards(ward_type)")
+        .eq("id", i.bed_id)
+        .eq("hospital_id", ctx.hospitalId)
+        .maybeSingle(),
+      "bed",
+    ) as {
+      bed_type: string | null;
+      archived_at: string | null;
+      hospital_wards: { ward_type: string | null } | null;
+    } | null;
+    if (
+      !b ||
+      b.bed_type !== "resus" ||
+      b.archived_at ||
+      b.hospital_wards?.ward_type !== "emergency_observation"
+    )
+      throw new HubError("Choose a resus space of an emergency unit.");
+    const used = await ctx.sb
+      .from("resus_bay_profiles")
+      .select("id")
+      .eq("bed_id", i.bed_id)
+      .neq("id", bay.id)
+      .limit(1);
+    if (used.error) throw new Error(`bay link: ${used.error.code ?? "error"}`);
+    if ((used.data ?? []).length > 0)
+      throw new HubError("Another resus bay already uses that space.", 409);
+  }
+  return {
+    audit: {
+      action: "link_resus_bay",
+      reason: reasonOr(
+        i.reason,
+        i.bed_id ? "Resus bay linked to an emergency unit space" : "Resus bay link removed",
+      ),
+      after: { bay_profile_id: bay.id, bed_id: i.bed_id },
+    },
+    apply: async () => {
+      const r = await ctx.sb
+        .from("resus_bay_profiles")
+        .update({ bed_id: i.bed_id })
+        .eq("id", bay.id)
+        .eq("hospital_id", ctx.hospitalId);
+      if (r.error) throw hubErrorFrom(r.error) ?? new Error(`link bay: ${r.error.code ?? "error"}`);
+      return { bay_profile_id: bay.id, bed_id: i.bed_id };
+    },
+  };
+};
+
+const linkCareUnit: OpHandler = async (ctx, i) => {
+  const u = must(
+    await ctx.sb
+      .from("hospital_care_units")
+      .select("id")
+      .eq("id", i.care_unit_id)
+      .eq("hospital_id", ctx.hospitalId)
+      .maybeSingle(),
+    "care unit",
+  ) as { id: string } | null;
+  if (!u) throw new HubError("That care unit isn't at this hospital.");
+  if (i.ward_id) {
+    const w = await loadWard(ctx, i.ward_id).catch(() => null);
+    if (!w || w.archived_at) throw new HubError("Choose a ward of this hospital.");
+  }
+  return {
+    audit: {
+      action: "link_care_unit",
+      reason: reasonOr(
+        i.reason,
+        i.ward_id ? "Care unit linked to a ward" : "Care unit link removed",
+      ),
+      after: { care_unit_id: u.id, ward_id: i.ward_id },
+    },
+    apply: async () => {
+      const r = await ctx.sb
+        .from("hospital_care_units")
+        .update({ ward_id: i.ward_id })
+        .eq("id", u.id)
+        .eq("hospital_id", ctx.hospitalId);
+      if (r.error)
+        throw hubErrorFrom(r.error) ?? new Error(`link unit: ${r.error.code ?? "error"}`);
+      return { care_unit_id: u.id, ward_id: i.ward_id };
+    },
+  };
+};
+
 const allocateAdmissionBed: OpHandler = async (ctx, i) => {
   const a = await loadAdmission(ctx, i.admission_id);
   await assertWardWorker(ctx, a.ward_id);
@@ -815,6 +928,8 @@ export const WARD_OPS: Record<string, OpHandler> = {
   assign_bed: assignBed,
   release_bed: releaseBed,
   move_eu_space: moveEuSpace,
+  link_resus_bay: linkResusBay,
+  link_care_unit: linkCareUnit,
   allocate_admission_bed: allocateAdmissionBed,
   confirm_arrival: confirmArrival,
   release_admission_bed: releaseAdmissionBed,

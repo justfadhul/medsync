@@ -528,3 +528,131 @@ describe.skipIf(!laneOn)("0313 — triage sends to EU resus", () => {
     ).resolves.toBeTruthy();
   });
 });
+
+describe.skipIf(!laneOn)("0313 — a resus bay and a care unit point at the drawn EU (D7)", () => {
+  let pg: Pg;
+  let h: string;
+  let h2: string;
+  let dept: string;
+
+  beforeAll(async () => {
+    pg = (await bootLane()).pg;
+    h = await hospital(pg, "EU links");
+    h2 = await hospital(pg, "Elsewhere links");
+    dept = await department(pg, h);
+  }, BOOT_MS);
+
+  async function ward(hid: string, type: string, beds: Record<string, string>) {
+    const s = randomUUID().slice(0, 8);
+    const w = (
+      await pg.query<{ id: string }>(
+        `INSERT INTO public.hospital_wards (hospital_id, department_id, name, slug, bed_count, ward_type)
+         VALUES ($1, $2, $3, $4, 1, $5) RETURNING id`,
+        [hid, hid === h ? dept : await department(pg, hid), `W ${s}`, `w-${s}`, type],
+      )
+    ).rows[0]!.id;
+    const ids: Record<string, string> = {};
+    for (const [label, bt] of Object.entries(beds))
+      ids[label] = (
+        await pg.query<{ id: string }>(
+          `INSERT INTO public.hospital_beds (hospital_id, ward_id, label, bed_type) VALUES ($1,$2,$3,$4) RETURNING id`,
+          [hid, w, label, bt],
+        )
+      ).rows[0]!.id;
+    return { w, ids };
+  }
+  const bay = async (hid: string) =>
+    (
+      await pg.query<{ id: string }>(
+        `INSERT INTO public.resus_bay_profiles (hospital_id, bay_label) VALUES ($1, $2) RETURNING id`,
+        [hid, `Bay ${randomUUID().slice(0, 6)}`],
+      )
+    ).rows[0]!.id;
+  const unit = async (hid: string) =>
+    (
+      await pg.query<{ id: string }>(
+        `INSERT INTO public.hospital_care_units (hospital_id, name, unit_type) VALUES ($1, $2, 'ward') RETURNING id`,
+        [hid, `Unit ${randomUUID().slice(0, 6)}`],
+      )
+    ).rows[0]!.id;
+  const fails = async (sql: string, params: unknown[]) => {
+    try {
+      await pg.query(sql, params);
+    } catch (e) {
+      return (e as Error).message;
+    }
+    throw new Error("expected a refusal");
+  };
+  const linkBay = (b: string, bed: string | null) =>
+    pg.query(`UPDATE public.resus_bay_profiles SET bed_id = $2 WHERE id = $1`, [b, bed]);
+
+  it("a bay links to a resus space of an EU of its hospital, and clears", async () => {
+    const eu = await ward(h, "emergency_observation", { R1: "resus" });
+    const b = await bay(h);
+    await linkBay(b, eu.ids.R1!);
+    const r = await pg.query<{ bed_id: string | null }>(
+      `SELECT bed_id FROM public.resus_bay_profiles WHERE id = $1`,
+      [b],
+    );
+    expect(r.rows[0]!.bed_id).toBe(eu.ids.R1);
+    await linkBay(b, null);
+  });
+
+  it("a bay refuses another hospital's space, a non-resus space and a non-EU ward's bed", async () => {
+    const other = await ward(h2, "emergency_observation", { R1: "resus" });
+    const trolley = await ward(h, "emergency_observation", { T1: "couch" });
+    const gen = await ward(h, "general", { R1: "resus" });
+    const b = await bay(h);
+    for (const bed of [other.ids.R1!, trolley.ids.T1!, gen.ids.R1!])
+      expect(
+        await fails(`UPDATE public.resus_bay_profiles SET bed_id = $2 WHERE id = $1`, [b, bed]),
+      ).toContain("Choose a resus space of an emergency unit.");
+  });
+
+  it("one space serves one bay; archiving the bed row's delete sets the link null", async () => {
+    const eu = await ward(h, "emergency_observation", { R1: "resus" });
+    const a = await bay(h);
+    const b = await bay(h);
+    await linkBay(a, eu.ids.R1!);
+    await expect(linkBay(b, eu.ids.R1!)).rejects.toThrow();
+    await pg.query(`DELETE FROM public.hospital_beds WHERE id = $1`, [eu.ids.R1]);
+    const r = await pg.query<{ bed_id: string | null }>(
+      `SELECT bed_id FROM public.resus_bay_profiles WHERE id = $1`,
+      [a],
+    );
+    expect(r.rows[0]!.bed_id).toBeNull();
+  });
+
+  it("a care unit links to a ward of its hospital only", async () => {
+    const mine = await ward(h, "general", { B1: "standard" });
+    const theirs = await ward(h2, "general", { B1: "standard" });
+    const u = await unit(h);
+    await pg.query(`UPDATE public.hospital_care_units SET ward_id = $2 WHERE id = $1`, [u, mine.w]);
+    expect(
+      await fails(`UPDATE public.hospital_care_units SET ward_id = $2 WHERE id = $1`, [
+        u,
+        theirs.w,
+      ]),
+    ).toContain("Choose a ward of this hospital.");
+    await pg.query(`DELETE FROM public.hospital_wards WHERE id = $1`, [mine.w]);
+    const r = await pg.query<{ ward_id: string | null }>(
+      `SELECT ward_id FROM public.hospital_care_units WHERE id = $1`,
+      [u],
+    );
+    expect(r.rows[0]!.ward_id).toBeNull();
+  });
+
+  it("re-runs: the section's SQL applies twice without error, and the verbs are audit verbs", async () => {
+    const { readFileSync } = await import("node:fs");
+    const sql = readFileSync("supabase/migrations/0313_eu_links.sql", "utf8");
+    const at = sql.indexOf("-- ─── 5.");
+    expect(at).toBeGreaterThan(0);
+    await pg.exec(sql.slice(at));
+    for (const v of ["link_resus_bay", "link_care_unit"])
+      await pg.query(
+        `INSERT INTO public.sa_audit_log (actor_id, action, target_kind, target_id, reason)
+         VALUES ($1, $2, 'hospital', $3, 'Linked in a test')`,
+        [(await staff(pg, { hospitalId: h, departmentId: dept })).userId, v, h],
+      );
+  });
+});

@@ -121,3 +121,12 @@ export const EU_RESUS = {
   offline: "Needs a connection",
   sent: (ward: string, space: string) => `Sent to EU resus · ${ward} · ${space}.`,
 } as const;
+
+/** An emergency unit's resus spaces and the resus desk's bays (D7). DRAFT wording for the CSO. */
+export const EU_RESUS_DESK = {
+  title: "Resus desk",
+  note: "Choose the resus bay each resus space is. The resus desk then names the bay by this unit and space.",
+  none: "This unit has no resus spaces yet. Draw one in the ward builder.",
+  noBay: "Not a resus bay",
+  space: (label: string) => `Space ${label}`,
+} as const;

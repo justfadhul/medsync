@@ -6,7 +6,7 @@ import { revalidatePath } from "next/cache";
 import { WARDS } from "@/content/hospital-admin/wards";
 import { requireHospitalAdminScope } from "@/lib/hospital-admin/scope";
 import { callEdge } from "@/lib/supabase/edge";
-import { wardBuilderLiveFor } from "@/lib/wards/feature";
+import { euObservationLiveFor, wardBuilderLiveFor } from "@/lib/wards/feature";
 
 /*
  * Wards and beds (phase 2 of ADR 0520): the list's writes, the same ha-services-hub ops the old panel ran and no
@@ -24,6 +24,7 @@ const OPS = new Set([
   "archive",
   "unarchive",
   "start_layout_from_register",
+  "link_resus_bay",
 ]);
 
 export async function wardOpAction(
@@ -38,6 +39,8 @@ export async function wardOpAction(
     return { ok: false, error: WARDS.errors.invalid };
   const scope = await requireHospitalAdminScope();
   if (input.op === "start_layout_from_register" && !wardBuilderLiveFor(scope.hospitalId))
+    return { ok: false, error: WARDS.errors.invalid };
+  if (input.op === "link_resus_bay" && !euObservationLiveFor(scope.hospitalId))
     return { ok: false, error: WARDS.errors.invalid };
   const r = await callEdge(
     "ha-services-hub",

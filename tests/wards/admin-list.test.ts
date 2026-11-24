@@ -136,6 +136,7 @@ describe("the wards pages in the admin frame", () => {
       "assign_ward_in_charge",
       "end_ward_in_charge",
       "generate_beds",
+      "link_resus_bay",
       "set_bed",
       "set_ward_closure",
       "start_layout_from_register",

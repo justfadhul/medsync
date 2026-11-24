@@ -53,6 +53,7 @@ describe("on-duty chip and ward cover", () => {
       createElement(WardPanel, {
         w,
         builder: false,
+        resus: null,
         parents: null,
         departments: [],
         nurses: [],

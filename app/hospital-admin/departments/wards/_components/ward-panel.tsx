@@ -1,6 +1,7 @@
 "use client";
 
 import type { WardItem } from "../_lib/model";
+import type { ResusDesk } from "../_lib/resus-desk";
 import type { Option } from "./shared";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -10,6 +11,7 @@ import { k, Toggle } from "@/components/clinics-schedule/shared";
 import { kampalaTime } from "@/components/rota/duty-chip";
 import { PlanView } from "@/components/wards/plan/plan-view";
 import { DUTY_ROTA_COPY as R } from "@/content/duty-rota";
+import { EU_RESUS_DESK as RD } from "@/content/eu/words";
 import { WARDS } from "@/content/hospital-admin/wards";
 import { WARD_TYPES } from "@/supabase/functions/_shared/services-hub";
 import { BED_STATES, BED_TYPES } from "@/supabase/functions/_shared/ward-layout";
@@ -34,6 +36,7 @@ type Modal = "details" | "close" | "charge" | "bedOut" | "archive" | null;
 export function WardPanel({
   w,
   builder,
+  resus,
   parents,
   departments,
   nurses,
@@ -43,6 +46,7 @@ export function WardPanel({
 }: {
   w: WardItem;
   builder: boolean;
+  resus: ResusDesk | null;
   parents: Option[] | null;
   departments: Option[];
   nurses: { userId: string; name: string; cadre: string | null }[];
@@ -149,6 +153,52 @@ export function WardPanel({
               </div>
             ) : null}
           </div>
+
+          {resus && w.wardType === "emergency_observation" ? (
+            <div className={k("su-sec")}>
+              <span className={k("cap")}>{RD.title}</span>
+              <p className={k("su-note")}>{RD.note}</p>
+              {resus.spaces.filter((x) => x.wardId === w.id).length === 0 ? (
+                <p className={k("su-note")}>{RD.none}</p>
+              ) : null}
+              {resus.spaces
+                .filter((x) => x.wardId === w.id)
+                .map((x) => (
+                  <label key={x.id} className={k("su-td")}>
+                    <span className={k("su-tdt")}>
+                      <b>{RD.space(x.label)}</b>
+                    </span>
+                    <select
+                      className={k("in")}
+                      disabled={op.pending}
+                      value={resus.bays.find((y) => y.bedId === x.id)?.id ?? ""}
+                      onChange={(e) => {
+                        const was = resus.bays.find((y) => y.bedId === x.id);
+                        const to = e.target.value;
+                        // Unlink the old bay first: one bay per space, one space per bay.
+                        const link = () =>
+                          to && op.run({ op: "link_resus_bay", bay_profile_id: to, bed_id: x.id });
+                        if (was)
+                          op.run(
+                            { op: "link_resus_bay", bay_profile_id: was.id, bed_id: null },
+                            link,
+                          );
+                        else link();
+                      }}
+                    >
+                      <option value="">{RD.noBay}</option>
+                      {resus.bays
+                        .filter((y) => !y.bedId || y.bedId === x.id)
+                        .map((y) => (
+                          <option key={y.id} value={y.id}>
+                            {y.label}
+                          </option>
+                        ))}
+                    </select>
+                  </label>
+                ))}
+            </div>
+          ) : null}
 
           {w.plan && isOpen(w) ? (
             <div className={k("su-sec")}>
