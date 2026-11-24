@@ -738,7 +738,7 @@ const archive: OpHandler = async (ctx, i) => {
       const patch: Record<string, unknown> = { archived_at: at };
       if (i.target === "clinic") patch.active = false;
       if (i.target === "ward") patch.state = "inactive"; // 0022 readers keep working
-      must(
+      wardWrite(
         await ctx.sb
           .from(table)
           .update(patch)
@@ -808,7 +808,7 @@ const unarchive: OpHandler = async (ctx, i) => {
   };
 };
 
-/** The database guard (migration 0310) backs the checks above for the race of two saves; its hints become words. */
+/** The database guards (0310; 0313 section 6 for archive and re-type) back the checks above; their hints become words. */
 function wardWrite<T>(
   r: { data: T; error: { message: string; hint?: string | null } | null },
   what: string,
@@ -817,6 +817,7 @@ function wardWrite<T>(
   if (hint === "ward_parent_not_ordinary")
     throw new HubError(WARD_ATTACH_WORDS.ordinaryParent, 409);
   if (hint === "ward_has_units") throw new HubError(WARD_ATTACH_WORDS.detachFirst, 409);
+  if (hint === "eu_ward_has_stays") throw new HubError(WARD_ATTACH_WORDS.staysOpen, 409);
   return must(r, what);
 }
 

@@ -24,15 +24,19 @@
 --      triggers on hospital_beds (archived, or no longer a resus space, or moved) and hospital_wards (archived, or no
 --      longer an emergency unit) clear the dependent bay/unit link in the same statement (audited by the bay's and
 --      the unit's own audit trigger).
+--   6. R71: hospital_wards_eu_stays_guard (BEFORE UPDATE OF archived_at, ward_type) refuses archiving a ward, or
+--      re-typing it away from an emergency unit, while an open eu_stays row (status not 'ended') names it, waiting
+--      for a space or not ("EU409 " words, HINT 'eu_ward_has_stays'; ha-services-hub maps it). The statement aborts
+--      before section 5's clearing triggers run.
 --
 -- ADDITIVE and re-runnable.
 -- Reverse: restore 0101's phi_access_basis_check (after removing any 'eu_staff' rows); restore 0295's
 -- clinic_floor_events detail list only while no 'eu' row exists (that log is append-only); drop
 -- send_to_eu_resus(jsonb) and restore 0311's audit list (after removing any 'send_to_eu_resus' rows); re-run 0311's
 -- observe_in_eu and 0312's end_eu_stay and admit_from_encounter definitions; drop the two link guards, the two
--- clearing triggers (eu_links_clear_bed, eu_links_clear_ward) and the
--- columns resus_bay_profiles.bed_id / hospital_care_units.ward_id (after clearing them) and restore the audit list
--- without 'link_resus_bay', 'link_care_unit' (after removing any such rows).
+-- clearing triggers (eu_links_clear_bed, eu_links_clear_ward), the open-stay guard (hospital_wards_eu_stays_guard
+-- and its function) and the columns resus_bay_profiles.bed_id / hospital_care_units.ward_id (after clearing them)
+-- and restore the audit list without 'link_resus_bay', 'link_care_unit' (after removing any such rows).
 
 -- ─── 1. Log an EU list name truthfully ───────────────────────────────────
 ALTER TABLE public.clinical_phi_access_log DROP CONSTRAINT IF EXISTS phi_access_basis_check;
@@ -728,3 +732,29 @@ $$;
 DROP TRIGGER IF EXISTS eu_links_clear_ward ON public.hospital_wards;
 CREATE TRIGGER eu_links_clear_ward AFTER UPDATE OF archived_at, ward_type ON public.hospital_wards
   FOR EACH ROW EXECUTE FUNCTION public.eu_links_clear_ward();
+
+-- ─── 6. An EU with open stays is not archived or re-typed (R71) ─────────
+-- A stay waiting for a space holds no bed, so the hub's occupied-bed count misses it; archiving the ward or re-typing
+-- it away from an emergency unit would drop the patient from every EU list. BEFORE UPDATE, so a refusal aborts the
+-- statement before eu_links_clear_ward (AFTER) clears anything. SECURITY DEFINER so RLS on eu_stays never hides a stay.
+-- shortcut: a send racing the archive is not locked out (the stay's foreign key takes only KEY SHARE on the ward);
+-- close it if sends and archives ever meet in practice.
+CREATE OR REPLACE FUNCTION public.hospital_wards_eu_stays_guard()
+RETURNS trigger
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, pg_temp
+AS $$
+BEGIN
+  IF ((OLD.archived_at IS NULL AND NEW.archived_at IS NOT NULL)
+      OR (OLD.ward_type = 'emergency_observation' AND NEW.ward_type IS DISTINCT FROM 'emergency_observation'))
+     AND EXISTS (SELECT 1 FROM public.eu_stays WHERE ward_id = NEW.id AND status <> 'ended') THEN
+    RAISE EXCEPTION 'EU409 Patients are in this emergency unit or waiting for a space in it. End or move their stays first.'
+      USING ERRCODE = 'check_violation', HINT = 'eu_ward_has_stays';
+  END IF;
+  RETURN NEW;
+END;
+$$;
+DROP TRIGGER IF EXISTS hospital_wards_eu_stays_guard ON public.hospital_wards;
+CREATE TRIGGER hospital_wards_eu_stays_guard BEFORE UPDATE OF archived_at, ward_type ON public.hospital_wards
+  FOR EACH ROW EXECUTE FUNCTION public.hospital_wards_eu_stays_guard();

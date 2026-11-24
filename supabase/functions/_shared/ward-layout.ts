@@ -1376,6 +1376,9 @@ export const WARD_ATTACH_WORDS = {
   ordinaryParent: "Attach it to an ordinary ward of this hospital.",
   movePatients: "Move the patients out before changing whether this ward is an emergency unit.",
   detachFirst: "Detach its emergency units before making it one.",
+  /** 0313 section 6 (R71): an EU with open stays, waiting for a space or not, is not archived or re-typed. */
+  staysOpen:
+    "Patients are in this emergency unit or waiting for a space in it. End or move their stays first.",
 } as const;
 
 export type WardAttachVerdict =

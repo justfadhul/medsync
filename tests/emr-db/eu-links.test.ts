@@ -723,3 +723,119 @@ describe.skipIf(!laneOn)("0313 — a resus bay and a care unit point at the draw
       );
   });
 });
+
+describe.skipIf(!laneOn)("0313 — an EU with open stays is not archived or re-typed (R71)", () => {
+  let pg: Pg;
+  let h: string;
+  let dept: string;
+  let doctor: string;
+
+  beforeAll(async () => {
+    pg = (await bootLane()).pg;
+    h = await hospital(pg, "EU open stays");
+    dept = await department(pg, h);
+    doctor = (await staff(pg, { hospitalId: h, departmentId: dept })).userId;
+  }, BOOT_MS);
+
+  const fails = async (sql: string, params: unknown[]) => {
+    try {
+      await pg.query(sql, params);
+    } catch (e) {
+      return (e as Error).message;
+    }
+    throw new Error("expected a refusal");
+  };
+  const WORDS =
+    "EU409 Patients are in this emergency unit or waiting for a space in it. End or move their stays first.";
+
+  /** An EU with one resus space linked to a bay, and a patient waiting there without a space. */
+  async function waitingIn() {
+    const s = randomUUID().slice(0, 8);
+    const w = (
+      await pg.query<{ id: string }>(
+        `INSERT INTO public.hospital_wards (hospital_id, department_id, name, slug, bed_count, ward_type)
+         VALUES ($1, $2, $3, $4, 1, 'emergency_observation') RETURNING id`,
+        [h, dept, `EU ${s}`, `eu-${s}`],
+      )
+    ).rows[0]!.id;
+    const bed = (
+      await pg.query<{ id: string }>(
+        `INSERT INTO public.hospital_beds (hospital_id, ward_id, label, bed_type) VALUES ($1, $2, 'R1', 'resus')
+         RETURNING id`,
+        [h, w],
+      )
+    ).rows[0]!.id;
+    const bay = (
+      await pg.query<{ id: string }>(
+        `INSERT INTO public.resus_bay_profiles (hospital_id, bay_label, bed_id) VALUES ($1, $2, $3) RETURNING id`,
+        [h, `Bay ${s}`, bed],
+      )
+    ).rows[0]!.id;
+    const e = await encounter(pg, {
+      hospitalId: h,
+      patientUserId: await patient(pg),
+      clinicianUserId: doctor,
+    });
+    await pg.query(`SELECT public.observe_in_eu($1::jsonb)`, [
+      JSON.stringify({
+        encounter_id: e,
+        actor: doctor,
+        ward_id: w,
+        space_wait_reason: "no_free_bed",
+      }),
+    ]);
+    return { w, bay, e };
+  }
+  const bayLink = async (b: string) =>
+    (
+      await pg.query<{ bed_id: string | null }>(
+        `SELECT bed_id FROM public.resus_bay_profiles WHERE id = $1`,
+        [b],
+      )
+    ).rows[0]!.bed_id;
+
+  it("archive and re-type are refused while a space-less stay is open; nothing is cleared", async () => {
+    const { w, bay } = await waitingIn();
+    const linked = await bayLink(bay);
+    expect(linked).not.toBeNull();
+    expect(
+      await fails(`UPDATE public.hospital_wards SET archived_at = now() WHERE id = $1`, [w]),
+    ).toBe(WORDS);
+    expect(
+      await fails(`UPDATE public.hospital_wards SET ward_type = 'general' WHERE id = $1`, [w]),
+    ).toBe(WORDS);
+    const r = await pg.query<{ archived_at: string | null; ward_type: string }>(
+      `SELECT archived_at, ward_type FROM public.hospital_wards WHERE id = $1`,
+      [w],
+    );
+    expect(r.rows[0]).toEqual({ archived_at: null, ward_type: "emergency_observation" });
+    expect(await bayLink(bay)).toBe(linked);
+    // An edit that keeps it an open EU still saves.
+    await pg.query(
+      `UPDATE public.hospital_wards SET name = name || ' A', ward_type = ward_type WHERE id = $1`,
+      [w],
+    );
+  });
+
+  it("once the stay ends the ward archives, and its bay link clears", async () => {
+    const { w, bay, e } = await waitingIn();
+    await pg.query(`SELECT public.end_eu_stay($1::jsonb)`, [
+      JSON.stringify({ encounter_id: e, actor: doctor, end_kind: "home", disposition: "home" }),
+    ]);
+    await pg.query(`UPDATE public.hospital_wards SET archived_at = now() WHERE id = $1`, [w]);
+    expect(await bayLink(bay)).toBeNull();
+  });
+
+  it("re-runs: section 6 applies twice and still refuses", async () => {
+    const { readFileSync } = await import("node:fs");
+    const sql = readFileSync("supabase/migrations/0313_eu_links.sql", "utf8");
+    const at = sql.indexOf("-- ─── 6.");
+    expect(at).toBeGreaterThan(0);
+    await pg.exec(sql.slice(at));
+    await pg.exec(sql.slice(at));
+    const { w } = await waitingIn();
+    expect(
+      await fails(`UPDATE public.hospital_wards SET archived_at = now() WHERE id = $1`, [w]),
+    ).toBe(WORDS);
+  });
+});

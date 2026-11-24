@@ -113,4 +113,20 @@ describe("upsert_ward — the Edge Function wiring", () => {
     expect(src).toContain("ward_has_units");
     expect(upsert).toContain("wardWrite(");
   });
+  it("R71: an EU with open stays — archive and re-type map 0313's hint to words", () => {
+    const write = src.slice(
+      src.indexOf("function wardWrite<T>("),
+      src.indexOf("const upsertWard: OpHandler"),
+    );
+    expect(write).toContain('hint === "eu_ward_has_stays"');
+    expect(write).toContain("WARD_ATTACH_WORDS.staysOpen");
+    const archive = src.slice(
+      src.indexOf('patch.state = "inactive"'),
+      src.indexOf("const unarchive: OpHandler"),
+    );
+    expect(archive).toContain("wardWrite(");
+    expect(WARD_ATTACH_WORDS.staysOpen).toBe(
+      "Patients are in this emergency unit or waiting for a space in it. End or move their stays first.",
+    );
+  });
 });
