@@ -50,7 +50,7 @@ import { fetchResusBoardV2, OPENABLE_LOOKBACK_MS } from "@/lib/resus/board-v2";
 import { revealPatientIdentities } from "@/lib/scheduling/patient-identity";
 import { resolveTriageAuthority } from "@/lib/triage/authority";
 import { DEFAULT_TIME_ZONE, startOfLocalDay } from "@/supabase/functions/_shared/slots";
-import { computeFlow, ENCOUNTER_IDLE_MS } from "./flow";
+import { computeFlow, ENCOUNTER_IDLE_MS, unnamedPatients } from "./flow";
 import { admittedLabel } from "./words";
 
 export { ENCOUNTER_IDLE_MS };
@@ -386,7 +386,11 @@ export async function loadWorkspace(args: {
 
   /* ── C ─────────────────────────────────────────────────────────────── */
   const rows = lanes ? flow.rows.filter((r) => lanes.includes(r.lane)) : flow.rows;
-  const shown = new Set(rows.map((r) => r.patientId).filter((id): id is string => !!id));
+  // R29: a row standing only for a restricted request I have no chart basis for stays nameless.
+  const unnamed = unnamedPatients(rows, tasks);
+  const shown = new Set(
+    rows.map((r) => r.patientId).filter((id): id is string => !!id && !unnamed.has(id)),
+  );
   const revealed = await revealPatientIdentities({
     viewer: { userId: viewer.userId, hospitalId: viewer.hospitalId },
     surface: "doctor_workspace",
@@ -603,13 +607,16 @@ async function requestTasks(database: EmrDb, viewer: WorkspaceViewer): Promise<F
         : r.kind === "consult"
           ? copy.consult(r.departmentName)
           : copy.review,
+      unnamed: r.restricted && !r.chart,
     });
-  // R29: the board reveals its rows' names, so a restricted request the viewer has no chart basis
-  // for stays off it (nameless on /doctor/requests). R30: only unclaimed ones can be picked up.
-  const onBoard = (r: RequestRow) => !r.restricted || r.chart;
+  // Asked of me: every one, the prompt to act (the reveal skips the unnamed). The department's: R29,
+  // a restricted one I have no chart basis for stays off (nameless on /doctor/requests); R30, only
+  // unclaimed ones can be picked up.
   return [
-    ...asked.filter(onBoard).map(task("request_mine")),
-    ...dept.filter((r) => onBoard(r) && !r.mine && !r.claimed).map(task("request_department")),
+    ...asked.map(task("request_mine")),
+    ...dept
+      .filter((r) => (!r.restricted || r.chart) && !r.mine && !r.claimed)
+      .map(task("request_department")),
   ];
 }
 

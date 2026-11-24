@@ -116,6 +116,23 @@ export interface FlowTask {
   atMs: number;
   /** "Potassium", "Clerking note", "Consult · Renal"; null when restricted: a board never names it. */
   label: string | null;
+  /** A restricted request the viewer has no chart basis for: its patient is never revealed (R29). */
+  unnamed?: boolean;
+}
+
+/**
+ * Patients the board must not reveal: their row stands only for requests the viewer may not name
+ * (restricted, no chart basis). Any other open item on the row is its own basis to show them.
+ */
+export function unnamedPatients(rows: readonly PatientFlowRow[], tasks: readonly FlowTask[]) {
+  const unnamed = new Set(tasks.filter((t) => t.unnamed).map((t) => t.id));
+  return new Set(
+    rows
+      .filter(
+        (r) => r.patientId && r.itemIds.length > 0 && r.itemIds.every((id) => unnamed.has(id)),
+      )
+      .map((r) => r.patientId!),
+  );
 }
 
 /** The resus v2 board's own section for the episode (lib/resus/board-v2.ts). */

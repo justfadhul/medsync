@@ -248,9 +248,11 @@ describe.skipIf(!laneOn)("reading care requests (PGlite lane)", () => {
     const hidden = await placed({ named: [consultant.userId], restricted: true });
     const shown = await placed({ named: [consultant.userId] });
     const tasks = await loadEmrTasks(lane.db, viewerOf(consultant));
+    // The routed recipient's board keeps their restricted request, unlabelled; they hold the chart basis.
     expect(tasks.find((t) => t.id === hidden.id)).toMatchObject({
       kind: "request_mine",
       label: null,
+      unnamed: false,
     });
     expect(tasks.find((t) => t.id === shown.id)!.label).toMatch(/^Consult · Renal/);
     // A member with no chart basis reads the request, but not who it is about or why.

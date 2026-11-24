@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { ago, computeFlow, ENCOUNTER_IDLE_MS } from "@/lib/workspace/flow";
+import { ago, computeFlow, ENCOUNTER_IDLE_MS, unnamedPatients } from "@/lib/workspace/flow";
 import { laneFromParam, LANES, visibleLanes } from "@/lib/workspace/lanes";
 import {
   DAY,
@@ -1115,6 +1115,21 @@ describe("FW-2 E8 record lanes: Critical results, Results to review, To co-sign"
       input({ patients, tasks: [task("q3", "a", "request_mine", { label: null })] }),
     );
     expect(restricted.stageDetail).toBe("Request asked of you");
+  });
+
+  it("a restricted request I may not name is boarded, but its patient is never revealed", () => {
+    const secret = task("q1", "a", "request_mine", { label: null, unnamed: true });
+    const alone = input({ patients, tasks: [secret] });
+    const { rows } = computeFlow(alone);
+    expect(rows[0]!.lane).toBe("asked_of_you");
+    expect(unnamedPatients(rows, alone.tasks!)).toEqual(new Set(["a"]));
+    // Another open item on the same row is its own basis to show the patient.
+    const mixed = input({
+      patients,
+      tasks: [secret],
+      encounters: [encounter("e1", "a", { state: "in_progress", lastActivityAtMs: NOW - MIN })],
+    });
+    expect(unnamedPatients(computeFlow(mixed).rows, mixed.tasks!)).toEqual(new Set());
   });
 
   it("the lanes sit in registry order on a mixed board", () => {
