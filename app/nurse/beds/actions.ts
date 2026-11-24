@@ -5,10 +5,11 @@ import type { WaitReason } from "@/lib/wards/eu-guard";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
+import { EU_WARD } from "@/content/eu/words";
 import { encrypt } from "@/lib/encryption";
 import { requireNurseScope } from "@/lib/nurse/scope";
 import { callEdge } from "@/lib/supabase/edge";
-import { euAssignRefusal } from "@/lib/wards/eu-guard";
+import { euAssignRefusal, WAIT_NOTE_MAX } from "@/lib/wards/eu-guard";
 import { wardBuilderLiveFor } from "@/lib/wards/feature";
 
 /*
@@ -84,6 +85,7 @@ export async function nurseMoveEuSpace(
   )
     return { ok: false, error: "Unknown stay, ward or space." };
   const note = target.waitNote?.trim();
+  if (note && note.length > WAIT_NOTE_MAX) return { ok: false, error: EU_WARD.waitNoteTooLong };
   return hub({
     op: "move_eu_space",
     stay_id: stayId,

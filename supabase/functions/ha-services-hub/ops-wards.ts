@@ -13,7 +13,7 @@ import type { RegisterBed, WardLayout } from "../_shared/ward-layout.ts";
 import type { Ctx, OpHandler } from "./common.ts";
 import { z } from "npm:zod@4.4.3";
 
-import { euRefusal } from "../_shared/eu.ts";
+import { EU_SEND_FROM_VISIT, euObservationOn, euRefusal } from "../_shared/eu.ts";
 import {
   blockingFailures,
   buildLayoutSchema,
@@ -520,6 +520,11 @@ const WAITING_INTAKE = ["arrived", "awaiting_triage", "triaged"];
 const assignBed: OpHandler = async (ctx, i) => {
   const b = await loadBed(ctx, i.bed_id);
   await assertWardWorker(ctx, b.ward_id);
+  // Server-side twin of the app's guard: a direct hub call cannot bypass it.
+  if (euObservationOn(Deno.env.get("EU_OBSERVATION"), ctx.hospitalId)) {
+    const w = await loadWard(ctx, b.ward_id);
+    if (w.ward_type === "emergency_observation") throw new HubError(EU_SEND_FROM_VISIT, 409);
+  }
   if (b.closed_at) throw new HubError(`Bed ${b.label} is out of service.`, 409);
   if (await openAssignmentOn(ctx, b.id))
     throw new HubError(`Bed ${b.label} already has a patient.`, 409);
@@ -695,15 +700,20 @@ async function rpc(ctx: Ctx, fn: string, p: Record<string, unknown>) {
 }
 
 const moveEuSpace: OpHandler = async (ctx, i) => {
-  const stay = must(
-    await ctx.sb
-      .from("eu_stays")
-      .select("id, ward_id, patient_user_id, status")
-      .eq("id", i.stay_id)
-      .eq("hospital_id", ctx.hospitalId)
-      .maybeSingle(),
-    "eu stay",
-  ) as { id: string; ward_id: string; patient_user_id: string; status: string } | null;
+  const sr = await ctx.sb
+    .from("eu_stays")
+    .select("id, ward_id, patient_user_id, status")
+    .eq("id", i.stay_id)
+    .eq("hospital_id", ctx.hospitalId)
+    .maybeSingle();
+  if (missing(sr.error)) throw new HubError("The emergency unit is not set up yet.", 409);
+  if (sr.error) throw new Error(`eu stay: ${sr.error.code ?? "error"}`);
+  const stay = sr.data as {
+    id: string;
+    ward_id: string;
+    patient_user_id: string;
+    status: string;
+  } | null;
   if (!stay) throw new HubError("That stay isn't at this hospital.");
   await assertWardWorker(ctx, stay.ward_id);
   if (i.ward_id && i.ward_id !== stay.ward_id) await assertWardWorker(ctx, i.ward_id);

@@ -6,6 +6,8 @@ import { EU_WARD } from "@/content/eu/words";
 import { db } from "@/db";
 import { euObservationLiveFor } from "@/lib/wards/feature";
 
+export const WAIT_NOTE_MAX = 500;
+
 export type WaitReason = "no_free_bed" | "extra_bed" | "floor" | "other";
 
 /**

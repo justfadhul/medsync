@@ -44,6 +44,32 @@ describe("ops-wards: move_eu_space", () => {
   });
 });
 
+describe("R60 hardening", () => {
+  it("hub assign_bed refuses an EU ward server-side when the EU is on", () => {
+    const h = hub.slice(hub.indexOf("const assignBed"), hub.indexOf("const releaseBed"));
+    expect(h).toContain('euObservationOn(Deno.env.get("EU_OBSERVATION"), ctx.hospitalId)');
+    expect(h).toContain("EU_SEND_FROM_VISIT");
+  });
+  it("adminAssignBed validates the bed id before the guard query", () => {
+    const a = admin.slice(admin.indexOf("export async function adminAssignBed"));
+    expect(a.indexOf("uuid.safeParse(bedId)")).toBeGreaterThan(-1);
+    expect(a.indexOf("uuid.safeParse(bedId)")).toBeLessThan(a.indexOf("euAssignRefusal"));
+  });
+  it("both move actions cap the note before encrypting", () => {
+    for (const src of [nurse, admin]) {
+      expect(src.indexOf("note.length > WAIT_NOTE_MAX")).toBeGreaterThan(-1);
+      expect(src.indexOf("note.length > WAIT_NOTE_MAX")).toBeLessThan(src.indexOf("encrypt(note)"));
+    }
+    expect(read("content/eu/words.ts")).toContain("waitNoteTooLong");
+  });
+  it("moveEuSpace handles a missing table and logs SQLSTATE only", () => {
+    const h = hub.slice(hub.indexOf("const moveEuSpace"));
+    expect(h).toContain("missing(sr.error)");
+    expect(h).toContain("sr.error.code");
+    expect(h).not.toContain("sr.error.message");
+  });
+});
+
 describe("euRefusal in the hub", () => {
   it("maps deadlocks to try again", () => {
     expect(euRefusal({ message: "x", code: "40P01" })).toBe(
@@ -66,7 +92,7 @@ describe("server actions", () => {
   it("both assign actions use the EU guard, whose refusal is the brief's words", () => {
     expect(nurse).toMatch(/nurseAssignBed[\s\S]*euAssignRefusal/);
     expect(admin).toMatch(/adminAssignBed[\s\S]*euAssignRefusal/);
-    expect(read("content/eu/words.ts")).toContain(SEND);
+    expect(read("supabase/functions/_shared/eu.ts")).toContain(SEND);
     expect(guard).toContain("euObservationLiveFor");
     expect(guard).toContain("emergency_observation");
   });

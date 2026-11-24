@@ -10,10 +10,11 @@ import type { WardLayout } from "@/lib/wards/layout-schema";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
+import { EU_WARD } from "@/content/eu/words";
 import { encrypt } from "@/lib/encryption";
 import { requireHospitalAdminScope } from "@/lib/hospital-admin/scope";
 import { callEdge } from "@/lib/supabase/edge";
-import { euAssignRefusal } from "@/lib/wards/eu-guard";
+import { euAssignRefusal, WAIT_NOTE_MAX } from "@/lib/wards/eu-guard";
 import { wardBuilderLiveFor } from "@/lib/wards/feature";
 import { WardLayoutSchema } from "@/lib/wards/layout-schema";
 
@@ -182,6 +183,7 @@ export async function adminAssignBed(
   bedId: string,
   patientUserId: string,
 ): Promise<SimpleResult> {
+  if (!uuid.safeParse(bedId).success) return { ok: false, error: "Unknown bed." };
   const s = await scope();
   const refused = await euAssignRefusal(s.hospitalId, bedId);
   if (refused) return { ok: false, error: refused };
@@ -283,6 +285,7 @@ export async function adminMoveEuSpace(
   )
     return { ok: false, error: "Unknown stay, ward or space." };
   const note = target.waitNote?.trim();
+  if (note && note.length > WAIT_NOTE_MAX) return { ok: false, error: EU_WARD.waitNoteTooLong };
   return adminHub(wardId, {
     op: "move_eu_space",
     stay_id: stayId,

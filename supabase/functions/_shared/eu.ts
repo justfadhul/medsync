@@ -2,6 +2,10 @@
  * The emergency unit's Edge Function helpers (ADR 0541). No imports: pure, and read by the app's tests.
  */
 
+/** The refusal for assigning a bed on an EU ward while the EU is live (shown by the app and the hub). */
+export const EU_SEND_FROM_VISIT =
+  "In an emergency unit, send the patient from their visit (Send to EU).";
+
 /**
  * `EU_OBSERVATION` as the function sees it: `1`, or a comma list of hospital ids. The app's
  * euObservationLiveFor (lib/wards/feature.ts) also needs WARD_BUILDER and ENCOUNTER_CLOSE_V2, which the
