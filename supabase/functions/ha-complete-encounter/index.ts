@@ -173,7 +173,7 @@ Deno.serve(async (request: Request) => {
   const { data: enc, error: encErr } = await sb
     .from("encounters")
     .select(
-      "id, hospital_id, patient_user_id, clinician_user_id, state, appointment_id, department_id, triage_record_id",
+      "id, hospital_id, patient_user_id, clinician_user_id, state, appointment_id, department_id, triage_record_id, visit_id",
     )
     .eq("id", input.encounter_id)
     .maybeSingle();
@@ -198,8 +198,24 @@ Deno.serve(async (request: Request) => {
     if (!scope.ok) return forbidden(init, scope.reason);
   }
 
-  // EU (ADR 0541): the open stay this visit may end, its own or a triage stay with no encounter yet. Another
-  // visit's stay is left alone. Before 0311 the table is missing (42P01, or PGRST205 from PostgREST 12.2+): no stay, the close is as before.
+  // The intake of this visit's triage, if any: it names the visit for a triage EU stay (R65) and closes the intake (3).
+  let triageIntakeId: string | null = null;
+  if (enc.triage_record_id) {
+    const { data: tr, error: trErr } = await sb
+      .from("triage_records")
+      .select("intake_id")
+      .eq("id", enc.triage_record_id)
+      .maybeSingle();
+    if (trErr) {
+      log.error("triage lookup failed", { requestId, name: trErr.name, code: trErr.code });
+      return serverError("encounter update failed", init);
+    }
+    triageIntakeId = (tr?.intake_id as string | null | undefined) ?? null;
+  }
+  const encIntakeId = (enc.visit_id as string | null) ?? triageIntakeId;
+
+  // EU (ADR 0541): the open stay this visit may end, its own or a triage stay with no encounter yet whose intake is
+  // this visit's (R65). Another visit's stay is left alone. Before 0311 the table is missing (42P01, or PGRST205 from PostgREST 12.2+): no stay, the close is as before.
   const missingTable = (code?: string) => code === "42P01" || code === "PGRST205";
   const stayLookup = (or: string) =>
     sb
@@ -210,7 +226,12 @@ Deno.serve(async (request: Request) => {
       .neq("status", "ended")
       .or(or)
       .maybeSingle();
-  let euLookup = await stayLookup(`encounter_id.eq.${enc.id},encounter_id.is.null`);
+  // Built from database uuids only (the encounter row and its triage record).
+  let euLookup = await stayLookup(
+    encIntakeId
+      ? `encounter_id.eq.${enc.id},and(encounter_id.is.null,intake_id.eq.${encIntakeId})`
+      : `encounter_id.eq.${enc.id}`,
+  );
   if (euLookup.error && !missingTable(euLookup.error.code)) {
     log.error("eu stay lookup failed", { requestId, code: euLookup.error.code });
     return serverError("encounter update failed", init);
@@ -460,15 +481,6 @@ Deno.serve(async (request: Request) => {
   //    rather than by date: a ticket declared before midnight and seen after
   //    it is still this visit's. The department is the fallback only for an
   //    unbooked visit, so a second clinic's ticket survives a booked one.
-  let triageIntakeId: string | null = null;
-  if (enc.triage_record_id) {
-    const { data: tr } = await sb
-      .from("triage_records")
-      .select("intake_id")
-      .eq("id", enc.triage_record_id)
-      .maybeSingle();
-    triageIntakeId = (tr?.intake_id as string | null | undefined) ?? null;
-  }
   const intakeLinks = [`encounter_id.eq.${enc.id}`];
   if (triageIntakeId) intakeLinks.push(`id.eq.${triageIntakeId}`);
   if (enc.appointment_id) intakeLinks.push(`appointment_id.eq.${enc.appointment_id}`);

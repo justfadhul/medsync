@@ -237,7 +237,12 @@ describe.skipIf(!laneOn)("0313 — triage sends to EU resus", () => {
     const { ward, beds } = await newWard({ R1: "resus" });
     const { p, i } = await triaged(2);
     const r = await call({ hospital_id: h, intake_id: i, bed_id: beds["R1"], actor: nurse });
-    const e = await encounter(pg, { hospitalId: h, patientUserId: p, clinicianUserId: doctor });
+    const e = await encounter(pg, {
+      hospitalId: h,
+      patientUserId: p,
+      clinicianUserId: doctor,
+      visitId: i,
+    });
     const a = (
       await pg.query<{ r: Record<string, unknown> }>(
         `SELECT public.observe_in_eu($1::jsonb) AS r`,
@@ -256,6 +261,78 @@ describe.skipIf(!laneOn)("0313 — triage sends to EU resus", () => {
       started_by_kind: "triage_nurse",
       decided_by: nurse,
     });
+  });
+
+  /* R65: a triage stay (no encounter yet) belongs to its intake. Only an encounter of that visit (encounters.visit_id,
+     or its triage's intake) adopts or ends it; another visit of the same patient leaves the resus space held. */
+  it("only the triage's own visit adopts or ends a triage stay; another visit leaves it held", async () => {
+    const { ward, beds } = await newWard({ R1: "resus" });
+    const { p, i } = await triaged(2);
+    const r = await call({ hospital_id: h, intake_id: i, bed_id: beds["R1"], actor: nurse });
+    const held = async () =>
+      row(
+        `SELECT s.status, s.encounter_id, a.ended_at
+           FROM public.eu_stays s JOIN public.bed_assignments a ON a.eu_stay_id = s.id
+          WHERE s.id = $1 AND a.id = $2`,
+        [r.stay_id, r.assignment_id],
+      );
+    const fn = async (name: string, payload: Record<string, unknown>) => {
+      try {
+        return (
+          await pg.query<{ r: Record<string, unknown> }>(`SELECT public.${name}($1::jsonb) AS r`, [
+            JSON.stringify(payload),
+          ])
+        ).rows[0]!.r;
+      } catch (e) {
+        return (e as Error).message;
+      }
+    };
+    const end = (e: string) => ({
+      encounter_id: e,
+      actor: doctor,
+      end_kind: "home",
+      disposition: "home",
+    });
+
+    // Visit B: a clinic visit of the same patient, same hospital (yesterday's ticket, one live per day); and an
+    // encounter with no visit at all.
+    const b = await intake(pg, {
+      hospitalId: h,
+      patientUserId: p,
+      arrivedAt: new Date(Date.now() - 86_400_000).toISOString(),
+    });
+    const clinic = await encounter(pg, {
+      hospitalId: h,
+      patientUserId: p,
+      clinicianUserId: doctor,
+      visitId: b,
+    });
+    const loose = await encounter(pg, { hospitalId: h, patientUserId: p, clinicianUserId: doctor });
+    for (const e of [clinic, loose]) {
+      expect(await fn("end_eu_stay", end(e))).toEqual({ ended: false });
+      expect(await held()).toEqual({ status: "in_space", encounter_id: null, ended_at: null });
+      expect(
+        await fn("observe_in_eu", {
+          encounter_id: e,
+          actor: doctor,
+          ward_id: ward,
+          bed_id: beds["R1"],
+        }),
+      ).toBe("EU409 This patient is already in the EU.");
+      expect(await held()).toEqual({ status: "in_space", encounter_id: null, ended_at: null });
+    }
+
+    // Visit A, linked through its triage record: its close (with an outcome) ends the stay and frees the space.
+    const own = await encounter(pg, { hospitalId: h, patientUserId: p, clinicianUserId: doctor });
+    await pg.query(
+      `UPDATE public.encounters SET triage_record_id = (SELECT id FROM public.triage_records WHERE intake_id = $2)
+        WHERE id = $1`,
+      [own, i],
+    );
+    expect(await fn("end_eu_stay", end(own))).toEqual({ ended: true, stay_id: r.stay_id });
+    const after = await held();
+    expect(after).toMatchObject({ status: "ended", encounter_id: own });
+    expect(after.ended_at).not.toBeNull();
   });
 
   it("only the service role runs it", async () => {

@@ -28,7 +28,7 @@ describe("ha-complete-encounter — the cascade is this encounter's, not the pat
   const intake = between(src, '.from("patient_intakes")', '.from("nursing_assignments")');
 
   it("reads the encounter's department and triage record", () => {
-    expect(src).toMatch(/\.select\(\s*"[^"]*department_id, triage_record_id"/);
+    expect(src).toMatch(/\.select\(\s*"[^"]*department_id, triage_record_id[^"]*"/);
   });
 
   it("closes the encounter's own queue row by encounter_id", () => {

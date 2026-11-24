@@ -153,7 +153,16 @@ describe("ha-complete-encounter — the close ends the EU stay", () => {
     expect(src).toContain('.from("eu_stays")');
     expect(src).toContain('.eq("patient_user_id", enc.patient_user_id)');
     expect(src).toContain('.neq("status", "ended")');
-    expect(src).toContain("encounter_id.eq.${enc.id},encounter_id.is.null");
+    // R65: a triage stay (no encounter) is this visit's only when its intake is this encounter's visit.
+    expect(src).not.toContain("encounter_id.eq.${enc.id},encounter_id.is.null");
+    expect(src).toContain(
+      '"id, hospital_id, patient_user_id, clinician_user_id, state, appointment_id, department_id, triage_record_id, visit_id"',
+    );
+    expect(src).toContain("const encIntakeId = (enc.visit_id as string | null) ?? triageIntakeId;");
+    expect(src).toContain(
+      "`encounter_id.eq.${enc.id},and(encounter_id.is.null,intake_id.eq.${encIntakeId})`",
+    );
+    expect(src.indexOf('.from("triage_records")')).toBeLessThan(src.indexOf('.from("eu_stays")'));
     expect(src).toContain(
       'const missingTable = (code?: string) => code === "42P01" || code === "PGRST205";',
     );

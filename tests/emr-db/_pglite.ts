@@ -337,15 +337,18 @@ export async function encounter(
     departmentId?: string | null;
     state?: "planned" | "in_progress" | "completed" | "cancelled";
     startedAt?: string;
+    /** The visit (intake) this encounter belongs to (encounters.visit_id). */
+    visitId?: string | null;
   },
 ): Promise<string> {
   const state = o.state ?? "in_progress";
   return (
     await one<{ id: string }>(
       pg,
-      `INSERT INTO public.encounters (hospital_id, patient_user_id, clinician_user_id, department_id, state, started_at, ended_at)
+      `INSERT INTO public.encounters (hospital_id, patient_user_id, clinician_user_id, department_id, state, started_at, ended_at,
+                                      visit_id)
        VALUES ($1, $2, $3, $4, $5, coalesce($6::timestamptz, now()),
-               CASE WHEN $5 = 'completed' THEN coalesce($6::timestamptz, now()) END)
+               CASE WHEN $5 = 'completed' THEN coalesce($6::timestamptz, now()) END, $7)
        RETURNING id`,
       [
         o.hospitalId,
@@ -354,6 +357,7 @@ export async function encounter(
         o.departmentId ?? null,
         state,
         o.startedAt ?? null,
+        o.visitId ?? null,
       ],
     )
   ).id;

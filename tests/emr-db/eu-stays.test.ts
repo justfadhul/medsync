@@ -529,7 +529,12 @@ describe.skipIf(!laneOn)("0311 — the EU stay on real SQL", () => {
         [h, ward, beds["R1"], p, doctor, s],
       )
     ).rows[0]!.id;
-    const e = await encounter(pg, { hospitalId: h, patientUserId: p, clinicianUserId: doctor });
+    const e = await encounter(pg, {
+      hospitalId: h,
+      patientUserId: p,
+      clinicianUserId: doctor,
+      visitId: i,
+    });
     const r = await call("observe_in_eu", {
       encounter_id: e,
       actor: doctor,
@@ -564,7 +569,12 @@ describe.skipIf(!laneOn)("0311 — the EU stay on real SQL", () => {
       started_by_kind: "triage_nurse",
       ward_id: ward,
     });
-    const e2 = await encounter(pg, { hospitalId: h, patientUserId: p2, clinicianUserId: doctor });
+    const e2 = await encounter(pg, {
+      hospitalId: h,
+      patientUserId: p2,
+      clinicianUserId: doctor,
+      visitId: i2,
+    });
     const r2 = await call("observe_in_eu", {
       encounter_id: e2,
       actor: doctor,
@@ -662,7 +672,13 @@ describe.skipIf(!laneOn)("0311 — the EU stay on real SQL", () => {
       ward_id: ward,
       ...o,
     });
-    const e = await encounter(pg, { hospitalId: h, patientUserId: p, clinicianUserId: doctor });
+    // The doctor's encounter is of the triage's visit (R65: only that visit adopts or ends the stay).
+    const e = await encounter(pg, {
+      hospitalId: h,
+      patientUserId: p,
+      clinicianUserId: doctor,
+      visitId: i,
+    });
     return { p, i, s, e, nurse };
   }
 
@@ -1009,6 +1025,7 @@ describe.skipIf(!laneOn)("0311 — the EU stay on real SQL", () => {
       patientUserId: t.p,
       clinicianUserId: doctor,
       state: "completed",
+      visitId: t.i,
     });
     const before = await stayRow(t.s);
     expect(await refusal("end_eu_stay", end(done))).toBe("EU409 This visit is not in progress.");

@@ -11,12 +11,16 @@
 --      free resus space of an active, open EU. The stay is the triage nurse's (no encounter, the intake named), in
 --      the space as Arriving; the doctor's Send to EU later adopts it (observe_in_eu, 0311). Service role only
 --      (ha-eu-stay); audit verb 'send_to_eu_resus' (0311's sa_audit_log_action_check list kept verbatim).
+--   4. R65: a triage stay (no encounter, the intake named) is adopted (observe_in_eu, 0311) and ended
+--      (end_eu_stay, 0312) only by an encounter of that visit (encounters.visit_id, or its triage's intake); another
+--      visit of the patient leaves it, and the resus space, alone. Both bodies are redefined verbatim but for that.
 --   Later sections come from Task 26.
 --
 -- ADDITIVE and re-runnable.
 -- Reverse: restore 0101's phi_access_basis_check (after removing any 'eu_staff' rows); restore 0295's
 -- clinic_floor_events detail list only while no 'eu' row exists (that log is append-only); drop
--- send_to_eu_resus(jsonb) and restore 0311's audit list (after removing any 'send_to_eu_resus' rows).
+-- send_to_eu_resus(jsonb) and restore 0311's audit list (after removing any 'send_to_eu_resus' rows); re-run 0311's
+-- observe_in_eu and 0312's end_eu_stay definitions.
 
 -- ─── 1. Log an EU list name truthfully ───────────────────────────────────
 ALTER TABLE public.clinical_phi_access_log DROP CONSTRAINT IF EXISTS phi_access_basis_check;
@@ -194,3 +198,240 @@ ALTER TABLE public.sa_audit_log ADD CONSTRAINT sa_audit_log_action_check CHECK (
     'send_to_eu_resus'
   )
 );
+
+-- ─── 4. A triage stay belongs to its visit (R65) ─────────────────────────
+-- A triage stay has no encounter, only its intake. 0312's end_eu_stay ended it for ANY encounter of the patient at
+-- the hospital, and 0311's observe_in_eu adopted it from any, so an unrelated clinic visit could release the resus
+-- space. Both bodies verbatim, except: the triage stay is matched only by an encounter whose visit is the stay's
+-- intake (encounters.visit_id, or the intake of its triage record, as observe_in_eu already names the intake).
+-- Another visit's close finds no stay; its Send to EU is refused as "already in the EU". Grants are kept.
+
+-- 0311's observe_in_eu, plus R65 on the adoption.
+CREATE OR REPLACE FUNCTION public.observe_in_eu(p jsonb)
+RETURNS jsonb
+LANGUAGE plpgsql
+SET search_path = public, pg_temp
+AS $$
+DECLARE
+  v_actor uuid := (p->>'actor')::uuid;
+  v_bed uuid := nullif(p->>'bed_id', '')::uuid;
+  v_reason text := CASE WHEN nullif(p->>'bed_id', '') IS NULL THEN nullif(p->>'space_wait_reason', '') END;
+  v_note text := CASE WHEN nullif(p->>'bed_id', '') IS NULL THEN nullif(p->>'space_wait_note_ciphertext', '') END;
+  v_enc public.encounters%ROWTYPE;
+  v_ward public.hospital_wards%ROWTYPE;
+  v_stay public.eu_stays%ROWTYPE;
+  v_cur public.bed_assignments%ROWTYPE;
+  v_label text;
+  v_intake uuid;
+  v_asg uuid;
+  v_here boolean;
+  v_con text;
+BEGIN
+  SELECT * INTO v_enc FROM public.encounters WHERE id = (p->>'encounter_id')::uuid FOR UPDATE;
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'EU404 Visit not found.' USING ERRCODE = 'check_violation', HINT = 'eu_visit_not_found';
+  END IF;
+  IF v_enc.state <> 'in_progress' THEN
+    RAISE EXCEPTION 'EU409 This visit is not in progress.'
+      USING ERRCODE = 'check_violation', HINT = 'eu_visit_not_in_progress';
+  END IF;
+  SELECT * INTO v_ward FROM public.hospital_wards
+   WHERE id = (p->>'ward_id')::uuid AND hospital_id = v_enc.hospital_id;
+  IF NOT FOUND OR v_ward.archived_at IS NOT NULL OR v_ward.state <> 'active' OR v_ward.closed_at IS NOT NULL
+     OR v_ward.ward_type IS DISTINCT FROM 'emergency_observation' THEN
+    RAISE EXCEPTION 'EU409 That is not an emergency unit at this hospital.'
+      USING ERRCODE = 'check_violation', HINT = 'eu_not_an_eu';
+  END IF;
+  IF v_bed IS NULL AND v_reason IS NULL THEN
+    RAISE EXCEPTION 'EU400 Choose a space, or say why the patient waits for one.'
+      USING ERRCODE = 'check_violation', HINT = 'eu_space_or_reason';
+  END IF;
+  IF v_reason = 'other' AND v_note IS NULL THEN
+    RAISE EXCEPTION 'EU400 Say why the patient waits.' USING ERRCODE = 'check_violation', HINT = 'eu_wait_note';
+  END IF;
+  IF EXISTS (SELECT 1 FROM public.admissions
+              WHERE patient_user_id = v_enc.patient_user_id
+                AND status IN ('awaiting_bed', 'bed_allocated', 'arrived')) THEN
+    RAISE EXCEPTION 'EU409 This patient has an open admission.'
+      USING ERRCODE = 'check_violation', HINT = 'eu_open_admission';
+  END IF;
+  SELECT * INTO v_stay FROM public.eu_stays
+   WHERE patient_user_id = v_enc.patient_user_id AND status <> 'ended' FOR UPDATE;
+  -- Only a triage stay at this hospital is adopted; any other open stay means the patient is in an EU already.
+  -- R65: and only by an encounter of the triage's visit (its visit_id, or its triage's intake).
+  IF FOUND AND (v_stay.encounter_id IS NOT NULL OR v_stay.hospital_id <> v_enc.hospital_id
+                OR v_stay.intake_id IS DISTINCT FROM coalesce(v_enc.visit_id,
+                     (SELECT t.intake_id FROM public.triage_records t WHERE t.id = v_enc.triage_record_id))) THEN
+    RAISE EXCEPTION 'EU409 This patient is already in the EU.'
+      USING ERRCODE = 'check_violation', HINT = 'eu_already_in_eu';
+  END IF;
+
+  IF v_stay.id IS NOT NULL THEN
+    -- Adopt the triage stay: stamp the encounter; a different space chosen moves it, as move_eu_space does.
+    SELECT * INTO v_cur FROM public.bed_assignments
+     WHERE eu_stay_id = v_stay.id AND ended_at IS NULL FOR UPDATE;
+    IF (v_bed IS NOT NULL AND v_bed IS DISTINCT FROM v_cur.bed_id) OR v_ward.id <> v_stay.ward_id THEN
+      IF v_bed IS NOT NULL THEN
+        v_label := public.admission_free_bed(v_enc.hospital_id, v_ward.id, v_bed);
+        IF EXISTS (SELECT 1 FROM public.bed_assignments
+                    WHERE patient_user_id = v_enc.patient_user_id AND ended_at IS NULL
+                      AND id IS DISTINCT FROM v_cur.id) THEN
+          RAISE EXCEPTION 'EU409 This patient is already in a bed. The ward releases it first.'
+            USING ERRCODE = 'check_violation', HINT = 'eu_already_in_bed';
+        END IF;
+      END IF;
+      IF v_cur.id IS NOT NULL THEN
+        UPDATE public.bed_assignments
+           SET ended_at = now(), ended_by = v_actor,
+               reason = CASE WHEN v_bed IS NULL THEN 'Moved out of a space' ELSE 'Moved to ' || v_label END
+         WHERE id = v_cur.id;
+      END IF;
+      -- Staff placing a waiting or arrived patient means the patient is here: the new space starts Occupied.
+      v_here := v_stay.arrived_at IS NOT NULL OR v_stay.status = 'awaiting_space';
+      IF v_bed IS NOT NULL THEN
+        INSERT INTO public.bed_assignments (hospital_id, ward_id, bed_id, patient_user_id, encounter_id, eu_stay_id,
+                                            started_by, arrived_at, arrived_by)
+        VALUES (v_enc.hospital_id, v_ward.id, v_bed, v_enc.patient_user_id, v_enc.id, v_stay.id, v_actor,
+                CASE WHEN v_here THEN now() END, CASE WHEN v_here THEN v_actor END)
+        RETURNING id INTO v_asg;
+      END IF;
+      UPDATE public.eu_stays
+         SET encounter_id = v_enc.id, ward_id = v_ward.id, responsible_user_id = v_actor,
+             status = CASE WHEN v_bed IS NULL THEN 'awaiting_space' ELSE 'in_space' END,
+             space_wait_reason = v_reason, space_wait_note_ciphertext = v_note,
+             arrived_at = coalesce(arrived_at, CASE WHEN v_bed IS NOT NULL AND v_here THEN now() END),
+             arrived_by = coalesce(arrived_by, CASE WHEN v_bed IS NOT NULL AND v_here THEN v_actor END)
+       WHERE id = v_stay.id;
+    ELSE
+      v_asg := v_cur.id;
+      SELECT label INTO v_label FROM public.hospital_beds WHERE id = v_cur.bed_id;
+      -- Same space (or still waiting on the same EU): the doctor's own wait reason replaces the nurse's.
+      UPDATE public.eu_stays
+         SET encounter_id = v_enc.id, responsible_user_id = v_actor,
+             space_wait_reason = CASE WHEN status = 'awaiting_space' THEN v_reason ELSE space_wait_reason END,
+             space_wait_note_ciphertext = CASE WHEN status = 'awaiting_space' THEN v_note
+                                               ELSE space_wait_note_ciphertext END
+       WHERE id = v_stay.id;
+    END IF;
+    v_intake := v_stay.intake_id;
+  ELSE
+    IF v_bed IS NOT NULL THEN
+      v_label := public.admission_free_bed(v_enc.hospital_id, v_ward.id, v_bed);
+      IF EXISTS (SELECT 1 FROM public.bed_assignments
+                  WHERE patient_user_id = v_enc.patient_user_id AND ended_at IS NULL) THEN
+        RAISE EXCEPTION 'EU409 This patient is already in a bed. The ward releases it first.'
+          USING ERRCODE = 'check_violation', HINT = 'eu_already_in_bed';
+      END IF;
+    END IF;
+    -- The visit's intake, or its triage's; only one of this patient at this hospital is named.
+    SELECT i.id INTO v_intake FROM public.patient_intakes i
+     WHERE i.id = coalesce(v_enc.visit_id,
+                           (SELECT t.intake_id FROM public.triage_records t WHERE t.id = v_enc.triage_record_id))
+       AND i.patient_user_id = v_enc.patient_user_id AND i.hospital_id = v_enc.hospital_id;
+    BEGIN
+      INSERT INTO public.eu_stays (hospital_id, patient_user_id, encounter_id, intake_id, ward_id, started_by_kind,
+                                   decided_by, responsible_user_id, status, space_wait_reason,
+                                   space_wait_note_ciphertext)
+      VALUES (v_enc.hospital_id, v_enc.patient_user_id, v_enc.id, v_intake, v_ward.id, 'doctor', v_actor, v_actor,
+              CASE WHEN v_bed IS NULL THEN 'awaiting_space' ELSE 'in_space' END, v_reason, v_note)
+      RETURNING * INTO v_stay;
+    EXCEPTION WHEN unique_violation THEN
+      -- Two sends at once: the one-open-stay index decides, in words.
+      GET STACKED DIAGNOSTICS v_con = CONSTRAINT_NAME;
+      IF v_con = 'eu_stays_one_open_per_patient' THEN
+        RAISE EXCEPTION 'EU409 This patient is already in the EU.'
+          USING ERRCODE = 'check_violation', HINT = 'eu_already_in_eu';
+      END IF;
+      RAISE;
+    END;
+    IF v_bed IS NOT NULL THEN
+      INSERT INTO public.bed_assignments (hospital_id, ward_id, bed_id, patient_user_id, encounter_id, eu_stay_id,
+                                          started_by)
+      VALUES (v_enc.hospital_id, v_ward.id, v_bed, v_enc.patient_user_id, v_enc.id, v_stay.id, v_actor)
+      RETURNING id INTO v_asg;
+    END IF;
+  END IF;
+
+  INSERT INTO public.encounter_events (encounter_id, kind, label, actor_user_id, recorded_at)
+  VALUES (v_enc.id, 'disposition',
+          'Sent to ' || v_ward.name || ', ' || coalesce(v_label, 'waiting for a space') || ' (the visit stays open)',
+          v_actor, now());
+
+  -- v_stay is the triage stay as locked (no encounter yet) when adopted, the new row otherwise.
+  RETURN jsonb_build_object('stay_id', v_stay.id, 'assignment_id', v_asg, 'ward', v_ward.name, 'bed', v_label,
+                            'patient_user_id', v_enc.patient_user_id, 'hospital_id', v_enc.hospital_id,
+                            'intake_id', v_intake, 'adopted', v_stay.encounter_id IS NULL);
+END;
+$$;
+
+-- 0312's end_eu_stay, plus R65 on the triage-stay arm.
+CREATE OR REPLACE FUNCTION public.end_eu_stay(p jsonb)
+RETURNS jsonb
+LANGUAGE plpgsql
+SET search_path = public, pg_temp
+AS $$
+DECLARE
+  v_actor uuid := (p->>'actor')::uuid;
+  v_enc public.encounters%ROWTYPE;
+  v_stay public.eu_stays%ROWTYPE;
+  v_ward text;
+  v_adm public.admissions%ROWTYPE;
+BEGIN
+  IF p->>'end_kind' = 'admitted' THEN
+    RAISE EXCEPTION 'EU400 An admission ends the stay when the patient arrives on the ward.'
+      USING ERRCODE = 'check_violation', HINT = 'eu_admission_ends_on_arrival';
+  END IF;
+  SELECT * INTO v_enc FROM public.encounters WHERE id = (p->>'encounter_id')::uuid FOR UPDATE;
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'EU404 Visit not found.' USING ERRCODE = 'check_violation', HINT = 'eu_visit_not_found';
+  END IF;
+  SELECT * INTO v_stay FROM public.eu_stays
+   WHERE patient_user_id = v_enc.patient_user_id AND hospital_id = v_enc.hospital_id AND status <> 'ended'
+     AND (encounter_id = v_enc.id
+          -- R65: a triage stay (no encounter) only for an encounter of the triage's visit.
+          OR (encounter_id IS NULL
+              AND intake_id = coalesce(v_enc.visit_id,
+                    (SELECT t.intake_id FROM public.triage_records t WHERE t.id = v_enc.triage_record_id)))
+          OR admission_id IN (SELECT id FROM public.admissions WHERE inpatient_encounter_id = v_enc.id))
+   FOR UPDATE;
+  -- No stay this visit may end (none, another visit's, or already ended): nothing written.
+  IF NOT FOUND THEN
+    RETURN jsonb_build_object('ended', false);
+  END IF;
+  IF v_enc.state <> 'in_progress' THEN
+    RAISE EXCEPTION 'EU409 This visit is not in progress.'
+      USING ERRCODE = 'check_violation', HINT = 'eu_visit_not_in_progress';
+  END IF;
+  SELECT name INTO v_ward FROM public.hospital_wards WHERE id = v_stay.ward_id;
+  -- R62: a boarder's open admission (and its Arriving ward bed) ends with the stay. DRAFT wording for the CSO.
+  SELECT * INTO v_adm FROM public.admissions
+   WHERE id = v_stay.admission_id AND status IN ('awaiting_bed', 'bed_allocated') FOR UPDATE;
+  IF FOUND THEN
+    UPDATE public.bed_assignments SET ended_at = now(), ended_by = v_actor, reason = 'Left the EU'
+     WHERE admission_id = v_adm.id AND ended_at IS NULL AND arrived_at IS NULL;
+    UPDATE public.admissions
+       SET status = 'cancelled', cancelled_at = now(), cancelled_by = v_actor,
+           cancel_reason = 'Left the EU before reaching the ward'
+     WHERE id = v_adm.id;
+  END IF;
+
+  UPDATE public.bed_assignments SET ended_at = now(), ended_by = v_actor, reason = 'Left the EU'
+   WHERE eu_stay_id = v_stay.id AND ended_at IS NULL;
+  UPDATE public.eu_stays
+     SET status = 'ended', ended_at = now(), ended_by = v_actor, end_kind = p->>'end_kind',
+         encounter_id = coalesce(encounter_id, v_enc.id)
+   WHERE id = v_stay.id;
+  -- As ha-complete-encounter's clinical close, plus the stay it ended.
+  UPDATE public.encounters
+     SET state = 'completed', ended_at = now(), completed_by = v_actor, closure_kind = 'clinical',
+         disposition = p->>'disposition',
+         disposition_detail = coalesce(nullif(p->'disposition_detail', 'null'::jsonb), '{}'::jsonb)
+                              || jsonb_build_object('eu_stay_id', v_stay.id, 'eu_ward', v_ward),
+         follow_up = nullif(p->'follow_up', 'null'::jsonb),
+         completion_reason = coalesce(nullif(p->>'completion_reason', ''), 'ended_by_clinician')
+   WHERE id = v_enc.id;
+  INSERT INTO public.encounter_events (encounter_id, kind, label, actor_user_id, recorded_at)
+  VALUES (v_enc.id, 'disposition', 'Visit completed: ' || (p->>'disposition') || ', left ' || v_ward, v_actor, now());
+  RETURN jsonb_build_object('ended', true, 'stay_id', v_stay.id);
+END;
+$$;
