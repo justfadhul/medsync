@@ -7,4 +7,5 @@
 export const EU_WARD = {
   attachedTo: "Attached to (for display)",
   noParent: "Not attached",
+  sendFromVisit: "In an emergency unit, send the patient from their visit (Send to EU).",
 } as const;
