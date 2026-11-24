@@ -110,12 +110,16 @@ export function deriveRequest(
   const seen = has(cur, "seen");
   const replied = has(all, "replied");
 
+  // R22: declined only when every recipient has declined; any accept in the round wins.
+  const decliners = new Set(cur.filter((e) => e.kind === "declined").map((e) => e.actorUserId));
+  const allDeclined = recipients.length > 0 && recipients.every((r) => decliners.has(r));
+
   let state: RequestState;
   if (has(all, "cancelled")) state = "cancelled";
   else if (has(all, "closed")) state = "closed";
   else if (replied) state = "replied";
-  else if (has(cur, "declined")) state = "declined";
   else if (acceptedAt) state = "accepted";
+  else if (allDeclined) state = "declined";
   else if (seen) state = "seen";
   else state = recipients.length ? "sent" : "unrouted";
 
@@ -163,7 +167,7 @@ export function canAct(d: DerivedRequest, act: RequestAct, who: Relation): true 
   const r = CARE_REQUEST_COPY.refusal;
   const s = d.state;
   if (s === "closed" || s === "cancelled") return r.final;
-  const asked = who.recipient || who.teamMember || who.head;
+  const asked = !who.requester && (who.recipient || who.teamMember || who.head);
   switch (act) {
     case "seen":
     case "accept":

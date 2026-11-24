@@ -32,7 +32,7 @@ const none: Relation = { requester: false, recipient: false, teamMember: false, 
 const derive = (events: RequestEvent[], f = facts()) => deriveRequest(f, events, at(500));
 
 describe("deriveRequest", () => {
-  it("state order: cancelled > closed > replied > declined > accepted > seen > sent", () => {
+  it("state order: cancelled > closed > replied > accepted > declined > seen > sent", () => {
     // redirected comes first, so the later kinds all sit in the current round.
     const list = [
       ev("redirected", 0),
@@ -44,8 +44,8 @@ describe("deriveRequest", () => {
       ev("closed", 6),
       ev("cancelled", 7),
     ];
-    const order = ["cancelled", "closed", "replied", "declined", "accepted", "seen"] as const;
-    const next = ["cancelled", "closed", "replied", "declined", "accepted", "seen", "sent"];
+    const order = ["cancelled", "closed", "replied", "accepted", "declined", "seen"] as const;
+    const next = ["cancelled", "closed", "replied", "accepted", "declined", "seen", "sent"];
     let cur = list;
     next.forEach((expected, i) => {
       expect(derive(cur).state).toBe(expected);
@@ -81,6 +81,27 @@ describe("deriveRequest", () => {
     expect(d.recipients).toEqual(["B"]);
     expect(d.round).toBe(1);
     expect(typeof canAct(d, "accept", { ...none })).toBe("string");
+  });
+
+  it("one decline of two does not decline the round; an accept wins", () => {
+    const two = [routed(0, "A"), routed(0, "B")];
+    const partial = derive([...two, ev("declined", 1, { actorUserId: "A" })]);
+    expect(partial.state).toBe("sent");
+    expect(canAct(partial, "accept", { ...none, recipient: true })).toBe(true);
+    const won = derive([
+      ...two,
+      ev("accepted", 1, { actorUserId: "A" }),
+      ev("declined", 2, { actorUserId: "B" }),
+    ]);
+    expect(won.state).toBe("accepted");
+    expect(won.ownerUserId).toBe("A");
+    expect(
+      derive([
+        ...two,
+        ev("declined", 1, { actorUserId: "A" }),
+        ev("declined", 2, { actorUserId: "B" }),
+      ]).state,
+    ).toBe("declined");
   });
 
   it("overdue only while open", () => {
@@ -123,6 +144,16 @@ describe("canAct", () => {
     expect(canAct(sent, "cancel", requester)).toBe(true);
     expect(typeof canAct(sent, "cancel", recipient)).toBe("string");
     expect(canAct(sent, "accept", recipient)).toBe(true);
+    for (const act of ["seen", "accept", "decline"] as const) {
+      expect(typeof canAct(sent, act, { ...requester, teamMember: true })).toBe("string");
+      expect(typeof canAct(sent, act, { ...requester, recipient: true })).toBe("string");
+    }
+    expect(
+      typeof canAct(d([routed(0, "A"), ev("accepted", 1)]), "reply", {
+        ...requester,
+        teamMember: true,
+      }),
+    ).toBe("string");
     expect(canAct(sent, "accept", { ...none, teamMember: true })).toBe(true);
     expect(typeof canAct(sent, "accept", requester)).toBe("string");
     expect(canAct(d([routed(0, "A"), ev("seen", 1)]), "accept", recipient)).toBe(true);
