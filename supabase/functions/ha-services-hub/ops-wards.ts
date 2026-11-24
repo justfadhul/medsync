@@ -100,6 +100,7 @@ interface WardRow {
   id: string;
   name: string;
   ward_type: string | null;
+  age_group: string | null;
   bed_count: number;
   archived_at: string | null;
 }
@@ -108,7 +109,7 @@ async function loadWard(ctx: Ctx, id: string): Promise<WardRow> {
   const w = must(
     await ctx.sb
       .from("hospital_wards")
-      .select("id, name, ward_type, bed_count, archived_at")
+      .select("id, name, ward_type, age_group, bed_count, archived_at")
       .eq("id", id)
       .eq("hospital_id", ctx.hospitalId)
       .maybeSingle(),
@@ -364,7 +365,7 @@ const publishWardLayout: OpHandler = async (ctx, i) => {
   const { draft } = await layoutsOf(ctx, w.id);
   if (!draft) throw new HubError("There is no draft to publish. Save the layout first.", 409);
   const doc = parseDocument(draft.document);
-  const checks = layoutChecks(doc, w.ward_type);
+  const checks = layoutChecks(doc, w.ward_type, w.age_group);
   const blocking = blockingFailures(checks);
   if (blocking.length) throw new HubError(blocking.map((c) => c.text).join(" · "), 409);
   const warnings = warningTexts(checks);

@@ -645,8 +645,8 @@ export function WardEditor({
 
   /* ── derived ── */
   const checks = useMemo(
-    () => (doc ? layoutChecks(doc, data.ward.wardType) : []),
-    [doc, data.ward.wardType],
+    () => (doc ? layoutChecks(doc, data.ward.wardType, data.ward.ageGroup) : []),
+    [doc, data.ward.wardType, data.ward.ageGroup],
   );
   const presets = useMemo(() => presetsFor(doc?.floor ?? FLOOR_DEFAULT), [doc?.floor]);
   const ghost: PlanGhost | null = useMemo(() => {

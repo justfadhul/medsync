@@ -766,7 +766,11 @@ export type CheckCode =
   | "overlap"
   | "piped_at_wall"
   | "duplicate_numbers"
-  | "eu_spaces";
+  | "eu_spaces"
+  | "resus_services"
+  | "resus_trolley_reach"
+  | "eu_isolation"
+  | "children_apart";
 
 export interface LayoutCheck {
   code: CheckCode;
@@ -779,6 +783,9 @@ export interface LayoutCheck {
 /** Ward types whose beds are expected to have a monitor (the monitor check). */
 export const MONITORED_WARD_TYPES = ["hdu", "icu", "nicu"] as const;
 
+/** A resus space must have a resus trolley within this many cells (5 m; proposed, not a signed standard). */
+export const RESUS_TROLLEY_REACH_CELLS = 10;
+
 const plural = (n: number, one: string, many = `${one}s`) => `${n} ${n === 1 ? one : many}`;
 export function nameList(names: readonly string[], max = 8): string {
   const shown = names.slice(0, max).join(", ");
@@ -789,7 +796,11 @@ export function nameList(names: readonly string[], max = 8): string {
  * Every check on a layout, in the order the panel shows them. Proposed wording, not signed standards.
  * `wardType` is the ward's A.5 type (the monitor check runs on HDU, ICU and NICU wards).
  */
-export function layoutChecks(d: WardLayout, wardType: string | null): LayoutCheck[] {
+export function layoutChecks(
+  d: WardLayout,
+  wardType: string | null,
+  ageGroup: string | null = null,
+): LayoutCheck[] {
   const checks: LayoutCheck[] = [];
   const inService = d.beds.filter((b) => b.status === "in");
   const lacking = (code: ServiceCode) =>
@@ -859,6 +870,65 @@ export function layoutChecks(d: WardLayout, wardType: string | null): LayoutChec
     text: trolley ? "Resus trolley placed" : "No resus trolley on the plan",
     blocking: false,
   });
+
+  if (wardType === EU_WARD_TYPE) {
+    const resus = inService.filter((b) => b.type === "resus");
+    if (resus.length) {
+      const bare = resus
+        .filter(
+          (b) => !["o2", "suction", "monitor"].every((s) => b.services.includes(s as ServiceCode)),
+        )
+        .map((b) => b.label);
+      checks.push({
+        code: "resus_services",
+        ok: bare.length === 0,
+        text: bare.length
+          ? `Resus spaces without oxygen, suction or a monitor: ${nameList(bare)}`
+          : "Every resus space has oxygen, suction and a monitor",
+        blocking: false,
+      });
+      const centres = d.fixtures
+        .filter((f) => f.kind === "resus_trolley")
+        .map((f) => fixtureRect(f))
+        .map((r) => ({ x: r.x + r.w / 2, y: r.y + r.h / 2 }));
+      const far = resus
+        .filter((b) => {
+          const r = bedRect(b);
+          return !centres.some(
+            (c) =>
+              Math.hypot(c.x - (r.x + r.w / 2), c.y - (r.y + r.h / 2)) <= RESUS_TROLLEY_REACH_CELLS,
+          );
+        })
+        .map((b) => b.label);
+      checks.push({
+        code: "resus_trolley_reach",
+        ok: far.length === 0,
+        text: far.length
+          ? `Resus spaces more than 5 m from a resus trolley: ${nameList(far)}`
+          : "Every resus space has a resus trolley within 5 m",
+        blocking: false,
+      });
+    }
+    const hasIso = d.rooms.some((r) => r.kind === "isolation");
+    checks.push({
+      code: "eu_isolation",
+      ok: hasIso,
+      text: hasIso ? "An isolation room is on the plan" : "No isolation room on the plan",
+      blocking: false,
+    });
+    const cots = inService.filter((b) => b.type === "cot");
+    if (ageGroup === "all" && cots.length) {
+      const open = cots.filter((b) => !roomOfBed(b, d.rooms)).map((b) => b.label);
+      checks.push({
+        code: "children_apart",
+        ok: open.length === 0,
+        text: open.length
+          ? `Cots in the open floor beside adults: ${nameList(open)}`
+          : "Children's spaces are in their own room or bay",
+        blocking: false,
+      });
+    }
+  }
 
   const bedClashes: string[] = [];
   for (let i = 0; i < d.beds.length; i++)
