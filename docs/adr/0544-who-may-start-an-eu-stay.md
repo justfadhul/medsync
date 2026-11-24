@@ -10,7 +10,9 @@ Builds on [ADR 0541](0541-the-eu-stay-observe-stays-open.md) (the stay and the c
 ## Decision
 
 1. **The doctor sends at the close (D8).** `send_to_eu` (op of `ha-eu-stay`, SQL `observe_in_eu`) starts or adopts a stay
-   from a visit in progress. The visit stays open; the stay ends only when the visit is closed with an outcome. A visit on
+   from a visit in progress. The visit stays open. Closing it with an outcome ends the stay (`end_eu_stay`); an admission closes the visit but leaves the
+   stay open as a boarder ([ADR 0542](0542-boarding-in-the-eu.md)), ended when the ward confirms arrival
+   (`confirm_bed_arrival`) or by `end_eu_stay` if the patient leaves first (R62). A visit on
    the clinic floor then ends there as "Observed in EU": `clinic_floor_events_detail_check` gains `eu` (0313 section 2) and
    `ha-eu-stay` writes that finish, because the floor's own Finish dialog never offers it.
 2. **The triage nurse sends a Level 1 or 2 patient to EU resus spaces only (D4).** `send_to_eu_resus` (op of `ha-eu-stay`,

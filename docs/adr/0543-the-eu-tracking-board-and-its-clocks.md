@@ -23,7 +23,7 @@ the links to the resus desk.
    `triage_system` capability: `sats` and `etat` words, otherwise MedSync's own form `L<n> · <word>`. Level 5 is never
    "Blue" on the EU board (SATS Blue means dead): level 4 and 5 both read "Green" in SATS and in MedSync's own words.
 5. **Who sees names (D10).** The EU list shows names and MRNs only to EU staff: whoever works the ward's beds
-   (`mayWorkBeds`, which includes the ward's nurses, its in-charge and the hospital admin) and the EU doctor on duty
+   (`mayWorkBeds`: nurses with an open nursing assignment on the ward, its in-charge and the hospital admin) and the EU doctor on duty
    (`mayReadEuNames`, `lib/eu/cover.ts`). Others get no name and no MRN, and nothing is logged. The list is read on the
    nurse beds page, the hospital-admin ward board page and the doctor's `app/doctor/eu` page. The ward board's plan view keeps
    its older rule (MRN only for the admin).
@@ -38,7 +38,7 @@ the links to the resus desk.
   There is no fallback to the department, its heads or the hospital contacts. In words the rota is "planned", never
   "present": the doctor's page says the list shows "to the EU doctor on duty, from the duty rota". This supersedes R12
   (empty seam) now that the rota exists on this branch.
-- **R64: the `eu_staff` basis.** A name shown to EU staff who hold no chart basis for the patient (the ward's nurses, the
+- **R64: the `eu_staff` basis.** A name shown to EU staff who hold no chart basis for the patient (nurses assigned to the ward, the
   in-charge, the rota doctor, the hospital admin) must not be logged as "assigned", which means a nursing assignment.
   Migration 0313 section 1 redefines `phi_access_basis_check` with 0101's list verbatim plus `eu_staff` (the Drizzle check
   in `db/schema/doctor-workspace.ts` mirrors it). `euNameBasis` logs the viewer's real chart basis if there is one, else
@@ -62,4 +62,4 @@ the links to the resus desk.
     needs observations).
   - **A read failure of `eu_stays` breaks the whole board** (it throws `eu_stays read failed`); only the names and the rota
     fail soft.
-  - **The boarding clock** starts at the admission's creation time ([ADR 0542](0542-boarding-in-the-eu.md)).
+  - **The boarding clock** starts at `admissions.decided_at` (the board's read, `lib/eu/load.ts`).
