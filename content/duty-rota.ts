@@ -17,6 +17,8 @@ export const DUTY_ROTA_COPY = {
     day24: { label: "24 hours", hours: "08:00–08:00" },
     week: { label: "Week", hours: "08:00 to 08:00, seven days" },
   },
+  /** A duty whose window is none of the shifts above. */
+  otherHours: "Other hours",
   /** The guard's refusals, by HINT (migrations 0307 and 0309). */
   refusal: {
     rota_grade: "Their grade does not fit this post.",

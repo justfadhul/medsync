@@ -184,12 +184,14 @@ export async function loadRotaWeek(
   gaps: ReturnType<typeof gaps>;
   /** departmentName is null for the department's own staff, who come first (R36). */
   eligible: { userId: string; name: string; cadre: string; departmentName: string | null }[];
+  /** Duties needing cover over the same range as the gaps: the week and the next 72 h. */
+  needsCover: (Assignment & { name: string })[];
 }> {
   if (
     !dutyRotaLiveFor(hospitalId) ||
     !WeekQ.safeParse({ hospitalId, departmentId, weekStart }).success
   )
-    return { posts: [], assignments: [], gaps: [], eligible: [] };
+    return { posts: [], assignments: [], gaps: [], eligible: [], needsCover: [] };
   const now = opts?.now ?? new Date();
   const from = new Date(`${weekStart}T00:00:00+03:00`);
   const to = new Date(from.getTime() + 7 * 24 * HOUR);
@@ -204,9 +206,14 @@ export async function loadRotaWeek(
       to: hi,
     });
     const shown = w.assignments.filter((a) => a.startsAt < to && a.endsAt > from);
+    const needs = w.assignments.filter(
+      (a) =>
+        ((a.startsAt < to && a.endsAt > from) || (a.startsAt < soon && a.endsAt > now)) &&
+        dutyState(a, w.leave, now) === "needs_cover",
+    );
     const names = await namesOf(
       tx,
-      shown.map((a) => a.userId),
+      [...shown, ...needs].map((a) => a.userId),
     );
     // One sweep when the week and the next 72 h touch, so a gap across their seam is not split in two.
     const holes =
@@ -268,6 +275,7 @@ export async function loadRotaWeek(
       })),
       gaps: holes,
       eligible: [...eligible.values()],
+      needsCover: needs.map((a) => ({ ...a, name: nameIn(names, a.userId) })),
     };
   });
 }

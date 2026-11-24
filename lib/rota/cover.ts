@@ -30,6 +30,17 @@ export function windowFor(day: string, shift: Shift): { startsAt: Date; endsAt: 
   return { startsAt, endsAt: new Date(startsAt.getTime() + hours * HOUR) };
 }
 
+/** The shift a window was made from (windowFor's start hour and length), or null for any other window. */
+export function shiftOf(startsAt: Date, endsAt: Date): Shift | null {
+  const start = startsAt.getTime() + 3 * HOUR; // Kampala wall clock
+  const hours = (endsAt.getTime() - startsAt.getTime()) / HOUR;
+  if (start % HOUR !== 0) return null;
+  const hour = new Date(start).getUTCHours();
+  return (
+    SHIFTS.find((s) => SHIFT_HOURS[s].start === hour && SHIFT_HOURS[s].hours === hours) ?? null
+  );
+}
+
 const DAY = 24 * HOUR;
 export const addDays = (day: string, n: number) =>
   new Date(Date.parse(`${day}T00:00:00Z`) + n * DAY).toISOString().slice(0, 10);

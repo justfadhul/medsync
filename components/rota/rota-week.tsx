@@ -11,7 +11,7 @@ import { Tag } from "@/components/medsync/tag";
 import { LabButton } from "@/components/tide/work/button";
 import { DialogTitle } from "@/components/ui/dialog";
 import { DUTY_ROTA_COPY } from "@/content/duty-rota";
-import { addDays } from "@/lib/rota/cover";
+import { addDays, shiftOf } from "@/lib/rota/cover";
 import { AssignDialog } from "./assign-dialog";
 import { dayLabel, GapReport } from "./gap-report";
 import { PostDialog } from "./post-dialog";
@@ -20,15 +20,10 @@ const G = DUTY_ROTA_COPY.grid;
 const HOUR = 3_600_000;
 type Week = Awaited<ReturnType<typeof loadRotaWeek>>;
 type Held = Week["assignments"][number];
-const SHIFT_BY_HOURS: Record<number, keyof typeof DUTY_ROTA_COPY.shift> = {
-  9: "day",
-  15: "night",
-  24: "day24",
-  168: "week",
+const shiftWord = (a: Held) => {
+  const s = shiftOf(a.startsAt, a.endsAt);
+  return s ? DUTY_ROTA_COPY.shift[s].label : DUTY_ROTA_COPY.otherHours;
 };
-const shiftWord = (a: Held) =>
-  DUTY_ROTA_COPY.shift[SHIFT_BY_HOURS[(a.endsAt.getTime() - a.startsAt.getTime()) / HOUR] ?? "day"]
-    .label;
 const OPEN = new Set(["planned", "in_post", "needs_cover"]);
 
 type Dialog =
@@ -220,14 +215,12 @@ export function RotaWeek({
           from: g.from,
           to: g.to,
         }))}
-        needsCover={week.assignments
-          .filter((a) => a.state === "needs_cover")
-          .map((a) => ({
-            postName: postName.get(a.postId) ?? "",
-            name: a.name,
-            from: a.startsAt,
-            to: a.endsAt,
-          }))}
+        needsCover={week.needsCover.map((a) => ({
+          postName: postName.get(a.postId) ?? "",
+          name: a.name,
+          from: a.startsAt,
+          to: a.endsAt,
+        }))}
       />
 
       {dialog?.k === "assign" ? (

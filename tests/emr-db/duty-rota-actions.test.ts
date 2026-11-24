@@ -308,6 +308,7 @@ describe.skipIf(!laneOn)("rota writes and reads (PGlite lane)", () => {
         assignments: [],
         gaps: [],
         eligible: [],
+        needsCover: [],
       });
       expect(await myDuties(mo, h, at, opts())).toEqual([]);
       expect(await coverForWard(h, ward, at, opts())).toEqual({ step: "none", people: [] });
@@ -370,5 +371,39 @@ describe.skipIf(!laneOn)("rota writes and reads (PGlite lane)", () => {
         state: "planned",
       },
     ]);
+  });
+
+  it("needs cover reaches into the 72 h after the shown week", async () => {
+    // Tuesday 1 Dec, after the week of 23 Nov; seen on Sunday 29 Nov, so inside the next 72 h.
+    const id = (
+      await ok<{ id: string }>(
+        assignDuty(
+          admin,
+          {
+            postId: consultantPost,
+            userId: c1,
+            day: "2026-12-01",
+            shift: "day",
+            kind: "rostered",
+            coversAssignmentId: null,
+          },
+          opts(),
+        ),
+      )
+    ).id;
+    await lane.pg.query(
+      `INSERT INTO public.availability_blocks (hospital_id, clinician_user_id, kind, starts_at, ends_at, state)
+       VALUES ($1, $2, 'leave', '2026-12-01T08:00:00+03:00', '2026-12-02T08:00:00+03:00', 'active')`,
+      [h, c1],
+    );
+    const week = await loadRotaWeek(h, med, "2026-11-23", opts(new Date("2026-11-29T10:00:00Z")));
+    expect(week.assignments.some((a) => a.id === id)).toBe(false);
+    expect(week.needsCover.find((a) => a.id === id)).toMatchObject({
+      name: "Dr Achieng Rota",
+      postId: consultantPost,
+    });
+    // Seen earlier in the week, 1 Dec is past the 72 h: not listed.
+    const early = await loadRotaWeek(h, med, "2026-11-23", opts(new Date("2026-11-25T06:00:00Z")));
+    expect(early.needsCover.some((a) => a.id === id)).toBe(false);
   });
 });

@@ -4,7 +4,7 @@ import { createRoot } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { DUTY_ROTA_COPY } from "@/content/duty-rota";
-import { rotaWeekStart } from "@/lib/rota/cover";
+import { rotaWeekStart, shiftOf } from "@/lib/rota/cover";
 
 /** The rota week grid (ADR 0534): synthetic posts and staff, no database. */
 
@@ -49,6 +49,31 @@ const week = {
   ],
   gaps: [],
   eligible: [{ userId: USER, name: "Dr Okello", cadre: "MEDICAL_OFFICER", departmentName: null }],
+  // The same duty, and one on Tuesday 1 Dec: after the shown week, inside the next 72 h.
+  needsCover: [
+    {
+      id: ASSIGN,
+      postId: POST,
+      userId: USER,
+      startsAt: new Date("2026-11-24T08:00:00+03:00"),
+      endsAt: new Date("2026-11-24T17:00:00+03:00"),
+      kind: "rostered" as const,
+      coversAssignmentId: null,
+      endedAt: null,
+      name: "Dr Okello",
+    },
+    {
+      id: "55555555-5555-4555-8555-555555555555",
+      postId: POST,
+      userId: USER,
+      startsAt: new Date("2026-12-01T08:00:00+03:00"),
+      endsAt: new Date("2026-12-01T09:30:00+03:00"),
+      kind: "rostered" as const,
+      coversAssignmentId: null,
+      endedAt: null,
+      name: "Dr Okello",
+    },
+  ],
 };
 
 const props = (canEdit: boolean) => ({
@@ -114,6 +139,23 @@ describe("RotaWeek", () => {
     // "present" only in that line: no state word claims anyone is there.
     expect(el.textContent!.match(/present/gi)).toHaveLength(1);
     await act(async () => root.unmount());
+  });
+
+  it("needs cover after the week shows in the report, not the grid", async () => {
+    const root = await render(true);
+    const cells = [...el.querySelectorAll("td")].map((td) => td.textContent).join(" ");
+    expect(cells).not.toContain("Tue 1 Dec");
+    expect(el.textContent).toContain("Medical on call · Dr Okello");
+    expect(el.textContent).toContain("Tue 1 Dec 08:00 – Tue 1 Dec 09:30");
+    await act(async () => root.unmount());
+  });
+
+  it("a window that is no shift gets a neutral word", () => {
+    const at = (s: string) => new Date(`${s}+03:00`);
+    expect(shiftOf(at("2026-11-24T17:00:00"), at("2026-11-25T08:00:00"))).toBe("night");
+    expect(shiftOf(at("2026-11-23T08:00:00"), at("2026-11-30T08:00:00"))).toBe("week");
+    expect(shiftOf(at("2026-12-01T08:00:00"), at("2026-12-01T09:30:00"))).toBeNull();
+    expect(shiftOf(at("2026-11-24T09:00:00"), at("2026-11-24T18:00:00"))).toBeNull();
   });
 
   it("the week is a Monday, else this week's Monday in Kampala", () => {
