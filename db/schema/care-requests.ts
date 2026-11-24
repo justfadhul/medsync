@@ -3,6 +3,7 @@ import { check, index, pgTable, smallint, text, timestamp, uuid } from "drizzle-
 
 import { authUsers } from "./_auth";
 import { admissions } from "./admissions";
+import { dutyPosts } from "./duty-rota";
 import { clinicalNotes } from "./emr";
 import { hospitalDepartments } from "./hospital-departments";
 import { hospitalWards } from "./hospital-wards";
@@ -99,8 +100,8 @@ export const careRequestEvents = pgTable(
     }),
     level: smallint("level").notNull().default(0),
     step: text("step"),
-    /** The FK arrives with duty_posts (0307). */
-    postId: uuid("post_id"),
+    /** FK cre_post_fk, added by 0307. */
+    postId: uuid("post_id").references(() => dutyPosts.id, { onDelete: "restrict" }),
     reasonCode: text("reason_code"),
     noteCiphertext: text("note_ciphertext"),
     noteId: uuid("note_id").references(() => clinicalNotes.id, { onDelete: "restrict" }),

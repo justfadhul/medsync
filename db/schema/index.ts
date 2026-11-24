@@ -181,3 +181,6 @@ export * from "./patient-care";
 
 // ─── Care requests: reviews and consults (migration 0306, GATED, ADR 0533) ───
 export * from "./care-requests";
+
+// ─── Duty rota: posts and assignments (migration 0307, GATED, ADR 0534) ───
+export * from "./duty-rota";
