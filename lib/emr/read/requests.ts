@@ -394,13 +394,13 @@ export async function forMyDepartment(viewer: Viewer, opts: Opts = {}): Promise<
 export async function sentByMe(viewer: Viewer, opts: Opts = {}): Promise<RequestRow[]> {
   await escalateLazily(viewer, opts);
   const now = opts.now ?? new Date();
-  const since = new Date(now.getTime() - SENT_WINDOW_MS).toISOString();
+  const sinceIso = new Date(now.getTime() - SENT_WINDOW_MS).toISOString();
   const loaded = await visible(
     viewer,
     and(
       eq(careRequests.requesterUserId, viewer.userId),
       sql`NOT EXISTS (SELECT 1 FROM ${careRequestEvents} e WHERE e.request_id = ${careRequests.id}
-            AND (e.kind = 'cancelled' OR (e.kind = 'replied' AND e.at < ${since}::timestamptz)))`,
+            AND (e.kind = 'cancelled' OR (e.kind = 'replied' AND e.at < ${sinceIso}::timestamptz)))`,
     ),
     opts,
   );
