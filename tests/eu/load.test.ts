@@ -128,7 +128,7 @@ describe("the EU board read (source)", () => {
     expect(s).toMatch(/if \(!euObservationLiveFor\(hospitalId\)\) return null;/);
   });
   it("the board's names only for names; nothing for the rest", () => {
-    expect(s).toContain('patients: viewer.names ? "names" : "none"');
+    expect(s).toContain('(viewer.names ? "names" : "none")'); // the default; a page may ask for less (mrn)
   });
   it("logs a name only inside the names branch, surface eu_board", () => {
     expect(s.match(/insert\(clinicalPhiAccessLog\)/g)).toHaveLength(1);

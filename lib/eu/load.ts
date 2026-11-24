@@ -7,6 +7,7 @@ import type { WaitReason } from "@/lib/emr/closure";
 import type { EmrDb, EmrTx } from "@/lib/emr/db";
 import type { AcuityLevel } from "@/lib/triage/types";
 import type { BoardBed, BoardData } from "@/lib/wards/board";
+import type { WardTab } from "@/lib/wards/data";
 import { and, asc, eq, gte, inArray, isNotNull, isNull, ne, or, sql } from "drizzle-orm";
 
 import { db } from "@/db";
@@ -85,10 +86,13 @@ export async function loadEuBoard(
   hospitalId: string,
   wardId: string,
   viewer: { userId: string; names: boolean; surface: Surface },
+  /** The page's own board options (its tabs, its patient detail); default: names iff `viewer.names`. */
+  boardOpts?: { patients?: "none" | "mrn" | "names"; tabs?: WardTab[] },
 ): Promise<EuBoardData | null> {
   if (!euObservationLiveFor(hospitalId)) return null;
   const board = await loadBedBoard(hospitalId, wardId, {
-    patients: viewer.names ? "names" : "none",
+    patients: boardOpts?.patients ?? (viewer.names ? "names" : "none"),
+    tabs: boardOpts?.tabs,
   });
   if (!board || board.ward.wardType !== "emergency_observation") return null;
 
@@ -278,10 +282,12 @@ async function stayInputs(
             .where(inArray(patientProfiles.id, patients))
         : [],
       // Staff names only, for the list's responsible-clinician column.
-      db
-        .select({ id: users.id, name: users.fullName })
-        .from(users)
-        .where(inArray(users.id, responsible)),
+      responsible.length
+        ? db
+            .select({ id: users.id, name: users.fullName })
+            .from(users)
+            .where(inArray(users.id, responsible))
+        : [],
     ]);
 
   const iso = (d: Date | string | null | undefined) => (d ? new Date(d).toISOString() : null);

@@ -5,7 +5,7 @@ import { mayReadEuNames } from "@/lib/eu/cover";
 import { loadEuList } from "@/lib/eu/list";
 import { requireHospitalAdminScope } from "@/lib/hospital-admin/scope";
 import { loadBedBoard } from "@/lib/wards/board";
-import { euObservationLiveFor, wardBuilderLiveFor } from "@/lib/wards/feature";
+import { wardBuilderLiveFor } from "@/lib/wards/feature";
 import { BoardClient } from "./board-client";
 
 export const metadata: Metadata = { title: "Bed board · Hospital admin · MedSync" };
@@ -20,18 +20,21 @@ export default async function WardBoardPage({ params }: { params: Promise<{ ward
   if (!wardBuilderLiveFor(scope.hospitalId)) notFound();
   const { wardId } = await params;
   if (!/^[0-9a-f-]{36}$/i.test(wardId)) notFound();
-  const data = await loadBedBoard(scope.hospitalId, wardId, { patients: "mrn" });
+  const euRead = await loadEuList(
+    scope.hospitalId,
+    wardId,
+    {
+      userId: scope.userId,
+      names: mayReadEuNames(
+        { admin: true, inChargeWardIds: [], assignedWardIds: [], onDutyDoctor: false },
+        wardId,
+      ),
+      surface: "admin",
+    },
+    { patients: "mrn" },
+  );
+  const data = euRead?.board ?? (await loadBedBoard(scope.hospitalId, wardId, { patients: "mrn" }));
   if (!data) notFound();
-  const eu =
-    data.ward.wardType === "emergency_observation" && euObservationLiveFor(scope.hospitalId)
-      ? await loadEuList(scope.hospitalId, wardId, {
-          userId: scope.userId,
-          names: mayReadEuNames(
-            { admin: true, inChargeWardIds: [], assignedWardIds: [], onDutyDoctor: false },
-            wardId,
-          ),
-          surface: "admin",
-        })
-      : null;
+  const eu = euRead?.eu ?? null;
   return <BoardClient key={wardId} data={data} hospitalId={scope.hospitalId} eu={eu} />;
 }

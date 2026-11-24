@@ -6,7 +6,7 @@ import { loadEuList } from "@/lib/eu/list";
 import { requireNurseScope } from "@/lib/nurse/scope";
 import { loadBedBoard } from "@/lib/wards/board";
 import { nurseWardIds, nurseWardTabs } from "@/lib/wards/data";
-import { euObservationLiveFor, wardBuilderLiveFor } from "@/lib/wards/feature";
+import { wardBuilderLiveFor } from "@/lib/wards/feature";
 import { NurseBoardClient } from "./board-client";
 
 export const metadata: Metadata = { title: "Bed board · Nurse · MedSync" };
@@ -39,24 +39,28 @@ export default async function NurseBedsPage({
   const { ward } = await searchParams;
   const wardId = ward && wardIds.includes(ward) ? ward : wardIds[0]!;
   const tabs = await nurseWardTabs(scope.hospitalId, wardIds);
-  const data = await loadBedBoard(scope.hospitalId, wardId, { patients: "names", tabs });
+  // An EU ward gets the tracking list (ADR 0541) and its board in one read; the nurse is on this ward by construction.
+  const euRead = await loadEuList(
+    scope.hospitalId,
+    wardId,
+    {
+      userId: scope.userId,
+      names: mayReadEuNames(
+        {
+          admin: false,
+          inChargeWardIds: scope.inChargeWardIds,
+          assignedWardIds: wardIds,
+          onDutyDoctor: false,
+        },
+        wardId,
+      ),
+      surface: "nurse",
+    },
+    { patients: "names", tabs },
+  );
+  const data =
+    euRead?.board ?? (await loadBedBoard(scope.hospitalId, wardId, { patients: "names", tabs }));
   if (!data) notFound();
-  // An EU ward gets the tracking list (ADR 0541); the nurse is on this ward by construction.
-  const eu =
-    data.ward.wardType === "emergency_observation" && euObservationLiveFor(scope.hospitalId)
-      ? await loadEuList(scope.hospitalId, wardId, {
-          userId: scope.userId,
-          names: mayReadEuNames(
-            {
-              admin: false,
-              inChargeWardIds: scope.inChargeWardIds,
-              assignedWardIds: wardIds,
-              onDutyDoctor: false,
-            },
-            wardId,
-          ),
-          surface: "nurse",
-        })
-      : null;
+  const eu = euRead?.eu ?? null;
   return <NurseBoardClient key={wardId} data={data} hospitalId={scope.hospitalId} eu={eu} />;
 }
