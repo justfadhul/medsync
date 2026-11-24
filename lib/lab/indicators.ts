@@ -101,7 +101,7 @@ export const count = (numerator: number, sourceRows: number): IndicatorValue =>
   sourceRows === 0 ? NO_DATA : { kind: "value", value: numerator, numerator, denominator: null };
 
 /** Nearest-rank percentile of a non-empty list. */
-function percentile(values: readonly number[], p: number): number {
+export function percentile(values: readonly number[], p: number): number {
   const sorted = [...values].sort((a, b) => a - b);
   return sorted[Math.max(0, Math.ceil((p / 100) * sorted.length) - 1)]!;
 }
