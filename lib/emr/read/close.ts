@@ -14,7 +14,7 @@ import { hospitalBeds } from "@/db/schema/services-hub";
 import { bedAssignments, bedStateEvents } from "@/db/schema/ward-builder";
 import { asClinicalWriter } from "@/lib/emr/db";
 import { patientVisitSummaryLiveFor, prescribeV2LiveFor } from "@/lib/emr/feature";
-import { wardBuilderLiveFor } from "@/lib/wards/feature";
+import { euObservationLiveFor, wardBuilderLiveFor } from "@/lib/wards/feature";
 import { bedState } from "@/supabase/functions/_shared/ward-layout";
 
 /*
@@ -140,10 +140,15 @@ export async function wardBedCounts(
   return out;
 }
 
-/** The wards that take admissions: active, not archived, not closed. */
+/** An emergency unit observes; it does not admit (with EU_OBSERVATION on). */
+export function admitsHere(wardType: string | null, euLive: boolean): boolean {
+  return !(euLive && wardType === "emergency_observation");
+}
+
+/** The wards that take admissions: active, not archived, not closed, not an emergency unit (flag on). */
 export async function admittingWards(tx: EmrTx, hospitalId: string): Promise<CloseWard[]> {
   const rows = await tx
-    .select({ id: hospitalWards.id, name: hospitalWards.name })
+    .select({ id: hospitalWards.id, name: hospitalWards.name, wardType: hospitalWards.wardType })
     .from(hospitalWards)
     .where(
       and(
@@ -154,14 +159,16 @@ export async function admittingWards(tx: EmrTx, hospitalId: string): Promise<Clo
       ),
     )
     .orderBy(asc(hospitalWards.name));
+  const euLive = euObservationLiveFor(hospitalId);
+  const wards = rows.filter((r) => admitsHere(r.wardType, euLive));
   const counts = wardBuilderLiveFor(hospitalId)
     ? await wardBedCounts(
         tx,
         hospitalId,
-        rows.map((r) => r.id),
+        wards.map((r) => r.id),
       )
     : null;
-  return rows.map((r) => ({ ...r, counts: counts?.get(r.id) ?? null }));
+  return wards.map((r) => ({ id: r.id, name: r.name, counts: counts?.get(r.id) ?? null }));
 }
 
 export function rxLine(r: {
