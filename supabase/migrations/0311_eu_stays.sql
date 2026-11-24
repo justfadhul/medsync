@@ -217,6 +217,8 @@ CREATE POLICY mfa_gate ON public.eu_stays AS RESTRICTIVE FOR ALL TO authenticate
 -- ─── 5. observe_in_eu, and Arrived for an EU space (service role only) ───
 -- Refusals the user can act on start "EU4xx " (the Edge Function returns the words after the code), raised as
 -- check_violation with a HINT the app can map; admission_free_bed's "AD409 " words pass through unchanged.
+-- Lock order in every EU function: encounter → stay → assignment (then the bed, in admission_free_bed), so two
+-- of them never deadlock (tests/emr-db/eu-stays.test.ts reads it from these bodies).
 
 -- Send to the EU: the visit stays open (ADR 0541). Payload: encounter_id, actor, ward_id, bed_id?,
 -- space_wait_reason?, space_wait_note_ciphertext?. An open triage stay of the patient's is adopted.
@@ -389,6 +391,11 @@ DECLARE
   v_enc uuid;
   v_ended integer;
 BEGIN
+  -- An EU space: its stay before the space (the lock order above); eu_stay_id never changes, so this read holds.
+  PERFORM 1 FROM public.eu_stays
+   WHERE id = (SELECT eu_stay_id FROM public.bed_assignments WHERE id = (p->>'assignment_id')::uuid)
+   FOR UPDATE;
+  -- Locked now, so the checks below see the space's current state.
   SELECT * INTO v_asg FROM public.bed_assignments
    WHERE id = (p->>'assignment_id')::uuid AND hospital_id = (p->>'hospital_id')::uuid FOR UPDATE;
   IF NOT FOUND THEN
@@ -453,6 +460,11 @@ DECLARE
   v_asg uuid;
   v_here boolean;
 BEGIN
+  -- The stay's encounter first (the lock order above). Stamped once: if adoption stamps it while we wait for the
+  -- stay, that adoption has committed and nothing else is held, so we go on without it.
+  PERFORM 1 FROM public.encounters
+   WHERE id = (SELECT encounter_id FROM public.eu_stays WHERE id = (p->>'stay_id')::uuid)
+   FOR UPDATE;
   SELECT * INTO v_stay FROM public.eu_stays
    WHERE id = (p->>'stay_id')::uuid AND hospital_id = (p->>'hospital_id')::uuid FOR UPDATE;
   IF NOT FOUND THEN

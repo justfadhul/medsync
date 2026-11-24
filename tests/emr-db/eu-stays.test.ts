@@ -17,6 +17,7 @@ import {
   laneOn,
   patient,
   probe,
+  readMigration,
   staff,
 } from "./_pglite";
 
@@ -714,6 +715,18 @@ describe.skipIf(!laneOn)("0311 — the EU stay on real SQL", () => {
         [h, ward, beds["R1"], stranger, doctor, s],
       ),
     ).rejects.toThrow(/stay's patient/);
+    // The stay's own patient, in a space of another hospital.
+    const p = (await row(`SELECT patient_user_id FROM public.eu_stays WHERE id=$1`, [s]))
+      .patient_user_id;
+    const h2 = await hospital(pg, "Not the stay's");
+    const away = await newWard(["Z1"], { hospitalId: h2 });
+    await expect(
+      pg.query(
+        `INSERT INTO public.bed_assignments (hospital_id, ward_id, bed_id, patient_user_id, started_by, eu_stay_id)
+         VALUES ($1, $2, $3, $4, $5, $6)`,
+        [h2, away.ward, away.beds["Z1"], p, doctor, s],
+      ),
+    ).rejects.toThrow(/at its hospital/);
   });
 
   /* ─── move_eu_space and end_eu_stay (0311 section 6) ─── */
@@ -986,5 +999,47 @@ describe.skipIf(!laneOn)("0311 — the EU stay on real SQL", () => {
         space_wait_reason: "floor",
       }),
     ).toBe("EU409 This stay has ended.");
+  });
+
+  it("end_eu_stay refuses a visit that is not in progress while its stay is open", async () => {
+    const { ward } = await newWard(["R1"]);
+    const t = await triageStay(ward);
+    const done = await encounter(pg, {
+      hospitalId: h,
+      patientUserId: t.p,
+      clinicianUserId: doctor,
+      state: "completed",
+    });
+    const before = await stayRow(t.s);
+    expect(await refusal("end_eu_stay", end(done))).toBe("EU409 This visit is not in progress.");
+    expect(await stayRow(t.s)).toEqual(before);
+  });
+});
+
+/* R57: one lock order across 0311's EU functions, encounter → stay → assignment, so two of them never deadlock.
+   PGlite has one connection, so the order is read from the function bodies. */
+describe("0311 — lock order", () => {
+  const sql = readMigration("0311_eu_stays.sql").replace(/--[^\n]*/g, "");
+  const order = (fn: string) => {
+    const start = sql.indexOf(`CREATE OR REPLACE FUNCTION public.${fn}(p jsonb)`);
+    const body = sql.slice(start, sql.indexOf("\n$$;", start));
+    const seen: string[] = [];
+    for (const stmt of body.split(";")) {
+      const t = /\bFOR UPDATE\b/.test(stmt)
+        ? /FROM public\.(\w+)/.exec(stmt)?.[1]
+        : /(?<!FOR )\bUPDATE public\.(\w+)/.exec(stmt)?.[1];
+      if (t && ["encounters", "eu_stays", "bed_assignments"].includes(t) && !seen.includes(t))
+        seen.push(t);
+    }
+    return seen;
+  };
+
+  it("observe_in_eu, move_eu_space and end_eu_stay lock encounter → stay → assignment", () => {
+    for (const fn of ["observe_in_eu", "move_eu_space", "end_eu_stay"])
+      expect(order(fn), fn).toEqual(["encounters", "eu_stays", "bed_assignments"]);
+  });
+
+  it("confirm_bed_arrival locks the stay before the assignment", () => {
+    expect(order("confirm_bed_arrival")).toEqual(["eu_stays", "bed_assignments"]);
   });
 });
