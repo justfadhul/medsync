@@ -31,6 +31,12 @@ describe("freeByNeed with the EU needs", () => {
     );
     expect(eu.resus).toEqual(["R1"]);
     expect(eu.chair).toEqual(["C1"]);
-    expect(freeByNeed(beds).map((n) => n.need)).toEqual(["any", "o2", "suction", "monitor", "single"]);
+    expect(freeByNeed(beds).map((n) => n.need)).toEqual([
+      "any",
+      "o2",
+      "suction",
+      "monitor",
+      "single",
+    ]);
   });
 });

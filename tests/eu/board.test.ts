@@ -1,6 +1,7 @@
+import type { EuStayInput } from "@/lib/eu/board";
 import { describe, expect, it } from "vitest";
 
-import { type EuStayInput, euTracking } from "@/lib/eu/board";
+import { euTracking } from "@/lib/eu/board";
 
 const NOW = Date.parse("2026-11-24T12:00:00Z");
 const H = 3_600_000;
@@ -50,7 +51,9 @@ describe("EU tracking rows", () => {
     expect(codes(stay({ obsFrequency: "hourly", lastObsAt: iso(-H - 60_000) }))).toContain(
       "obs_overdue",
     );
-    expect(codes(stay({ obsFrequency: "hourly", lastObsAt: iso(-H) }))).not.toContain("obs_overdue");
+    expect(codes(stay({ obsFrequency: "hourly", lastObsAt: iso(-H) }))).not.toContain(
+      "obs_overdue",
+    );
     expect(
       codes(stay({ status: "awaiting_space", spaceStartedAt: null, waitReason: "floor" })),
     ).toContain("waiting_space");
@@ -65,9 +68,9 @@ describe("EU tracking rows", () => {
       euTracking([stay({ obsFrequency: "continuous" })], NOW, 24).rows[0]!.nextObsDueAt,
     ).toBeNull();
     // never observed: counted from the decision
-    expect(
-      euTracking([stay({ obsFrequency: "4h" })], NOW, 24).rows[0]!.nextObsDueAt,
-    ).toBe(iso(-2 * H + 4 * H));
+    expect(euTracking([stay({ obsFrequency: "4h" })], NOW, 24).rows[0]!.nextObsDueAt).toBe(
+      iso(-2 * H + 4 * H),
+    );
   });
   it("status words", () => {
     const w = (s: EuStayInput) => euTracking([s], NOW, 24).rows[0]!.statusWord;
