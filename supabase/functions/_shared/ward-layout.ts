@@ -765,7 +765,8 @@ export type CheckCode =
   | "bed_overlap"
   | "overlap"
   | "piped_at_wall"
-  | "duplicate_numbers";
+  | "duplicate_numbers"
+  | "eu_spaces";
 
 export interface LayoutCheck {
   code: CheckCode;
@@ -920,6 +921,16 @@ export function layoutChecks(d: WardLayout, wardType: string | null): LayoutChec
     text: dup.size ? `Duplicate bed numbers: ${nameList([...dup])}` : "Bed numbers are unique",
     blocking: true,
   });
+
+  // R54: the palette hides chair and resus off an EU; this stops a hand-made layout publishing them.
+  const euSpaces = d.beds.filter((b) => EU_BED_TYPES.includes(b.type)).map((b) => b.label);
+  if (wardType !== EU_WARD_TYPE && euSpaces.length)
+    checks.push({
+      code: "eu_spaces",
+      ok: false,
+      text: `Chair and resus spaces belong only on an emergency observation ward: ${nameList(euSpaces)}`,
+      blocking: true,
+    });
   return checks;
 }
 

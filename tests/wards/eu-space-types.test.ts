@@ -5,9 +5,12 @@ import {
   BED_TYPE_CODES,
   bedSize,
   bedTypesFor,
+  blockingFailures,
   EU_BED_TYPES,
   EU_WARD_TYPE,
+  layoutChecks,
 } from "@/supabase/functions/_shared/ward-layout";
+import { openWardDoc } from "./fixtures";
 
 describe("EU space types (ADRs 0539–0540)", () => {
   it("chair is 2×2 and resus is 3×4, with their words", () => {
@@ -30,5 +33,20 @@ describe("EU space types (ADRs 0539–0540)", () => {
     expect(codes("general")).toEqual(["standard", "icu", "cot", "couch"]);
     expect(codes(null)).toEqual(["standard", "icu", "cot", "couch"]);
     expect(codes("general", "resus")).toEqual(["standard", "icu", "cot", "couch", "resus"]);
+  });
+
+  it("R54: publish refuses chair or resus on a ward that is not an EU, and takes them on an EU", () => {
+    const base = openWardDoc();
+    const doc = {
+      ...base,
+      beds: base.beds.map((b, i) => (i === 0 ? { ...b, type: "resus" as const } : b)),
+    };
+    const eu = (c: ReturnType<typeof layoutChecks>) => c.find((x) => x.code === "eu_spaces");
+    const general = layoutChecks(doc, "general");
+    expect(eu(general)).toMatchObject({ ok: false, blocking: true });
+    expect(blockingFailures(general).map((c) => c.code)).toContain("eu_spaces");
+    expect(blockingFailures(layoutChecks(doc, null)).map((c) => c.code)).toContain("eu_spaces");
+    expect(eu(layoutChecks(doc, EU_WARD_TYPE))).toBeUndefined();
+    expect(eu(layoutChecks(base, "general"))).toBeUndefined();
   });
 });
