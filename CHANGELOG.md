@@ -5,6 +5,14 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); version
 
 ## [Unreleased]
 
+### Added — The EU board, its clocks and names; who may start a stay; links to the resus desk ([ADR 0543](docs/adr/0543-the-eu-tracking-board-and-its-clocks.md), [0544](docs/adr/0544-who-may-start-an-eu-stay.md)) — 24 Nov 2026
+
+The emergency unit has a tracking list with four clocks and a "Needs attention" list, names only for EU staff (each reveal logged), a triage-nurse path for Level 1 and 2 patients to EU resus spaces, and resus bays and care units that link to the drawn EU. Behind `EU_OBSERVATION`. Wording is draft.
+
+- **Migration 0313 is GATED:** apply it before the app and the functions, with `cd <the worktree of this branch> && npm run db:migrate` (run it in the folder that holds the migration). It adds the `eu_staff` access basis, the floor's `eu` outcome, `send_to_eu_resus`, the triage-stay rule (a triage stay is ended or adopted only by its own visit), `resus_bay_profiles.bed_id`, `hospital_care_units.ward_id`, their guards and the triggers that clear a link when its space or ward is archived or re-typed. Deploy order: the migration, then `ha-eu-stay`, `ha-complete-encounter` and `ha-services-hub`, then set the function secret `EU_OBSERVATION` to match the app flag, then turn the app flag on. The app's Drizzle selects on `resus_bay_profiles` and `hospital_care_units` read the new columns, so 0313 comes before the app deploy.
+- Names show to the ward's nurses and in-charge, the rota's EU doctor and the hospital admin; until 0313 is applied they stay hidden. The rota is "planned", never "present". Only the encounter's own clinician sends to the EU.
+- Open for the owner/CSO: Level 5 reads "Green" on the EU board while the floor says "L5 · Blue"; all wording; unidentified patients cannot take the triage-to-resus path; the clinic alert still fires for EU-resus triage; `link_care_unit` has no screen; the queue-start link can be re-stamped by `ha-complete-encounter`.
+
 ### Added — Boarding in the EU: admit from the EU, arrival ends the stay ([ADR 0542](docs/adr/0542-boarding-in-the-eu.md)) — 24 Nov 2026
 
 A doctor can admit a patient who is in an emergency unit. The patient boards: they keep their EU space, hold a ward bed (Arriving) and have an open inpatient record from the decision; the ward's Arrived ends the EU space and the stay in one step. Behind `EU_OBSERVATION`. Wording is draft.
