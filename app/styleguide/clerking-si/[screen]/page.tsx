@@ -33,13 +33,14 @@ export default async function Page({ params }: { params: Promise<{ screen: strin
     signoff: DX_SIGNOFF,
   };
   // `plan`: step 10 by problem (ADR 0184); `-allergy` a cephalosporin allergy, `-placed` a blood
-  // culture already placed.
+  // culture already placed, `-requests` CARE_REQUESTS on (ADR 0537).
   if (step === "plan")
     return (
       <FixtureDesk
         p={withPlanFixture(p, {
           allergy: parts.includes("allergy"),
           placed: parts.includes("placed"),
+          requests: parts.includes("requests"),
         })}
         step={step}
       />

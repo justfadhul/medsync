@@ -58,6 +58,8 @@ export interface ChecklistInput {
   cards: readonly ProblemCard[];
   record: PlanRecord;
   obsRequired: ObsRequirement | null;
+  /** CARE_REQUESTS: senior review offers "Not needed" with a reason. */
+  notNeededOption?: boolean;
 }
 
 export function checklist(i: ChecklistInput): ChecklistItem[] {
@@ -91,11 +93,12 @@ export function checklist(i: ChecklistInput): ChecklistItem[] {
         ? "Less often than NEWS2 calls for: say why."
         : null,
   });
+  const seniorDone = !!plan.seniorReview || words(plan.seniorReviewNotNeeded ?? "") >= REASON_WORDS;
   items.push({
     id: "senior_review",
     label: "Senior review",
-    done: !!plan.seniorReview,
-    detail: plan.seniorReview ? null : "Choose when.",
+    done: seniorDone,
+    detail: seniorDone ? null : i.notNeededOption ? "Choose when, or say why not." : "Choose when.",
   });
   const leading = cards.find((c) => c.slot === "leading");
   if (leading) {
@@ -129,7 +132,7 @@ export function checklist(i: ChecklistInput): ChecklistItem[] {
       detail: pending.length ? pending.map((m) => m.display).join(", ") : null,
     });
   const basket = basketOf(plan);
-  const inBasket = basket.orders.length + basket.prescriptions.length;
+  const inBasket = basket.orders.length + basket.prescriptions.length + basket.requests.length;
   items.push({
     id: "basket",
     label: "The basket is empty",

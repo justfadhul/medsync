@@ -52,7 +52,13 @@ const cards = [
     mustNotMiss: true,
   }),
 ];
-const empty: PlanRecord = { orders: [], prescriptions: [], medicines: [], charts: [] };
+const empty: PlanRecord = {
+  orders: [],
+  prescriptions: [],
+  medicines: [],
+  charts: [],
+  requests: [],
+};
 
 describe("observations against NEWS2 (CO-NEWS-01..05)", () => {
   const req = (total: number, singleThree = false) =>
@@ -377,6 +383,8 @@ describe("the note's Plan block", () => {
         },
         { id: "c2", kind: "mar", frequency: null, measureUrine: false, openedByLabel: "" },
       ],
+      // Flag off: no requests, and the Plan block is unchanged.
+      requests: [],
     };
     const lines = composePlanLines({
       plan,
@@ -445,5 +453,102 @@ describe("request lines in the basket (ADR 0537)", () => {
     expect(PlanRequestLineSchema.safeParse({ ...review, helpWanted: "advice" }).success).toBe(
       false,
     );
+  });
+});
+
+describe("requests in the Plan (ADR 0537)", () => {
+  const placed = (
+    over: Partial<PlanRecord["requests"][number]>,
+  ): PlanRecord["requests"][number] => ({
+    id: "r-1",
+    kind: "review",
+    urgency: "within_1h",
+    helpWanted: null,
+    targetWords: "Medicine",
+    stateWord: "Sent",
+    at: "2026-09-27T20:16:00.000Z",
+    ...over,
+  });
+  const senior = (plan: PlanDraft, notNeededOption?: boolean) =>
+    checklist({ plan, cards, record: empty, obsRequired: null, notNeededOption }).find(
+      (i) => i.id === "senior_review",
+    )!;
+
+  it("senior review is met by not needed with a reason", () => {
+    expect(senior({ seniorReviewNotNeeded: "stable" }, true)).toMatchObject({
+      done: false,
+      detail: "Choose when, or say why not.",
+    });
+    expect(senior({ seniorReviewNotNeeded: "seen by consultant today" }, true)).toMatchObject({
+      done: true,
+      detail: null,
+    });
+    // Flag off: the words are today's.
+    expect(senior({})).toMatchObject({ done: false, detail: "Choose when." });
+  });
+
+  it("a placed review writes who it went to", () => {
+    const lines = composePlanLines({
+      plan: { seniorReview: "within_1h" },
+      cards: [],
+      record: {
+        ...empty,
+        requests: [
+          placed({}),
+          placed({
+            id: "r-2",
+            kind: "consult",
+            urgency: "urgent_today",
+            helpWanted: "see_patient",
+            targetWords: "Nephrology",
+          }),
+        ],
+      },
+      obsRequired: null,
+      news2Total: null,
+    });
+    expect(lines.join("\n")).toMatch(/senior review requested from Medicine, within 1 hour/i);
+    expect(lines).toContain(
+      "Consult requested from Nephrology (please see the patient, urgent, today).",
+    );
+  });
+
+  it("a review still in the basket is not yet sent; not needed gives its reason", () => {
+    const line = {
+      clientKey: "req-key-0001",
+      kind: "review" as const,
+      targetDepartmentId: "33333333-3333-4333-8333-333333333333",
+      wardId: null,
+      namedUserIds: [],
+      urgency: "now" as const,
+      helpWanted: null,
+      reasonConditionIds: [],
+      question: "",
+      phoned: null,
+      display: "Senior review, Medicine",
+    };
+    const compose = (plan: PlanDraft) =>
+      composePlanLines({ plan, cards: [], record: empty, obsRequired: null, news2Total: null });
+    expect(
+      compose({
+        seniorReview: "now",
+        basket: { orders: [], prescriptions: [], requests: [line] },
+      }),
+    ).toEqual(["Senior review now (not yet sent)."]);
+    expect(compose({ seniorReviewNotNeeded: "seen by consultant today" })).toEqual([
+      "No senior review needed: seen by consultant today.",
+    ]);
+  });
+
+  it("flag off, the Plan block is unchanged", () => {
+    expect(
+      composePlanLines({
+        plan: { seniorReview: "routine" },
+        cards: [],
+        record: empty,
+        obsRequired: null,
+        news2Total: null,
+      }),
+    ).toEqual(["Senior review routine."]);
   });
 });

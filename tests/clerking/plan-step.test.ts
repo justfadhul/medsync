@@ -19,7 +19,7 @@ import {
 } from "@/lib/clerking/impression/load";
 import { ecat } from "./exam-fixtures";
 import { cat, v2Payload } from "./fixtures";
-import { PLAN_DX, withPlanFixture } from "./plan-fixtures";
+import { PLAN_DX, PLAN_REQUESTS, withPlanFixture } from "./plan-fixtures";
 
 /**
  * Step 10 Plan by problem in the v2 desk (ADR 0184): the four questions in order, a test to the
@@ -33,6 +33,7 @@ vi.mock("next/navigation", () => ({
   useSearchParams: () => new URLSearchParams(),
 }));
 const { ClerkingDesk } = await import("@/components/clerking/clerking-desk");
+const { placeWords } = await import("@/components/clerking/plan/plan-step");
 
 const dx = {
   cat: DX_CATALOGUE,
@@ -43,14 +44,14 @@ const dx = {
   specimens: TEST_SPECIMENS,
 };
 
-function payload(plan = true): DeskPayload {
+function payload(plan = true, requests = false): DeskPayload {
   const p = v2Payload();
   p.clerking!.dx = {
     catalogueUrl: "/api/clerking/dx-catalogue?v=test",
     catalogueVersion: DX_CATALOGUE.version,
     signoff: DX_SIGNOFF,
   };
-  const out = withPlanFixture(p);
+  const out = withPlanFixture(p, { requests });
   if (!plan) delete out.plan;
   return out;
 }
@@ -367,5 +368,126 @@ describe("step 10, Plan by problem", () => {
     mount(payload(false));
     await act(async () => {});
     expect(headings()).not.toContain("By problem");
+  });
+});
+
+describe("requests in the Plan (CARE_REQUESTS, ADR 0537)", () => {
+  const MEDICINE = PLAN_REQUESTS.departments[0]!.id;
+  const NEPHROLOGY = PLAN_REQUESTS.departments[1]!.id;
+  const consult = {
+    clientKey: "req-key-0001",
+    kind: "consult" as const,
+    targetDepartmentId: NEPHROLOGY,
+    wardId: null,
+    namedUserIds: [],
+    urgency: "routine" as const,
+    helpWanted: "advice" as const,
+    reasonConditionIds: [PLAN_DX[0]!.id],
+    question: "Is this nephrotic?",
+    phoned: null,
+    display: "Consult, Nephrology",
+  };
+  const typeText = (el: Element | null | undefined, value: string) =>
+    act(() => {
+      const t = el as HTMLTextAreaElement;
+      Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, "value")!.set!.call(t, value);
+      t.dispatchEvent(new Event("input", { bubbles: true }));
+    });
+
+  it("placeWords keeps today's words without requests", () => {
+    expect(placeWords(2, 0, 0)).toBe("Place 2 orders and 0 prescriptions");
+    expect(placeWords(1, 1, 0)).toBe("Place 1 order and 1 prescription");
+    expect(placeWords(1, 2, 1)).toBe("Place 1 order, 2 prescriptions and 1 request");
+    expect(placeWords(0, 0, 2)).toBe("Place 0 orders, 0 prescriptions and 2 requests");
+  });
+
+  it("requests are placed with the basket", async () => {
+    const p = payload(true, true);
+    p.draft!.content = {
+      ...p.draft!.content,
+      plan: { basket: { orders: [], prescriptions: [], requests: [consult] } },
+    } as NoteContent;
+    mount(p);
+    await act(async () => {});
+    expect(host.textContent).toMatch(/Consult, Nephrology/);
+    await act(async () => {
+      button(/^Place 0 orders, 0 prescriptions and 1 request$/)!.click();
+    });
+    expect(placed).toHaveLength(1);
+    expect(placed[0]!.requests).toHaveLength(1);
+    expect(plan().basket).toEqual({ orders: [], prescriptions: [] });
+  });
+
+  it("no request controls with the flag off", async () => {
+    mount(payload());
+    await act(async () => {});
+    expect(button("Ask another team")).toBeUndefined();
+    expect(radio("Senior review", "Not needed")).toBeUndefined();
+  });
+
+  it("a time adds the one review line; Not needed asks why and clears it", async () => {
+    const p = payload(true, true);
+    p.plan!.requests = { ...PLAN_REQUESTS, ownDepartmentId: null };
+    mount(p);
+    await act(async () => {});
+    tap(radio("Disposition", "Admit"));
+    tap(button(/^Medical ward/, host));
+    tap(radio("Senior review", "Now"));
+    const [line] = plan().basket!.requests!;
+    expect(line).toMatchObject({
+      kind: "review",
+      urgency: "now",
+      targetDepartmentId: MEDICINE,
+      wardId: "00000000-0000-4000-8000-0000000000a3",
+    });
+    tap(radio("Senior review", "Within 1 hour"));
+    expect(plan().basket!.requests).toEqual([
+      { ...line, urgency: "within_1h", display: expect.any(String) },
+    ]);
+    expect(host.textContent).toMatch(/The requesting team stays responsible for the patient/);
+    tap(radio("Senior review", "Not needed"));
+    expect(plan().basket!.requests).toEqual([]);
+    expect(plan().seniorReview).toBeUndefined();
+    const why = [...host.querySelectorAll("label")].find((l) =>
+      /^Why no senior review/.test(l.textContent ?? ""),
+    )!;
+    type(document.getElementById(why.htmlFor), "seen by consultant today");
+    expect(plan().seniorReviewNotNeeded).toBe("seen by consultant today");
+  });
+
+  it("Ask another team adds a consult once it is complete", async () => {
+    mount(payload(true, true));
+    await act(async () => {});
+    tap(button("Ask another team"));
+    const dialog = [...document.querySelectorAll('[role="dialog"]')].find((d) =>
+      /Ask another team/.test(d.textContent ?? ""),
+    )!;
+    expect(dialog.textContent).toMatch(/The requesting team stays responsible for the patient/);
+    const add = button("Add to basket", dialog) as HTMLButtonElement;
+    expect(add.disabled).toBe(true);
+    expect(dialog.textContent).toMatch(/Choose the team\./);
+    const chip = (group: string, name: string) =>
+      [...dialog.querySelectorAll(`[aria-label="${group}"] button`)].find(
+        (b) => b.textContent?.trim() === name,
+      );
+    tap(chip("Team", "Nephrology"));
+    tap(chip("Urgency", "Routine"));
+    tap(chip("Help wanted", "Advice only"));
+    tap(chip("Problems", "Sepsis"));
+    expect(add.disabled).toBe(true);
+    typeText(dialog.querySelector("textarea"), "Is this nephrotic?");
+    expect(add.disabled).toBe(false);
+    tap(add);
+    expect(plan().basket!.requests).toMatchObject([
+      {
+        kind: "consult",
+        targetDepartmentId: NEPHROLOGY,
+        urgency: "routine",
+        helpWanted: "advice",
+        reasonConditionIds: [PLAN_DX[0]!.id],
+        question: "Is this nephrotic?",
+        phoned: null,
+      },
+    ]);
   });
 });

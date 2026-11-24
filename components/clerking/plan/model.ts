@@ -75,7 +75,13 @@ export function derivePlan(i: {
   const record = payload.record;
   const news2 = news2Now(i.news2);
   const obsRequired = requiredObservation(news2);
-  const items = checklist({ plan: draft, cards, record, obsRequired });
+  const items = checklist({
+    plan: draft,
+    cards,
+    record,
+    obsRequired,
+    notNeededOption: !!payload.requests,
+  });
   const basket = basketOf(draft);
   const open = new Set(record.charts.map((c) => c.kind));
   const willOpen = chartsToOpen({
