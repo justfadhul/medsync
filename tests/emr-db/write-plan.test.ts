@@ -488,6 +488,16 @@ describe.skipIf(!laneOn)("placing the Plan (PGlite lane)", () => {
 
   it("all or nothing: a refused request places no order", async () => {
     const v = await visit();
+    // The order's own reason stays valid; only the consult's condition is superseded.
+    const other = await as(mo, v.p, (ctx) =>
+      recordEncounterDiagnosis(ctx, {
+        patientUserId: v.p,
+        encounterId: v.e,
+        clientKey: key(),
+        termId: dxTermUuid("dx.anaemia"),
+        rank: "secondary",
+      }),
+    );
     await q(
       `INSERT INTO public.conditions (id, logical_id, version, supersedes_id, hospital_id, patient_user_id,
          encounter_id, effective_at, recorded_by_user_id, source, trust, category, text_ciphertext,
@@ -497,7 +507,7 @@ describe.skipIf(!laneOn)("placing the Plan (PGlite lane)", () => {
       [v.cond, h, v.p, v.e, mo.userId],
     );
     await expect(
-      basket(v, { orders: [oneOrder(v.cond)], requests: [consult(v.cond)] }),
+      basket(v, { orders: [oneOrder(other.id)], requests: [consult(v.cond)] }),
     ).rejects.toThrow(/has changed or was entered in error/);
     const [o] = await q<{ n: number }>(
       `SELECT count(*)::int AS n FROM encounter_orders WHERE encounter_id = $1`,
