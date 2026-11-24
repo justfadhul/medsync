@@ -5,6 +5,16 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); version
 
 ## [Unreleased]
 
+### Added — Emergency unit in the ward builder, behind EU_OBSERVATION ([ADR 0539](docs/adr/0539-an-emergency-unit-is-a-ward-type.md), [0540](docs/adr/0540-eu-space-types-chair-and-resus.md)) — 24 Nov 2026
+
+An emergency observation ward gets chair and resus spaces, its own checks and a template, may be attached to an ordinary ward for display, and no longer appears under Admit. Behind `EU_OBSERVATION` (needs `WARD_BUILDER` and `ENCOUNTER_CLOSE_V2`). Wording and sizes are draft.
+
+- **Migration 0310 is GATED:** apply it before turning the flag on, with `cd <the worktree of this branch> && npm run db:migrate` (run it in the folder that holds the migration). It adds the chair and resus bed types, `hospital_wards.parent_ward_id` and a guard that refuses an EU, archived or other-hospital parent. Then deploy `ha-services-hub`, then set the flag.
+- Chair (2 by 2) and resus (3 by 4) spaces and an Emergency unit template, offered only on an EU ward with the flag on. A chair or resus space on any other ward blocks publishing.
+- Four warning checks on EU wards (resus services, resus trolley within 5 m, an isolation room, children's cots in a room); they never block and run whatever the flag.
+- Changing a ward to or from Emergency observation is refused while patients are in its beds; a ward with EUs attached cannot become one.
+- Open for the owner/CSO: chair and resus sizes, the 5 m reach, whether any check blocks, all wording; the server does not yet refuse admitting into an EU (Phase 3).
+
 ### Added — Rota upkeep ([ADR 0538](docs/adr/0538-rota-upkeep.md)) — 24 Nov 2026
 
 Week templates, publishing, cover and swap requests, and a delegate who makes the rota. Behind `DUTY_ROTA`. Wording is draft.
