@@ -343,7 +343,7 @@ describe.skipIf(!laneOn)("the EU board read on real SQL", () => {
     expect(logged).toHaveLength(2);
     for (const row of logged)
       expect(row.access_basis).toBe(
-        expected.rows.find((x) => x.p === row.patient_user_id)?.basis ?? "assigned",
+        expected.rows.find((x) => x.p === row.patient_user_id)?.basis ?? "eu_staff",
       );
 
     // The same day again: no second row.
@@ -360,12 +360,24 @@ describe.skipIf(!laneOn)("the EU board read on real SQL", () => {
     expect(await logRows(doctor)).toEqual([]);
   });
 
-  it("an admin with no chart basis holds no true basis: MRNs, no names, nothing logged", async () => {
+  it("an admin (no chart basis) gets names, logged eu_staff (R64)", async () => {
     const data = (await load(h, eu.ward, { userId: as(admin), names: true, surface: "admin" }))!;
-    expect(data.rows).toHaveLength(2);
-    expect(data.rows.map((r) => r.name)).toEqual([null, null]);
+    expect(data.rows.map((r) => r.name).sort()).toEqual(["Achieng Lane", "Okello Lane"]);
     expect(data.rows.find((r) => r.stayId === a.stay)?.mrn).toBe(a.mrn);
-    expect(await logRows(admin)).toEqual([]);
+    expect((await logRows(admin)).map((r) => r.access_basis)).toEqual(["eu_staff", "eu_staff"]);
+  });
+
+  it("an EU nurse keeps her chart basis where she has one and is eu_staff where she has none (R64)", async () => {
+    // Another department: no department_recent for B (no intake either); A's intake today is open_intake.
+    const other = await department(pg, h, "Emergency");
+    const euNurse = (await staff(pg, { hospitalId: h, departmentId: other, cadre: "NURSE" }))
+      .userId;
+    const data = (await load(h, eu.ward, { userId: as(euNurse), names: true, surface: "nurse" }))!;
+    expect(data.rows.every((r) => r.name !== null)).toBe(true);
+    const basis = Object.fromEntries(
+      (await logRows(euNurse)).map((r) => [r.patient_user_id, r.access_basis]),
+    );
+    expect(basis).toEqual({ [a.p]: "open_intake", [b.p]: "eu_staff" });
   });
 
   it("staff of another hospital read no stay (RLS)", async () => {

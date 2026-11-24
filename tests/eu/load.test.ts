@@ -49,17 +49,41 @@ describe("mayReadEuNames (D10: EU staff only)", () => {
   });
 });
 
-describe("the basis logged for a name is one the viewer holds", () => {
+describe("the basis logged for a name is one the viewer holds (R64)", () => {
   it("their chart basis for the patient, when they hold one", () => {
-    expect(euNameBasis("admin", "department_recent")).toBe("department_recent");
-    expect(euNameBasis("nurse", "active_encounter")).toBe("active_encounter");
+    expect(euNameBasis("department_recent")).toBe("department_recent");
+    expect(euNameBasis("active_encounter")).toBe("active_encounter");
   });
-  it("EU nurses and the rota's EU doctor are assigned to the ward", () => {
-    expect(euNameBasis("nurse", null)).toBe("assigned");
-    expect(euNameBasis("doctor", null)).toBe("assigned");
+  it("otherwise eu_staff (D10's EU staff: ward workers, the rota's EU doctor, the admin), never assigned", () => {
+    expect(euNameBasis(null)).toBe("eu_staff");
   });
-  it("an admin with no chart basis holds none: no name", () => {
-    expect(euNameBasis("admin", null)).toBeNull();
+});
+
+describe("0313 lets the log say eu_staff", () => {
+  const basisList = (file: string) => {
+    const body = readFileSync(resolve(process.cwd(), "supabase/migrations", file), "utf8")
+      .replace(/--.*$/gm, "")
+      .split("ADD CONSTRAINT phi_access_basis_check CHECK (access_basis IN")[1]!;
+    return [...body.slice(0, body.indexOf("))")).matchAll(/'([a-z_]+)'/g)].map((m) => m[1]);
+  };
+  it("is 0101's list verbatim, plus eu_staff", () => {
+    expect(basisList("0313_eu_links.sql")).toEqual([
+      ...basisList("0101_lab_work_access_basis.sql"),
+      "eu_staff",
+    ]);
+  });
+  it("is GATED with the R14 header", () => {
+    const lines = readFileSync(
+      resolve(process.cwd(), "supabase/migrations/0313_eu_links.sql"),
+      "utf8",
+    ).split("\n");
+    expect(lines[0]).toMatch(/^-- GATED — /);
+    expect(lines[1]).toBe("-- 0313: EU links (ADRs 0543, 0544).");
+  });
+  it("the Drizzle CHECK mirrors it", () => {
+    expect(readFileSync(resolve(process.cwd(), "db/schema/doctor-workspace.ts"), "utf8")).toContain(
+      "'lab_work','eu_staff')",
+    );
   });
 });
 

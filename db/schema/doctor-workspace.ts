@@ -174,7 +174,7 @@ export const clinicalPhiAccessLog = pgTable(
   (t) => [
     check(
       "phi_access_basis_check",
-      sql`${t.accessBasis} IN ('care_team','active_encounter','department_recent','break_glass','assigned','open_intake','lab_work')`,
+      sql`${t.accessBasis} IN ('care_team','active_encounter','department_recent','break_glass','assigned','open_intake','lab_work','eu_staff')`,
     ),
     index("phi_access_patient_idx").on(t.patientUserId, t.createdAt),
     index("phi_access_clinician_idx").on(t.clinicianUserId, t.createdAt),

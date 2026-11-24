@@ -2,6 +2,7 @@ import "server-only";
 
 import type { EuStayInput, EuTrackingRow } from "./board";
 import type { ObsFrequencyChoice } from "@/lib/clerking/plan/draft";
+import type { EmrAccessBasis } from "@/lib/emr/access";
 import type { WaitReason } from "@/lib/emr/closure";
 import type { EmrDb, EmrTx } from "@/lib/emr/db";
 import type { AcuityLevel } from "@/lib/triage/types";
@@ -49,13 +50,16 @@ export interface EuBoardData {
 
 type Surface = "nurse" | "admin" | "doctor";
 
+/** A value phi_access_basis_check allows (0313): a chart basis, or eu_staff. */
+export type EuNameBasis = EmrAccessBasis | "eu_staff";
+
 /**
- * The basis a name reveal is logged with: the viewer's chart basis for the patient when they hold one; otherwise
- * EU nurses (in charge of or assigned to the ward) and the rota's EU doctor are `assigned` to the ward, which is
- * what D10 shows names for. An admin with no chart basis holds no basis the log can say truly: no name.
+ * The basis a name reveal is logged with (R64): the viewer's chart basis for the patient when they hold one;
+ * otherwise `eu_staff`, the EU staff D10 shows names to (the ward's nurses and in-charge, the rota's EU doctor,
+ * the hospital admin). Never `assigned`, which is a nursing assignment for that patient.
  */
-export function euNameBasis(surface: Surface, chartBasis: string | null): string | null {
-  return chartBasis ?? (surface === "admin" ? null : "assigned");
+export function euNameBasis(chartBasis: EmrAccessBasis | null): EuNameBasis {
+  return chartBasis ?? "eu_staff";
 }
 
 /** `content.plan.observations.frequency` of a note's content, as the desk reads it; anything else is null. */
@@ -330,7 +334,7 @@ async function stayInputs(
  */
 async function auditEuNames(
   hospitalId: string,
-  viewer: { userId: string; surface: Surface },
+  viewer: { userId: string },
   patients: string[],
   now: Date,
 ): Promise<Set<string>> {
@@ -341,17 +345,15 @@ async function auditEuNames(
   );
   try {
     return await (db as unknown as EmrDb).transaction(async (tx: EmrTx) => {
-      const basis = new Map<string, string>();
+      const basis = new Map<string, EuNameBasis>();
       for (const p of patients) {
         const access = await resolveEmrAccess(tx, {
           userId: viewer.userId,
           patientUserId: p,
           hospitalId,
         });
-        const b = euNameBasis(viewer.surface, access.basis);
-        if (b) basis.set(p, b);
+        basis.set(p, euNameBasis(access.basis));
       }
-      if (!basis.size) return new Set<string>();
       const done = new Set(
         (
           await tx
