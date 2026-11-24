@@ -5,6 +5,16 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); version
 
 ## [Unreleased]
 
+### Added — The EU stay: Observe in EU keeps the visit open ([ADR 0541](docs/adr/0541-the-eu-stay-observe-stays-open.md)) — 24 Nov 2026
+
+A doctor can send a patient to an emergency unit from the close; the visit stays open, the patient holds a space (or waits for one), and closing the visit with an outcome ends the stay. Behind `EU_OBSERVATION`. Wording is draft.
+
+- **Migration 0311 is GATED:** apply it before turning the flag on, with `cd <the worktree of this branch> && npm run db:migrate` (run it in the folder that holds the migration). It adds `eu_stays` (with its guard, RLS and audit), `bed_assignments.eu_stay_id`, `observe_in_eu`, `move_eu_space`, `end_eu_stay`, an Arrived branch for EU spaces, and a trigger so a visit with an open stay closes only through `end_eu_stay`. Deploy order: the migration, then `ha-eu-stay`, `ha-complete-encounter` and `ha-services-hub`, then the flag. The function secret `EU_OBSERVATION` must match the app flag.
+- Only the visit's own clinician sends (`ha-eu-stay`). A triage nurse's open stay is adopted by the doctor's send, who becomes responsible.
+- The board shows an EU space Arriving until the ward confirms Arrived (Occupied; no inpatient record opens), and ward staff Move a patient to another free space or to the waiting list; Release is refused for an EU space, and assigning a bed on an EU ward is refused while the flag is on.
+- Closing the visit ends the space, the stay and the visit in one step; a close with no outcome, or an admission, is refused while a stay is open (admitting from the EU comes with boarding, Phase 3).
+- Open for the owner/CSO: all wording (including the two "Visit completed" labels), the 24 h limit (clocks and the limit exist but nothing shows or flags them yet), cross-EU moves from the board, a theatre outcome.
+
 ### Added — Emergency unit in the ward builder, behind EU_OBSERVATION ([ADR 0539](docs/adr/0539-an-emergency-unit-is-a-ward-type.md), [0540](docs/adr/0540-eu-space-types-chair-and-resus.md)) — 24 Nov 2026
 
 An emergency observation ward gets chair and resus spaces, its own checks and a template, may be attached to an ordinary ward for display, and no longer appears under Admit. Behind `EU_OBSERVATION` (needs `WARD_BUILDER` and `ENCOUNTER_CLOSE_V2`). Wording and sizes are draft.
