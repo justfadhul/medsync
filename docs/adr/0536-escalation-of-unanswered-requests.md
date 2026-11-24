@@ -52,8 +52,11 @@ reads, a heartbeat) and [ADR 0243](0243-the-recipient-ladder.md) §3 (an empty l
    then) and is only a placement record. Nothing reads it for the screen. Overdue and the due words use the planner's
    `overdue` and `dueAt` on the request's current level, with the times in force now. `deriveFromRows` still passes
    `dueAt: null` to the engine, so `derived.overdue` is always false and is not used. Words: "Due by 14:30" (Kampala
-   time), "Overdue by 25 min", plain "Overdue" for the urgent consult's day end, "Asked 40 min ago" with nothing signed.
-   Overdue is a neutral slate `Tag` with a clock icon and the word.
+   time; "tomorrow" or the date when it falls on another Kampala day), "Overdue by 25 min", plain "Overdue" for the
+   urgent consult's day end, "Asked 40 min ago" with nothing signed. Overdue is checked first, so a due time never shows
+   beside an Overdue tag. A fully declined round shows no due words and is never overdue (R47, as R42). If the signed
+   times cannot be read (0308 not applied yet), the lists fall back to "Asked … ago" and never fail. Overdue is a
+   neutral slate `Tag` with a clock icon and the word.
 
 ### How the run behaves
 
