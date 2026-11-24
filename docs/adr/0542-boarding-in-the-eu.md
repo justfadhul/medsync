@@ -72,7 +72,8 @@ not hold their EU space and a ward bed.
     the same transaction. The close context is loaded for any visit the desk opens (`lib/emr/read/desk.ts`), whatever its
     state, so the close dialog shows "Admitted · <ward> · waiting <duration>" (`EU_SEND.boarding`; `OpenStayView.boarding`
     and `admit`) only where a close dialog is opened for that source visit after the admission. The wait counts from the
-    admission's creation time (`admissions.created_at`, there is no decision timestamp) with the shared `durationWords`.
+    admission's creation time (`admissions.created_at`; the EU board reads `decided_at`, set in the same insert) with the
+    shared `durationWords`.
     Otherwise boarding is visible on the EU board (Phase 4). The board's Arriving rule
     (`isArriving`) is unchanged.
 
