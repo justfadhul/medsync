@@ -12,7 +12,8 @@ Builds on [ADR 0539](0539-an-emergency-unit-is-a-ward-type.md) and the ward buil
    cell 0.5 m. Migration 0310 widens `hospital_beds_bed_type_check` to `standard, icu, cot, couch, chair, resus`, `NOT VALID`
    as 0090 did, so a value written before stays valid. Drizzle mirrors it. The sizes are proposed.
 2. **Only an EU offers them.** `bedTypesFor(wardType, keep)` filters the palette and the bed's type chips: chair and resus
-   appear only for an EU ward with the flag live, and a bed already of such a type still shows its own. The Emergency unit
+   appear only for an EU ward; the editor passes the ward type only when the flag is live, so with the flag off they are
+   hidden everywhere, and a bed already of such a type still shows its own. The Emergency unit
    template is offered only under the same condition.
 3. **The server refuses them elsewhere (R54).** `layoutChecks` adds a BLOCKING issue `eu_spaces` when a ward that is not an EU
    holds a chair or resus space, and `publishWardLayout` already refuses on a blocking issue. The palette filter alone would
@@ -46,7 +47,8 @@ Builds on [ADR 0539](0539-an-emergency-unit-is-a-ward-type.md) and the ward buil
   board's generic bed drawing; the stay and arrival work is Phase 2.
 - **Deploy order:** apply migration 0310 (`cd <worktree> && npm run db:migrate`), deploy `ha-services-hub`, then set
   `EU_OBSERVATION`. The function would otherwise publish a layout the database then refuses.
-- Warnings never stop a publish; an EU without an isolation room or a trolley within 5 m publishes with a warning.
+- The EU checks are warnings, never blockers: an EU without an isolation room or a trolley within 5 m publishes once the
+  admin acknowledges the current warnings (the existing ADR 0196 rule).
 - Open for the owner or CSO, not decided here:
   - **The sizes** of chair and resus, the **10-cell (5 m) reach**, and whether the three required resus services are the right
     list.
