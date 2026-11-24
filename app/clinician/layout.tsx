@@ -5,10 +5,12 @@ import { redirect } from "next/navigation";
 
 import { TideScope } from "@/components/medsync/tide-scope";
 import { ArrestAlarm } from "@/components/resus/arrest-alarm";
+import { CARE_REQUEST_COPY } from "@/content/care-requests";
 import { requireClinicianScope } from "@/lib/clinician/scope";
 import { isDoctorUser } from "@/lib/doctor/scope";
 import { isLabTechUser } from "@/lib/lab-tech/scope";
 import { isPharmacyUser } from "@/lib/pharmacy/scope";
+import { careRequestsLiveFor } from "@/lib/requests/feature";
 import { resusDeskV2 } from "@/lib/resus/feature";
 import { cn } from "@/lib/utils";
 
@@ -58,6 +60,14 @@ export default async function ClinicianLayout({ children }: { children: ReactNod
         </div>
 
         <div className="flex items-center gap-3">
+          {careRequestsLiveFor(scope.hospitalId) ? (
+            <Link
+              href="/clinician/requests"
+              className="text-muted-foreground hover:text-foreground text-body-s underline-offset-4 transition-colors hover:underline"
+            >
+              {CARE_REQUEST_COPY.page.nav}
+            </Link>
+          ) : null}
           <span
             className={cn("text-muted-foreground text-body-s truncate", "hidden sm:inline")}
             title={scope.userEmail}

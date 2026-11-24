@@ -11,7 +11,8 @@ import type {
   RequestKind,
 } from "@/lib/requests/engine";
 import type { SQL } from "drizzle-orm";
-import { and, desc, eq, inArray, or, sql } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, isNull, or, sql } from "drizzle-orm";
+import { z } from "zod";
 
 import { CARE_REQUEST_COPY } from "@/content/care-requests";
 import { careRequestEvents, careRequests } from "@/db/schema/care-requests";
@@ -122,15 +123,15 @@ const hidden = (l: Loaded) => l.request.sensitivity !== "standard" && !l.chart;
 const openSql = sql`NOT EXISTS (SELECT 1 FROM ${careRequestEvents} e WHERE e.request_id = ${careRequests.id}
   AND e.kind IN ('replied','closed','cancelled'))`;
 
+const declinedByViewer = (l: Loaded, me: string) =>
+  currentRound(l.events).some((e) => e.kind === "declined" && e.actorUserId === me);
+
 /** Asked of me: a current-round recipient who has not declined in it, or the one who accepted. */
 function askedOf(l: Loaded, me: string): boolean {
   const d = l.derived;
   if (d.state === "accepted") return d.ownerUserId === me;
   if (d.state !== "sent" && d.state !== "seen") return false;
-  return (
-    d.recipients.includes(me) &&
-    !currentRound(l.events).some((e) => e.kind === "declined" && e.actorUserId === me)
-  );
+  return d.recipients.includes(me) && !declinedByViewer(l, me);
 }
 
 /** Overdue first, then urgency (now, urgent today, within 1 h, routine), then the oldest. */
@@ -429,10 +430,51 @@ export async function requestDetail(
         : (p.term ?? safeDecrypt(p.text) ?? copy.problem),
     ),
     history,
-    canAct: Object.fromEntries(ACTS.map((a) => [a, canAct(l.derived, a, who)])) as Record<
-      RequestAct,
-      true | string
-    >,
+    canAct: {
+      ...(Object.fromEntries(ACTS.map((a) => [a, canAct(l.derived, a, who)])) as Record<
+        RequestAct,
+        true | string
+      >),
+      // The writer refuses a second decline in one round (R27): never offer it.
+      ...(declinedByViewer(l, viewer.userId)
+        ? { decline: CARE_REQUEST_COPY.refusal.already_declined }
+        : {}),
+    },
     canOpenChart: l.chart,
   };
+}
+
+/** The hospital's clinical teams, for Redirect: names only. */
+export async function redirectDepartments(
+  hospitalId: string,
+  database?: EmrDb,
+): Promise<{ id: string; name: string }[]> {
+  const db = await appDb(database);
+  return db
+    .select({ id: hospitalDepartments.id, name: hospitalDepartments.name })
+    .from(hospitalDepartments)
+    .where(
+      and(
+        eq(hospitalDepartments.hospitalId, hospitalId),
+        eq(hospitalDepartments.kind, "clinical"),
+        isNull(hospitalDepartments.archivedAt),
+      ),
+    )
+    .orderBy(asc(hospitalDepartments.name));
+}
+
+/** The request page (ADR 0537): the three lists, and the request `?request=` names when the viewer may read it. */
+export async function requestsPageData(viewer: Viewer, requestId: unknown, opts: Opts = {}) {
+  const id = z.uuid().safeParse(requestId);
+  const [asked, department, sent, detail] = await Promise.all([
+    askedOfMe(viewer, opts),
+    forMyDepartment(viewer, opts),
+    sentByMe(viewer, opts),
+    id.success ? requestDetail(viewer, id.data, opts) : null,
+  ]);
+  const departments =
+    detail?.canAct.redirect === true
+      ? await redirectDepartments(viewer.hospitalId, opts.database)
+      : [];
+  return { asked, department, sent, detail, departments };
 }

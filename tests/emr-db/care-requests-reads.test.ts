@@ -31,7 +31,7 @@ vi.mock("@/db", () => ({
 }));
 vi.mock("@/lib/resus/board-v2", () => ({ OPENABLE_LOOKBACK_MS: 0, fetchResusBoardV2: vi.fn() }));
 
-const { askedOfMe, askedOrder, forMyDepartment, requestDetail, sentByMe } =
+const { askedOfMe, askedOrder, forMyDepartment, requestDetail, requestsPageData, sentByMe } =
   await import("@/lib/emr/read/requests");
 const { loadEmrTasks } = await import("@/lib/workspace/queries");
 
@@ -286,6 +286,34 @@ describe.skipIf(!laneOn)("reading care requests (PGlite lane)", () => {
     expect(detail.canAct.accept).toBe(true);
     expect(detail.canAct.cancel).not.toBe(true);
     expect(detail.canOpenChart).toBe(true);
+  });
+
+  it("a decliner is not offered a second decline but may still accept", async () => {
+    const second = await member(renal, "CONSULTANT");
+    const r = await placed({ named: [consultant.userId, second.userId] });
+    await withRequestWrite(
+      consultant,
+      r.id,
+      (c) => declineRequest(c, { clientKey: key(), reasonCode: "not_our_specialty" }),
+      opts(),
+    );
+    const detail = (await requestDetail(consultant, r.id, opts()))!;
+    expect(detail.canAct.decline).toBe("You have already declined this request.");
+    expect(detail.canAct.accept).toBe(true);
+    expect((await requestDetail(second, r.id, opts()))!.canAct.decline).toBe(true);
+    // Both declined: the requester's page offers Redirect, with the hospital's clinical teams.
+    await withRequestWrite(
+      second,
+      r.id,
+      (c) => declineRequest(c, { clientKey: key(), reasonCode: "needs_other_team" }),
+      opts(),
+    );
+    const page = await requestsPageData(requester, r.id, opts());
+    expect(page.detail?.canAct.redirect).toBe(true);
+    expect(page.departments.map((d) => d.name)).toEqual(
+      expect.arrayContaining([expect.stringMatching(/^Home/), expect.stringMatching(/^Other/)]),
+    );
+    expect((await requestsPageData(requester, "not-a-uuid", opts())).detail).toBeNull();
   });
 
   it("a nurse in another department sees nothing", async () => {

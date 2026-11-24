@@ -6,6 +6,7 @@ import { TideScope } from "@/components/medsync/tide-scope";
 import { ArrestAlarm } from "@/components/resus/arrest-alarm";
 import { signedAvatarUrl } from "@/lib/avatars";
 import { requireDoctorScope } from "@/lib/doctor/scope";
+import { careRequestsLiveFor } from "@/lib/requests/feature";
 import { resusDeskV2 } from "@/lib/resus/feature";
 import { doctorWorkspace } from "@/lib/workspace/feature";
 import { newestAnnouncement } from "./_components/critical-alerts";
@@ -30,8 +31,11 @@ export default async function DoctorLayout({ children }: { children: ReactNode }
       criticalCount={criticals?.alerts.open.length ?? null}
     >
       <TideScope group="doctor">{children}</TideScope>
-      {criticals ? (
-        <CriticalLive userId={scope.userId} announce={newestAnnouncement(criticals.alerts.open)} />
+      {criticals || careRequestsLiveFor(scope.hospitalId) ? (
+        <CriticalLive
+          userId={scope.userId}
+          announce={criticals ? newestAnnouncement(criticals.alerts.open) : null}
+        />
       ) : null}
       {resusDeskV2() ? (
         <ArrestAlarm hospitalId={scope.hospitalId} resusBase="/doctor/resus" />
