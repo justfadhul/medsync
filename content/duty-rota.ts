@@ -23,6 +23,7 @@ export const DUTY_ROTA_COPY = {
     rota_leave: "They are on leave during this duty.",
     rota_double: "They already hold this post at that time.",
     rota_full: "This post is full at that time.",
+    rota_cover: "A cover or swap must replace a duty on the same post.",
     rota_maker: "Only the hospital admin or the head of department makes this rota.",
     rota_locked: "This week is published. Change it through a cover or swap request.",
   },

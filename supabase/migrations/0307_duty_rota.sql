@@ -11,9 +11,11 @@
 --      the HINTs content/duty-rota.ts words, when the post is archived or another hospital's, the actor is
 --      not a rota maker (rota_maker), the person's cadre does not fit the post (rota_grade), they are on
 --      approved leave in the window (rota_leave), they already hold the post then (rota_double), or the
---      post is full then (rota_full; a cover or swap does not count the assignment it replaces). The post
---      lock is taken before the two counts, so two concurrent inserts cannot both pass. An assignment
---      that ended early counts only until it ended (lib/rota/cover.ts endOf).
+--      post is full then (rota_full; a cover or swap does not count the assignment it replaces, which must be
+--      on the same post: rota_cover). The post lock is taken before the two counts, so two concurrent
+--      inserts cannot both pass. An assignment that ended early holds the post only until it ended
+--      (lib/rota/cover.ts endOf); one cancelled before it started holds nothing. An end is never after
+--      the planned end.
 --   4. care_request_events.post_id gains its FK (0306 left it bare).
 --   5. RLS: staff of the hospital read both tables through medsync_clinical_reader; no client writes
 --      (the server writes through asClinicalWriter, as the pharmacy roster). mfa_gate and audit on both.
@@ -59,6 +61,7 @@ CREATE TABLE IF NOT EXISTS public.duty_assignments (
   end_reason text CONSTRAINT duty_assignments_end_reason_check CHECK (char_length(end_reason) BETWEEN 2 AND 200),
   CONSTRAINT duty_assignments_window CHECK (ends_at > starts_at),
   CONSTRAINT duty_assignments_covers_shape CHECK (kind = 'rostered' OR covers_assignment_id IS NOT NULL),
+  CONSTRAINT duty_assignments_end_within CHECK (ended_at <= ends_at),
   CONSTRAINT duty_assignments_end_shape CHECK (
     (ended_at IS NULL) = (ended_by IS NULL) AND (ended_at IS NULL) = (end_reason IS NULL))
 );
@@ -114,6 +117,11 @@ BEGIN
   IF p.id IS NULL OR p.hospital_id <> NEW.hospital_id OR p.archived_at IS NOT NULL THEN
     RAISE EXCEPTION 'duty_assignments: the post is archived or not this hospital''s' USING ERRCODE = 'check_violation';
   END IF;
+  IF NEW.covers_assignment_id IS NOT NULL AND NOT EXISTS (
+       SELECT 1 FROM public.duty_assignments c WHERE c.id = NEW.covers_assignment_id AND c.post_id = NEW.post_id) THEN
+    RAISE EXCEPTION 'duty_assignments: a cover or swap replaces a duty on the same post'
+      USING ERRCODE = 'check_violation', HINT = 'rota_cover';
+  END IF;
   IF NOT private.duty_rota_maker(NEW.hospital_id, NEW.created_by, p.department_id) THEN
     RAISE EXCEPTION 'duty_assignments: you are not making this rota' USING ERRCODE = 'check_violation', HINT = 'rota_maker';
   END IF;
@@ -132,15 +140,18 @@ BEGIN
 
   -- One post's inserts run one at a time from here, so the counts below cannot race (0273's lock).
   PERFORM pg_advisory_xact_lock(hashtext(NEW.post_id::text));
-  -- Overlap is half-open; an assignment that ended early holds the post only until it ended.
+  -- Overlap is half-open; an assignment holds [starts_at, least(ends_at, ended_at)), and nothing when
+  -- that is empty (cancelled before it started). least() ignores a NULL ended_at.
   IF EXISTS (SELECT 1 FROM public.duty_assignments a
               WHERE a.post_id = NEW.post_id AND a.user_id = NEW.user_id
-                AND a.starts_at < NEW.ends_at AND NEW.starts_at < least(a.ends_at, coalesce(a.ended_at, a.ends_at))) THEN
+                AND a.starts_at < NEW.ends_at AND NEW.starts_at < least(a.ends_at, a.ended_at)
+                AND a.starts_at < least(a.ends_at, a.ended_at)) THEN
     RAISE EXCEPTION 'duty_assignments: they already hold this post at that time' USING ERRCODE = 'check_violation', HINT = 'rota_double';
   END IF;
   SELECT count(*) INTO taken FROM public.duty_assignments a
    WHERE a.post_id = NEW.post_id
-     AND a.starts_at < NEW.ends_at AND NEW.starts_at < least(a.ends_at, coalesce(a.ended_at, a.ends_at))
+     AND a.starts_at < NEW.ends_at AND NEW.starts_at < least(a.ends_at, a.ended_at)
+     AND a.starts_at < least(a.ends_at, a.ended_at)
      AND a.id IS DISTINCT FROM NEW.covers_assignment_id;
   IF taken >= p.capacity THEN
     RAISE EXCEPTION 'duty_assignments: this post is full at that time' USING ERRCODE = 'check_violation', HINT = 'rota_full';

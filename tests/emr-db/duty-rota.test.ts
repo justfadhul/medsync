@@ -224,6 +224,90 @@ describe.skipIf(!laneOn)("0307 — duty rota", () => {
         }),
       ),
     ).toBe("allowed");
+    // ...but still holds 08:00–12:00 (R34): a second holder for that stretch overfills the post.
+    expect(
+      await refusal(
+        assign({
+          postId: consultantPost,
+          userId: head,
+          from: at("2027-01-09", 8),
+          to: at("2027-01-09", 12),
+        }),
+      ),
+    ).toBe("rota_full");
+  });
+
+  it("a duty cancelled before it starts holds nothing", async () => {
+    // Night 17:00–08:00, cancelled at 09:00 that morning; a 24-hour duty spanning it fits the post.
+    const night = await assign({
+      postId: consultantPost,
+      userId: c1,
+      from: at("2027-01-13", 17),
+      to: at("2027-01-14", 8),
+    });
+    await pg.query(
+      `UPDATE public.duty_assignments SET ended_at = $2, ended_by = $3, end_reason = 'Cancelled' WHERE id = $1`,
+      [night, at("2027-01-13", 9), admin],
+    );
+    expect(
+      await refusal(
+        assign({
+          postId: consultantPost,
+          userId: c2,
+          from: at("2027-01-13", 8),
+          to: at("2027-01-14", 8),
+        }),
+      ),
+    ).toBe("allowed");
+    // Nor is it a double booking for the same person.
+    const own = await assign({
+      postId: onCallPost,
+      userId: c1,
+      from: at("2027-01-13", 17),
+      to: at("2027-01-14", 8),
+    });
+    await pg.query(
+      `UPDATE public.duty_assignments SET ended_at = $2, ended_by = $3, end_reason = 'Cancelled' WHERE id = $1`,
+      [own, at("2027-01-13", 9), admin],
+    );
+    expect(
+      await refusal(
+        assign({
+          postId: onCallPost,
+          userId: c1,
+          from: at("2027-01-13", 8),
+          to: at("2027-01-14", 8),
+        }),
+      ),
+    ).toBe("allowed");
+  });
+
+  it("a cover names a duty on the same post, and an end is never after the duty", async () => {
+    const d = "2027-01-15";
+    const held = await assign({
+      postId: consultantPost,
+      userId: c1,
+      from: at(d, 8),
+      to: at(d, 17),
+    });
+    expect(
+      await refusal(
+        assign({
+          postId: onCallPost,
+          userId: c2,
+          from: at(d, 8),
+          to: at(d, 17),
+          kind: "cover",
+          covers: held,
+        }),
+      ),
+    ).toBe("rota_cover");
+    await expect(
+      pg.query(
+        `UPDATE public.duty_assignments SET ended_at = $2, ended_by = $3, end_reason = 'Late' WHERE id = $1`,
+        [held, at(d, 18), admin],
+      ),
+    ).rejects.toThrow(/duty_assignments_end_within/);
   });
 
   it("only the admin or the head makes the rota", async () => {

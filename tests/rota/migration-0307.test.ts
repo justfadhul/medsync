@@ -25,6 +25,7 @@ describe("migration 0307 (static)", () => {
   it("the guard names every hint", () => {
     const hints = Object.keys(DUTY_ROTA_COPY.refusal).filter((h) => h !== "rota_locked"); // rota_locked is 0309's
     expect(hints.sort()).toEqual([
+      "rota_cover",
       "rota_double",
       "rota_full",
       "rota_grade",

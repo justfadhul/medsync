@@ -102,6 +102,7 @@ export const dutyAssignments = pgTable(
       "duty_assignments_covers_shape",
       sql`${t.kind} = 'rostered' OR ${t.coversAssignmentId} IS NOT NULL`,
     ),
+    check("duty_assignments_end_within", sql`${t.endedAt} <= ${t.endsAt}`),
     check(
       "duty_assignments_end_shape",
       sql`(${t.endedAt} IS NULL) = (${t.endedBy} IS NULL) AND (${t.endedAt} IS NULL) = (${t.endReason} IS NULL)`,
