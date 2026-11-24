@@ -25,7 +25,9 @@ import { asClinicalReader } from "@/lib/emr/db";
 import { identitiesFor } from "@/lib/emr/read/results";
 import { notPharmacyDepartment, relationTo } from "@/lib/emr/write/requests";
 import { decrypt } from "@/lib/encryption";
+import { logger } from "@/lib/logger";
 import { canAct } from "@/lib/requests/engine";
+import { runCareRequestEscalations } from "@/lib/requests/escalation-run";
 import { currentRound, deriveFromRows } from "@/lib/requests/rows";
 
 /**
@@ -261,8 +263,25 @@ async function rowsOf(viewer: Viewer, loaded: Loaded[], opts: Opts): Promise<Req
   });
 }
 
+/** The lazy run (ADR 0536): what is due for the viewer's hospital escalates before a list is read. It
+ *  writes no heartbeat, and a failure is logged by name, never breaks the read. */
+async function escalateLazily(viewer: Viewer, opts: Opts): Promise<void> {
+  try {
+    await runCareRequestEscalations(await appDb(opts.database), {
+      now: opts.now ?? new Date(),
+      source: "lazy",
+      hospitalId: viewer.hospitalId,
+    });
+  } catch (e) {
+    logger.error("care_request.lazy_escalation_failed", {
+      reason: e instanceof Error ? e.name : "unknown",
+    });
+  }
+}
+
 /** Open requests asked of me, by user id: whatever department my scope picked today. */
 export async function askedOfMe(viewer: Viewer, opts: Opts = {}): Promise<RequestRow[]> {
+  await escalateLazily(viewer, opts);
   const loaded = await visible(
     viewer,
     and(
@@ -283,6 +302,7 @@ export async function askedOfMe(viewer: Viewer, opts: Opts = {}): Promise<Reques
 export async function forMyDepartment(viewer: Viewer, opts: Opts = {}): Promise<RequestRow[]> {
   const dept = viewer.departmentId;
   if (!dept) return [];
+  await escalateLazily(viewer, opts);
   const loaded = await visible(
     viewer,
     and(
@@ -309,6 +329,7 @@ export async function forMyDepartment(viewer: Viewer, opts: Opts = {}): Promise<
 
 /** My requests: the open ones first, then those replied in the last 7 days; newest first in each. */
 export async function sentByMe(viewer: Viewer, opts: Opts = {}): Promise<RequestRow[]> {
+  await escalateLazily(viewer, opts);
   const now = opts.now ?? new Date();
   const since = new Date(now.getTime() - SENT_WINDOW_MS).toISOString();
   const loaded = await visible(

@@ -201,6 +201,24 @@ export const CARE_REQUEST_COPY = {
   },
   /** The notice's body; like the subject, it never names the patient. */
   noticeBody: "Open your requests in MedSync to see it.",
+  /** Draft wording, not CSO-signed: the requester's notice when a request escalates (D7); never the patient. */
+  escalatedBody(
+    until: "accepted" | "replied",
+    minutes: number,
+    step: string,
+    post: string | null,
+  ): string {
+    const waited = until === "accepted" ? "Not accepted" : "No reply";
+    const asked =
+      step === "post" && post
+        ? `asked the ${post}`
+        : step === "department_head"
+          ? "asked the head of department"
+          : step === "hospital_contacts"
+            ? "asked the hospital contacts"
+            : "reached nobody: phone the team";
+    return `${waited} after ${minutes} min; ${asked}.`;
+  },
   /** Draft wording, not CSO-signed: the nurse in charge's notice at admission; never the patient. */
   wardIncomingBody: "A patient is being admitted to your ward. See the bed board.",
   /** The in-app notices list (staff names and places only). */

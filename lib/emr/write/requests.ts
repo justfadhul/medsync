@@ -76,7 +76,7 @@ export const isPharmacyDepartment = sql<boolean>`NOT ${notPharmacyDepartment}`;
 
 /** Clinicians with an affiliation here (any state, in `codes` when given), and whether one of them is live.
  *  Never a pharmacy cadre. */
-async function cliniciansHere(
+export async function cliniciansHere(
   tx: EmrTx,
   hospitalId: string,
   userIds: string[],
@@ -225,6 +225,28 @@ export async function loadRouteCandidates(
           .limit(1)
       : [];
 
+  // Named people with no live clinical affiliation here are skipped (and recorded).
+  const live = await cliniciansHere(tx, q.hospitalId, q.namedUserIds);
+  return {
+    named: q.namedUserIds.map((userId) => ({ userId, active: live.get(userId) ?? false })),
+    post: await postHolders(tx, q, review),
+    team: team.map((r): Candidate => ({ userId: r.userId, active: true })),
+    supervisor,
+    ...(await headsAndContacts(tx, q.hospitalId, q.departmentId, q.at)),
+  };
+}
+
+/**
+ * Routing's last steps and the escalation ladder's (D7): the department's heads in office at `at`
+ * (substantive first) and the hospital contacts (critical_contacts level 2). One with no live clinical
+ * affiliation here (or a pharmacy cadre, R32) is marked inactive, so route() skips and records them.
+ */
+export async function headsAndContacts(
+  tx: EmrTx,
+  hospitalId: string,
+  departmentId: string,
+  at: Date,
+): Promise<Pick<RouteCandidates, "heads" | "hospitalContacts">> {
   const heads = await tx
     .select({
       userId: departmentHeads.userId,
@@ -232,10 +254,10 @@ export async function loadRouteCandidates(
     .from(departmentHeads)
     .where(
       and(
-        eq(departmentHeads.hospitalId, q.hospitalId),
-        eq(departmentHeads.departmentId, q.departmentId),
-        lte(departmentHeads.startsAt, q.at),
-        or(isNull(departmentHeads.endsAt), gt(departmentHeads.endsAt, q.at)),
+        eq(departmentHeads.hospitalId, hospitalId),
+        eq(departmentHeads.departmentId, departmentId),
+        lte(departmentHeads.startsAt, at),
+        or(isNull(departmentHeads.endsAt), gt(departmentHeads.endsAt, at)),
       ),
     )
     .orderBy(asc(departmentHeads.acting), asc(departmentHeads.startsAt));
@@ -245,22 +267,16 @@ export async function loadRouteCandidates(
       userId: criticalContacts.userId,
     })
     .from(criticalContacts)
-    .where(and(eq(criticalContacts.hospitalId, q.hospitalId), eq(criticalContacts.level, 2)))
+    .where(and(eq(criticalContacts.hospitalId, hospitalId), eq(criticalContacts.level, 2)))
     .orderBy(asc(criticalContacts.position));
 
-  // Named people, heads and contacts with no live clinical affiliation here are skipped (and recorded).
-  const live = await cliniciansHere(tx, q.hospitalId, [
-    ...q.namedUserIds,
+  const live = await cliniciansHere(tx, hospitalId, [
     ...heads.map((r) => r.userId),
     ...hospitalContacts.map((r) => r.userId),
   ]);
   const checked = (ids: string[]): Candidate[] =>
     ids.map((userId) => ({ userId, active: live.get(userId) ?? false }));
   return {
-    named: checked(q.namedUserIds),
-    post: await postHolders(tx, q, review),
-    team: team.map((r): Candidate => ({ userId: r.userId, active: true })),
-    supervisor,
     heads: checked(heads.map((r) => r.userId)),
     hospitalContacts: checked(hospitalContacts.map((r) => r.userId)),
   };
@@ -301,6 +317,7 @@ export async function notifyRecipients(
   userIds: string[],
   kind: "care_request" | "care_request_update",
   place: string,
+  body: string = CARE_REQUEST_COPY.noticeBody,
 ): Promise<void> {
   if (!userIds.length) return;
   try {
@@ -308,7 +325,7 @@ export async function notifyRecipients(
       insertNotices(sp, ctx.now, userIds, {
         kind,
         subject: CARE_REQUEST_COPY.noticeSubject(kind, place),
-        body: CARE_REQUEST_COPY.noticeBody,
+        body,
         relatedKind: "care_request",
         relatedId: requestId,
       }),
@@ -362,19 +379,20 @@ export async function notifyWardIncoming(ctx: WriteCtx, admissionId: string): Pr
   }
 }
 
-/** The `routed` rows of one routing round (one row with no recipient when it reached nobody), with its
- *  skips; returns the recipients. */
-async function writeRouting(
-  ctx: Pick<WriteCtx, "tx" | "now" | "actor">,
+/** The `routed` rows of one routing round, or of one escalation level (one row with no recipient when it
+ *  reached nobody), with its skips; returns the recipients. */
+export async function writeRouting(
+  ctx: { tx: EmrTx; now: Date; actor: { hospitalId: string } },
   requestId: string,
   routed: ReturnType<typeof route>,
+  level = 0,
 ): Promise<string[]> {
   const base = {
     requestId,
     hospitalId: ctx.actor.hospitalId,
     kind: "routed",
     at: ctx.now,
-    level: 0,
+    level,
     step: routed.step,
     skippedUserIds: routed.skipped.map((k) => k.userId),
   };
@@ -700,7 +718,10 @@ async function writeEvent(
 }
 
 /** The place a notice names: the ward, else the department (never the patient, ADR 0199). */
-async function placeOf(c: RequestCtx, departmentId = c.departmentId): Promise<string> {
+export async function placeOf(
+  c: Pick<RequestCtx, "tx" | "request" | "departmentId">,
+  departmentId = c.departmentId,
+): Promise<string> {
   if (c.request.wardId) {
     const [w] = await c.tx
       .select({ name: hospitalWards.name })
