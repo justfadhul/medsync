@@ -481,7 +481,7 @@ END;
 $$;
 
 -- 0311's encounters_eu_stay_close_guard, plus: a boarder's inpatient record, while their stay is open (an admission
--- ended before arrival), also completes only through end_eu_stay (its third arm), never leaving the stay open.
+-- ended before arrival), also completes only through end_eu_stay (its second arm), never leaving the stay open.
 CREATE OR REPLACE FUNCTION public.encounters_eu_stay_close_guard()
   RETURNS trigger
   LANGUAGE plpgsql
