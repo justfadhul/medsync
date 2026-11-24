@@ -215,6 +215,51 @@ describe.skipIf(!laneOn)("reading care requests (PGlite lane)", () => {
     expect(sorted.map((x) => x.id)).toEqual(["late", "now", "routine"]);
   });
 
+  it("lists still load when response times are not migrated yet (0306 without 0308)", async () => {
+    const r = await placed({ named: [consultant.userId] });
+    await pg.query(`ALTER TABLE care_request_response_versions RENAME TO crrv_away`);
+    try {
+      const row = (await askedOfMe(consultant, opts())).find((x) => x.id === r.id)!;
+      expect(row.overdue).toBe(false);
+      expect(row.dueWords).toMatch(/^Asked .* ago$/);
+      expect((await requestDetail(consultant, r.id, opts()))?.id).toBe(r.id);
+    } finally {
+      await pg.query(`ALTER TABLE crrv_away RENAME TO care_request_response_versions`);
+    }
+  });
+
+  it("a fully declined round shows no overdue and no due words (R47)", async () => {
+    const r = await placed({ kind: "review", named: [consultant.userId] });
+    await withRequestWrite(
+      consultant,
+      r.id,
+      (c) => declineRequest(c, { clientKey: key(), reasonCode: "not_our_specialty" }),
+      opts(),
+    );
+    const [v] = (
+      await pg.query<{ id: string }>(
+        `INSERT INTO care_request_response_versions (hospital_id, version, status, review_now_accept_min,
+           review_1h_accept_min, consult_urgent_accept_min, routine_reply_min, source, authored_by,
+           admin_signed_by, admin_signed_at, cso_signed_by, cso_signed_at, exception_note)
+         VALUES ($1, 1, 'signed', 1, 60, 120, 1440, 'test fixture', $2, $2, now(), $2, now(),
+           'fixture: one person signs both') RETURNING id`,
+        [h, requester.userId],
+      )
+    ).rows;
+    try {
+      const later = { ...opts(), now: new Date(Date.now() + 3_600_000) };
+      const row = (await sentByMe(requester, later)).find((x) => x.id === r.id)!;
+      expect(row.stateWord).toBe("Declined");
+      expect(row.overdue).toBe(false);
+      expect(row.dueWords).toBeNull();
+    } finally {
+      await pg.query(
+        `UPDATE care_request_response_versions SET status = 'superseded' WHERE id = $1`,
+        [v!.id],
+      );
+    }
+  });
+
   it("asked of you ignores the scope department", async () => {
     const asked = await placed({ named: [consultant.userId] });
     // requireDoctorScope picked another of the consultant's departments today.

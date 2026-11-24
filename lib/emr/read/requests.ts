@@ -2,7 +2,7 @@ import "server-only";
 
 import type { CareRequestRow } from "@/db/schema/care-requests";
 import type { EmrActor } from "@/lib/emr/actor";
-import type { EmrDb } from "@/lib/emr/db";
+import type { EmrDb, EmrTx } from "@/lib/emr/db";
 import type {
   DerivedRequest,
   HelpWanted,
@@ -160,6 +160,20 @@ export function askedOrder(a: RequestRow, b: RequestRow): number {
   );
 }
 
+/** The signed times, or null when none, or when 0308 is not applied yet (R13). A savepoint keeps a failed
+ *  query from aborting the read; the log has the error name and SQLSTATE only. */
+async function signedTimesOrNull(tx: EmrTx, hospitalId: string) {
+  try {
+    return await tx.transaction((sp) => signedRequestTimesAt(sp, hospitalId));
+  } catch (e) {
+    logger.error("care_request.signed_times_read_failed", {
+      reason: e instanceof Error ? e.name : "unknown",
+      code: errorCode(e),
+    });
+    return null;
+  }
+}
+
 /** The requests RLS lets the viewer read that match `where`, with their events, derived. */
 async function visible(viewer: Viewer, where: SQL | undefined, opts: Opts): Promise<Loaded[]> {
   const now = opts.now ?? new Date();
@@ -186,12 +200,13 @@ async function visible(viewer: Viewer, where: SQL | undefined, opts: Opts): Prom
               ),
             )
         : [];
-      const signed = rows.length ? await signedRequestTimesAt(tx, viewer.hospitalId) : null;
+      const signed = rows.length ? await signedTimesOrNull(tx, viewer.hospitalId) : null;
       return rows.map(({ request, chart }) => {
         const mine = events.filter((e) => e.requestId === request.id);
         const derived = deriveFromRows(request, mine, now);
         const open = openRequestOf(request, mine, signed?.signedAt ?? null, now);
-        const live = isOpen(derived.derived);
+        // R47: a fully declined round never escalates (R42): the requester redirects, so nothing is due.
+        const live = isOpen(derived.derived) && derived.derived.state !== "declined";
         return {
           request,
           chart: !!chart,

@@ -67,4 +67,37 @@ describe("dueWords", () => {
   it("signed, nothing due: no words", () => {
     expect(dueWords({ signed: true, due: null, overdue: false, askedAt: asked, now })).toBeNull();
   });
+
+  it("overdue wins over a later due time: never Due by beside an Overdue tag", () => {
+    expect(
+      dueWords({
+        signed: true,
+        due: at("2026-11-24T22:00:00Z"),
+        overdue: true,
+        askedAt: asked,
+        now,
+      }),
+    ).toBe("Overdue");
+  });
+  it("a due time on another Kampala day says tomorrow, or the date", () => {
+    // 23:30 UTC is 02:30 on the 25th in Kampala
+    expect(
+      dueWords({
+        signed: true,
+        due: at("2026-11-24T23:30:00Z"),
+        overdue: false,
+        askedAt: asked,
+        now,
+      }),
+    ).toBe("Due by tomorrow 02:30");
+    expect(
+      dueWords({
+        signed: true,
+        due: at("2026-11-27T11:30:00Z"),
+        overdue: false,
+        askedAt: asked,
+        now,
+      }),
+    ).toBe("Due by 27 Nov 14:30");
+  });
 });

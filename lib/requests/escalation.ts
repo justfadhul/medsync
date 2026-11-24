@@ -89,13 +89,18 @@ export function overdue(r: OpenRequest, t: RequestTimes | null, now: Date): bool
   );
 }
 
-const kampalaTime = (d: Date) =>
-  d.toLocaleTimeString("en-GB", {
-    timeZone: "Africa/Kampala",
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: false,
-  });
+const kampala = (d: Date, o: Intl.DateTimeFormatOptions) =>
+  d.toLocaleString("en-GB", { timeZone: "Africa/Kampala", ...o });
+const kampalaDay = (d: Date) => Math.floor((d.getTime() + 3 * 3_600_000) / 86_400_000);
+
+/** "14:30" today, "tomorrow 02:30", or "27 Nov 14:30" (Kampala time). */
+function kampalaWhen(due: Date, now: Date): string {
+  const time = kampala(due, { hour: "2-digit", minute: "2-digit", hour12: false });
+  const days = kampalaDay(due) - kampalaDay(now);
+  if (days <= 0) return time;
+  if (days === 1) return `${CARE_REQUEST_COPY.page.tomorrow} ${time}`;
+  return `${kampala(due, { day: "numeric", month: "short" })} ${time}`;
+}
 
 /**
  * The due words on a request (R41: from the live signed times, never the stored due_at). With nothing
@@ -111,7 +116,10 @@ export function dueWords(a: {
 }): string | null {
   const P = CARE_REQUEST_COPY.page;
   if (!a.signed) return P.asked(ago(a.now.getTime() - a.askedAt.getTime()));
-  if (a.due && a.due > a.now) return P.dueBy(kampalaTime(a.due));
-  if (a.due && a.overdue) return P.overdueBy(ago(a.now.getTime() - a.due.getTime()));
-  return a.overdue ? P.overdue : null;
+  // Overdue first: never "Due by 01:00" beside an Overdue tag.
+  if (a.overdue)
+    return a.due && a.due <= a.now
+      ? P.overdueBy(ago(a.now.getTime() - a.due.getTime()))
+      : P.overdue;
+  return a.due ? P.dueBy(kampalaWhen(a.due, a.now)) : null;
 }
