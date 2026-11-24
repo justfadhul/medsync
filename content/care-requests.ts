@@ -60,6 +60,7 @@ export const CARE_REQUEST_COPY = {
     notNeeded: "Not needed",
     notNeededWhy: "Why no senior review?",
     notNeededHint: "A reason of three words or more; it goes into the note.",
+    noTarget: "No review request will be sent: no team is set for this ward or for you.",
     ask: "Ask another team",
     reviewDisplay: (department: string) => `Senior review, ${department}`,
     consultDisplay: (department: string) => `Consult, ${department}`,

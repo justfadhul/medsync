@@ -34,8 +34,9 @@ import { JUNIOR_CADRE_CODES, SENIOR_CADRE_CODES } from "@/lib/doctor/cadres";
 import { asClinicalWriter } from "@/lib/emr/db";
 import { encrypt } from "@/lib/encryption";
 import { logger } from "@/lib/logger";
-import { canAct, deriveRequest } from "@/lib/requests/engine";
+import { canAct } from "@/lib/requests/engine";
 import { route } from "@/lib/requests/routing";
+import { deriveFromRows } from "@/lib/requests/rows";
 import { EmrWriteError } from "./context";
 import { insertSignedNote } from "./notes";
 import {
@@ -402,39 +403,11 @@ async function loadRequest(
     .where(and(eq(careRequests.id, requestId), eq(careRequests.hospitalId, actor.hospitalId)))
     .for("update");
   if (!request) throw new EmrWriteError("not_found", "Request not found here.");
-  // A redirect and its new routing share one `at`: the redirect sorts first, so its routing is the new round.
   const rows = await tx
     .select()
     .from(careRequestEvents)
-    .where(eq(careRequestEvents.requestId, requestId))
-    .orderBy(asc(careRequestEvents.at), sql`${careRequestEvents.kind} <> 'redirected'`);
-  const events: RequestEvent[] = rows.map((e) => ({
-    kind: e.kind as RequestEvent["kind"],
-    at: e.at,
-    actorUserId: e.actorUserId,
-    recipientUserId: e.recipientUserId,
-    level: e.level,
-    step: e.step as RequestEvent["step"],
-    postId: e.postId,
-    reasonCode: e.reasonCode,
-    noteId: e.noteId,
-  }));
-  const departmentId =
-    rows.findLast((e) => e.kind === "redirected")?.redirectDepartmentId ??
-    request.targetDepartmentId;
-  const derived = deriveRequest(
-    {
-      requesterUserId: request.requesterUserId,
-      requestedAt: request.requestedAt,
-      phoned:
-        request.phonedUserId && request.phonedAt
-          ? { userId: request.phonedUserId, at: request.phonedAt }
-          : null,
-      dueAt: null,
-    },
-    events,
-    now,
-  );
+    .where(eq(careRequestEvents.requestId, requestId));
+  const { events, derived, departmentId } = deriveFromRows(request, rows, now);
   const [team] = await tx
     .select({ one: sql`1` })
     .from(staffAffiliations)

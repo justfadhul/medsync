@@ -93,6 +93,18 @@ function Harness({ p }: { p: DeskPayload }) {
                     open: true,
                   })),
                 ],
+                requests: [
+                  ...x.record.requests,
+                  ...r.requests.map((q) => ({
+                    id: `00000000-0000-4000-8000-${String(++seq).padStart(12, "8")}`,
+                    kind: q.kind,
+                    urgency: q.urgency,
+                    helpWanted: q.helpWanted,
+                    targetWords: "Medicine",
+                    stateWord: "Sent",
+                    at: "2026-09-27T20:16:00.000Z",
+                  })),
+                ],
               },
             }
           : x,
@@ -489,5 +501,79 @@ describe("requests in the Plan (CARE_REQUESTS, ADR 0537)", () => {
         phoned: null,
       },
     ]);
+  });
+
+  const seniorItem = () =>
+    [...host.querySelectorAll("li")]
+      .map((l) => l.textContent ?? "")
+      .find((t) => /^(Done|To do): Senior review/.test(t)) ?? "";
+
+  it("after a review is placed, the row queues no second review and the checklist stays done", async () => {
+    mount(payload(true, true));
+    await act(async () => {});
+    tap(radio("Senior review", "Now"));
+    await act(async () => {
+      button(/^Place 0 orders, 0 prescriptions and 1 request$/)!.click();
+    });
+    expect(placed[0]!.requests).toHaveLength(1);
+    expect(seniorItem()).toMatch(/^Done/);
+    tap(radio("Senior review", "Now"));
+    tap(radio("Senior review", "Within 1 hour"));
+    expect(plan().basket?.requests ?? []).toEqual([]);
+    expect(plan().seniorReview).toBe("within_1h");
+    expect(seniorItem()).toMatch(/^Done/);
+  });
+
+  it("removing a review line keeps the senior review when one is placed", async () => {
+    const p = payload(true, true);
+    p.plan!.record.requests = [
+      {
+        id: "00000000-0000-4000-8000-0000000000e1",
+        kind: "review",
+        urgency: "now",
+        helpWanted: null,
+        targetWords: "Medicine",
+        stateWord: "Sent",
+        at: "2026-09-27T20:16:00.000Z",
+      },
+    ];
+    p.draft!.content = {
+      ...p.draft!.content,
+      plan: {
+        seniorReview: "now",
+        basket: {
+          orders: [],
+          prescriptions: [],
+          requests: [
+            {
+              ...consult,
+              kind: "review",
+              urgency: "now",
+              helpWanted: null,
+              reasonConditionIds: [],
+              question: "",
+              display: "Senior review, Medicine",
+            },
+          ],
+        },
+      },
+    } as NoteContent;
+    mount(p);
+    await act(async () => {});
+    tap(host.querySelector('[aria-label="Remove Senior review, Medicine"]'));
+    expect(plan().basket?.requests ?? []).toEqual([]);
+    expect(plan().seniorReview).toBe("now");
+    expect(seniorItem()).toMatch(/^Done/);
+  });
+
+  it("says when no review request can be sent", async () => {
+    const p = payload(true, true);
+    p.plan!.requests = { ...PLAN_REQUESTS, ownDepartmentId: null };
+    mount(p);
+    await act(async () => {});
+    expect(host.textContent).toMatch(/No review request will be sent/);
+    tap(radio("Disposition", "Admit"));
+    tap(button(/^Medical ward/, host));
+    expect(host.textContent).not.toMatch(/No review request will be sent/);
   });
 });

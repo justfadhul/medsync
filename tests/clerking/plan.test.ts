@@ -469,10 +469,17 @@ describe("requests in the Plan (ADR 0537)", () => {
     at: "2026-09-27T20:16:00.000Z",
     ...over,
   });
-  const senior = (plan: PlanDraft, notNeededOption?: boolean) =>
-    checklist({ plan, cards, record: empty, obsRequired: null, notNeededOption }).find(
+  const senior = (plan: PlanDraft, notNeededOption?: boolean, record = empty) =>
+    checklist({ plan, cards, record, obsRequired: null, notNeededOption }).find(
       (i) => i.id === "senior_review",
     )!;
+
+  it("a placed review settles senior review", () => {
+    expect(senior({}, true, { ...empty, requests: [placed({})] })).toMatchObject({
+      done: true,
+      detail: null,
+    });
+  });
 
   it("senior review is met by not needed with a reason", () => {
     expect(senior({ seniorReviewNotNeeded: "stable" }, true)).toMatchObject({

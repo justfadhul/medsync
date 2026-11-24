@@ -8,8 +8,8 @@ import type { ChartFrequency, ChartKind } from "@/lib/emr/charts/rules";
 import type { EmrDb, EmrTx } from "@/lib/emr/db";
 import type { OrderFrequency, OrderPriority } from "@/lib/emr/orders";
 import type { PlanRx, RxEdit } from "@/lib/prescribing/plan-rx";
-import type { HelpWanted, RequestEvent, RequestKind } from "@/lib/requests/engine";
-import { and, asc, eq, inArray, isNull, ne, sql } from "drizzle-orm";
+import type { HelpWanted, RequestKind } from "@/lib/requests/engine";
+import { and, asc, eq, inArray, isNull, ne } from "drizzle-orm";
 
 import { CARE_REQUEST_COPY } from "@/content/care-requests";
 import { careRequestEvents, careRequests } from "@/db/schema/care-requests";
@@ -42,8 +42,8 @@ import {
 import { loadPrescriberPharmacy } from "@/lib/pharmacy/review/prescriber-read";
 import { drugById } from "@/lib/prescribing/formulary";
 import { willRead } from "@/lib/prescribing/plan-rx";
-import { deriveRequest } from "@/lib/requests/engine";
 import { careRequestsLiveFor } from "@/lib/requests/feature";
+import { deriveFromRows } from "@/lib/requests/rows";
 
 /**
  * The Plan's payload for the desk (ADR 0184): what step 10 reads back from the record. Loaded only
@@ -136,7 +136,7 @@ function placedRx(r: RxRow): PlacedRx {
  * CARE_REQUESTS (ADR 0537): the clinical departments with their admitting wards and live clinical
  * staff (names and cadres only, never patients), and this visit's placed requests with their state.
  */
-async function loadPlanRequests(
+export async function loadPlanRequests(
   tx: EmrTx,
   actor: EmrActor,
   encounterId: string,
@@ -185,7 +185,6 @@ async function loadPlanRequests(
       and(eq(careRequests.hospitalId, actor.hospitalId), eq(careRequests.encounterId, encounterId)),
     )
     .orderBy(asc(careRequests.requestedAt));
-  // As loadRequest sorts them: a redirect sorts before its own new routing.
   const events = rows.length
     ? await tx
         .select()
@@ -196,42 +195,21 @@ async function loadPlanRequests(
             rows.map((r) => r.id),
           ),
         )
-        .orderBy(asc(careRequestEvents.at), sql`${careRequestEvents.kind} <> 'redirected'`)
     : [];
 
   const nameOf = new Map(depts.map((d) => [d.id, d.name]));
   const placed = rows.map((r): PlacedRequest => {
-    const mine = events.filter((e) => e.requestId === r.id);
-    const derived = deriveRequest(
-      {
-        requesterUserId: r.requesterUserId,
-        requestedAt: r.requestedAt,
-        phoned: r.phonedUserId && r.phonedAt ? { userId: r.phonedUserId, at: r.phonedAt } : null,
-        dueAt: null,
-      },
-      mine.map(
-        (e): RequestEvent => ({
-          kind: e.kind as RequestEvent["kind"],
-          at: e.at,
-          actorUserId: e.actorUserId,
-          recipientUserId: e.recipientUserId,
-          level: e.level,
-          step: e.step as RequestEvent["step"],
-          postId: e.postId,
-          reasonCode: e.reasonCode,
-          noteId: e.noteId,
-        }),
-      ),
+    const { derived, departmentId } = deriveFromRows(
+      r,
+      events.filter((e) => e.requestId === r.id),
       now,
     );
-    const department =
-      mine.findLast((e) => e.kind === "redirected")?.redirectDepartmentId ?? r.targetDepartmentId;
     return {
       id: r.id,
       kind: r.kind as RequestKind,
       urgency: r.urgency,
       helpWanted: r.helpWanted as HelpWanted | null,
-      targetWords: nameOf.get(department) ?? "",
+      targetWords: nameOf.get(departmentId) ?? "",
       stateWord: CARE_REQUEST_COPY.state[derived.state],
       at: r.requestedAt.toISOString(),
     };

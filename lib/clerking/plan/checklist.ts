@@ -93,7 +93,10 @@ export function checklist(i: ChecklistInput): ChecklistItem[] {
         ? "Less often than NEWS2 calls for: say why."
         : null,
   });
-  const seniorDone = !!plan.seniorReview || words(plan.seniorReviewNotNeeded ?? "") >= REASON_WORDS;
+  const seniorDone =
+    !!plan.seniorReview ||
+    record.requests.some((r) => r.kind === "review") ||
+    words(plan.seniorReviewNotNeeded ?? "") >= REASON_WORDS;
   items.push({
     id: "senior_review",
     label: "Senior review",

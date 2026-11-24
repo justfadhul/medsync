@@ -134,8 +134,23 @@ export function placeWords(n: number, m: number, k: number): string {
  * basket (same clientKey), sent to the admit ward's department, else the viewer's own; "Not needed"
  * drops the line and asks why.
  */
+/** The department a review goes to: the admit ward's, else the viewer's own; none, no line. */
+function reviewTarget(v: PlanView, x: PlanDraft) {
+  const rq = v.payload.requests;
+  const wardId = x.disposition?.wardId ?? null;
+  return (
+    (wardId && rq?.departments.find((d) => d.wardIds.includes(wardId))) ||
+    rq?.departments.find((d) => d.id === rq.ownDepartmentId) ||
+    null
+  );
+}
+
+const reviewPlaced = (v: PlanView) => v.record.requests.some((r) => r.kind === "review");
+
 function pickSenior(v: PlanView, id: SeniorReview | "not_needed") {
   return (x: PlanDraft): PlanDraft => {
+    // Seg re-fires on the chosen chip: nothing changes.
+    if (id === x.seniorReview) return x;
     const b = basketOf(x);
     const old = b.requests.find((r) => r.kind === "review");
     if (id === "not_needed") {
@@ -147,11 +162,10 @@ function pickSenior(v: PlanView, id: SeniorReview | "not_needed") {
       };
     }
     const { seniorReviewNotNeeded: _n, ...rest } = x;
-    const rq = v.payload.requests;
+    // A review already placed at this visit is the request: the time is only recorded.
+    if (reviewPlaced(v)) return { ...rest, seniorReview: id };
     const wardId = x.disposition?.wardId ?? null;
-    const dept =
-      (wardId && rq?.departments.find((d) => d.wardIds.includes(wardId))) ||
-      rq?.departments.find((d) => d.id === rq.ownDepartmentId);
+    const dept = reviewTarget(v, x);
     const line: PlanRequestLine | null = dept
       ? {
           clientKey: old?.clientKey ?? crypto.randomUUID(),
@@ -363,6 +377,9 @@ function Where({
                 ) : null}
               </div>
             ) : null}
+            {!reviewTarget(v, d) ? (
+              <p className="text-caption text-muted-foreground">{RQ.noTarget}</p>
+            ) : null}
             <p className="text-caption text-muted-foreground">{CARE_REQUEST_COPY.responsible}</p>
             <Button
               variant="ghost"
@@ -502,7 +519,8 @@ function Basket({
                 onPlan((d) => {
                   const x = basketOf(d);
                   const requests = x.requests.filter((y) => y.clientKey !== r.clientKey);
-                  if (r.kind !== "review") return { ...d, basket: { ...x, requests } };
+                  if (r.kind !== "review" || reviewPlaced(v))
+                    return { ...d, basket: { ...x, requests } };
                   // The review line is the senior review: removing it clears the choice.
                   const { seniorReview: _s, ...rest } = d;
                   return { ...rest, basket: { ...x, requests } };
