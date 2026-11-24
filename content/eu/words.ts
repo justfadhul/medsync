@@ -130,3 +130,25 @@ export const EU_RESUS_DESK = {
   noBay: "Not a resus bay",
   space: (label: string) => `Space ${label}`,
 } as const;
+
+/** The emergency unit's indicators on the hospital admin's Reports page. DRAFT wording for the CSO. */
+export const EU_REPORT = {
+  title: "Emergency unit",
+  lede: "Counts from recorded times; nothing here is a target.",
+  stays: (n: number, days: number) => `${n} stays decided in the last ${days} days`,
+  tooFew: "too few to report",
+  deathsTitle: "Deaths in the unit, by time since arrival at the hospital",
+  within: (h: number, n: number) => `Within ${h} hours: ${n}`,
+  noArrival: (n: number) =>
+    `${n} with no usable arrival time (missing, unreadable or after the death), not counted above`,
+  losTitle: "Length of stay",
+  boardTitle: "Waiting in the unit for a ward bed after the decision to admit",
+  spread: (median: string, p90: string, n: number) =>
+    `Median ${median} · 90th percentile ${p90} · over ${n} finished stays`,
+  minutes: (m: number) => (m < 60 ? `${m} min` : `${Math.floor(m / 60)} h ${m % 60} min`),
+  overTitle: "Stays over the hospital's limit",
+  over: (num: number, den: number, hours: number) =>
+    `${num} of ${den} finished stays ran past ${hours} hours`,
+  overBasis: "The share is over finished stays only; stays still open are not counted.",
+  unavailable: "Not available yet.",
+} as const;

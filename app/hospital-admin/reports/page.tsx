@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 
+import { fetchEuReport } from "@/lib/eu/report-load";
 import { fetchPilotWeeks, PILOT_WEEKS } from "@/lib/hospital-admin/pilot";
 import {
   fetchHospitalReport,
@@ -9,6 +10,7 @@ import {
   reportWindow,
 } from "@/lib/hospital-admin/reports";
 import { requireHospitalAdminScope } from "@/lib/hospital-admin/scope";
+import { EuAggregates } from "./_components/eu-aggregates";
 import { LabAggregates } from "./_components/lab-aggregates";
 import { ReportsView } from "./_components/reports-view";
 import { reportView } from "./_lib/view";
@@ -40,9 +42,10 @@ export default async function ReportsPage({ searchParams }: PageProps) {
   const params = await searchParams;
   const days = parseReportDays(params.days);
   const window = reportWindow(days);
-  const [report, pilot] = await Promise.all([
+  const [report, pilot, eu] = await Promise.all([
     fetchHospitalReport(scope.hospitalId, window),
     fetchPilotWeeks(scope.hospitalId),
+    fetchEuReport(scope.hospitalId, days),
   ]);
 
   return (
@@ -51,6 +54,7 @@ export default async function ReportsPage({ searchParams }: PageProps) {
       windows={REPORT_WINDOWS}
       min={MIN_RATE_SAMPLE}
       pilotWeeks={PILOT_WEEKS}
+      eu={eu ? <EuAggregates read={eu} /> : null}
       lab={<LabAggregates scope={scope} from={window.from} to={window.to} />}
     />
   );
