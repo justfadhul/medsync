@@ -15,8 +15,8 @@ import * as w from "@/lib/rota/write";
  * when DUTY_ROTA is off, and maps the 0307 guard's refusals to content sentences; anything else is logged and
  * answered with one sentence, never a raw error.
  */
-type Write = (actor: RotaActor, raw: unknown) => Promise<ActionResult<{ id: string }>>;
-async function run(fn: Write, raw: unknown): Promise<ActionResult<{ id: string }>> {
+type Write<T> = (actor: RotaActor, raw: unknown) => Promise<ActionResult<T>>;
+async function run<T = { id: string }>(fn: Write<T>, raw: unknown): Promise<ActionResult<T>> {
   try {
     const s = await requireDoctorScope();
     const out = await fn({ userId: s.userId, hospitalId: s.hospitalId }, raw);
@@ -33,3 +33,13 @@ export const createPostAction = async (raw: unknown) => run(w.createPost, raw);
 export const archivePostAction = async (raw: unknown) => run(w.archivePost, raw);
 export const assignDutyAction = async (raw: unknown) => run(w.assignDuty, raw);
 export const endDutyAction = async (raw: unknown) => run(w.endDuty, raw);
+export const saveTemplateAction = async (raw: unknown) => run(w.saveTemplateLine, raw);
+export const endTemplateAction = async (raw: unknown) => run(w.endTemplateLine, raw);
+export const fillWeekAction = async (raw: unknown) => run(w.fillWeekFromTemplates, raw);
+export const publishWeekAction = async (raw: unknown) => run(w.publishWeek, raw);
+export const unlockWeekAction = async (raw: unknown) => run(w.unlockWeek, raw);
+export const decideSwapAction = async (raw: unknown) => run(w.decideSwap, raw);
+export const addDelegateAction = async (raw: unknown) => run(w.addDelegate, raw);
+export const revokeDelegateAction = async (raw: unknown) => run(w.revokeDelegate, raw);
+export const askSwapAction = async (raw: unknown) => run(w.askCoverOrSwap, raw);
+export const answerSwapAction = async (raw: unknown) => run(w.answerSwap, raw);

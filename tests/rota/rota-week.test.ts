@@ -11,7 +11,25 @@ import { rotaWeekStart, shiftOf } from "@/lib/rota/cover";
 const { RotaWeek } = await import("@/components/rota/rota-week");
 
 const ok = vi.fn(async () => ({ ok: true as const, id: "x", serverTime: "" }));
-const actions = { createPost: ok, archivePost: ok, assignDuty: ok, endDuty: ok };
+const actions = {
+  createPost: ok,
+  archivePost: ok,
+  assignDuty: ok,
+  endDuty: ok,
+  saveTemplate: ok,
+  endTemplate: ok,
+  fillWeek: vi.fn(async () => ({
+    ok: true as const,
+    id: "x",
+    serverTime: "",
+    data: { written: 0, skipped: [] },
+  })),
+  publishWeek: ok,
+  unlockWeek: ok,
+  decideSwap: ok,
+  addDelegate: ok,
+  revokeDelegate: ok,
+};
 const DEPT = "11111111-1111-4111-8111-111111111111";
 const POST = "22222222-2222-4222-8222-222222222222";
 const ASSIGN = "33333333-3333-4333-8333-333333333333";

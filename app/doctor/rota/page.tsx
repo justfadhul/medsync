@@ -2,9 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { and, asc, eq, gt, isNull, lte, or } from "drizzle-orm";
 
-import { Panel } from "@/components/medsync/panel";
-import { Tag } from "@/components/medsync/tag";
-import { when } from "@/components/rota/gap-report";
+import { MyDuties } from "@/components/rota/my-duties";
 import { RotaWeek } from "@/components/rota/rota-week";
 import { WeekNav } from "@/components/rota/week-nav";
 import { DUTY_ROTA_COPY } from "@/content/duty-rota";
@@ -14,11 +12,25 @@ import { departmentHeads } from "@/db/schema/services-hub";
 import { requireDoctorScope } from "@/lib/doctor/scope";
 import { rotaWeekStart } from "@/lib/rota/cover";
 import { dutyRotaLiveFor } from "@/lib/rota/feature";
-import { loadRotaWeek, myDuties, rotaChoices } from "@/lib/rota/read";
-import { archivePostAction, assignDutyAction, createPostAction, endDutyAction } from "./actions";
+import { loadRotaWeek, rotaChoices, swapOptions, swapsAskedOfMe } from "@/lib/rota/read";
+import {
+  addDelegateAction,
+  answerSwapAction,
+  archivePostAction,
+  askSwapAction,
+  assignDutyAction,
+  createPostAction,
+  decideSwapAction,
+  endDutyAction,
+  endTemplateAction,
+  fillWeekAction,
+  publishWeekAction,
+  revokeDelegateAction,
+  saveTemplateAction,
+  unlockWeekAction,
+} from "./actions";
 
 const P = DUTY_ROTA_COPY.page;
-const M = DUTY_ROTA_COPY.mine;
 export const metadata: Metadata = { title: P.metaTitle("Doctor") };
 export const dynamic = "force-dynamic";
 
@@ -50,8 +62,9 @@ export default async function DoctorRotaPage({
       ),
     )
     .orderBy(asc(hospitalDepartments.name));
-  const [mine, rotas] = await Promise.all([
-    myDuties(scope.userId, scope.hospitalId, now),
+  const [mine, asked, rotas] = await Promise.all([
+    swapOptions(scope.userId, scope.hospitalId, now),
+    swapsAskedOfMe(scope.userId, scope.hospitalId),
     Promise.all(
       headed.map(async (d) => {
         const [week, choices] = await Promise.all([
@@ -67,6 +80,15 @@ export default async function DoctorRotaPage({
     archivePost: archivePostAction,
     assignDuty: assignDutyAction,
     endDuty: endDutyAction,
+    saveTemplate: saveTemplateAction,
+    endTemplate: endTemplateAction,
+    fillWeek: fillWeekAction,
+    publishWeek: publishWeekAction,
+    unlockWeek: unlockWeekAction,
+    askSwap: askSwapAction,
+    decideSwap: decideSwapAction,
+    addDelegate: addDelegateAction,
+    revokeDelegate: revokeDelegateAction,
   };
 
   return (
@@ -80,26 +102,7 @@ export default async function DoctorRotaPage({
           {P.headLead}
         </p>
       </header>
-      <Panel title={M.title} count={mine.length}>
-        <p className="text-muted-foreground text-caption px-4 pt-3">
-          {DUTY_ROTA_COPY.plannedNotPresent}
-        </p>
-        {mine.length ? (
-          <ul className="divide-border divide-y">
-            {mine.map((m, i) => (
-              <li key={i} className="flex flex-wrap items-center gap-x-3 gap-y-1 px-4 py-2.5">
-                <span className="text-label text-foreground">{m.postName}</span>
-                <span className="text-muted-foreground text-caption tabular-nums">
-                  {M.until(when(m.until))}
-                </span>
-                <Tag>{DUTY_ROTA_COPY.state[m.state]}</Tag>
-              </li>
-            ))}
-          </ul>
-        ) : (
-          <p className="text-muted-foreground text-body-s px-4 py-3">{M.none}</p>
-        )}
-      </Panel>
+      <MyDuties duties={mine} asked={asked} ask={askSwapAction} answer={answerSwapAction} />
       {rotas.length ? (
         <>
           <WeekNav weekStart={weekStart} base="/doctor/rota?" />
@@ -113,6 +116,9 @@ export default async function DoctorRotaPage({
               wards={choices.wards}
               cadres={choices.cadres}
               canEdit
+              canPublish
+              canDelegate
+              viewerId={scope.userId}
               actions={actions}
             />
           ))}

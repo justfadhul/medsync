@@ -515,6 +515,119 @@ export async function myDuties(
   });
 }
 
+export interface SwapOption {
+  id: string;
+  postName: string;
+  startsAt: Date;
+  endsAt: Date;
+  state: DutyState;
+  /** Live staff whose grade the post takes (not the asker): who can be asked. */
+  colleagues: { userId: string; name: string }[];
+  /** Their live duties on the same post, for a swap. */
+  theirDuties: { id: string; userId: string; startsAt: Date; endsAt: Date }[];
+}
+
+/**
+ * This person's live duties over the next 14 days, each with who they may ask and the duties a swap could take.
+ * Staff names and posts only (ADR 0199). The guard checks the holder, the post and the pair again.
+ */
+export async function swapOptions(
+  userId: string,
+  hospitalId: string,
+  now: Date,
+  opts?: Opts,
+): Promise<SwapOption[]> {
+  if (!dutyRotaLiveFor(hospitalId) || !z.uuid().safeParse(userId).success) return [];
+  const to = new Date(now.getTime() + 14 * 24 * HOUR);
+  return inSnapshot(opts?.database, async (tx) => {
+    const rows = await tx
+      .select({ a: dutyAssignments, post: dutyPosts })
+      .from(dutyAssignments)
+      .innerJoin(dutyPosts, eq(dutyPosts.id, dutyAssignments.postId))
+      .where(
+        and(
+          eq(dutyAssignments.hospitalId, hospitalId),
+          eq(dutyAssignments.userId, userId),
+          isNull(dutyAssignments.endedAt),
+          lt(dutyAssignments.startsAt, to),
+          gt(dutyAssignments.endsAt, now),
+        ),
+      )
+      .orderBy(asc(dutyAssignments.startsAt));
+    const mine = rows
+      .map((r) => ({ a: toAssignment(r.a), post: r.post }))
+      .filter(({ a }) => endOf(a) > now.getTime());
+    if (!mine.length) return [];
+    const postIds = [...new Set(mine.map(({ post }) => post.id))];
+    const codes = [...new Set(mine.flatMap(({ post }) => post.eligibleCadres))];
+    const staff = codes.length
+      ? await tx
+          .selectDistinct({
+            userId: staffAffiliations.userId,
+            name: users.fullName,
+            cadre: cadres.code,
+          })
+          .from(staffAffiliations)
+          .innerJoin(cadres, eq(cadres.id, staffAffiliations.cadreId))
+          .leftJoin(users, eq(users.id, staffAffiliations.userId))
+          .where(
+            and(
+              eq(staffAffiliations.hospitalId, hospitalId),
+              inArray(staffAffiliations.state, ["active", "approved"]),
+              inArray(cadres.code, codes),
+            ),
+          )
+          .orderBy(asc(users.fullName))
+      : [];
+    const theirs = (
+      await tx
+        .select()
+        .from(dutyAssignments)
+        .where(
+          and(
+            eq(dutyAssignments.hospitalId, hospitalId),
+            inArray(dutyAssignments.postId, postIds),
+            isNull(dutyAssignments.endedAt),
+            lt(dutyAssignments.startsAt, to),
+            gt(dutyAssignments.endsAt, now),
+          ),
+        )
+        .orderBy(asc(dutyAssignments.startsAt))
+    )
+      .map(toAssignment)
+      .filter((a) => a.userId !== userId && endOf(a) > now.getTime());
+    const leave = await leaveOf(
+      tx,
+      hospitalId,
+      [userId],
+      now,
+      new Date(Math.max(...mine.map(({ a }) => a.endsAt.getTime()))),
+    );
+    return mine.map(({ a, post }) => {
+      const colleagues = new Map<string, string>();
+      for (const s of staff)
+        if (s.userId !== userId && post.eligibleCadres.includes(s.cadre))
+          colleagues.set(s.userId, s.name ?? DUTY_ROTA_COPY.unnamed);
+      return {
+        id: a.id,
+        postName: post.name,
+        startsAt: a.startsAt,
+        endsAt: new Date(endOf(a)),
+        state: dutyState(a, leave, now),
+        colleagues: [...colleagues].map(([id, name]) => ({ userId: id, name })),
+        theirDuties: theirs
+          .filter((t) => t.postId === post.id)
+          .map((t) => ({
+            id: t.id,
+            userId: t.userId,
+            startsAt: t.startsAt,
+            endsAt: new Date(endOf(t)),
+          })),
+      };
+    });
+  });
+}
+
 /** Who covers a ward now, by whoCovers's fixed order: staff names and post names only. */
 export async function coverForWard(
   hospitalId: string,

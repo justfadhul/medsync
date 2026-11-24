@@ -12,7 +12,20 @@ import { requireHospitalAdminScope } from "@/lib/hospital-admin/scope";
 import { rotaWeekStart } from "@/lib/rota/cover";
 import { dutyRotaLiveFor } from "@/lib/rota/feature";
 import { loadRotaWeek, rotaChoices } from "@/lib/rota/read";
-import { archivePostAction, assignDutyAction, createPostAction, endDutyAction } from "./actions";
+import {
+  addDelegateAction,
+  archivePostAction,
+  assignDutyAction,
+  createPostAction,
+  decideSwapAction,
+  endDutyAction,
+  endTemplateAction,
+  fillWeekAction,
+  publishWeekAction,
+  revokeDelegateAction,
+  saveTemplateAction,
+  unlockWeekAction,
+} from "./actions";
 
 const P = DUTY_ROTA_COPY.page;
 export const metadata: Metadata = { title: P.metaTitle("Hospital admin") };
@@ -71,7 +84,17 @@ export default async function AdminRotaPage({
         wards={choices.wards}
         cadres={choices.cadres}
         canEdit
+        canPublish
+        canDelegate
         actions={{
+          saveTemplate: saveTemplateAction,
+          endTemplate: endTemplateAction,
+          fillWeek: fillWeekAction,
+          publishWeek: publishWeekAction,
+          unlockWeek: unlockWeekAction,
+          decideSwap: decideSwapAction,
+          addDelegate: addDelegateAction,
+          revokeDelegate: revokeDelegateAction,
           createPost: createPostAction,
           archivePost: archivePostAction,
           assignDuty: assignDutyAction,
