@@ -65,6 +65,12 @@ describe.skipIf(!laneOn)("reading care requests (PGlite lane)", () => {
   const member = async (dept: string, cadre = "MEDICAL_OFFICER") =>
     actor(await clinician(pg, { hospitalId: h, departmentId: dept, cadre }), cadre, dept);
   const key = () => `k-${randomUUID()}`;
+  const viewerOf = (a: EmrActor) => ({
+    userId: a.userId,
+    hospitalId: h,
+    departmentId: a.departmentId!,
+    cadreCode: a.cadreCode,
+  });
   const opts = () => ({ database: lane.db });
   const ours = (rows: RequestRow[], ids: string[]) =>
     rows.map((r) => r.id).filter((id) => ids.includes(id));
@@ -227,18 +233,21 @@ describe.skipIf(!laneOn)("reading care requests (PGlite lane)", () => {
       expect(r.patientName).toBe("Fixture Patient");
       expect(r.mine).toBe(false);
     }
-    expect(rows.find((r) => r.id === claimed.id)!.stateWord).toBe("Accepted");
+    expect(rows.find((r) => r.id === claimed.id)).toMatchObject({
+      stateWord: "Accepted",
+      claimed: true,
+    });
+    expect(rows.find((r) => r.id === unclaimed.id)!.claimed).toBe(false);
+    // R30: the board offers "Pick up" only on what nobody has taken; the list keeps both.
+    const board = (await loadEmrTasks(lane.db, viewerOf(late))).map((t) => t.id);
+    expect(board).toContain(unclaimed.id);
+    expect(board).not.toContain(claimed.id);
   });
 
   it("restricted request is never named on a lane", async () => {
     const hidden = await placed({ named: [consultant.userId], restricted: true });
     const shown = await placed({ named: [consultant.userId] });
-    const tasks = await loadEmrTasks(lane.db, {
-      userId: consultant.userId,
-      hospitalId: h,
-      departmentId: renal,
-      cadreCode: "CONSULTANT",
-    });
+    const tasks = await loadEmrTasks(lane.db, viewerOf(consultant));
     expect(tasks.find((t) => t.id === hidden.id)).toMatchObject({
       kind: "request_mine",
       label: null,
@@ -247,8 +256,19 @@ describe.skipIf(!laneOn)("reading care requests (PGlite lane)", () => {
     // A member with no chart basis reads the request, but not who it is about or why.
     const late = await member(renal);
     const row = (await forMyDepartment(late, opts())).find((r) => r.id === hidden.id)!;
-    expect(row).toMatchObject({ restricted: true, patientName: null, questionFirstLine: null });
+    expect(row).toMatchObject({
+      restricted: true,
+      chart: false,
+      patientName: null,
+      mrn: null,
+      questionFirstLine: null,
+    });
+    // R29: never on their board, where the workspace would reveal the patient's name.
+    const board = (await loadEmrTasks(lane.db, viewerOf(late))).map((t) => t.id);
+    expect(board).not.toContain(hidden.id);
+    expect(board).toContain(shown.id);
     const detail = (await requestDetail(late, hidden.id, opts()))!;
+    expect(detail.mrn).toBeNull();
     expect(detail.question).toBeNull();
     expect(detail.canOpenChart).toBe(false);
     expect(detail.problems).not.toContain("Nephrotic syndrome");

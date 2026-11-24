@@ -18,7 +18,6 @@ import { careRequestEvents, careRequests } from "@/db/schema/care-requests";
 import { conditions, diagnosisTerms } from "@/db/schema/emr";
 import { hospitalDepartments } from "@/db/schema/hospital-departments";
 import { hospitalWards } from "@/db/schema/hospital-wards";
-import { patientProfiles } from "@/db/schema/patient-profiles";
 import { cadres } from "@/db/schema/reference-data";
 import { users } from "@/db/schema/users";
 import { asClinicalReader } from "@/lib/emr/db";
@@ -33,7 +32,7 @@ import { currentRound, deriveFromRows } from "@/lib/requests/rows";
  * Two parts. The requests and their events come under `asClinicalReader`, so FORCED RLS
  * (private.care_request_visible) decides which exist for the viewer. Names, MRNs, places and the
  * problems' words then come as the owner, only for those requests. A restricted request the viewer has
- * no chart basis for is never named: no patient name, no question, no restricted problem.
+ * no chart basis for is never named: no patient name, no MRN, no question, no restricted problem.
  * The state is deriveFromRows's, never re-derived here.
  */
 
@@ -65,7 +64,11 @@ export interface RequestRow {
   askedAtMs: number;
   /** Asked of the viewer: a current-round recipient who has not declined, or the accepter. */
   mine: boolean;
+  /** Someone has accepted it (or was phoned): nothing left for the department to pick up. */
+  claimed: boolean;
   restricted: boolean;
+  /** The viewer has a chart basis for the patient. Restricted without it: no name, MRN or question. */
+  chart: boolean;
 }
 
 export interface RequestDetail extends RequestRow {
@@ -190,9 +193,7 @@ async function rowsOf(viewer: Viewer, loaded: Loaded[], opts: Opts): Promise<Req
   const wardIds = ids((l) => l.request.wardId);
   const shown =
     opts.names === false ? [] : ids((l) => (hidden(l) ? null : l.request.patientUserId));
-  const unnamed =
-    opts.names === false ? [] : ids((l) => (hidden(l) ? l.request.patientUserId : null));
-  const [depts, wards, people, cadreRows, who, codes] = await Promise.all([
+  const [depts, wards, people, cadreRows, who] = await Promise.all([
     db
       .select({ id: hospitalDepartments.id, name: hospitalDepartments.name })
       .from(hospitalDepartments)
@@ -222,18 +223,11 @@ async function rowsOf(viewer: Viewer, loaded: Loaded[], opts: Opts): Promise<Req
         ),
       ),
     identitiesFor(viewer, shown, "doctor_requests", db),
-    unnamed.length
-      ? db
-          .select({ id: patientProfiles.id, code: patientProfiles.patientCode })
-          .from(patientProfiles)
-          .where(inArray(patientProfiles.id, unnamed))
-      : [],
   ]);
   const dept = new Map(depts.map((d) => [d.id, d.name]));
   const ward = new Map(wards.map((w) => [w.id, w.name]));
   const person = new Map(people.map((p) => [p.id, p.name]));
   const cadre = new Map(cadreRows.map((c) => [c.code, c.name]));
-  const mrn = new Map(codes.map((c) => [c.id, c.code]));
   return loaded.map((l): RequestRow => {
     const r = l.request;
     const secret = hidden(l);
@@ -247,7 +241,7 @@ async function rowsOf(viewer: Viewer, loaded: Loaded[], opts: Opts): Promise<Req
       patientUserId: r.patientUserId,
       encounterId: r.encounterId,
       patientName: secret ? null : (who.get(r.patientUserId)?.name ?? null),
-      mrn: who.get(r.patientUserId)?.mrn ?? mrn.get(r.patientUserId) ?? null,
+      mrn: secret ? null : (who.get(r.patientUserId)?.mrn ?? null),
       wardName: r.wardId ? (ward.get(r.wardId) ?? null) : null,
       departmentName: dept.get(l.departmentId) ?? "",
       requesterName: person.get(r.requesterUserId) ?? null,
@@ -257,7 +251,9 @@ async function rowsOf(viewer: Viewer, loaded: Loaded[], opts: Opts): Promise<Req
         : (safeDecrypt(r.questionCiphertext)?.split("\n")[0]?.trim() ?? null) || null,
       askedAtMs: r.requestedAt.getTime(),
       mine: askedOf(l, viewer.userId),
+      claimed: l.derived.state === "accepted",
       restricted: r.sensitivity !== "standard",
+      chart: l.chart,
     };
   });
 }
@@ -303,12 +299,8 @@ export async function forMyDepartment(viewer: Viewer, opts: Opts = {}): Promise<
       isOpen(l.derived) &&
       l.derived.state !== "declined",
   );
-  const accepted = new Set(
-    open.filter((l) => l.derived.state === "accepted").map((l) => l.request.id),
-  );
-  const claimed = (r: RequestRow) => Number(accepted.has(r.id));
   return (await rowsOf(viewer, open, opts)).sort(
-    (a, b) => claimed(a) - claimed(b) || askedOrder(a, b),
+    (a, b) => Number(a.claimed) - Number(b.claimed) || askedOrder(a, b),
   );
 }
 

@@ -604,9 +604,12 @@ async function requestTasks(database: EmrDb, viewer: WorkspaceViewer): Promise<F
           ? copy.consult(r.departmentName)
           : copy.review,
     });
+  // R29: the board reveals its rows' names, so a restricted request the viewer has no chart basis
+  // for stays off it (nameless on /doctor/requests). R30: only unclaimed ones can be picked up.
+  const onBoard = (r: RequestRow) => !r.restricted || r.chart;
   return [
-    ...asked.map(task("request_mine")),
-    ...dept.filter((r) => !r.mine).map(task("request_department")),
+    ...asked.filter(onBoard).map(task("request_mine")),
+    ...dept.filter((r) => onBoard(r) && !r.mine && !r.claimed).map(task("request_department")),
   ];
 }
 
