@@ -51,7 +51,10 @@ export interface OpenRequest {
 }
 
 /** When the current level's window ends; null with no times or once the clock's condition is met. */
-export function dueAt(r: OpenRequest, t: RequestTimes | null): Date | null {
+export function dueAt(
+  r: Pick<OpenRequest, "kind" | "urgency" | "levelSince" | "accepted" | "replied">,
+  t: RequestTimes | null,
+): Date | null {
   if (!t) return null;
   const c = clockFor(r.kind, r.urgency, t);
   if (c.until === "accepted" ? r.accepted || r.replied : r.replied) return null;

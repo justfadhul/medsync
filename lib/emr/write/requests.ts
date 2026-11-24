@@ -37,8 +37,10 @@ import { encrypt } from "@/lib/encryption";
 import { logger } from "@/lib/logger";
 import { PHARMACY_MAP_CADRES } from "@/lib/pharmacy/access";
 import { canAct } from "@/lib/requests/engine";
+import { dueAt } from "@/lib/requests/escalation";
 import { route } from "@/lib/requests/routing";
 import { currentRound, deriveFromRows } from "@/lib/requests/rows";
+import { signedRequestTimes } from "@/lib/requests/times";
 import { whoCovers } from "@/lib/rota/cover";
 import { dutyRotaLiveFor } from "@/lib/rota/feature";
 import { loadCoverWorld } from "@/lib/rota/read";
@@ -402,6 +404,8 @@ export async function placeRequests(
   const { tx, actor, now } = ctx;
   const hospitalId = actor.hospitalId;
   const encounter = await openEncounter(ctx, input.patientUserId, input.encounterId);
+  // Null when nothing is signed: then no request has a due time (ADR 0244 §1).
+  const times = await signedRequestTimes(tx, hospitalId);
   const ids: string[] = [];
 
   for (const line of input.lines) {
@@ -497,6 +501,17 @@ export async function placeRequests(
         placementId: input.placementId,
         clientKey: line.clientKey,
         sensitivity: restricted ? "restricted" : "standard",
+        // A phoned request counts as accepted (the engine), so an accept clock has no due time.
+        dueAt: dueAt(
+          {
+            kind: line.kind,
+            urgency: line.urgency,
+            levelSince: now,
+            accepted: Boolean(phoned),
+            replied: false,
+          },
+          times,
+        ),
       })
       .returning({ id: careRequests.id });
     const id = request!.id;

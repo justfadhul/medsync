@@ -1,5 +1,14 @@
 import { sql } from "drizzle-orm";
-import { check, index, pgTable, smallint, text, timestamp, uuid } from "drizzle-orm/pg-core";
+import {
+  check,
+  index,
+  integer,
+  pgTable,
+  smallint,
+  text,
+  timestamp,
+  uuid,
+} from "drizzle-orm/pg-core";
 
 import { authUsers } from "./_auth";
 import { admissions } from "./admissions";
@@ -52,6 +61,8 @@ export const careRequests = pgTable(
     clientKey: text("client_key").notNull().unique("care_requests_client_key"),
     sensitivity: text("sensitivity").notNull().default("standard"),
     createdAt: timestamp("created_at", tz).notNull().defaultNow(),
+    /** 0308: the first level's window end from the signed times, set at insert; null when none is signed. */
+    dueAt: timestamp("due_at", tz),
   },
   (t) => [
     check("care_requests_kind_check", sql`${t.kind} IN ('review','consult')`),
@@ -149,6 +160,35 @@ export const careRequestEvents = pgTable(
       .where(sql`${t.kind} = 'routed'`),
   ],
 );
+
+/**
+ * Migration 0308 (GATED, ADR 0536): the request clock (D4) as a signed, versioned set per hospital, as
+ * critical_response_versions (0102). The CHECKs (minutes 1-2880, two signers) and the one-signed index
+ * live in the SQL.
+ */
+export const careRequestResponseVersions = pgTable("care_request_response_versions", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  hospitalId: uuid("hospital_id")
+    .notNull()
+    .references(() => hospitals.id, { onDelete: "cascade" }),
+  version: integer("version").notNull(),
+  status: text("status").notNull().default("draft"),
+  reviewNowAcceptMin: integer("review_now_accept_min").notNull(),
+  review1hAcceptMin: integer("review_1h_accept_min").notNull(),
+  consultUrgentAcceptMin: integer("consult_urgent_accept_min").notNull(),
+  routineReplyMin: integer("routine_reply_min").notNull(),
+  source: text("source").notNull(),
+  authoredBy: uuid("authored_by")
+    .notNull()
+    .references(() => authUsers.id, { onDelete: "restrict" }),
+  adminSignedBy: uuid("admin_signed_by").references(() => authUsers.id, { onDelete: "restrict" }),
+  adminSignedAt: timestamp("admin_signed_at", tz),
+  csoSignedBy: uuid("cso_signed_by").references(() => authUsers.id, { onDelete: "restrict" }),
+  csoSignedAt: timestamp("cso_signed_at", tz),
+  exceptionNote: text("exception_note"),
+  createdAt: timestamp("created_at", tz).notNull().defaultNow(),
+  supersededAt: timestamp("superseded_at", tz),
+});
 
 export type CareRequestRow = typeof careRequests.$inferSelect;
 export type CareRequestEventRow = typeof careRequestEvents.$inferSelect;
