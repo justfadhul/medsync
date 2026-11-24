@@ -4,8 +4,10 @@ import type { EmrTx } from "@/lib/emr/db";
 import type { RequestTimes } from "@/lib/requests/escalation";
 import { and, eq, isNull, max, ne } from "drizzle-orm";
 
+import { CARE_REQUEST_COPY } from "@/content/care-requests";
 import { careRequestResponseVersions as crrv } from "@/db/schema/care-requests";
 import { EmrWriteError } from "@/lib/emr/write/context";
+import { D4_DEFAULTS } from "@/lib/requests/escalation";
 
 /**
  * The request response times (D4, migration 0308): a draft, then the hospital admin's signature, then the
@@ -93,7 +95,7 @@ export async function saveRequestTimesDraft(
 export async function signRequestTimes(
   tx: EmrTx,
   signer: Actor & { as: "admin" | "cso" },
-  input: { versionId: string; exceptionNote: string | null },
+  input: { versionId: string; exceptionNote: string | null; expect?: RequestTimes },
   now: Date,
 ): Promise<void> {
   const [v] = await tx
@@ -103,6 +105,12 @@ export async function signRequestTimes(
     .for("update");
   if (!v) throw new EmrWriteError("not_found", "That set of response times was not found.");
   if (v.status !== "draft") throw new EmrWriteError("conflict", "This set is already signed.");
+  // Sign exactly what the signer was shown (R46).
+  if (
+    input.expect &&
+    (Object.keys(D4_DEFAULTS) as (keyof RequestTimes)[]).some((k) => v[k] !== input.expect![k])
+  )
+    throw new EmrWriteError("conflict", CARE_REQUEST_COPY.times.changedSince);
   const note = input.exceptionNote?.trim() || null;
   if (note && note.length < 10) throw invalid("Say in a sentence why no second person can sign.");
   if (signer.as === "admin") {
