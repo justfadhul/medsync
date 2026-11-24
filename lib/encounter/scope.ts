@@ -110,5 +110,6 @@ export async function resolveEncounterAccess(args: {
   if (grant) return { allowed: true, basis: "break_glass" };
 
   // care_team — SEAM (table arrives with the care-team module).
+  // Stays a seam: request recipients open the chart via loadChart → resolveEmrAccess (0306, needs EMR v1).
   return { allowed: false, basis: null };
 }

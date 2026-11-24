@@ -93,6 +93,7 @@ export async function resolvePatientAccess(args: {
   // 1. care_team — table doesn't exist yet; the seam is always false
   // today. When the care-team module ships, add a fast path here BEFORE
   // the department check.
+  // Stays a seam: request recipients open the chart via loadChart → resolveEmrAccess (0306, needs EMR v1).
 
   return { allowed: false, basis: null };
 }
