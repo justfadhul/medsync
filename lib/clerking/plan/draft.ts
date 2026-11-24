@@ -85,9 +85,9 @@ export const PlanSchema = z.object({
   disposition: z
     .object({
       kind: z.enum(DISPOSITIONS),
-      /** Admit: the ward's name (the words; drafts saved before ADR 0197 have only this); Refer: where to. */
+      /** Admit or Observe in EU: the ward's name (the words; drafts saved before ADR 0197 have only this); Refer: where to. */
       ward: text(120).optional(),
-      /** Admit: the ward's id (ADR 0197 §5), what the close admits to. */
+      /** Admit or Observe in EU: the ward's id (ADR 0197 §5), what the close admits or sends to. */
       wardId: uuid.optional(),
       referTo: text(200).optional(),
     })
