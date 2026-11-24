@@ -119,6 +119,8 @@ export const bedAssignments = pgTable(
     admissionId: uuid("admission_id"),
     arrivedAt: timestamp("arrived_at", { withTimezone: true }),
     arrivedBy: uuid("arrived_by"),
+    /** 0311 (ADR 0541): the EU stay this space serves; never with admission_id. FK in SQL. */
+    euStayId: uuid("eu_stay_id"),
   },
   (t) => [
     uniqueIndex("bed_assignments_one_open_per_bed")
