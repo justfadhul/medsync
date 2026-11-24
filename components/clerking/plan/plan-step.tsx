@@ -201,7 +201,7 @@ export function PlanStatusPill({ v }: { v: PlanView }) {
   );
 }
 
-function Where({
+export function Where({
   v,
   editable,
   onPlan,

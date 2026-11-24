@@ -325,7 +325,7 @@ function CloseStep({
                 <Button
                   type="button"
                   className={PRESS}
-                  disabled={!!euWhy || pending}
+                  disabled={!!euWhy || pending || !!msg?.ok}
                   onClick={send}
                 >
                   {EU_SEND.send}
