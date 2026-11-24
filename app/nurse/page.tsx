@@ -13,12 +13,15 @@ import {
 
 import { IncomingIntakesPanel } from "@/components/intake/incoming-panel";
 import { CautionNotice } from "@/components/medsync/caution-notice";
+import { StaffNotices } from "@/components/medsync/staff-notices";
 import { NURSE_TASKS_COPY } from "@/content/nurse-tasks";
 import { WARDS } from "@/content/pharmacy-stores-wards";
 import { nurseTasksLiveFor } from "@/lib/emr/feature";
 import { fetchHospitalIncomingIntakes } from "@/lib/intake/queries";
+import { myNotices } from "@/lib/notices/read";
 import { requireNurseScope } from "@/lib/nurse/scope";
 import { nurseWardNotices } from "@/lib/nurse/ward-stock";
+import { careRequestsLiveFor } from "@/lib/requests/feature";
 
 export const metadata: Metadata = { title: "Overview · Nurse · MedSync" };
 export const dynamic = "force-dynamic";
@@ -39,6 +42,10 @@ export default async function NurseOverviewPage() {
   });
   // Pharmacy Phase 2 (5.7): recall notices for the nurse's wards; staff-facing, never a patient.
   const notices = await nurseWardNotices(scope);
+  // Care requests (ADR 0533): the nurse in charge's admission notices; flag off, none are read.
+  const incomingNotices = careRequestsLiveFor(scope.hospitalId)
+    ? await myNotices(scope.userId, ["ward_incoming"])
+    : [];
 
   return (
     <div className="relative mx-auto flex w-full max-w-5xl flex-col gap-8 px-6 py-8 lg:py-10">
@@ -80,6 +87,8 @@ export default async function NurseOverviewPage() {
           </ul>
         </CautionNotice>
       ) : null}
+
+      <StaffNotices notices={incomingNotices} />
 
       {/* Incoming intakes for this department */}
       <div className="reveal-up" style={{ animationDelay: "70ms" }}>

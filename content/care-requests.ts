@@ -201,6 +201,10 @@ export const CARE_REQUEST_COPY = {
   },
   /** The notice's body; like the subject, it never names the patient. */
   noticeBody: "Open your requests in MedSync to see it.",
+  /** Draft wording, not CSO-signed: the nurse in charge's notice at admission; never the patient. */
+  wardIncomingBody: "A patient is being admitted to your ward. See the bed board.",
+  /** The in-app notices list (staff names and places only). */
+  notices: { title: "Notices", dismiss: "Dismiss", dismissFailed: "Could not dismiss the notice." },
   /** Staff names and places only, never a patient (ADR 0199). */
   noticeSubject(
     kind: "care_request" | "care_request_update" | "ward_incoming",

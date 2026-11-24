@@ -27,6 +27,7 @@ import { clinicalSupervision } from "@/db/schema/doctor-workspace";
 import { hospitalDepartments } from "@/db/schema/hospital-departments";
 import { hospitalWards } from "@/db/schema/hospital-wards";
 import { criticalContacts } from "@/db/schema/lab-safety";
+import { wardInChargeAssignments } from "@/db/schema/nurse-workspace";
 import { cadres } from "@/db/schema/reference-data";
 import { saNotifications } from "@/db/schema/sa-notifications";
 import { departmentHeads } from "@/db/schema/services-hub";
@@ -196,6 +197,31 @@ export async function loadRouteCandidates(
   };
 }
 
+/** Inserts one notice per user and sends each its live nudge, in the caller's savepoint. */
+async function insertNotices(
+  sp: EmrTx,
+  now: Date,
+  userIds: string[],
+  n: { kind: string; subject: string; body: string; relatedKind: string; relatedId: string },
+): Promise<void> {
+  if (!userIds.length) return;
+  await sp.insert(saNotifications).values(
+    userIds.map((recipientUserId) => ({
+      recipientUserId,
+      kind: n.kind,
+      subject: n.subject,
+      body: n.body,
+      relatedKind: n.relatedKind,
+      relatedId: n.relatedId,
+      deliveredAt: now,
+    })),
+  );
+  for (const u of userIds)
+    await sp.execute(
+      sql`SELECT private.notify_user_event(${u}::uuid, 'request', ${n.kind}, ${n.relatedId}::uuid)`,
+    );
+}
+
 /**
  * In-app notices for a request, in a savepoint: they commit only with the request, and a failure is
  * logged, never thrown. Subjects carry the place, never the patient (ADR 0199).
@@ -209,25 +235,61 @@ export async function notifyRecipients(
 ): Promise<void> {
   if (!userIds.length) return;
   try {
-    await ctx.tx.transaction(async (sp) => {
-      await sp.insert(saNotifications).values(
-        userIds.map((recipientUserId) => ({
-          recipientUserId,
-          kind,
-          subject: CARE_REQUEST_COPY.noticeSubject(kind, place),
-          body: CARE_REQUEST_COPY.noticeBody,
-          relatedKind: "care_request",
-          relatedId: requestId,
-          deliveredAt: ctx.now,
-        })),
-      );
-      for (const u of userIds)
-        await sp.execute(
-          sql`SELECT private.notify_user_event(${u}::uuid, 'request', ${kind}, ${requestId}::uuid)`,
-        );
-    });
+    await ctx.tx.transaction((sp) =>
+      insertNotices(sp, ctx.now, userIds, {
+        kind,
+        subject: CARE_REQUEST_COPY.noticeSubject(kind, place),
+        body: CARE_REQUEST_COPY.noticeBody,
+        relatedKind: "care_request",
+        relatedId: requestId,
+      }),
+    );
   } catch (e) {
     logger.warn("care_request.notify_failed", { requestId, reason: String(e) });
+  }
+}
+
+/**
+ * The admission's ward is told (ADR 0533): its open in-charge assignments, substantive and acting, get a
+ * `ward_incoming` notice naming the ward only (ADR 0199). Reads and writes sit in one savepoint, so a
+ * failure is logged and never rolls back the close's own writes; it never throws.
+ */
+export async function notifyWardIncoming(ctx: WriteCtx, admissionId: string): Promise<void> {
+  try {
+    await ctx.tx.transaction(async (sp) => {
+      const [ward] = await sp
+        .select({ id: hospitalWards.id, name: hospitalWards.name })
+        .from(admissions)
+        .innerJoin(hospitalWards, eq(hospitalWards.id, admissions.wardId))
+        .where(
+          and(eq(admissions.id, admissionId), eq(admissions.hospitalId, ctx.actor.hospitalId)),
+        );
+      if (!ward) return;
+      const nurses = await sp
+        .selectDistinct({ userId: wardInChargeAssignments.nurseUserId })
+        .from(wardInChargeAssignments)
+        .where(
+          and(
+            eq(wardInChargeAssignments.wardId, ward.id),
+            isNull(wardInChargeAssignments.endsAt),
+            lte(wardInChargeAssignments.startsAt, ctx.now),
+          ),
+        );
+      await insertNotices(
+        sp,
+        ctx.now,
+        nurses.map((r) => r.userId),
+        {
+          kind: "ward_incoming",
+          subject: CARE_REQUEST_COPY.noticeSubject("ward_incoming", ward.name),
+          body: CARE_REQUEST_COPY.wardIncomingBody,
+          relatedKind: "admission",
+          relatedId: admissionId,
+        },
+      );
+    });
+  } catch (e) {
+    logger.warn("ward_incoming.notify_failed", { admissionId, reason: String(e) });
   }
 }
 
