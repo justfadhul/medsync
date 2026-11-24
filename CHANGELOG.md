@@ -5,12 +5,23 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); version
 
 ## [Unreleased]
 
+### Added — EU indicators on the hospital's Reports page ([ADR 0543](docs/adr/0543-the-eu-tracking-board-and-its-clocks.md)) — 24 Nov 2026
+
+The hospital admin's Reports page gains an Emergency unit section: deaths in the EU within 2, 8 and 24 hours of hospital arrival (MoH), length of stay, boarding time and the share of finished stays over the limit, each with its basis and window. Medians show "too few to report" under the sample floor; a death with no usable arrival time is counted on its own line; a failed read says "not available" and prints no figure. Counts from recorded times; nothing is a target. Behind `EU_OBSERVATION`. No migration. Wording is draft.
+
+**Owner steps for Observe in EU (ADRs 0539–0544):**
+
+1. Apply migrations 0310, 0311, 0312 and 0313 in order, from this branch's worktree: `cd /Users/carolinemurizihiwe/Desktop/medsync/.claude/worktrees/admin-clinics-harmonize-efe20d && npm run db:migrate`. All four are GATED.
+2. Deploy the functions `ha-services-hub`, `ha-eu-stay` and `ha-complete-encounter`.
+3. Set the function secret `EU_OBSERVATION` to match the app flag.
+4. Deploy the app, then set `EU_OBSERVATION` per hospital (`1` or a comma list of hospital ids). It works only where `WARD_BUILDER` and `ENCOUNTER_CLOSE_V2` are also on; the function secret cannot see those, so set it only for the same hospitals.
+
 ### Added — The EU board, its clocks and names; who may start a stay; links to the resus desk ([ADR 0543](docs/adr/0543-the-eu-tracking-board-and-its-clocks.md), [0544](docs/adr/0544-who-may-start-an-eu-stay.md)) — 24 Nov 2026
 
 The emergency unit has a tracking list with four clocks and a "Needs attention" list, names only for EU staff (each reveal logged), a triage-nurse path for Level 1 and 2 patients to EU resus spaces, and resus bays and care units that link to the drawn EU. Behind `EU_OBSERVATION`. Wording is draft.
 
 - **Migration 0313 is GATED:** apply it before the app and the functions, with `cd <the worktree of this branch> && npm run db:migrate` (run it in the folder that holds the migration). It adds the `eu_staff` access basis, the floor's `eu` outcome, `send_to_eu_resus`, the triage-stay rule (a triage stay is ended or adopted only by its own visit), `resus_bay_profiles.bed_id`, `hospital_care_units.ward_id`, their guards and the triggers that clear a link when its space or ward is archived or re-typed. Deploy order: the migration, then `ha-eu-stay`, `ha-complete-encounter` and `ha-services-hub`, then set the function secret `EU_OBSERVATION` to match the app flag, then turn the app flag on. The app's Drizzle selects on `resus_bay_profiles` and `hospital_care_units` read the new columns, so 0313 comes before the app deploy.
-- Names show to the ward's nurses and in-charge, the rota's EU doctor and the hospital admin; until 0313 is applied they stay hidden. The rota is "planned", never "present". Only the encounter's own clinician sends to the EU.
+- Names show to nurses with an open nursing assignment on the ward, its in-charge, the rota's EU doctor and the hospital admin; until 0313 is applied they stay hidden. The rota is "planned", never "present". Only the encounter's own clinician sends to the EU.
 - Open for the owner/CSO: Level 5 reads "Green" on the EU board while the floor says "L5 · Blue"; all wording; unidentified patients cannot take the triage-to-resus path; the clinic alert still fires for EU-resus triage; `link_care_unit` has no screen; the queue-start link can be re-stamped by `ha-complete-encounter`.
 
 ### Added — Boarding in the EU: admit from the EU, arrival ends the stay ([ADR 0542](docs/adr/0542-boarding-in-the-eu.md)) — 24 Nov 2026
