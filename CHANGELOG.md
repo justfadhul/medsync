@@ -5,6 +5,15 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); version
 
 ## [Unreleased]
 
+### Added — Boarding in the EU: admit from the EU, arrival ends the stay ([ADR 0542](docs/adr/0542-boarding-in-the-eu.md)) — 24 Nov 2026
+
+A doctor can admit a patient who is in an emergency unit. The patient boards: they keep their EU space, hold a ward bed (Arriving) and have an open inpatient record from the decision; the ward's Arrived ends the EU space and the stay in one step. Behind `EU_OBSERVATION`. Wording is draft.
+
+- **Migration 0312 is GATED:** apply it after 0311 and before turning the flag on, with `cd <the worktree of this branch> && npm run db:migrate` (run it in the folder that holds the migration). It replaces the one-open-bed-per-patient index with one Occupied and one Arriving place per patient, and redefines the assignment and admission guards, `admit_from_encounter`, `allocate_admission_bed`, `confirm_bed_arrival`, `move_eu_space`, the close guard and `end_eu_stay`. The index build briefly locks `bed_assignments` for writes (it is not concurrent), so apply it outside a busy bed-allocation window. Deploy order: the migration, then `ha-complete-encounter` and `ha-services-hub`, then the app.
+- The inpatient record opens at the decision to admit for a boarder (ADR 0200 decision 5, for boarders only). Admit-from-EU is refused for an EU ward, from another visit than the stay's own, and when a ward bed is chosen while the EU space is still Arriving.
+- A boarder who leaves the EU before the ward (died, home) has the admission cancelled and its Arriving ward bed ended in the same step. The close dialog shows "Admitted · ward · waiting ..." only where it is opened for the source visit after the admission; otherwise boarding shows on the EU board (Phase 4).
+- Open for the owner/CSO: re-admission of a boarder after the ward admission falls through (not supported today), the new refusal and cancel wording, and the boarding wait clock.
+
 ### Added — The EU stay: Observe in EU keeps the visit open ([ADR 0541](docs/adr/0541-the-eu-stay-observe-stays-open.md)) — 24 Nov 2026
 
 A doctor can send a patient to an emergency unit from the close; the visit stays open, the patient holds a space (or waits for one), and closing the visit with an outcome ends the stay. Behind `EU_OBSERVATION`. Wording is draft.
