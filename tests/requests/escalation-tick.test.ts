@@ -23,7 +23,10 @@ vi.mock("@/lib/notify/results-ready-store", () => ({
   sendResultsReady: async () => ({ sent: 0 }),
 }));
 vi.mock("@/lib/logger", () => ({ logger: { error: logError, warn: vi.fn(), info: vi.fn() } }));
-vi.mock("@/lib/requests/escalation-run", () => ({ runCareRequestEscalations: runCare }));
+vi.mock("@/lib/requests/escalation-run", () => ({
+  runCareRequestEscalations: runCare,
+  errorCode: (e: { code?: string }) => e.code,
+}));
 
 const tick = async () => {
   const { POST } = await import("@/app/api/cron/lab-escalations/route");
@@ -53,11 +56,12 @@ describe("care requests on the lab escalation tick", () => {
   });
 
   it("a care-request failure is logged by name and the lab run still succeeds", async () => {
-    runCare.mockRejectedValue(new TypeError("patient Jane Doe"));
+    runCare.mockRejectedValue(Object.assign(new TypeError("patient Jane Doe"), { code: "42P01" }));
     const r = await tick();
     expect(r).toMatchObject({ status: 200, body: { escalated: 2, careRequestsEscalated: null } });
     expect(logError).toHaveBeenCalledWith("cron.lab-escalations.care_requests_failed", {
       reason: "TypeError",
+      code: "42P01",
     });
   });
 });

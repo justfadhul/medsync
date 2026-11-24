@@ -11,8 +11,9 @@ import type { Lane, Pg } from "./_pglite";
 import type { PlanRequestLine } from "@/lib/clerking/plan/draft";
 import type { EmrActor } from "@/lib/emr/actor";
 import { eq } from "drizzle-orm";
-import { afterEach, beforeAll, describe, expect, it } from "vitest";
+import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 
+import * as schema from "@/db/schema";
 import { careRequestEvents, careRequests } from "@/db/schema/care-requests";
 import { sentByMe } from "@/lib/emr/read/requests";
 import { withPatientWrite } from "@/lib/emr/write/context";
@@ -22,10 +23,12 @@ import {
   declineRequest,
   placeRequests,
   redirectRequest,
+  replyToRequest,
   withRequestWrite,
 } from "@/lib/emr/write/requests";
 import { generateKey } from "@/lib/encryption";
 import { heartbeatStale } from "@/lib/lab/criticals/escalation";
+import { logger } from "@/lib/logger";
 import { D4_DEFAULTS, overdue } from "@/lib/requests/escalation";
 import {
   lastRequestHeartbeat,
@@ -47,6 +50,8 @@ import {
 } from "./_pglite";
 
 const MIN = 60_000;
+// A variable, not a literal: the specifier stays invisible to tsc and the bundler (as in ./_pglite).
+const DRIZZLE_PGLITE = "drizzle-orm/pglite";
 // After the real clock: department_heads.starts_at defaults to now().
 const T0 = new Date(Math.ceil((Date.now() + 5 * MIN) / MIN) * MIN);
 const at = (m: number) => new Date(T0.getTime() + m * MIN);
@@ -55,6 +60,7 @@ describe.skipIf(!laneOn)("care request escalation runner (PGlite lane)", () => {
   let lane: Lane;
   let pg: Pg;
   const key = () => `k-${randomUUID()}`;
+  const patientOf = new Map<string, string>();
 
   interface World {
     h: string;
@@ -114,14 +120,18 @@ describe.skipIf(!laneOn)("care request escalation runner (PGlite lane)", () => {
    *  outside the team, and the D4 times signed an hour before T0 (unless `signed: false`). */
   async function world(
     name: string,
-    o: { head?: boolean; contact?: boolean; signed?: boolean } = {},
+    o: { member?: boolean; head?: boolean; contact?: boolean; signed?: boolean } = {},
   ): Promise<World> {
     const h = await hospital(pg, name);
     const home = await department(pg, h, "Home");
     const target = await department(pg, h, "Medicine");
     const requester = actorOf(await clinician(pg, { hospitalId: h, departmentId: home }), h, home);
     const member = (
-      await clinician(pg, { hospitalId: h, departmentId: target, cadre: "CONSULTANT" })
+      await clinician(pg, {
+        hospitalId: h,
+        departmentId: o.member === false ? home : target,
+        cadre: "CONSULTANT",
+      })
     ).userId;
     const head = (await clinician(pg, { hospitalId: h, departmentId: home, cadre: "CONSULTANT" }))
       .userId;
@@ -180,6 +190,7 @@ describe.skipIf(!laneOn)("care request escalation runner (PGlite lane)", () => {
         }),
       { database: lane.db, now: when },
     );
+    patientOf.set(id!, p);
     return id!;
   }
 
@@ -221,6 +232,8 @@ describe.skipIf(!laneOn)("care request escalation runner (PGlite lane)", () => {
 
   beforeAll(async () => {
     process.env.MEDSYNC_PHI_KEY ??= generateKey();
+    // The replied fixture signs a note; a test key, never a real one.
+    process.env.MEDSYNC_NOTE_HMAC_KEY ??= Buffer.alloc(32, 7).toString("base64");
     lane = await bootLane();
     pg = lane.pg;
   }, 240_000);
@@ -327,7 +340,8 @@ describe.skipIf(!laneOn)("care request escalation runner (PGlite lane)", () => {
     expect((await events(id)).filter((e) => e.kind === "escalated")).toHaveLength(1);
   });
 
-  it("two concurrent runs never double-escalate", async () => {
+  // PGlite has one connection: the two runs queue, so this proves the re-run, not real concurrency.
+  it("a lazy run queued behind the scheduler's at the same now adds nothing", async () => {
     const w = await world("Esc race");
     const id = await place(w);
     const [x, y] = await Promise.all([run(w, 15), run(w, 15, "lazy")]);
@@ -465,7 +479,7 @@ describe.skipIf(!laneOn)("care request escalation runner (PGlite lane)", () => {
     expect(await events(cancelled)).toEqual([]);
   });
 
-  it("a redirect restarts the clock for the new round", async () => {
+  it("a fully declined round never escalates (R42); a redirect starts a fresh clock", async () => {
     const w = await world("Esc redirect");
     const cardio = await department(pg, w.h, "Cardiology");
     await clinician(pg, { hospitalId: w.h, departmentId: cardio, cadre: "CONSULTANT" });
@@ -474,11 +488,108 @@ describe.skipIf(!laneOn)("care request escalation runner (PGlite lane)", () => {
     await act(member, id, 5, (c) =>
       declineRequest(c, { clientKey: key(), reasonCode: "not_our_specialty" }),
     );
-    await act(w.requester, id, 10, (c) =>
+    expect((await run(w, 100)).escalated).toBe(0);
+    expect(await events(id)).toEqual([]);
+    await act(w.requester, id, 110, (c) =>
       redirectRequest(c, { clientKey: key(), departmentId: cardio, reasonCode: "other" }),
     );
-    expect((await run(w, 24)).escalated).toBe(0);
-    expect((await run(w, 25)).escalated).toBe(1);
+    expect((await run(w, 124)).escalated).toBe(0);
+    expect((await run(w, 125)).escalated).toBe(1);
+  });
+
+  it("only due requests are locked; a replied request is never a candidate (R43)", async () => {
+    const w = await world("Esc locks");
+    const due = await place(w);
+    const later = await place(w, {}, at(10));
+    const replied = await place(w);
+    const member = actorOf({ userId: w.member, affiliationId: "" }, w.h, w.target, "CONSULTANT");
+    await act(member, replied, 5, (c) => acceptRequest(c, { clientKey: key(), expectInMin: null }));
+    await withPatientWrite(
+      member,
+      patientOf.get(replied)!,
+      (ctx) =>
+        replyToRequest(ctx, {
+          patientUserId: patientOf.get(replied)!,
+          requestId: replied,
+          clientKey: key(),
+          assessment: "Synthetic assessment.",
+          recommendations: "Synthetic plan.",
+          followUp: true,
+        }),
+      { database: lane.db, now: at(6) },
+    );
+    const queries: { q: string; p: unknown[] }[] = [];
+    const { drizzle } = await import(/* @vite-ignore */ DRIZZLE_PGLITE);
+    const logged = drizzle(pg, {
+      schema,
+      logger: { logQuery: (q: string, p: unknown[]) => queries.push({ q, p }) },
+    }) as Lane["db"];
+    expect(
+      (await runCareRequestEscalations(logged, { now: at(15), source: "lazy", hospitalId: w.h }))
+        .escalated,
+    ).toBe(1);
+    const locks = queries.filter((x) => /for update skip locked/i.test(x.q));
+    expect(locks).toHaveLength(1);
+    expect(locks[0]!.p).toContain(due);
+    expect(locks[0]!.p).not.toContain(later);
+    expect(queries.some((x) => x.p.includes(replied))).toBe(false);
+    expect(await events(later)).toEqual([]);
+  });
+
+  it("level 1 skips whoever this round already asked, and passes on at once (R44)", async () => {
+    const w = await world("Esc repeats", { member: false });
+    const id = await place(w);
+    const level0 = await pg.query<{ step: string; recipient_user_id: string }>(
+      `SELECT step, recipient_user_id FROM care_request_events WHERE request_id = $1 AND kind = 'routed'`,
+      [id],
+    );
+    expect(level0.rows).toEqual([{ step: "department_head", recipient_user_id: w.head }]);
+    expect((await run(w, 15)).escalated).toBe(1);
+    expect((await events(id)).filter((e) => e.kind === "routed")).toEqual([
+      expect.objectContaining({
+        level: 1,
+        step: "none",
+        recipient_user_id: null,
+        skipped_user_ids: [w.head],
+      }),
+      expect.objectContaining({
+        level: 2,
+        step: "hospital_contacts",
+        recipient_user_id: w.contact,
+      }),
+    ]);
+  });
+
+  it("a failing request is logged and skipped; the others still escalate (R45)", async () => {
+    const w = await world("Esc broken");
+    const broken = await place(w);
+    const good = await place(w);
+    const spy = vi.spyOn(logger, "error");
+    await pg.exec(`
+      CREATE FUNCTION public.test_break_escalation() RETURNS trigger LANGUAGE plpgsql AS $$
+      BEGIN
+        IF NEW.request_id = '${broken}'::uuid AND NEW.kind = 'escalated' THEN
+          RAISE EXCEPTION 'broken for the test';
+        END IF;
+        RETURN NEW;
+      END $$;
+      CREATE TRIGGER test_break_escalation BEFORE INSERT ON public.care_request_events
+        FOR EACH ROW EXECUTE FUNCTION public.test_break_escalation();`);
+    try {
+      expect((await run(w, 15)).escalated).toBe(1);
+    } finally {
+      await pg.exec(`DROP TRIGGER test_break_escalation ON public.care_request_events;
+        DROP FUNCTION public.test_break_escalation();`);
+    }
+    const calls = [...spy.mock.calls];
+    spy.mockRestore();
+    expect(await events(broken)).toEqual([]);
+    expect((await events(good)).filter((e) => e.kind === "escalated")).toHaveLength(1);
+    expect(calls).toContainEqual([
+      "care_request.escalation_failed",
+      { requestId: broken, reason: expect.any(String), code: "P0001" },
+    ]);
+    expect(JSON.stringify(calls)).not.toContain("broken for the test");
   });
 
   it("no signed times: no automatic escalation at all", async () => {

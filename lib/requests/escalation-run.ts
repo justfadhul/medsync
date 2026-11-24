@@ -150,25 +150,41 @@ async function escalationHolders(
   }
 }
 
+type Signed = { times: RequestTimes; signedAt: Date | null };
+
+/** The step due now, or null. A fully declined round is the requester's to redirect, never escalated (R42). */
+function stepFor(request: CareRequestRow, rows: EventRows, signed: Signed, now: Date) {
+  if (deriveFromRows(request, rows, now).derived.state === "declined") return null;
+  const open = openRequestOf(request, rows, signed.signedAt, now);
+  return planRequestEscalations(now, [open], () => signed.times)[0] ?? null;
+}
+
+/** A failure's SQLSTATE (Postgres errors carry `code`; Drizzle wraps them in `cause`). Never the message. */
+export function errorCode(e: unknown): string | undefined {
+  const x = e as { code?: unknown; cause?: { code?: unknown } } | null;
+  const code = x?.code ?? x?.cause?.code;
+  return typeof code === "string" ? code : undefined;
+}
+
 /** One request past its window: escalated level by level until someone is asked or level 2 is reached. */
 async function escalateOne(
   tx: EmrTx,
   request: CareRequestRow,
   rows: EventRows,
-  signed: { times: RequestTimes; signedAt: Date | null },
+  signed: Signed,
   now: Date,
 ): Promise<boolean> {
-  const open = openRequestOf(request, rows, signed.signedAt, now);
-  const [step] = planRequestEscalations(now, [open], () => signed.times);
+  const step = stepFor(request, rows, signed, now);
   if (!step) return false;
   const { events, departmentId } = deriveFromRows(request, rows, now);
+  const round = currentRound(events).filter((e) => e.kind === "routed");
   const level0Posts = [
-    ...new Set(
-      currentRound(events)
-        .filter((e) => e.kind === "routed" && e.level === 0 && e.postId)
-        .map((e) => e.postId!),
-    ),
+    ...new Set(round.filter((e) => e.level === 0 && e.postId).map((e) => e.postId!)),
   ];
+  // R44: whoever this round already asked is not asked again (a recorded skip); a level of repeats is empty.
+  const asked = new Set(round.flatMap((e) => (e.recipientUserId ? [e.recipientUserId] : [])));
+  const notAgain = (c: Candidate[]) =>
+    c.map((p) => (asked.has(p.userId) ? { ...p, active: false } : p));
   const ctx = { tx, now, actor: { hospitalId: request.hospitalId } };
   let routed!: RouteResult;
   let recipients: string[] = [];
@@ -184,16 +200,18 @@ async function escalateOne(
       level === 1
         ? {
             ...NOBODY,
-            post: await escalationHolders(
-              tx,
-              request.hospitalId,
-              level0Posts,
-              request.kind === "review",
-              now,
+            post: notAgain(
+              await escalationHolders(
+                tx,
+                request.hospitalId,
+                level0Posts,
+                request.kind === "review",
+                now,
+              ),
             ),
-            heads,
+            heads: notAgain(heads),
           }
-        : { ...NOBODY, hospitalContacts },
+        : { ...NOBODY, hospitalContacts: notAgain(hospitalContacts) },
       request.requesterUserId,
     );
     await tx.insert(careRequestEvents).values({
@@ -213,7 +231,7 @@ async function escalateOne(
   const [post] = postId
     ? await tx.select({ name: dutyPosts.name }).from(dutyPosts).where(eq(dutyPosts.id, postId))
     : [];
-  const clock = clockFor(open.kind, open.urgency, signed.times);
+  const clock = clockFor(request.kind as OpenRequest["kind"], request.urgency, signed.times);
   await notifyRecipients(
     ctx,
     request.id,
@@ -225,10 +243,22 @@ async function escalateOne(
   return true;
 }
 
+/** Still waiting on the clock: no reply, close or cancel yet. */
+const unfinished = sql`NOT EXISTS (SELECT 1 FROM ${careRequestEvents} e WHERE e.request_id = ${careRequests.id}
+  AND e.kind IN ('replied','closed','cancelled'))`;
+
+const eventsOf = async (tx: EmrTx, ids: string[]) =>
+  ids.length
+    ? tx.select().from(careRequestEvents).where(inArray(careRequestEvents.requestId, ids))
+    : [];
+
 /**
  * Escalates every open request past its window, once, in one transaction. With no signed times a hospital
  * has no automatic escalation (ADR 0244 §1). Before migrations 0306-0308 there is nothing to do (R13).
- * Only the scheduler records a heartbeat: a read escalating on its own must never hide a stopped scheduler.
+ * It plans without locks, then locks only the due requests (SKIP LOCKED), re-reads and re-plans them (R43),
+ * so the lifecycle's writes never wait on a request that is not due. Each request runs in its own savepoint:
+ * one failing is logged and skipped, never the run (R45). Only the scheduler records a heartbeat: a read
+ * escalating on its own must never hide a stopped scheduler.
  */
 export async function runCareRequestEscalations(
   db: EmrDb,
@@ -252,7 +282,7 @@ export async function runCareRequestEscalations(
           opts.hospitalId ? eq(crrv.hospitalId, opts.hospitalId) : undefined,
         ),
       );
-    const times = new Map(
+    const times = new Map<string, Signed>(
       signed.map((v) => [
         v.hospitalId,
         {
@@ -268,34 +298,53 @@ export async function runCareRequestEscalations(
     );
     let escalated = 0;
     if (times.size) {
-      // shortcut: every open request of a signed hospital is locked and derived each run; filter on a stored
+      // shortcut: every unfinished request of a signed hospital is derived each run; filter on a stored
       // level and due time in SQL when open requests per hospital reach the thousands.
-      const open = await tx
+      const candidates = await tx
         .select()
         .from(careRequests)
-        .where(
-          and(
-            inArray(careRequests.hospitalId, [...times.keys()]),
-            sql`NOT EXISTS (SELECT 1 FROM ${careRequestEvents} e WHERE e.request_id = ${careRequests.id}
-              AND e.kind IN ('closed','cancelled'))`,
+        .where(and(inArray(careRequests.hospitalId, [...times.keys()]), unfinished));
+      const seen = await eventsOf(
+        tx,
+        candidates.map((r) => r.id),
+      );
+      const due = candidates
+        .filter((r) =>
+          stepFor(
+            r,
+            seen.filter((e) => e.requestId === r.id),
+            times.get(r.hospitalId)!,
+            opts.now,
           ),
         )
-        .for("update", { skipLocked: true });
-      const rows = open.length
+        .map((r) => r.id);
+      const locked = due.length
         ? await tx
             .select()
-            .from(careRequestEvents)
-            .where(
-              inArray(
-                careRequestEvents.requestId,
-                open.map((r) => r.id),
-              ),
-            )
+            .from(careRequests)
+            .where(and(inArray(careRequests.id, due), unfinished))
+            .for("update", { skipLocked: true })
         : [];
-      for (const request of open) {
+      const rows = await eventsOf(
+        tx,
+        locked.map((r) => r.id),
+      );
+      for (const request of locked) {
         const mine = rows.filter((e) => e.requestId === request.id);
-        if (await escalateOne(tx, request, mine, times.get(request.hospitalId)!, opts.now))
-          escalated++;
+        try {
+          if (
+            await tx.transaction((sp) =>
+              escalateOne(sp, request, mine, times.get(request.hospitalId)!, opts.now),
+            )
+          )
+            escalated++;
+        } catch (e) {
+          logger.error("care_request.escalation_failed", {
+            requestId: request.id,
+            reason: e instanceof Error ? e.name : "unknown",
+            code: errorCode(e),
+          });
+        }
       }
     }
     if (opts.source === "scheduler")

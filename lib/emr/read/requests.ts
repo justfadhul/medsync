@@ -27,7 +27,7 @@ import { notPharmacyDepartment, relationTo } from "@/lib/emr/write/requests";
 import { decrypt } from "@/lib/encryption";
 import { logger } from "@/lib/logger";
 import { canAct } from "@/lib/requests/engine";
-import { runCareRequestEscalations } from "@/lib/requests/escalation-run";
+import { errorCode, runCareRequestEscalations } from "@/lib/requests/escalation-run";
 import { currentRound, deriveFromRows } from "@/lib/requests/rows";
 
 /**
@@ -275,6 +275,7 @@ async function escalateLazily(viewer: Viewer, opts: Opts): Promise<void> {
   } catch (e) {
     logger.error("care_request.lazy_escalation_failed", {
       reason: e instanceof Error ? e.name : "unknown",
+      code: errorCode(e),
     });
   }
 }
