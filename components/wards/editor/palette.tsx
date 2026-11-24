@@ -8,7 +8,7 @@ import { MousePointer2Icon } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import {
-  BED_TYPES,
+  bedTypesFor,
   DIVIDER_KINDS,
   FIXTURE_KINDS,
   ROW_LIMITS,
@@ -28,11 +28,13 @@ function Glyph({ tool }: { tool: Tool }) {
         className={cn(
           base,
           "border-ink-700 bg-card border-[1.5px] border-t-[5px]",
-          sub === "icu"
+          sub === "icu" || sub === "resus"
             ? "h-[22px] w-[17px] rounded-[2px]"
             : sub === "cot"
               ? "h-4 w-3 rounded"
-              : "h-[22px] w-3 rounded-[2px]",
+              : sub === "chair"
+                ? "size-3 rounded-[2px]"
+                : "h-[22px] w-3 rounded-[2px]",
           sub === "couch" && "border-t-[1.5px] border-dashed",
         )}
       />
@@ -140,6 +142,7 @@ export function Palette({
   onRow,
   presets,
   onPreset,
+  wardType,
 }: {
   tool: Tool;
   onArm: (t: Tool) => void;
@@ -147,6 +150,7 @@ export function Palette({
   onRow: (r: RowSettings) => void;
   presets: Preset[];
   onPreset: (p: Preset) => void;
+  wardType: string | null;
 }) {
   const grid = "grid grid-cols-2 gap-1.5";
   return (
@@ -218,7 +222,7 @@ export function Palette({
 
       <Section title="Beds">
         <div className={grid}>
-          {BED_TYPES.map((b) => (
+          {bedTypesFor(wardType).map((b) => (
             <PaletteButton key={b.code} tool={`bed:${b.code}`} armed={tool} onArm={onArm}>
               {b.code === "standard" ? "Standard" : b.label}
             </PaletteButton>

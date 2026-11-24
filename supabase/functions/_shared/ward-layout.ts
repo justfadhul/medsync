@@ -29,9 +29,20 @@ export const BED_TYPES = [
   { code: "icu", label: "ICU bed", short: "ICU bed", w: 3, h: 4 },
   { code: "cot", label: "Cot", short: "Cot", w: 2, h: 3 },
   { code: "couch", label: "Couch or trolley", short: "Couch or trolley", w: 2, h: 4 },
+  { code: "chair", label: "Chair", short: "Chair", w: 2, h: 2 },
+  { code: "resus", label: "Resus space", short: "Resus", w: 3, h: 4 },
 ] as const;
 export type BedType = (typeof BED_TYPES)[number]["code"];
 export const BED_TYPE_CODES = BED_TYPES.map((b) => b.code) as readonly BedType[];
+
+/** ADRs 0539–0540: the emergency unit's ward type, and the spaces only an EU offers. */
+export const EU_WARD_TYPE = "emergency_observation";
+export const EU_BED_TYPES: readonly BedType[] = ["chair", "resus"];
+/** The types a ward offers: chair and resus only on an EU; `keep` still shows a bed's own type. */
+export const bedTypesFor = (wardType: string | null | undefined, keep?: BedType) =>
+  BED_TYPES.filter(
+    (b) => wardType === EU_WARD_TYPE || b.code === keep || !EU_BED_TYPES.includes(b.code),
+  );
 
 export const SERVICE_GROUPS = ["Piped services", "Monitoring and call", "At the bedside"] as const;
 export type ServiceGroup = (typeof SERVICE_GROUPS)[number];

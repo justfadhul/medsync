@@ -43,6 +43,8 @@ export const hospitalWards = pgTable(
     closedReason: text("closed_reason"),
     expectedReopenOn: date("expected_reopen_on"), // 0080: a date column; string mode
     archivedAt: timestamp("archived_at", { withTimezone: true }),
+    /** 0310 (ADR 0539, D3): for display only. The ward an EU sits under; FK and check in SQL. */
+    parentWardId: uuid("parent_ward_id"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },

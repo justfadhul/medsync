@@ -68,8 +68,8 @@ export const departmentHeads = pgTable("department_heads", {
 /**
  * STR-5: optional register; never more unarchived beds than the ward's count. 0090 (ADR 0192): where
  * each bed stands on the published layout, and `bed_type` checked to the ward builder's four types
- * (NOT VALID in SQL, so a value written before 0090 stays valid). For a laid-out ward, publishing the
- * layout writes these rows.
+ * (NOT VALID in SQL, so a value written before 0090 stays valid); 0310 (ADR 0540) adds chair and resus.
+ * For a laid-out ward, publishing the layout writes these rows.
  */
 export const hospitalBeds = pgTable(
   "hospital_beds",
@@ -101,7 +101,7 @@ export const hospitalBeds = pgTable(
     ),
     check(
       "hospital_beds_bed_type_check",
-      sql`${t.bedType} IS NULL OR ${t.bedType} IN ('standard', 'icu', 'cot', 'couch')`,
+      sql`${t.bedType} IS NULL OR ${t.bedType} IN ('standard', 'icu', 'cot', 'couch', 'chair', 'resus')`,
     ),
   ],
 );

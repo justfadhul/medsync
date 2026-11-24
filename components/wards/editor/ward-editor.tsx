@@ -915,6 +915,7 @@ export function WardEditor({
               onRow={(row) => dispatch({ type: "row", row })}
               presets={presets}
               onPreset={(p) => edit(p.build(), null)}
+              wardType={data.ward.wardType}
             />
           </aside>
 
@@ -1078,6 +1079,7 @@ export function WardEditor({
                 selected={selected}
                 onChange={(d) => edit(d)}
                 onSelect={(ref) => dispatch({ type: "select", ref })}
+                wardType={data.ward.wardType}
               />
             ) : (
               <WardInspector

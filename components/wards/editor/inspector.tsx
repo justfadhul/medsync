@@ -58,6 +58,7 @@ import { WARD_SEXES, WARD_TYPES } from "@/supabase/functions/_shared/services-hu
 import {
   BED_TYPES,
   bedRect,
+  bedTypesFor,
   centreInside,
   DIVIDER_KINDS,
   dividerLength,
@@ -406,10 +407,12 @@ function BedPanel({
   doc,
   bed,
   onChange,
+  wardType,
 }: {
   doc: WardLayout;
   bed: LayoutBed;
   onChange: (d: WardLayout) => void;
+  wardType: string | null;
 }) {
   const room = roomOfBed(bed, doc.rooms);
   const others = companions(doc, bed.key);
@@ -444,7 +447,7 @@ function BedPanel({
         <ChipChoice
           label="Bed type"
           value={bed.type}
-          options={BED_TYPES.map((t) => ({ value: t.code, label: t.label }))}
+          options={bedTypesFor(wardType, bed.type).map((t) => ({ value: t.code, label: t.label }))}
           onChange={(type) => onChange(setBedType(doc, bed.key, type))}
         />
       </div>
@@ -714,11 +717,13 @@ export function SelectionInspector({
   selected,
   onChange,
   onSelect,
+  wardType,
 }: {
   doc: WardLayout;
   selected: ItemRef;
   onChange: (d: WardLayout) => void;
   onSelect: (r: ItemRef | null) => void;
+  wardType: string | null;
 }) {
   const it = findItem(doc, selected);
   if (!it) return null;
@@ -734,7 +739,7 @@ export function SelectionInspector({
         title: b.label,
         where: `${BED_TYPES.find((t) => t.code === b.type)!.label} · ${room ? `in ${room.name}` : "open ward"} · ${HEAD_WORDS[headSideOf(b.rot)]}`,
       };
-      body = <BedPanel key={b.key} doc={doc} bed={b} onChange={onChange} />;
+      body = <BedPanel key={b.key} doc={doc} bed={b} onChange={onChange} wardType={wardType} />;
       break;
     }
     case "room": {
