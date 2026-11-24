@@ -1312,7 +1312,12 @@ export const NEEDS = [
   { code: "monitor", label: "With a monitor" },
   { code: "single", label: "In a single room" },
 ] as const;
-export type Need = (typeof NEEDS)[number]["code"];
+/** The EU's own needs, appended by bed type when the caller asks (`freeByNeed(beds, { eu: true })`). */
+export const EU_NEEDS = [
+  { code: "resus", label: "A resus space" },
+  { code: "chair", label: "A chair" },
+] as const;
+export type Need = (typeof NEEDS)[number]["code"] | (typeof EU_NEEDS)[number]["code"];
 
 export interface BoardBedLite {
   id: string;
@@ -1320,17 +1325,20 @@ export interface BoardBedLite {
   state: BedState;
   services: readonly string[];
   roomKind: RoomKind | null;
+  type?: BedType;
 }
 
 /** "Free beds, by what the patient needs": one pass over the beds, their services and state. */
-export function freeByNeed(beds: readonly BoardBedLite[]) {
+export function freeByNeed(beds: readonly BoardBedLite[], opts: { eu?: boolean } = {}) {
   const free = beds.filter((b) => b.state === "free");
   const fits = (b: BoardBedLite, n: Need) =>
     n === "any" ||
     (n === "single"
       ? b.roomKind !== null && SINGLE_ROOM_KINDS.includes(b.roomKind)
-      : b.services.includes(n));
-  return NEEDS.map((n) => ({
+      : n === "resus" || n === "chair"
+        ? b.type === n
+        : b.services.includes(n));
+  return [...NEEDS, ...(opts.eu ? EU_NEEDS : [])].map((n) => ({
     need: n.code,
     label: n.label,
     beds: free.filter((b) => fits(b, n.code)).map((b) => ({ id: b.id, label: b.label })),

@@ -2,7 +2,7 @@
 
 import type { ActionResult } from "@/lib/emr/write/context";
 import type { VisitSummaryContent } from "@/lib/patient/visit-summary";
-import type { WardLayout } from "@/supabase/functions/_shared/ward-layout";
+import type { BedType, RoomKind, WardLayout } from "@/supabase/functions/_shared/ward-layout";
 import { revalidatePath } from "next/cache";
 import { and, eq } from "drizzle-orm";
 import { z } from "zod";
@@ -231,6 +231,8 @@ export interface PickerBed {
   state: string;
   services: string[];
   roomName: string | null;
+  roomKind: RoomKind | null;
+  type: BedType;
 }
 
 const BedArgs = z.object({ surface, wardId: uuid });
@@ -259,6 +261,8 @@ export async function wardBeds(
             state: b.state,
             services: b.services,
             roomName: b.roomName,
+            roomKind: b.roomKind,
+            type: b.type,
           })),
         }
       : null,

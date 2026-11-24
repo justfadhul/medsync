@@ -53,3 +53,24 @@ export const EU_BOARD = {
   keep: "Keep them here",
   chooseSpace: "Choose a space, or say why the patient waits for one.",
 } as const;
+
+/** The tracking board's status words, Needs attention lines and level words. DRAFT wording for the CSO. */
+export const EU_TRACK = {
+  waiting: "Waiting for a space",
+  arriving: "Arriving",
+  inEu: "In EU",
+  admitted: (ward: string) => `Admitted · ${ward} · waiting for a ward bed`,
+  admissionEnded: "Admission ended · in EU",
+  overLimit: (hours: number) => `In the EU over ${hours} h`,
+  arrivingLong: "Arriving for over 1 h",
+  obsOverdue: "Observations overdue",
+  boardingLong: "Waiting for a ward bed over 12 h",
+  waitingSpace: "Waiting for a space",
+} as const;
+
+/** The patient's urgency in the hospital's own triage words. DRAFT for the CSO; level 5 is never Blue (SATS Blue means dead). */
+export const EU_LEVEL_WORDS = {
+  sats: ["Red", "Orange", "Yellow", "Green", "Green"],
+  etat: ["Emergency", "Priority", "Priority", "Queue", "Queue"],
+  own: ["Red", "Orange", "Yellow", "Green", "Green"],
+} as const;

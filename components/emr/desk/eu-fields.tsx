@@ -62,14 +62,15 @@ export function EuFields({
 
   const current = read && read.wardId === wardId ? read : null;
   const beds = current?.beds ?? null;
-  // Until Task 21 adds the EU needs, the plain needs; a need no free space meets is not offered.
+  // A need no free space meets is not offered.
   const byNeed = freeByNeed(
     (beds?.beds ?? []).map((b) => ({
       ...b,
       id: b.bedId,
       state: b.state as BedState,
-      roomKind: null,
+      roomKind: b.roomKind,
     })),
+    { eu: true },
   ).filter((n) => n.need === "any" || n.beds.length);
   const fits = new Set(byNeed.find((n) => n.need === need)?.beds.map((b) => b.id));
   const free = (beds?.beds ?? []).filter((b) => b.state === "free" && fits.has(b.bedId));

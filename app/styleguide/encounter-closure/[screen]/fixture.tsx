@@ -93,6 +93,8 @@ const ACTIONS: Partial<CloseActions> = {
         state: b.state,
         services: b.services,
         roomName: b.roomName,
+        roomKind: b.roomKind,
+        type: b.type,
       })),
     }),
   followUpOptions: async () =>
