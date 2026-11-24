@@ -253,6 +253,7 @@ export interface WardRow {
   sex: string | null;
   ageGroup: string | null;
   placeId: string | null;
+  parentWardId: string | null;
   bedCount: number;
   closed: { reason: string; since: string; expectedReopenOn: string | null } | null;
   archived: boolean;
@@ -307,6 +308,7 @@ export async function loadWards(hospitalId: string): Promise<WardRow[]> {
     sex: w.sex,
     ageGroup: w.ageGroup,
     placeId: w.placeId,
+    parentWardId: w.parentWardId,
     bedCount: w.bedCount,
     closed: w.closedAt
       ? {

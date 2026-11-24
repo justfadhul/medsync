@@ -34,6 +34,7 @@ type Modal = "details" | "close" | "charge" | "bedOut" | "archive" | null;
 export function WardPanel({
   w,
   builder,
+  parents,
   departments,
   nurses,
   places,
@@ -42,6 +43,7 @@ export function WardPanel({
 }: {
   w: WardItem;
   builder: boolean;
+  parents: Option[] | null;
   departments: Option[];
   nurses: { userId: string; name: string; cadre: string | null }[];
   places: Option[];
@@ -319,6 +321,7 @@ export function WardPanel({
       {modal === "details" ? (
         <WardDetailsDialog
           ward={w}
+          parents={parents}
           departments={departments}
           places={places}
           onClose={() => setModal(null)}

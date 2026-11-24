@@ -20,6 +20,8 @@ export interface WardItem {
   sex: string | null;
   ageGroup: string | null;
   placeId: string | null;
+  /** An emergency unit's ordinary ward, for display (migration 0310). */
+  parentWardId: string | null;
   bedCount: number;
   closed: { reason: string; since: string; expectedReopenOn: string | null } | null;
   archived: boolean;

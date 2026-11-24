@@ -27,6 +27,7 @@ const ward = (over: Partial<WardItem>): WardItem => ({
   sex: "female",
   ageGroup: "adult",
   placeId: null,
+  parentWardId: null,
   bedCount: 0,
   closed: null,
   archived: false,

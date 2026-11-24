@@ -5,6 +5,7 @@ import type { Option } from "./shared";
 import { useState } from "react";
 
 import { DeskDialog, Field, k, Step, Toggle } from "@/components/clinics-schedule/shared";
+import { EU_WARD } from "@/content/eu/words";
 import { WARDS } from "@/content/hospital-admin/wards";
 import { WARD_AGE_GROUPS, WARD_SEXES, WARD_TYPES } from "@/supabase/functions/_shared/services-hub";
 import { useWardOp } from "./use-ward-op";
@@ -53,12 +54,15 @@ function ChipPick<T extends string>({
 /** Add a ward, or change one's details (`upsert_ward`). A laid-out ward's beds come from its published plan. */
 export function WardDetailsDialog({
   ward,
+  parents,
   departments,
   places,
   onClose,
   onDone,
 }: {
   ward: WardItem | null;
+  /** Wards an emergency unit may be attached to; null when the EU flag is off. */
+  parents: Option[] | null;
   departments: Option[];
   places: Option[];
   onClose: () => void;
@@ -74,6 +78,7 @@ export function WardDetailsDialog({
     sex: (ward?.sex ?? "") as (typeof WARD_SEXES)[number]["code"] | "",
     age_group: (ward?.ageGroup ?? "") as (typeof WARD_AGE_GROUPS)[number]["code"] | "",
     place_id: ward?.placeId ?? "",
+    parent_ward_id: ward?.parentWardId ?? "",
     bed_count: ward?.bedCount ?? 12,
   });
   const set = <K extends keyof typeof f>(key: K, val: (typeof f)[K]) =>
@@ -90,6 +95,10 @@ export function WardDetailsDialog({
         sex: f.sex || null,
         age_group: f.age_group || null,
         place_id: f.place_id || null,
+        // Only an emergency unit has a parent; the function clears it when the type moves away.
+        ...(parents && f.ward_type === "emergency_observation"
+          ? { parent_ward_id: f.parent_ward_id || null }
+          : {}),
         bed_count: f.bed_count,
       },
       (d) => onDone(f.name.trim(), typeof d?.id === "string" ? d.id : (ward?.id ?? null)),
@@ -144,6 +153,24 @@ export function WardDetailsDialog({
           onPick={(x) => set("age_group", x)}
           label={A.ageGroup}
         />
+        {parents && f.ward_type === "emergency_observation" ? (
+          <Field as="label" label={EU_WARD.attachedTo}>
+            <select
+              className={k("in")}
+              value={f.parent_ward_id}
+              onChange={(e) => set("parent_ward_id", e.target.value)}
+            >
+              <option value="">{EU_WARD.noParent}</option>
+              {parents
+                .filter((p) => p.id !== ward?.id)
+                .map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.name}
+                  </option>
+                ))}
+            </select>
+          </Field>
+        ) : null}
         {places.length ? (
           <Field as="label" label={A.place}>
             <select

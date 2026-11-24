@@ -36,6 +36,7 @@ describe("on-duty chip and ward cover", () => {
       sex: null,
       ageGroup: null,
       placeId: null,
+      parentWardId: null,
       bedCount: 0,
       closed: null,
       archived: false,
@@ -52,6 +53,7 @@ describe("on-duty chip and ward cover", () => {
       createElement(WardPanel, {
         w,
         builder: false,
+        parents: null,
         departments: [],
         nurses: [],
         places: [],

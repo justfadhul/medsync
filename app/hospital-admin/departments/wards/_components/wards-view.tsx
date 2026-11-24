@@ -39,6 +39,7 @@ const BAR: BedState[] = ["occupied", "arriving", "cleaning", "reserved", "out"];
 export function WardsView({
   wards,
   builder,
+  euLive,
   departments,
   nurses,
   places,
@@ -47,6 +48,7 @@ export function WardsView({
 }: {
   wards: WardItem[];
   builder: boolean;
+  euLive: boolean;
   departments: Option[];
   nurses: { userId: string; name: string; cadre: string | null }[];
   places: Option[];
@@ -58,6 +60,12 @@ export function WardsView({
   const [sel, setSel] = useState<string | null>(openId);
   const [adding, setAdding] = useState(addingAtStart);
   const [said, setSaid] = useState("");
+  // The wards an emergency unit may be attached to: ordinary and live. Null: the field is hidden.
+  const parents = euLive
+    ? wards
+        .filter((x) => !x.archived && x.wardType !== "emergency_observation")
+        .map((x) => ({ id: x.id, name: x.name }))
+    : null;
   const S = WARDS.stats;
   const sum = summarise(wards);
   const live = wards.filter((w) => !w.archived);
@@ -205,6 +213,7 @@ export function WardsView({
           key={ward.id}
           w={ward}
           builder={builder}
+          parents={parents}
           departments={departments}
           nurses={nurses}
           places={places}
@@ -216,6 +225,7 @@ export function WardsView({
       {adding && departments.length ? (
         <WardDetailsDialog
           ward={null}
+          parents={parents}
           departments={departments}
           places={places}
           onClose={() => setAdding(false)}

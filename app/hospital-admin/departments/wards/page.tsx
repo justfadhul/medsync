@@ -15,7 +15,7 @@ import {
 } from "@/lib/services/data";
 import { loadBedBoard } from "@/lib/wards/board";
 import { layoutStatusByWard, wardTabs } from "@/lib/wards/data";
-import { wardBuilderLiveFor } from "@/lib/wards/feature";
+import { euObservationLiveFor, wardBuilderLiveFor } from "@/lib/wards/feature";
 import { WardsView } from "./_components/wards-view";
 
 export const metadata: Metadata = { title: WARDS.title };
@@ -79,6 +79,7 @@ export default async function WardsPage({
     <WardsView
       wards={items}
       builder={builder}
+      euLive={euObservationLiveFor(h)}
       departments={departments
         .filter((d) => d.parentId === null && !d.archived)
         .map((d) => ({ id: d.id, name: d.name }))}
