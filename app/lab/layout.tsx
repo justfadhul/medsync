@@ -2,7 +2,12 @@ import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import Link from "next/link";
 
+import { DutyChip } from "@/components/rota/duty-chip";
 import { requireLabTechScope } from "@/lib/lab-tech/scope";
+import { tetherDesk } from "@/lib/landing/tether-host";
+import { dutyRotaLiveFor } from "@/lib/rota/feature";
+import { myDuties } from "@/lib/rota/read";
+import { soft } from "@/lib/rota/soft";
 import { cn } from "@/lib/utils";
 import { LabShellV2 } from "./_components/v2/shell";
 import { labV2 } from "./_lib/places";
@@ -21,9 +26,28 @@ export const metadata: Metadata = {
  */
 export default async function LabLayout({ children }: { children: ReactNode }) {
   const scope = await requireLabTechScope();
+  // ADR 0545: on Tether, a hospital TETHER_LAB names draws in the desk frame; any other goes to MedSync.
+  const desk = await tetherDesk("/lab", scope.hospitalId);
   // Lab Workspace v2 (ADR 0349): the six-place shell wherever the workspace and the EMR are on.
   const v2 = scope.workspaceLive ? await labV2() : null;
-  if (v2?.live) return <LabShellV2 payload={await shellPayload(v2)}>{children}</LabShellV2>;
+  if (v2?.live) {
+    // ADR 0545 §4: the duty rota's posts in the lab's department; rostered now, a plan, never proof of presence.
+    const duties =
+      desk && dutyRotaLiveFor(scope.hospitalId)
+        ? (await soft(myDuties(scope.userId, scope.hospitalId, new Date()), [])).filter(
+            (d) => d.state === "in_post",
+          )
+        : [];
+    return (
+      <LabShellV2
+        payload={await shellPayload(v2)}
+        desk={desk}
+        duty={duties.length ? <DutyChip duties={duties} href={null} /> : null}
+      >
+        {children}
+      </LabShellV2>
+    );
+  }
   return <LegacyLabLayout scope={scope}>{children}</LegacyLabLayout>;
 }
 

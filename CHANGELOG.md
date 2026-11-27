@@ -5,6 +5,16 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); version
 
 ## [Unreleased]
 
+### Added — The pharmacy and the laboratory open on Tether, in the desk frame ([ADR 0545](docs/adr/0545-pharmacy-and-lab-open-on-tether.md)) — 28 Nov 2026
+
+Pharmacy and lab staff signing in on the Tether domain stay there: `/pharmacy` and `/lab` open on Tether and draw their own places, counts, Find (or Scan or search), Start, station, offline pill and Needs you inside the Tether desk frame (`components/tether/workspace-frame.tsx`). Every page, permission and rule is the workspace's own and unchanged; on MedSync's domain nothing changes. A read-only chip names the viewer's duty now: the duty rota's post for the lab (where `DUTY_ROTA` is on), the pharmacy roster's line for the pharmacy, both "rostered, not confirmed present". Wording is draft (`content/tether-pharmacy-lab.ts`).
+
+**Owner steps:**
+
+1. No migration. The lab's chip needs the duty rota (migration 0307 applied and `DUTY_ROTA` on); without it the chip does not show.
+2. Set `TETHER_LAB` and `TETHER_PHARMACY` to `1` (every hospital) or a comma list of hospital ids. A hospital a list does not name is sent to MedSync as before. Unset, nothing changes.
+3. Turn `TETHER_PHARMACY` on when the pharmacy shows nothing waiting for offline sync: the offline outbox is kept per address.
+
 ### Added — EU indicators on the hospital's Reports page ([ADR 0543](docs/adr/0543-the-eu-tracking-board-and-its-clocks.md)) — 24 Nov 2026
 
 The hospital admin's Reports page gains an Emergency unit section: deaths in the EU within 2, 8 and 24 hours of hospital arrival (MoH), length of stay, boarding time and the share of finished stays over the limit, each with its basis and window. Medians show "too few to report" under the sample floor; a death with no usable arrival time is counted on its own line; a failed read says "not available" and prints no figure. Counts from recorded times; nothing is a target. Behind `EU_OBSERVATION`. No migration. Wording is draft.

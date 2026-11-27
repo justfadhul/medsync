@@ -122,7 +122,7 @@ li{max-width:70ch}
 <div class="wrap">
 
 <header style="display:grid;gap:14px">
-  <span class="eyebrow">MedSync · Tether · plan for authorisation · 28 Nov 2026</span>
+  <span class="eyebrow">MedSync · Tether · plan authorised 28 Nov 2026 ("go through all steps") · built on claude/tether-pharmacy-lab-1f10a7</span>
   <h1>Pharmacy and Lab on Tether</h1>
   <p class="lede">Pharmacy and lab staff at every hospital open their real MedSync workspace on the Tether address, inside the same desk frame the reception, clinic floor and admin already use. The pages, data, permissions and clinical rules stay exactly as they are. Only the frame, the address and the landing change.</p>
   <div class="facts">
@@ -191,23 +191,24 @@ li{max-width:70ch}
 </section>
 
 <section>
-  <div class="mockcap"><div style="display:grid;gap:4px"><span class="eyebrow">Mock screen 2</span><h2>Pharmacy, Window, inside the Tether desk</h2></div><span class="ex">Example figures · no patients</span></div>
+  <div class="mockcap"><div style="display:grid;gap:4px"><span class="eyebrow">Mock screen 2</span><h2>Pharmacy, Dispense, inside the Tether desk</h2></div><span class="ex">Example figures · no patients</span></div>
   <div class="scroller"><div class="desk">
     <nav class="rail">
       <div class="brand"><i></i>Tether</div>
       <div class="hosp"><i></i>Pharmacy</div>
       <div class="nav">Today</div>
-      <div class="nav on">Window <small>7 waiting</small></div>
-      <div class="nav">Shelf</div>
-      <div class="nav">Store <small>3 needing action</small></div>
-      <div class="nav">Clinical <small>2 to review</small></div>
+      <div class="nav on">Dispense <small>7</small></div>
+      <div class="nav">Patients</div>
+      <div class="nav">Stock <small>3</small></div>
+      <div class="nav">Controls <small>1</small></div>
+      <div class="nav">Records</div>
       <div class="nav">Set-up</div>
       <div class="dock"><span class="av">PH</span><span>Pharmacist<br><span style="opacity:.7">Outpatient window</span></span></div>
     </nav>
     <div class="main">
-      <div class="top"><h4>Window</h4><span class="find">Find a prescription or medicine</span><span class="duty">On the roster: window, day</span><span class="btn-em">Emergency</span></div>
+      <div class="top"><span class="go" style="padding:6px 12px">+ Start</span><span class="find">Find</span><span class="duty">Outpatient window</span><span class="duty">Online</span><span class="duty">On the roster: Pharmacist, until 17:00</span><span class="btn-em">Emergency</span></div>
       <div class="body">
-        <div class="tabs"><span class="on">Queue 7</span><span>Ready 4</span><span>Open lines</span><span>Refills</span><span>Supplied</span></div>
+        <div class="tabs"><span class="on">Review 7</span><span>Ready 4</span><span>Handed over</span></div>
         <div class="cols">
           <div class="panel"><h5>Queue <span class="num">oldest first</span></h5>
             <div class="row"><div>Prescription · 3 lines<div class="sub">OPD · waiting 14 min · checks clear</div></div><span class="go">Review</span></div>
@@ -223,7 +224,7 @@ li{max-width:70ch}
       </div>
     </div>
   </div></div>
-  <p style="color:var(--ink2);font-size:14px">The rail is the six places of Pharmacy Workspace v2. Review, dispense, controlled-medicine witness, the offline outbox and Find keep working as they do now. Where a hospital still runs the older pharmacy pages, the same frame wraps those pages.</p>
+  <p style="color:var(--ink2);font-size:14px">The rail is the pharmacy's own six sections plus Set-up (moved out of the account menu, because the desk's user dock has none). Start, Find, the station chip, the offline pill, the witness inbox and the section tabs are the workspace's own and keep working as they do now. Tab names here are illustrative.</p>
 </section>
 
 <section>
@@ -311,8 +312,8 @@ li{max-width:70ch}
 </section>
 
 <footer style="display:grid;gap:6px;border-top:1px solid var(--line);padding-top:18px">
-  <span class="eyebrow">Your answer</span>
-  <p>Reply with "go" to accept the four recommendations and start step 1, or name what to change. Nothing is built until you say so.</p>
+  <span class="eyebrow">Status</span>
+  <p>You accepted all four recommendations. Steps 1–4 are built behind <code>TETHER_LAB</code> and <code>TETHER_PHARMACY</code>; the PR waits for your yes.</p>
 </footer>
 
 </div>
