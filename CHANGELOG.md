@@ -5,6 +5,10 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); version
 
 ## [Unreleased]
 
+### Added — The nurse ward desk, Phase 1 ([ADR 0545](docs/adr/0545-the-nurse-ward-desk.md), [0546](docs/adr/0546-ward-pages-open-on-tether.md)) — 28 Nov 2026
+
+Behind `NURSE_WARD_V2` (`1` or hospital ids). The nurse patient list shows each patient's latest NEWS2 with its signed band label and when the next vitals are due from the observations chart's own frequency ("Late 20 min", "In 12 min"; "No frequency set" when the plan set none), sickest first; needs `CLERKING_PLAN_V2` for the charts. The in-charge's nurse home shows the ward today: occupancy and free beds (with `WARD_BUILDER`), admitted today, waiting for a bed, nurses with patients, vitals on time, doses withheld or refused today. The tasks page opens on a To do board (Overdue, Next hour, Later, Done today) of vitals due, today's doses and nurse tasks. On the Tether domain `/nurse` opens and a ward nurse of a hospital with the desk on stays; other nurses go to the clinic floor. Reads only; no migration.
+
 ### Decided — The nurse ward desk, and it opens on Tether ([ADR 0545](docs/adr/0545-the-nurse-ward-desk.md), [0546](docs/adr/0546-ward-pages-open-on-tether.md)) — 28 Nov 2026
 
 The Tether ward workspace for nurses (in-charge, registered, enrolled) becomes one desk upgraded in place under `/nurse`, built in five phases behind `NURSE_WARD_V2`, with a To do board, a nursing care plan, a medicines round across patients, SBAR handover, a department calendar shared with doctors, and five gaps found in the current build (NEWS2 on nurse lists, co-sign rules wired in, coded not-given reasons, leave requests for all staff, a falls and pressure-sore log). On the Tether domain `/nurse` opens behind the flag and ward nurses land on the desk. Gate A: [docs/tether-ward/nurse-ward-desk-gate-a.md](docs/tether-ward/nurse-ward-desk-gate-a.md). Maternity is parked. No code yet.
