@@ -126,7 +126,9 @@ describe("tpl.consult", () => {
     const full = planSign(
       {
         ...unsigned,
-        content: { sections: { s02: { narrative: "Sepsis." }, s03: { narrative: "Start review." } } },
+        content: {
+          sections: { s02: { narrative: "Sepsis." }, s03: { narrative: "Start review." } },
+        },
       },
       input,
     );

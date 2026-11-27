@@ -1,6 +1,8 @@
+import type { Ratio, ReportWindow } from "@/lib/hospital-admin/reports";
+
 import { overLimit } from "@/lib/eu/clock";
 import { median } from "@/lib/hospital-admin/pilot";
-import { MIN_RATE_SAMPLE, ratio, type Ratio, type ReportWindow } from "@/lib/hospital-admin/reports";
+import { MIN_RATE_SAMPLE, ratio } from "@/lib/hospital-admin/reports";
 import { percentile } from "@/lib/lab/indicators";
 
 /** MoH EU indicators (pure): deaths by time since hospital arrival, length of stay, boarding, over-limit. */
@@ -38,7 +40,11 @@ function spread(ms: number[]): Spread {
   };
 }
 
-export function euReport(stays: EuReportStay[], window: ReportWindow, limitHours: number): EuReport {
+export function euReport(
+  stays: EuReportStay[],
+  window: ReportWindow,
+  limitHours: number,
+): EuReport {
   // Same rule as the other report windows: from inclusive, to exclusive.
   const inWindow = stays.filter((s) => {
     const t = Date.parse(s.decidedAt);
