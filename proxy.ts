@@ -5,6 +5,7 @@ import { getAuthState } from "@/lib/auth";
 import {
   isTetherHost,
   landingTetherOn,
+  medsyncAddress,
   tetherClosed,
   tetherHome,
   tetherRewrite,
@@ -135,10 +136,9 @@ export async function proxy(request: NextRequest): Promise<NextResponse> {
 }
 
 function closedOnTether(request: NextRequest): NextResponse {
-  const medsync = (process.env.MEDSYNC_URL ?? "").trim().replace(/\/+$/, "");
-  if (!medsync) return NextResponse.rewrite(new URL("/not-found", request.url), { status: 404 });
-  const base = /^https?:\/\//.test(medsync) ? medsync : `https://${medsync}`;
-  return NextResponse.redirect(`${base}${request.nextUrl.pathname}${request.nextUrl.search}`);
+  const to = medsyncAddress(`${request.nextUrl.pathname}${request.nextUrl.search}`);
+  if (!to) return NextResponse.rewrite(new URL("/not-found", request.url), { status: 404 });
+  return NextResponse.redirect(to);
 }
 
 async function gate(request: NextRequest): Promise<NextResponse> {
