@@ -23,6 +23,7 @@ const noop = () => () => {};
 
 export function DeskShell({
   label = DESK.nav.label,
+  darkSwitch = true,
   priv,
   offline,
   banner,
@@ -45,6 +46,8 @@ export function DeskShell({
 }: {
   /** The sidebar's accessible name. */
   label?: string;
+  /** False for a workspace that ships light only (the lab and the pharmacy, ADR 0545), so the switch is not a dead control. */
+  darkSwitch?: boolean;
   priv: boolean;
   offline: boolean;
   banner: ReactNode;
@@ -118,17 +121,19 @@ export function DeskShell({
                 <span>{user.place}</span>
               </div>
               <div className={c("acts2", "full")}>
-                <button
-                  type="button"
-                  className={c("ib")}
-                  role="switch"
-                  aria-checked={dark}
-                  onClick={() => setTheme(dark ? "light" : "dark")}
-                  aria-label={DESK.dock.dark}
-                  title={DESK.dock.dark}
-                >
-                  <Icon n={dark ? "sun" : "moon"} size={17} w={1.9} />
-                </button>
+                {darkSwitch ? (
+                  <button
+                    type="button"
+                    className={c("ib")}
+                    role="switch"
+                    aria-checked={dark}
+                    onClick={() => setTheme(dark ? "light" : "dark")}
+                    aria-label={DESK.dock.dark}
+                    title={DESK.dock.dark}
+                  >
+                    <Icon n={dark ? "sun" : "moon"} size={17} w={1.9} />
+                  </button>
+                ) : null}
                 <button
                   type="button"
                   className={c("ib")}
