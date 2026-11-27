@@ -71,9 +71,16 @@ const TETHER_OPEN = [
   "/admin",
 ];
 
-/** True when the Tether domain does not serve `pathname`. Files (`/sw.js`, `/robots.txt`) always serve. */
-export function tetherClosed(pathname: string): boolean {
+/**
+ * True when the Tether domain does not serve `pathname`. Files (`/sw.js`, `/robots.txt`) always serve. ADR 0546: with
+ * `NURSE_WARD_V2` set for any hospital, the nurse ward desk (`/nurse` and its pages) opens too; the page decides who sees it.
+ */
+export function tetherClosed(
+  pathname: string,
+  nurseWard: string | undefined = process.env.NURSE_WARD_V2,
+): boolean {
   if (pathname === "/" || /\.[a-z0-9]+$/i.test(pathname)) return false;
+  if (nurseWard?.trim() && (pathname === "/nurse" || pathname.startsWith("/nurse/"))) return false;
   return !TETHER_OPEN.some((p) => pathname === p || pathname.startsWith(`${p}/`));
 }
 
@@ -90,6 +97,12 @@ const TETHER_HOMES: Record<string, string> = {
   "/get-started": "/sign-in",
 };
 
-export function tetherHome(pathname: string): string | null {
-  return TETHER_HOMES[pathname.replace(/\/+$/, "") || "/"] ?? null;
+export function tetherHome(
+  pathname: string,
+  nurseWard: string | undefined = process.env.NURSE_WARD_V2,
+): string | null {
+  const path = pathname.replace(/\/+$/, "") || "/";
+  // ADR 0546: with the ward desk on, `/nurse` decides itself (ward nurses stay, floor nurses go to the clinic floor).
+  if (path === "/nurse" && nurseWard?.trim()) return null;
+  return TETHER_HOMES[path] ?? null;
 }

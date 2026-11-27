@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
+import { headers } from "next/headers";
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import {
   ActivityIcon,
   CalendarClockIcon,
@@ -18,8 +20,11 @@ import { NURSE_TASKS_COPY } from "@/content/nurse-tasks";
 import { WARDS } from "@/content/pharmacy-stores-wards";
 import { nurseTasksLiveFor } from "@/lib/emr/feature";
 import { fetchHospitalIncomingIntakes } from "@/lib/intake/queries";
+import { isTetherHost } from "@/lib/landing/feature";
 import { myNotices } from "@/lib/notices/read";
+import { nurseWardV2LiveFor } from "@/lib/nurse/feature";
 import { requireNurseScope } from "@/lib/nurse/scope";
+import { isWardNurse } from "@/lib/nurse/ward-desk";
 import { nurseWardNotices } from "@/lib/nurse/ward-stock";
 import { careRequestsLiveFor } from "@/lib/requests/feature";
 
@@ -33,6 +38,12 @@ export const dynamic = "force-dynamic";
  */
 export default async function NurseOverviewPage() {
   const scope = await requireNurseScope();
+  // ADR 0546: on Tether only a ward nurse of a hospital with the ward desk on stays; the rest work the clinic floor.
+  if (
+    isTetherHost((await headers()).get("host")) &&
+    !(nurseWardV2LiveFor(scope.hospitalId) && (await isWardNurse(scope)))
+  )
+    redirect("/clinic");
   const firstName = scope.fullName?.split(" ")[0];
 
   const incoming = await fetchHospitalIncomingIntakes({

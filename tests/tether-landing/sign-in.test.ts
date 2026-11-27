@@ -68,6 +68,23 @@ describe("the Tether domain", () => {
 });
 
 /** ADR 0509: a nurse's or doctor's MedSync home is the clinic floor on Tether. */
+describe("the nurse ward desk on Tether (ADR 0546)", () => {
+  it("opens /nurse and its pages only when NURSE_WARD_V2 is set", () => {
+    expect(tetherClosed("/nurse", undefined)).toBe(true);
+    expect(tetherClosed("/nurse/mar", "")).toBe(true);
+    expect(tetherClosed("/nurse", "1")).toBe(false);
+    expect(tetherClosed("/nurse/mar", "h1,h2")).toBe(false);
+    expect(tetherClosed("/nursery", "1")).toBe(true);
+    expect(tetherClosed("/doctor", "1")).toBe(true);
+  });
+  it("lets /nurse decide its own home when the desk is on", () => {
+    expect(tetherHome("/nurse", "1")).toBeNull();
+    expect(tetherHome("/nurse/", "1")).toBeNull();
+    expect(tetherHome("/nurse", undefined)).toBe("/clinic");
+    expect(tetherHome("/nurse/triage", "1")).toBe("/clinic?view=triage");
+  });
+});
+
 describe("tetherHome", () => {
   it("sends the nurse and doctor homes to the floor", () => {
     expect(tetherHome("/nurse")).toBe("/clinic");

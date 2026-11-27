@@ -1,9 +1,13 @@
+import type { NewsSummary } from "@/lib/nurse/news-summary";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { UsersIcon } from "lucide-react";
 
+import { StatusWord } from "@/components/emr/status-word";
+import { bySickest } from "@/lib/nurse/news-summary";
 import { listNursePatientPanel } from "@/lib/nurse/patient-access";
 import { requireNurseScope } from "@/lib/nurse/scope";
+import { loadWardNews } from "@/lib/nurse/ward-news";
 
 export const metadata: Metadata = { title: "Patients · Nurse · MedSync" };
 export const dynamic = "force-dynamic";
@@ -24,6 +28,14 @@ export default async function NursePatientsPage() {
     inChargeWardIds: scope.inChargeWardIds,
     limit: 200,
   });
+  // ADR 0545 Phase 1: with the ward desk on, the latest NEWS2 and next vitals, sickest first.
+  const newsBy = await loadWardNews(
+    { userId: scope.userId, hospitalId: scope.hospitalId },
+    rows.map((r) => r.patientUserId),
+  );
+  const showNews = newsBy.size > 0;
+  const list = rows.map((r) => ({ ...r, news: newsBy.get(r.patientUserId) ?? NO_NEWS }));
+  if (showNews) list.sort(bySickest);
 
   return (
     <div className="stagger-children mx-auto flex w-full max-w-6xl flex-col gap-6 px-6 py-8 lg:py-10">
@@ -59,6 +71,16 @@ export default async function NursePatientsPage() {
                 <th scope="col" className="px-4 py-2.5 font-normal">
                   Patient code
                 </th>
+                {showNews ? (
+                  <>
+                    <th scope="col" className="px-4 py-2.5 font-normal">
+                      NEWS2
+                    </th>
+                    <th scope="col" className="px-4 py-2.5 font-normal">
+                      Next vitals
+                    </th>
+                  </>
+                ) : null}
                 <th scope="col" className="px-4 py-2.5 font-normal">
                   Last activity
                 </th>
@@ -69,7 +91,7 @@ export default async function NursePatientsPage() {
               </tr>
             </thead>
             <tbody className="divide-border/60 divide-y">
-              {rows.map((r) => (
+              {list.map((r) => (
                 <tr key={r.patientUserId} className="group hover:bg-ink-25 transition-colors">
                   <td className="px-4 py-2.5">
                     <Link
@@ -79,6 +101,23 @@ export default async function NursePatientsPage() {
                       {r.patientCode}
                     </Link>
                   </td>
+                  {showNews ? (
+                    <>
+                      <td className="px-4 py-2.5 text-[12.5px]">
+                        {r.news.total === null ? (
+                          <span className="text-muted-foreground">No score yet</span>
+                        ) : (
+                          <StatusWord tone={r.news.emergency ? "critical" : "neutral"}>
+                            <span className="tabular-nums">{r.news.total}</span>
+                            {r.news.bandLabel ? ` · ${r.news.bandLabel}` : ""}
+                          </StatusWord>
+                        )}
+                      </td>
+                      <td className="text-foreground px-4 py-2.5 font-mono text-[11.5px] tabular-nums">
+                        {dueWords(r.news)}
+                      </td>
+                    </>
+                  ) : null}
                   <td className="text-foreground px-4 py-2.5 font-mono text-[11.5px] tabular-nums">
                     {r.lastSeenIso ? formatRelative(r.lastSeenIso) : "—"}
                   </td>
@@ -151,6 +190,26 @@ function EmptyPanel({
       </div>
     </div>
   );
+}
+
+const NO_NEWS: NewsSummary = {
+  total: null,
+  at: null,
+  bandLabel: null,
+  emergency: false,
+  everyHours: null,
+  dueAt: null,
+  late: false,
+};
+
+/** "Late 20 min", "In 12 min", "At 14:00", or why there is none, in words (no colour). */
+function dueWords(n: NewsSummary): string {
+  const now = Date.now();
+  if (!n.dueAt) return n.everyHours === null ? "No frequency set" : "No set yet";
+  const min = Math.round((new Date(n.dueAt).getTime() - now) / 60_000);
+  if (min <= 0) return `Late ${-min} min`;
+  if (min <= 60) return `In ${min} min`;
+  return `At ${new Date(n.dueAt).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", timeZone: "Africa/Kampala" })}`;
 }
 
 function formatRelative(iso: string): string {
