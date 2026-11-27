@@ -5,6 +5,10 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); version
 
 ## [Unreleased]
 
+### Decided — The nurse ward desk, and it opens on Tether ([ADR 0545](docs/adr/0545-the-nurse-ward-desk.md), [0546](docs/adr/0546-ward-pages-open-on-tether.md)) — 28 Nov 2026
+
+The Tether ward workspace for nurses (in-charge, registered, enrolled) becomes one desk upgraded in place under `/nurse`, built in five phases behind `NURSE_WARD_V2`, with a To do board, a nursing care plan, a medicines round across patients, SBAR handover, a department calendar shared with doctors, and five gaps found in the current build (NEWS2 on nurse lists, co-sign rules wired in, coded not-given reasons, leave requests for all staff, a falls and pressure-sore log). On the Tether domain `/nurse` opens behind the flag and ward nurses land on the desk. Gate A: [docs/tether-ward/nurse-ward-desk-gate-a.md](docs/tether-ward/nurse-ward-desk-gate-a.md). Maternity is parked. No code yet.
+
 ### Added — EU indicators on the hospital's Reports page ([ADR 0543](docs/adr/0543-the-eu-tracking-board-and-its-clocks.md)) — 24 Nov 2026
 
 The hospital admin's Reports page gains an Emergency unit section: deaths in the EU within 2, 8 and 24 hours of hospital arrival (MoH), length of stay, boarding time and the share of finished stays over the limit, each with its basis and window. Medians show "too few to report" under the sample floor; a death with no usable arrival time is counted on its own line; a failed read says "not available" and prints no figure. Counts from recorded times; nothing is a target. Behind `EU_OBSERVATION`. No migration. Wording is draft.
