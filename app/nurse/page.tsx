@@ -25,8 +25,10 @@ import { myNotices } from "@/lib/notices/read";
 import { nurseWardV2LiveFor } from "@/lib/nurse/feature";
 import { requireNurseScope } from "@/lib/nurse/scope";
 import { isWardNurse } from "@/lib/nurse/ward-desk";
+import { loadWardOverview } from "@/lib/nurse/ward-overview";
 import { nurseWardNotices } from "@/lib/nurse/ward-stock";
 import { careRequestsLiveFor } from "@/lib/requests/feature";
+import { WardFiguresPanel } from "./_components/ward-figures";
 
 export const metadata: Metadata = { title: "Overview · Nurse · MedSync" };
 export const dynamic = "force-dynamic";
@@ -53,6 +55,8 @@ export default async function NurseOverviewPage() {
   });
   // Pharmacy Phase 2 (5.7): recall notices for the nurse's wards; staff-facing, never a patient.
   const notices = await nurseWardNotices(scope);
+  // ADR 0545 Phase 1: the in-charge's ward figures, with the ward desk on.
+  const wardFigures = await loadWardOverview(scope);
   // Care requests (ADR 0533): the nurse in charge's admission notices; flag off, none are read.
   const incomingNotices = careRequestsLiveFor(scope.hospitalId)
     ? await myNotices(scope.userId, ["ward_incoming"])
@@ -80,6 +84,8 @@ export default async function NurseOverviewPage() {
           care-team, prescribing) ship.
         </p>
       </header>
+
+      <WardFiguresPanel wards={wardFigures} />
 
       {notices.length ? (
         <CautionNotice lead={WARDS.notices.title}>
