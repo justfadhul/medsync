@@ -47,6 +47,7 @@ import {
   v2CommittedWords,
   withConditionOnList,
 } from "@/components/clerking/model";
+import { placeWords } from "@/components/clerking/plan/plan-step";
 import { refinementOf, signingStages } from "@/components/clerking/si-model";
 import {
   useCatalogue,
@@ -1038,7 +1039,7 @@ export function DeskClient({
       run(
         "plan:place",
         () => placePlan({ ...base, encounterId, ...r }),
-        `Placed ${r.orders.length} ${r.orders.length === 1 ? "order" : "orders"} and ${r.prescriptions.length} ${r.prescriptions.length === 1 ? "prescription" : "prescriptions"}`,
+        `Placed${placeWords(r.orders.length, r.prescriptions.length, r.requests.length).slice("Place".length)}`,
         r,
       ).then((x) => x.ok),
     onSyncCharts: (r: { observationFrequency: ObsFrequency | null; measureUrine: boolean }) =>

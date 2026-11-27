@@ -229,6 +229,8 @@ export interface DepartmentsData {
   points: Record<string, string>;
   goLive: boolean;
   pharmacyDemo: boolean;
+  /** DUTY_ROTA is on here (ADR 0534): each department links to its rota. */
+  rotaLive: boolean;
   rules: Record<string, BookingRules>;
   /** Every current clinic's published weekly sessions: where days, hours and slot length are set (ADR 0526). */
   sessions: SessionLite[];

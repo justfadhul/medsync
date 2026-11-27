@@ -217,6 +217,7 @@ describe.skipIf(!laneOn)("the prescriber's stock line and the nurse's chip (Step
         encounterId: v.e,
         orders: [],
         prescriptions: [rx],
+        requests: [],
         observationFrequency: null,
         measureUrine: false,
       }),

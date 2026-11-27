@@ -4,7 +4,13 @@ import type { AllergyItems } from "./medicines";
 import type { PlanView } from "./model";
 import type { PharmacyHandlers } from "./pharmacy";
 import type { PrescribeTarget } from "./problem-card";
-import type { PlanBasketRx, PlanDraft, PlanOrderLine } from "@/lib/clerking/plan/draft";
+import type {
+  PlanBasketRx,
+  PlanDraft,
+  PlanOrderLine,
+  PlanRequestLine,
+  SeniorReview,
+} from "@/lib/clerking/plan/draft";
 import type { ObsFrequency } from "@/lib/emr/charts/rules";
 import type { PlanRx } from "@/lib/prescribing/plan-rx";
 import { useSearchParams } from "next/navigation";
@@ -14,6 +20,8 @@ import { ChevronLeftIcon, XIcon } from "lucide-react";
 import { MonitoringChartsView } from "@/components/emr/chart/monitoring/monitoring-charts-view";
 import { StatusWord } from "@/components/emr/status-word";
 import { Button } from "@/components/ui/button";
+import { CARE_REQUEST_COPY } from "@/content/care-requests";
+import { EU_SEND } from "@/content/eu/words";
 import { PRESCRIBER_PHARMACY_COPY } from "@/content/pharmacy-prescriber";
 import { words } from "@/lib/clerking/impression/board";
 import { REASON_WORDS, statusWord } from "@/lib/clerking/plan/checklist";
@@ -33,6 +41,7 @@ import { standing } from "@/lib/clerking/plan/record";
 import { CHART_FREQUENCY_WORD, CHART_NAME } from "@/lib/emr/charts/rules";
 import { ORDER_PRIORITY_WORD } from "@/lib/emr/orders";
 import { cn } from "@/lib/utils";
+import { ConsultDialog } from "./consult-dialog";
 import { MedicinesSection } from "./medicines";
 import {
   Caution,
@@ -62,6 +71,7 @@ export interface PlacePlanRequest {
   prescriptions: PlanRx[];
   observationFrequency: ObsFrequency | null;
   measureUrine: boolean;
+  requests: PlanRequestLine[];
 }
 
 export interface PlanHandlers {
@@ -108,6 +118,79 @@ const SENIOR_OPTIONS = [
   { id: "routine" as const, label: "Routine" },
 ];
 const OBS_OPTIONS = OBS_FREQUENCIES.map((f) => ({ id: f, label: OBS_WORD[f] }));
+const RQ = CARE_REQUEST_COPY.plan;
+/** CARE_REQUESTS: a fourth choice, settled by a reason instead of a request. */
+const SENIOR_OPTIONS_RQ = [...SENIOR_OPTIONS, { id: "not_needed" as const, label: RQ.notNeeded }];
+
+const plural = (n: number, one: string) => `${n} ${n === 1 ? one : `${one}s`}`;
+
+/** The Place button's words; without requests, exactly as before ADR 0537. */
+export function placeWords(n: number, m: number, k: number): string {
+  if (k === 0) return `Place ${plural(n, "order")} and ${plural(m, "prescription")}`;
+  return `Place ${plural(n, "order")}, ${plural(m, "prescription")} and ${plural(k, "request")}`;
+}
+
+/**
+ * Senior review with CARE_REQUESTS (ADR 0537): a time sets it and keeps the one review line in the
+ * basket (same clientKey), sent to the admit ward's department, else the viewer's own; "Not needed"
+ * drops the line and asks why.
+ */
+/** The department a review goes to: the admit ward's, else the viewer's own; none, no line. */
+export function reviewTarget(v: PlanView, x: PlanDraft) {
+  const rq = v.payload.requests;
+  // Only an admit ward is a review's place: an EU chosen under Observe in EU is not (R11).
+  const wardId = x.disposition?.kind === "admit" ? (x.disposition.wardId ?? null) : null;
+  return (
+    (wardId && rq?.departments.find((d) => d.wardIds.includes(wardId))) ||
+    rq?.departments.find((d) => d.id === rq.ownDepartmentId) ||
+    null
+  );
+}
+
+const reviewPlaced = (v: PlanView) => v.record.requests.some((r) => r.kind === "review");
+
+function pickSenior(v: PlanView, id: SeniorReview | "not_needed") {
+  return (x: PlanDraft): PlanDraft => {
+    // Seg re-fires on the chosen chip: nothing changes.
+    if (id === x.seniorReview) return x;
+    const b = basketOf(x);
+    const old = b.requests.find((r) => r.kind === "review");
+    if (id === "not_needed") {
+      const { seniorReview: _s, ...rest } = x;
+      return {
+        ...rest,
+        seniorReviewNotNeeded: x.seniorReviewNotNeeded ?? "",
+        basket: { ...b, requests: b.requests.filter((r) => r !== old) },
+      };
+    }
+    const { seniorReviewNotNeeded: _n, ...rest } = x;
+    // A review already placed at this visit is the request: the time is only recorded.
+    if (reviewPlaced(v)) return { ...rest, seniorReview: id };
+    const wardId = x.disposition?.kind === "admit" ? (x.disposition.wardId ?? null) : null;
+    const dept = reviewTarget(v, x);
+    const line: PlanRequestLine | null = dept
+      ? {
+          clientKey: old?.clientKey ?? crypto.randomUUID(),
+          kind: "review",
+          targetDepartmentId: dept.id,
+          wardId,
+          namedUserIds: [],
+          urgency: id,
+          helpWanted: null,
+          reasonConditionIds: [],
+          question: "",
+          phoned: null,
+          display: RQ.reviewDisplay(dept.name),
+        }
+      : null;
+    const requests = old
+      ? b.requests.flatMap((r) => (r === old ? (line ? [line] : []) : [r]))
+      : line
+        ? [...b.requests, line]
+        : b.requests;
+    return { ...rest, seniorReview: id, basket: { ...b, requests } };
+  };
+}
 
 export function PlanStatusPill({ v }: { v: PlanView }) {
   const s = v.status;
@@ -118,7 +201,7 @@ export function PlanStatusPill({ v }: { v: PlanView }) {
   );
 }
 
-function Where({
+export function Where({
   v,
   editable,
   onPlan,
@@ -131,6 +214,9 @@ function Where({
   const refer = useId();
   const obsWhy = useId();
   const ward = useId();
+  const seniorWhy = useId();
+  const [asking, setAsking] = useState(false);
+  const rq = v.payload.requests;
   const n = v.news2;
   const req = v.obsRequired;
   const lessOften = lessOftenThanRequired(d.observations?.frequency, req);
@@ -188,6 +274,32 @@ function Where({
                   className={inputClass}
                 />
               </div>
+            )
+          ) : null}
+          {d.disposition?.kind === "observe_eu" && v.payload.euWards ? (
+            v.payload.euWards.length ? (
+              <div role="group" aria-label={EU_SEND.planChoose} className="flex flex-wrap gap-1.5">
+                {v.payload.euWards.map((w) => (
+                  <Toggle
+                    key={w.id}
+                    on={d.disposition?.wardId === w.id}
+                    disabled={!editable}
+                    onPress={() =>
+                      onPlan((x) => ({
+                        ...x,
+                        disposition: { kind: "observe_eu", ward: w.name, wardId: w.id },
+                      }))
+                    }
+                  >
+                    {w.name}
+                    {w.counts ? (
+                      <span className="text-muted-foreground font-normal"> · {w.counts}</span>
+                    ) : null}
+                  </Toggle>
+                ))}
+              </div>
+            ) : (
+              <p className="text-caption text-muted-foreground">{EU_SEND.planNone}</p>
             )
           ) : null}
           {d.disposition?.kind === "refer" ? (
@@ -264,16 +376,75 @@ function Where({
             </div>
           ) : null}
         </Row>
-        <Row label="Senior review">
-          <Seg
-            label="Senior review"
-            options={SENIOR_OPTIONS}
-            value={d.seniorReview}
-            disabled={!editable}
-            onPick={(seniorReview) => onPlan((x) => ({ ...x, seniorReview }))}
-          />
-        </Row>
+        {rq ? (
+          <Row label="Senior review">
+            <Seg
+              label="Senior review"
+              options={SENIOR_OPTIONS_RQ}
+              value={
+                d.seniorReview ?? (d.seniorReviewNotNeeded !== undefined ? "not_needed" : undefined)
+              }
+              disabled={!editable}
+              onPick={(id) => onPlan(pickSenior(v, id))}
+            />
+            {d.seniorReviewNotNeeded !== undefined && !d.seniorReview ? (
+              <div className="flex flex-col gap-1">
+                <label htmlFor={seniorWhy} className="text-caption text-muted-foreground">
+                  {RQ.notNeededWhy}
+                </label>
+                <input
+                  id={seniorWhy}
+                  value={d.seniorReviewNotNeeded}
+                  maxLength={300}
+                  disabled={!editable}
+                  onChange={(e) => onPlan((x) => ({ ...x, seniorReviewNotNeeded: e.target.value }))}
+                  className={inputClass}
+                />
+                {words(d.seniorReviewNotNeeded) < REASON_WORDS ? (
+                  <span className="text-caption text-muted-foreground">{RQ.notNeededHint}</span>
+                ) : null}
+              </div>
+            ) : null}
+            {!reviewTarget(v, d) ? (
+              <p className="text-caption text-muted-foreground">{RQ.noTarget}</p>
+            ) : null}
+            <p className="text-caption text-muted-foreground">{CARE_REQUEST_COPY.responsible}</p>
+            <Button
+              variant="ghost"
+              className="self-start"
+              aria-haspopup="dialog"
+              disabled={!editable}
+              onClick={() => setAsking(true)}
+            >
+              {RQ.ask}
+            </Button>
+          </Row>
+        ) : (
+          <Row label="Senior review">
+            <Seg
+              label="Senior review"
+              options={SENIOR_OPTIONS}
+              value={d.seniorReview}
+              disabled={!editable}
+              onPick={(seniorReview) => onPlan((x) => ({ ...x, seniorReview }))}
+            />
+          </Row>
+        )}
       </div>
+      {asking ? (
+        <ConsultDialog
+          open
+          onOpenChange={setAsking}
+          v={v}
+          onAdd={(line) => {
+            onPlan((x) => {
+              const b = basketOf(x);
+              return { ...x, basket: { ...b, requests: [...b.requests, line] } };
+            });
+            setAsking(false);
+          }}
+        />
+      ) : null}
     </Section>
   );
 }
@@ -299,8 +470,9 @@ function Basket({
       .join(", ") || "a problem no longer on the visit";
   const n = b.orders.length;
   const m = b.prescriptions.length;
-  if (!n && !m) return null;
-  const place = `Place ${n} ${n === 1 ? "order" : "orders"} and ${m} ${m === 1 ? "prescription" : "prescriptions"}`;
+  const k = b.requests.length;
+  if (!n && !m && !k) return null;
+  const place = placeWords(n, m, k);
   return (
     <section
       aria-labelledby="plan-basket"
@@ -362,6 +534,31 @@ function Basket({
             </Button>
           </li>
         ))}
+        {b.requests.map((r) => (
+          <li key={r.clientKey} className="text-body-s flex flex-wrap items-center gap-2">
+            <span className="text-foreground">{r.display}</span>
+            <Tag>{CARE_REQUEST_COPY.urgency[r.urgency]}</Tag>
+            <Button
+              size="iconSm"
+              variant="ghost"
+              aria-label={`Remove ${r.display}`}
+              disabled={!canWrite}
+              onClick={() =>
+                onPlan((d) => {
+                  const x = basketOf(d);
+                  const requests = x.requests.filter((y) => y.clientKey !== r.clientKey);
+                  if (r.kind !== "review" || reviewPlaced(v))
+                    return { ...d, basket: { ...x, requests } };
+                  // The review line is the senior review: removing it clears the choice.
+                  const { seniorReview: _s, ...rest } = d;
+                  return { ...rest, basket: { ...x, requests } };
+                })
+              }
+            >
+              <XIcon aria-hidden className="size-3.5" />
+            </Button>
+          </li>
+        ))}
       </ul>
       <Button className="self-start" disabled={!canWrite || busy} onClick={onPlace}>
         {place}
@@ -405,6 +602,7 @@ export function PlanStep(props: PlanStepProps) {
       ),
       observationFrequency: v.draft.observations?.frequency ?? null,
       measureUrine: !!v.draft.measureUrine,
+      requests: b.requests,
     });
     setPlacing(false);
     if (ok)
@@ -413,11 +611,15 @@ export function PlanStep(props: PlanStepProps) {
         const now = basketOf(x);
         const orders = new Set(b.orders.map((o) => o.clientKey));
         const rx = new Set(b.prescriptions.map((r) => r.clientKey));
+        const rq = new Set(b.requests.map((r) => r.clientKey));
+        const requests = now.requests.filter((r) => !rq.has(r.clientKey));
         return {
           ...x,
           basket: {
             orders: now.orders.filter((o) => !orders.has(o.clientKey)),
             prescriptions: now.prescriptions.filter((r) => !rx.has(r.clientKey)),
+            // No key when none are left: the basket keeps today's shape (flag off: unchanged).
+            ...(requests.length ? { requests } : {}),
           },
         };
       });

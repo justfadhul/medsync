@@ -29,9 +29,20 @@ export const BED_TYPES = [
   { code: "icu", label: "ICU bed", short: "ICU bed", w: 3, h: 4 },
   { code: "cot", label: "Cot", short: "Cot", w: 2, h: 3 },
   { code: "couch", label: "Couch or trolley", short: "Couch or trolley", w: 2, h: 4 },
+  { code: "chair", label: "Chair", short: "Chair", w: 2, h: 2 },
+  { code: "resus", label: "Resus space", short: "Resus", w: 3, h: 4 },
 ] as const;
 export type BedType = (typeof BED_TYPES)[number]["code"];
 export const BED_TYPE_CODES = BED_TYPES.map((b) => b.code) as readonly BedType[];
+
+/** ADRs 0539–0540: the emergency unit's ward type, and the spaces only an EU offers. */
+export const EU_WARD_TYPE = "emergency_observation";
+export const EU_BED_TYPES: readonly BedType[] = ["chair", "resus"];
+/** The types a ward offers: chair and resus only on an EU; `keep` still shows a bed's own type. */
+export const bedTypesFor = (wardType: string | null | undefined, keep?: BedType) =>
+  BED_TYPES.filter(
+    (b) => wardType === EU_WARD_TYPE || b.code === keep || !EU_BED_TYPES.includes(b.code),
+  );
 
 export const SERVICE_GROUPS = ["Piped services", "Monitoring and call", "At the bedside"] as const;
 export type ServiceGroup = (typeof SERVICE_GROUPS)[number];
@@ -754,7 +765,12 @@ export type CheckCode =
   | "bed_overlap"
   | "overlap"
   | "piped_at_wall"
-  | "duplicate_numbers";
+  | "duplicate_numbers"
+  | "eu_spaces"
+  | "resus_services"
+  | "resus_trolley_reach"
+  | "eu_isolation"
+  | "children_apart";
 
 export interface LayoutCheck {
   code: CheckCode;
@@ -767,6 +783,9 @@ export interface LayoutCheck {
 /** Ward types whose beds are expected to have a monitor (the monitor check). */
 export const MONITORED_WARD_TYPES = ["hdu", "icu", "nicu"] as const;
 
+/** A resus space must have a resus trolley within this many cells (5 m; proposed, not a signed standard). */
+export const RESUS_TROLLEY_REACH_CELLS = 10;
+
 const plural = (n: number, one: string, many = `${one}s`) => `${n} ${n === 1 ? one : many}`;
 export function nameList(names: readonly string[], max = 8): string {
   const shown = names.slice(0, max).join(", ");
@@ -777,7 +796,11 @@ export function nameList(names: readonly string[], max = 8): string {
  * Every check on a layout, in the order the panel shows them. Proposed wording, not signed standards.
  * `wardType` is the ward's A.5 type (the monitor check runs on HDU, ICU and NICU wards).
  */
-export function layoutChecks(d: WardLayout, wardType: string | null): LayoutCheck[] {
+export function layoutChecks(
+  d: WardLayout,
+  wardType: string | null,
+  ageGroup: string | null = null,
+): LayoutCheck[] {
   const checks: LayoutCheck[] = [];
   const inService = d.beds.filter((b) => b.status === "in");
   const lacking = (code: ServiceCode) =>
@@ -848,6 +871,65 @@ export function layoutChecks(d: WardLayout, wardType: string | null): LayoutChec
     blocking: false,
   });
 
+  if (wardType === EU_WARD_TYPE) {
+    const resus = inService.filter((b) => b.type === "resus");
+    if (resus.length) {
+      const bare = resus
+        .filter(
+          (b) => !["o2", "suction", "monitor"].every((s) => b.services.includes(s as ServiceCode)),
+        )
+        .map((b) => b.label);
+      checks.push({
+        code: "resus_services",
+        ok: bare.length === 0,
+        text: bare.length
+          ? `Resus spaces without oxygen, suction or a monitor: ${nameList(bare)}`
+          : "Every resus space has oxygen, suction and a monitor",
+        blocking: false,
+      });
+      const centres = d.fixtures
+        .filter((f) => f.kind === "resus_trolley")
+        .map((f) => fixtureRect(f))
+        .map((r) => ({ x: r.x + r.w / 2, y: r.y + r.h / 2 }));
+      const far = resus
+        .filter((b) => {
+          const r = bedRect(b);
+          return !centres.some(
+            (c) =>
+              Math.hypot(c.x - (r.x + r.w / 2), c.y - (r.y + r.h / 2)) <= RESUS_TROLLEY_REACH_CELLS,
+          );
+        })
+        .map((b) => b.label);
+      checks.push({
+        code: "resus_trolley_reach",
+        ok: far.length === 0,
+        text: far.length
+          ? `Resus spaces more than 5 m from a resus trolley: ${nameList(far)}`
+          : "Every resus space has a resus trolley within 5 m",
+        blocking: false,
+      });
+    }
+    const hasIso = d.rooms.some((r) => r.kind === "isolation");
+    checks.push({
+      code: "eu_isolation",
+      ok: hasIso,
+      text: hasIso ? "An isolation room is on the plan" : "No isolation room on the plan",
+      blocking: false,
+    });
+    const cots = inService.filter((b) => b.type === "cot");
+    if (ageGroup === "all" && cots.length) {
+      const open = cots.filter((b) => !roomOfBed(b, d.rooms)).map((b) => b.label);
+      checks.push({
+        code: "children_apart",
+        ok: open.length === 0,
+        text: open.length
+          ? `Cots in the open floor beside adults: ${nameList(open)}`
+          : "Children's spaces are in their own room or bay",
+        blocking: false,
+      });
+    }
+  }
+
   const bedClashes: string[] = [];
   for (let i = 0; i < d.beds.length; i++)
     for (let j = i + 1; j < d.beds.length; j++)
@@ -909,6 +991,16 @@ export function layoutChecks(d: WardLayout, wardType: string | null): LayoutChec
     text: dup.size ? `Duplicate bed numbers: ${nameList([...dup])}` : "Bed numbers are unique",
     blocking: true,
   });
+
+  // R54: the palette hides chair and resus off an EU; this stops a hand-made layout publishing them.
+  const euSpaces = d.beds.filter((b) => EU_BED_TYPES.includes(b.type)).map((b) => b.label);
+  if (wardType !== EU_WARD_TYPE && euSpaces.length)
+    checks.push({
+      code: "eu_spaces",
+      ok: false,
+      text: `Chair and resus spaces belong only on an emergency observation ward: ${nameList(euSpaces)}`,
+      blocking: true,
+    });
   return checks;
 }
 
@@ -1167,6 +1259,18 @@ export const SETTABLE_STATES = ["free", "cleaning", "reserved"] as const;
 export type SettableState = (typeof SETTABLE_STATES)[number];
 export const bedStateMeta = (s: BedState) => BED_STATES.find((x) => x.code === s)!;
 
+/**
+ * The one Arriving rule (ADR 0199, 0541): a bed is held for an admission or an EU stay and nobody has
+ * arrived. The board, the counts and the close read all use this.
+ */
+export function isArriving(a: {
+  admissionId: string | null;
+  euStayId?: string | null;
+  arrivedAt: unknown;
+}): boolean {
+  return (a.admissionId != null || a.euStayId != null) && a.arrivedAt == null;
+}
+
 export interface BedStateInput {
   closed: boolean;
   /** The open assignment; `arriving` when it was made for an admission and nobody has arrived (ADR 0199). */
@@ -1208,7 +1312,12 @@ export const NEEDS = [
   { code: "monitor", label: "With a monitor" },
   { code: "single", label: "In a single room" },
 ] as const;
-export type Need = (typeof NEEDS)[number]["code"];
+/** The EU's own needs, appended by bed type when the caller asks (`freeByNeed(beds, { eu: true })`). */
+export const EU_NEEDS = [
+  { code: "resus", label: "A resus space" },
+  { code: "chair", label: "A chair" },
+] as const;
+export type Need = (typeof NEEDS)[number]["code"] | (typeof EU_NEEDS)[number]["code"];
 
 export interface BoardBedLite {
   id: string;
@@ -1216,17 +1325,20 @@ export interface BoardBedLite {
   state: BedState;
   services: readonly string[];
   roomKind: RoomKind | null;
+  type?: BedType;
 }
 
 /** "Free beds, by what the patient needs": one pass over the beds, their services and state. */
-export function freeByNeed(beds: readonly BoardBedLite[]) {
+export function freeByNeed(beds: readonly BoardBedLite[], opts: { eu?: boolean } = {}) {
   const free = beds.filter((b) => b.state === "free");
   const fits = (b: BoardBedLite, n: Need) =>
     n === "any" ||
     (n === "single"
       ? b.roomKind !== null && SINGLE_ROOM_KINDS.includes(b.roomKind)
-      : b.services.includes(n));
-  return NEEDS.map((n) => ({
+      : n === "resus" || n === "chair"
+        ? b.type === n
+        : b.services.includes(n));
+  return [...NEEDS, ...(opts.eu ? EU_NEEDS : [])].map((n) => ({
     need: n.code,
     label: n.label,
     beds: free.filter((b) => fits(b, n.code)).map((b) => ({ id: b.id, label: b.label })),
@@ -1256,4 +1368,53 @@ export function mayWorkBeds(
   wardId: string,
 ): boolean {
   return who.admin || who.inChargeWardIds.includes(wardId) || who.assignedWardIds.includes(wardId);
+}
+
+/** DRAFT wording for the CSO (content/eu/words.ts mirrors the visible ones). */
+export const WARD_ATTACH_WORDS = {
+  onlyEu: "Only an emergency unit is attached to a ward.",
+  ordinaryParent: "Attach it to an ordinary ward of this hospital.",
+  movePatients: "Move the patients out before changing whether this ward is an emergency unit.",
+  detachFirst: "Detach its emergency units before making it one.",
+  /** 0313 section 6 (R71): an EU with open stays, waiting for a space or not, is not archived or re-typed. */
+  staysOpen:
+    "Patients are in this emergency unit or waiting for a space in it. End or move their stays first.",
+} as const;
+
+export type WardAttachVerdict =
+  | { ok: true; parent: string | null | undefined }
+  | { ok: false; status: 400 | 409; message: string };
+
+/**
+ * upsert_ward's rule for the attached-to ward and the ward type (ADR 0539), pure. `parent` is the row the new
+ * parent id points at, read for this hospital only (null: none there); `stored` is the ward being edited (null: a
+ * new ward); `units` counts unarchived EUs attached to it; `occupied` counts open bed assignments in it.
+ * `parent` in the verdict is what to write: a value, null to clear, undefined to leave it as stored.
+ */
+export function decideWardAttach(i: {
+  type: string | null;
+  parentId: string | null | undefined;
+  wardId: string | null;
+  stored: { type: string | null } | null;
+  parent: { id: string; type: string | null; archived: boolean } | null;
+  units: number;
+  occupied: number;
+}): WardAttachVerdict {
+  const EU = "emergency_observation";
+  const no = (status: 400 | 409, message: string): WardAttachVerdict => ({
+    ok: false,
+    status,
+    message,
+  });
+  if (i.parentId && i.type !== EU) return no(400, WARD_ATTACH_WORDS.onlyEu);
+  if (i.parentId) {
+    const p = i.parent;
+    if (!p || p.id !== i.parentId || p.archived || p.id === i.wardId || p.type === EU)
+      return no(400, WARD_ATTACH_WORDS.ordinaryParent);
+  }
+  if (i.stored && (i.stored.type === EU) !== (i.type === EU)) {
+    if (i.occupied > 0) return no(409, WARD_ATTACH_WORDS.movePatients);
+    if (i.type === EU && i.units > 0) return no(409, WARD_ATTACH_WORDS.detachFirst);
+  }
+  return { ok: true, parent: i.type === EU ? i.parentId : null };
 }

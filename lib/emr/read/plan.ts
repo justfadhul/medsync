@@ -1,27 +1,36 @@
 import "server-only";
 
 import type { MedicineAnswer } from "@/components/emr/desk/model";
-import type { PlanPayload } from "@/lib/clerking/plan/payload";
-import type { AdmissionMedicine, PlacedRx } from "@/lib/clerking/plan/record";
+import type { PlanPayload, RequestsPayload } from "@/lib/clerking/plan/payload";
+import type { AdmissionMedicine, PlacedRequest, PlacedRx } from "@/lib/clerking/plan/record";
 import type { EmrActor } from "@/lib/emr/actor";
 import type { ChartFrequency, ChartKind } from "@/lib/emr/charts/rules";
-import type { EmrDb } from "@/lib/emr/db";
+import type { EmrDb, EmrTx } from "@/lib/emr/db";
 import type { OrderFrequency, OrderPriority } from "@/lib/emr/orders";
 import type { PlanRx, RxEdit } from "@/lib/prescribing/plan-rx";
-import { and, eq, inArray, isNull } from "drizzle-orm";
+import type { HelpWanted, RequestKind } from "@/lib/requests/engine";
+import { and, asc, eq, inArray, isNull, ne } from "drizzle-orm";
 
+import { CARE_REQUEST_COPY } from "@/content/care-requests";
+import { careRequestEvents, careRequests } from "@/db/schema/care-requests";
+import { staffAffiliations } from "@/db/schema/clinician-profiles";
 import { medicationStatements, specimens } from "@/db/schema/emr";
 import { encounterOrders } from "@/db/schema/encounter";
+import { hospitalDepartments } from "@/db/schema/hospital-departments";
+import { hospitalWards } from "@/db/schema/hospital-wards";
 import { monitoringCharts } from "@/db/schema/monitoring";
+import { cadres } from "@/db/schema/reference-data";
+import { users } from "@/db/schema/users";
 import { TEST_UUIDS } from "@/lib/clerking/impression/load";
 import { countsWords } from "@/lib/emr/closure";
 import { asClinicalReader, asClinicalWriter } from "@/lib/emr/db";
 import { emrPrescribingLive, prescribeV2LiveFor } from "@/lib/emr/feature";
-import { admittingWards } from "@/lib/emr/read/close";
+import { admittingWards, euWards } from "@/lib/emr/read/close";
 import { loadMonitoring } from "@/lib/emr/read/monitoring";
 import { loadPlanFacts } from "@/lib/emr/write/plan";
 import { encounterPrescriptions, prescribeRequirement } from "@/lib/emr/write/prescriptions";
 import { loadRepeatsPayload } from "@/lib/emr/write/repeats";
+import { isPharmacyDepartment, notPharmacyCadre } from "@/lib/emr/write/requests";
 import { decrypt } from "@/lib/encryption";
 import { labOneMenuLiveFor } from "@/lib/lab/feature";
 import { menuToday } from "@/lib/lab/one-menu-read";
@@ -34,6 +43,9 @@ import {
 import { loadPrescriberPharmacy } from "@/lib/pharmacy/review/prescriber-read";
 import { drugById } from "@/lib/prescribing/formulary";
 import { willRead } from "@/lib/prescribing/plan-rx";
+import { careRequestsLiveFor } from "@/lib/requests/feature";
+import { deriveFromRows } from "@/lib/requests/rows";
+import { euObservationLiveFor } from "@/lib/wards/feature";
 
 /**
  * The Plan's payload for the desk (ADR 0184): what step 10 reads back from the record. Loaded only
@@ -122,6 +134,115 @@ function placedRx(r: RxRow): PlacedRx {
   };
 }
 
+/**
+ * CARE_REQUESTS (ADR 0537): the clinical departments with their admitting wards and live clinical
+ * staff (names and cadres only, never patients), and this visit's placed requests with their state.
+ */
+export async function loadPlanRequests(
+  tx: EmrTx,
+  actor: EmrActor,
+  encounterId: string,
+  wardIds: string[],
+  now: Date,
+): Promise<{ payload: RequestsPayload; placed: PlacedRequest[] }> {
+  const depts = await tx
+    .select({
+      id: hospitalDepartments.id,
+      name: hospitalDepartments.name,
+      kind: hospitalDepartments.kind,
+      archivedAt: hospitalDepartments.archivedAt,
+      // R32: the pharmacy is not a team to ask (it still names a placed request's target).
+      pharmacy: isPharmacyDepartment,
+    })
+    .from(hospitalDepartments)
+    .where(eq(hospitalDepartments.hospitalId, actor.hospitalId))
+    .orderBy(asc(hospitalDepartments.name));
+  const staff = await tx
+    .select({
+      departmentId: staffAffiliations.departmentId,
+      userId: staffAffiliations.userId,
+      name: users.fullName,
+      cadre: cadres.name,
+    })
+    .from(staffAffiliations)
+    .innerJoin(cadres, eq(cadres.id, staffAffiliations.cadreId))
+    .innerJoin(users, eq(users.id, staffAffiliations.userId))
+    .where(
+      and(
+        eq(staffAffiliations.hospitalId, actor.hospitalId),
+        inArray(staffAffiliations.state, ["active", "approved"]),
+        eq(cadres.isClinical, true),
+        notPharmacyCadre(),
+        ne(staffAffiliations.userId, actor.userId),
+      ),
+    )
+    .orderBy(asc(users.fullName));
+  const wards = wardIds.length
+    ? await tx
+        .select({ id: hospitalWards.id, departmentId: hospitalWards.departmentId })
+        .from(hospitalWards)
+        .where(inArray(hospitalWards.id, wardIds))
+    : [];
+  const rows = await tx
+    .select()
+    .from(careRequests)
+    .where(
+      and(eq(careRequests.hospitalId, actor.hospitalId), eq(careRequests.encounterId, encounterId)),
+    )
+    .orderBy(asc(careRequests.requestedAt));
+  const events = rows.length
+    ? await tx
+        .select()
+        .from(careRequestEvents)
+        .where(
+          inArray(
+            careRequestEvents.requestId,
+            rows.map((r) => r.id),
+          ),
+        )
+    : [];
+
+  const nameOf = new Map(depts.map((d) => [d.id, d.name]));
+  const placed = rows.map((r): PlacedRequest => {
+    const { derived, departmentId } = deriveFromRows(
+      r,
+      events.filter((e) => e.requestId === r.id),
+      now,
+    );
+    return {
+      id: r.id,
+      kind: r.kind as RequestKind,
+      urgency: r.urgency,
+      helpWanted: r.helpWanted as HelpWanted | null,
+      targetWords: nameOf.get(departmentId) ?? "",
+      stateWord: CARE_REQUEST_COPY.state[derived.state],
+      at: r.requestedAt.toISOString(),
+    };
+  });
+
+  return {
+    payload: {
+      departments: depts
+        .filter((d) => d.kind === "clinical" && !d.archivedAt && !d.pharmacy)
+        .map((d) => ({
+          id: d.id,
+          name: d.name,
+          wardIds: wards.filter((w) => w.departmentId === d.id).map((w) => w.id),
+          // One chip per person: two roles in one department are one affiliation each.
+          staff: staff
+            .filter(
+              (x, i) =>
+                x.departmentId === d.id &&
+                staff.findIndex((y) => y.departmentId === d.id && y.userId === x.userId) === i,
+            )
+            .map((x) => ({ userId: x.userId, name: x.name, cadre: x.cadre })),
+        })),
+      ownDepartmentId: actor.departmentId,
+    },
+    placed,
+  };
+}
+
 export async function loadPlanPayload(
   actor: EmrActor,
   input: {
@@ -145,6 +266,9 @@ export async function loadPlanPayload(
         encounterId: input.encounterId,
       });
       const wards = await admittingWards(tx, actor.hospitalId);
+      const eu = euObservationLiveFor(actor.hospitalId)
+        ? await euWards(tx, actor.hospitalId)
+        : null;
       // Pharmacy Phase 3 (5.3): the signed pairs and this patient's current medicines, behind the flag.
       const interactions = pharmacyInteractionsLiveFor(actor.hospitalId)
         ? await interactionContextFor(tx, actor.hospitalId, input.patientUserId, input.now)
@@ -191,11 +315,23 @@ export async function loadPlanPayload(
         rx.map((r) => r.id),
         input.now,
       );
+      // CARE_REQUESTS (ADR 0537): the departments to ask and this visit's placed requests.
+      const requests = careRequestsLiveFor(actor.hospitalId)
+        ? await loadPlanRequests(
+            tx,
+            actor,
+            input.encounterId,
+            wards.map((w) => w.id),
+            input.now,
+          )
+        : null;
       return {
         facts,
         rx,
+        requests,
         repeats,
         wards: wards.map((w) => ({ id: w.id, name: w.name, counts: countsWords(w.counts) })),
+        eu,
         interactions,
         cosign,
         reasons,
@@ -309,8 +445,18 @@ export async function loadPlanPayload(
         measureUrine: c.measureUrine,
         openedByLabel: (c.openedBy as { label?: string }).label ?? "",
       })),
+      requests: owner.requests?.placed ?? [],
     },
     wards: owner.wards,
+    ...(owner.eu
+      ? {
+          euWards: owner.eu.map((w) => ({
+            id: w.id,
+            name: w.name,
+            counts: countsWords(w.counts),
+          })),
+        }
+      : {}),
     intern: actor.cadreCode === "INTERN_DOCTOR",
     facts: {
       ageYears: owner.facts.ageYears,
@@ -330,6 +476,7 @@ export async function loadPlanPayload(
       : "none",
     kidneyTestOrdered: reader.orders.some((o) => o.testId && KIDNEY.has(o.testId)),
     monitoring: reader.monitoring,
+    ...(owner.requests ? { requests: owner.requests.payload } : {}),
     ...(pharmacy ? { pharmacy } : {}),
     ...(owner.interactions ? { interactions: owner.interactions } : {}),
     ...(owner.repeats

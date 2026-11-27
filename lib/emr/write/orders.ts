@@ -103,6 +103,45 @@ export async function replayed(
   return rows[0]?.id ?? null;
 }
 
+/**
+ * Reason diagnoses (orders and care requests): each on this patient's record, as it stands (its
+ * current version, never entered in error). Says whether any is restricted.
+ */
+export async function checkReasonConditions(
+  tx: EmrTx,
+  patientUserId: string,
+  ids: readonly string[],
+): Promise<{ restricted: boolean }> {
+  const reasonIds = [...new Set(ids)];
+  if (!reasonIds.length) return { restricted: false };
+  const reasons = await tx
+    .select({
+      id: conditions.id,
+      sensitivity: conditions.sensitivity,
+      status: conditions.status,
+    })
+    .from(conditions)
+    .where(and(inArray(conditions.id, reasonIds), eq(conditions.patientUserId, patientUserId)));
+  if (reasons.length !== reasonIds.length)
+    throw new EmrWriteError("invalid", "A reason diagnosis is not on this patient's record.");
+  // Q10: a reason is the diagnosis as it stands (its current version, never entered in error);
+  // a differential is a reason like any other.
+  const [superseded] = await tx
+    .select({ id: conditions.id })
+    .from(conditions)
+    .where(inArray(conditions.supersedesId, reasonIds))
+    .limit(1);
+  if (
+    superseded ||
+    reasons.some((r) => r.status === "entered_in_error" || r.status === "cancelled")
+  )
+    throw new EmrWriteError(
+      "conflict",
+      "A reason diagnosis has changed or was entered in error: reload and choose it again.",
+    );
+  return { restricted: reasons.some((r) => r.sensitivity === "restricted") };
+}
+
 export async function openEncounter(
   ctx: WriteCtx,
   patientUserId: string,
@@ -352,39 +391,11 @@ export async function placeOrders(
 
     // Sensitivity at insert (C9): a restricted component (HIV, TB…) or a restricted reason
     // diagnosis restricts the order itself.
-    let restricted =
+    const reasons = await checkReasonConditions(tx, input.patientUserId, reasonIds);
+    const restricted =
       test.components.some((c) => sensitivityFor(c as FactConcept, null) === "restricted") ||
-      (classes && test.restrictedClass !== null); // CC-8: the class propagates to every result
-    if (reasonIds.length) {
-      const reasons = await tx
-        .select({
-          id: conditions.id,
-          sensitivity: conditions.sensitivity,
-          status: conditions.status,
-        })
-        .from(conditions)
-        .where(
-          and(inArray(conditions.id, reasonIds), eq(conditions.patientUserId, input.patientUserId)),
-        );
-      if (reasons.length !== reasonIds.length)
-        throw new EmrWriteError("invalid", "A reason diagnosis is not on this patient's record.");
-      // Q10: a reason is the diagnosis as it stands (its current version, never entered in error);
-      // a differential is a reason like any other.
-      const [superseded] = await tx
-        .select({ id: conditions.id })
-        .from(conditions)
-        .where(inArray(conditions.supersedesId, reasonIds))
-        .limit(1);
-      if (
-        superseded ||
-        reasons.some((r) => r.status === "entered_in_error" || r.status === "cancelled")
-      )
-        throw new EmrWriteError(
-          "conflict",
-          "A reason diagnosis has changed or was entered in error: reload and choose it again.",
-        );
-      restricted ||= reasons.some((r) => r.sensitivity === "restricted");
-    }
+      (classes && test.restrictedClass !== null) || // CC-8: the class propagates to every result
+      reasons.restricted;
 
     const [order] = await tx
       .insert(encounterOrders)

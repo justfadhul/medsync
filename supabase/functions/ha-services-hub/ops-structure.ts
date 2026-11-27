@@ -18,6 +18,7 @@ import {
   liveChange,
   startChange,
 } from "../_shared/services-hub.ts";
+import { decideWardAttach, WARD_ATTACH_WORDS } from "../_shared/ward-layout.ts";
 import { assertHeadOf, HubError, loadDepartment, must, reasonOr, slugify } from "./common.ts";
 import { hasPublishedLayout, occupiedBedCount } from "./ops-wards.ts";
 
@@ -119,6 +120,8 @@ export const StructureOpSchema = z.discriminatedUnion("op", [
     sex: z.enum(["female", "male", "mixed"]).nullable().optional(),
     age_group: z.enum(["adult", "paediatric", "neonatal", "all"]).nullable().optional(),
     place_id: uuid.nullable().optional(),
+    // An emergency unit's ordinary ward, for display (migration 0310). Omitted keeps the stored one.
+    parent_ward_id: uuid.nullable().optional(),
     bed_count: z.number().int().min(0).max(2000),
     reason,
   }),
@@ -735,7 +738,7 @@ const archive: OpHandler = async (ctx, i) => {
       const patch: Record<string, unknown> = { archived_at: at };
       if (i.target === "clinic") patch.active = false;
       if (i.target === "ward") patch.state = "inactive"; // 0022 readers keep working
-      must(
+      wardWrite(
         await ctx.sb
           .from(table)
           .update(patch)
@@ -805,6 +808,19 @@ const unarchive: OpHandler = async (ctx, i) => {
   };
 };
 
+/** The database guards (0310; 0313 section 6 for archive and re-type) back the checks above; their hints become words. */
+function wardWrite<T>(
+  r: { data: T; error: { message: string; hint?: string | null } | null },
+  what: string,
+): T {
+  const hint = r.error?.hint ?? "";
+  if (hint === "ward_parent_not_ordinary")
+    throw new HubError(WARD_ATTACH_WORDS.ordinaryParent, 409);
+  if (hint === "ward_has_units") throw new HubError(WARD_ATTACH_WORDS.detachFirst, 409);
+  if (hint === "eu_ward_has_stays") throw new HubError(WARD_ATTACH_WORDS.staysOpen, 409);
+  return must(r, what);
+}
+
 const upsertWard: OpHandler = async (ctx, i) => {
   const dept = await loadDepartment(ctx, i.department_id);
   await assertPlace(ctx, i.place_id);
@@ -820,20 +836,59 @@ const upsertWard: OpHandler = async (ctx, i) => {
   ) as { id: string } | null;
   if (clash && clash.id !== i.id)
     throw new HubError(`A ward called ${i.name} already exists.`, 409);
+  const wardType = i.ward_type ?? null;
+  // Wording is DRAFT for the CSO (content/eu/words.ts); the raw CHECK error never reaches the admin.
+  let parentRow: { id: string; type: string | null; archived: boolean } | null = null;
+  if (i.parent_ward_id) {
+    const r = must(
+      await ctx.sb
+        .from("hospital_wards")
+        .select("id, ward_type, archived_at")
+        .eq("id", i.parent_ward_id)
+        .eq("hospital_id", ctx.hospitalId)
+        .maybeSingle(),
+      "parent ward",
+    ) as { id: string; ward_type: string | null; archived_at: string | null } | null;
+    if (r) parentRow = { id: r.id, type: r.ward_type, archived: r.archived_at !== null };
+  }
   let before: Record<string, unknown> | undefined;
   let bedCount: number = i.bed_count;
+  let stored: { type: string | null } | null = null;
   if (i.id) {
     const w = must(
       await ctx.sb
         .from("hospital_wards")
-        .select("id, name, bed_count, department_id, ward_type")
+        .select("id, name, bed_count, department_id, ward_type, parent_ward_id")
         .eq("id", i.id)
         .eq("hospital_id", ctx.hospitalId)
         .maybeSingle(),
       "ward",
-    ) as (Record<string, unknown> & { bed_count: number }) | null;
+    ) as (Record<string, unknown> & { bed_count: number; ward_type: string | null }) | null;
     if (!w) throw new HubError("Ward not found at this hospital.");
     before = w;
+    stored = { type: w.ward_type };
+  }
+  const units = i.id
+    ? await ctx.sb
+        .from("hospital_wards")
+        .select("id", { count: "exact", head: true })
+        .eq("hospital_id", ctx.hospitalId)
+        .eq("parent_ward_id", i.id)
+        .is("archived_at", null)
+    : null;
+  if (units?.error) throw new Error(`ward units: ${units.error.message}`);
+  const verdict = decideWardAttach({
+    type: wardType,
+    parentId: i.parent_ward_id,
+    wardId: i.id ?? null,
+    stored,
+    parent: parentRow,
+    units: units?.count ?? 0,
+    occupied: i.id ? await occupiedBedCount(ctx, { wardIds: [i.id] }) : 0,
+  });
+  if (!verdict.ok) throw new HubError(verdict.message, verdict.status);
+  if (i.id && before) {
+    const w = before as { bed_count: number };
     if (await hasPublishedLayout(ctx, i.id)) {
       // ADR 0192 §6: a laid-out ward's count is its published layout's; the form can't change it.
       bedCount = w.bed_count;
@@ -856,11 +911,12 @@ const upsertWard: OpHandler = async (ctx, i) => {
     name: i.name,
     slug,
     department_id: dept.id,
-    ward_type: i.ward_type ?? null,
+    ward_type: wardType,
     sex: i.sex ?? null,
     age_group: i.age_group ?? null,
     place_id: i.place_id ?? null,
     bed_count: bedCount,
+    ...(verdict.parent !== undefined ? { parent_ward_id: verdict.parent } : {}),
   };
   return {
     audit: {
@@ -871,10 +927,10 @@ const upsertWard: OpHandler = async (ctx, i) => {
     },
     apply: async () => {
       if (i.id) {
-        must(await ctx.sb.from("hospital_wards").update(row).eq("id", i.id), "update ward");
+        wardWrite(await ctx.sb.from("hospital_wards").update(row).eq("id", i.id), "update ward");
         return { id: i.id };
       }
-      const w = must(
+      const w = wardWrite(
         await ctx.sb.from("hospital_wards").insert(row).select("id").single(),
         "insert ward",
       ) as { id: string };

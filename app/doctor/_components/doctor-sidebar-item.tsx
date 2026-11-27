@@ -5,6 +5,7 @@ import type { Domain } from "@/lib/design/domains";
 import type { LucideIcon } from "lucide-react";
 import {
   ActivityIcon,
+  BedDoubleIcon,
   CalendarClockIcon,
   CheckSquareIcon,
   ClipboardListIcon,
@@ -32,6 +33,7 @@ const ICONS: Record<DoctorIconKey, LucideIcon> = {
   cosign_queue: ListChecksIcon,
   triage: HeartPulseIcon,
   resus: SirenIcon,
+  eu: BedDoubleIcon,
 };
 
 /** Which part of the hospital each item belongs to (ADR 0162); none = neutral. */

@@ -5,12 +5,16 @@ import type {
   SaveDraftResult,
   SimpleResult,
 } from "@/components/wards/editor/ward-editor";
+import type { WaitReason } from "@/lib/wards/eu-guard";
 import type { WardLayout } from "@/lib/wards/layout-schema";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
+import { EU_WARD } from "@/content/eu/words";
+import { encrypt } from "@/lib/encryption";
 import { requireHospitalAdminScope } from "@/lib/hospital-admin/scope";
 import { callEdge } from "@/lib/supabase/edge";
+import { euAssignRefusal, WAIT_NOTE_MAX } from "@/lib/wards/eu-guard";
 import { wardBuilderLiveFor } from "@/lib/wards/feature";
 import { WardLayoutSchema } from "@/lib/wards/layout-schema";
 
@@ -179,7 +183,10 @@ export async function adminAssignBed(
   bedId: string,
   patientUserId: string,
 ): Promise<SimpleResult> {
+  if (!uuid.safeParse(bedId).success) return { ok: false, error: "Unknown bed." };
   const s = await scope();
+  const refused = await euAssignRefusal(s.hospitalId, bedId);
+  if (refused) return { ok: false, error: refused };
   const r = await callEdge(
     "ha-services-hub",
     { op: "assign_bed", hospital_id: s.hospitalId, bed_id: bedId, patient_user_id: patientUserId },
@@ -263,5 +270,28 @@ export async function adminReleaseAdmissionBed(
     admission_id: admissionId,
     reason,
     outcome,
+  });
+}
+
+export async function adminMoveEuSpace(
+  wardId: string,
+  stayId: string,
+  target: { wardId?: string; bedId?: string; waitReason?: WaitReason; waitNote?: string },
+): Promise<SimpleResult> {
+  if (
+    ![wardId, stayId, target.wardId ?? stayId, target.bedId ?? stayId].every(
+      (x) => uuid.safeParse(x).success,
+    )
+  )
+    return { ok: false, error: "Unknown stay, ward or space." };
+  const note = target.waitNote?.trim();
+  if (note && note.length > WAIT_NOTE_MAX) return { ok: false, error: EU_WARD.waitNoteTooLong };
+  return adminHub(wardId, {
+    op: "move_eu_space",
+    stay_id: stayId,
+    ...(target.wardId ? { ward_id: target.wardId } : {}),
+    ...(target.bedId ? { bed_id: target.bedId } : {}),
+    ...(!target.bedId && target.waitReason ? { space_wait_reason: target.waitReason } : {}),
+    ...(!target.bedId && note ? { space_wait_note_ciphertext: encrypt(note) } : {}),
   });
 }

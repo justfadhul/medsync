@@ -7,6 +7,7 @@ import type {
   LayoutBed,
   LayoutDivider,
   LayoutFixture,
+  LayoutRoom,
   ServiceCode,
   WardLayout,
 } from "@/supabase/functions/_shared/ward-layout";
@@ -18,7 +19,7 @@ import {
   shellWalls,
 } from "@/supabase/functions/_shared/ward-layout";
 
-export type PresetId = "open" | "bays" | "hdu" | "empty";
+export type PresetId = "eu" | "open" | "bays" | "hdu" | "empty";
 
 export interface Preset {
   id: PresetId;
@@ -38,6 +39,18 @@ export const HDU_SERVICES: ServiceCode[] = [
   "pump",
   "iv_pole",
   "pressure_mattress",
+];
+
+/** What each resus space in the Emergency unit template records (no pressure mattress). */
+export const EU_RESUS_SERVICES: ServiceCode[] = [
+  "o2",
+  "suction",
+  "air",
+  "monitor",
+  "call",
+  "power",
+  "pump",
+  "iv_pole",
 ];
 
 type Floor = { w: number; h: number };
@@ -243,13 +256,77 @@ export function highDependency(floor: Floor): WardLayout {
   return addDoor(d, 1, Math.floor(h / 2) + 3, "v");
 }
 
-export function presetsFor(floor: Floor): Preset[] {
+/**
+ * Emergency unit: two resus spaces with a trolley between, four trolleys, four chairs and an isolation
+ * room (two trolleys and two chairs on a narrow floor). Only the resus spaces record services (ADR 0193).
+ */
+export function emergencyUnit(floor: Floor): WardLayout {
+  let d = shell(floor);
+  const { w, h } = floor;
+  const n = w < 30 ? 2 : 4;
+  const room = (r: Omit<LayoutRoom, "key">) => {
+    d = { ...d, rooms: [...d.rooms, { ...r, key: nextKey(d, "r") }] };
+  };
+  room({ kind: "bay", name: "Resus", x: 2, y: 1, w: 10, h: 9, door: "bottom", features: {} });
+  for (const [i, x] of [3, 7].entries())
+    d = addBed(d, {
+      label: `R${i + 1}`,
+      type: "resus",
+      x,
+      y: 2,
+      rot: 0,
+      services: [...EU_RESUS_SERVICES],
+    });
+  d = addFixture(d, { kind: "resus_trolley", x: 5, y: 7 });
+  room({
+    kind: "bay",
+    name: "Trolleys",
+    x: 13,
+    y: 1,
+    w: n * 3 + 2,
+    h: 7,
+    door: "bottom",
+    features: {},
+  });
+  for (let i = 0; i < n; i++)
+    d = addBed(d, { label: `T${i + 1}`, type: "couch", x: 14 + i * 3, y: 2, rot: 0, services: [] });
+  for (let i = 0; i < n; i++)
+    d = addBed(d, { label: `C${i + 1}`, type: "chair", x: 3 + i * 3, y: 14, rot: 0, services: [] });
+  room({
+    kind: "isolation",
+    name: "Isolation",
+    x: w - 9,
+    y: h - 10,
+    w: 7,
+    h: 9,
+    door: "top",
+    features: { sink: true },
+  });
+  d = addBed(d, { label: "I1", type: "couch", x: w - 7, y: h - 6, rot: 180, services: [] });
+  const cy = Math.floor(h / 2);
+  d = addFixture(d, { kind: "station", x: Math.floor(w / 2) - 3, y: cy, label: "Nurses’ station" });
+  d = addFixture(d, { kind: "sink", x: Math.floor(w / 2) + 4, y: cy });
+  return addDoor(d, w - 1, cy, "v");
+}
+
+export function presetsFor(floor: Floor, opts: { eu?: boolean } = {}): Preset[] {
   const open = openWard(floor);
   const bays = baysAndRooms(floor);
   const hdu = highDependency(floor);
   const rooms = bays.rooms.filter((r) => r.kind !== "bay").length;
   const bayCount = bays.rooms.length - rooms;
+  const eu: Preset[] = opts.eu
+    ? [
+        {
+          id: "eu",
+          name: "Emergency unit",
+          sub: "Resus spaces with services, trolleys, chairs and an isolation room",
+          build: () => emergencyUnit(floor),
+        },
+      ]
+    : [];
   return [
+    ...eu,
     {
       id: "open",
       name: `Open ward, ${open.beds.length} beds`,

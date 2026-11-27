@@ -1,11 +1,15 @@
 "use server";
 
 import type { SimpleResult } from "@/components/wards/editor/ward-editor";
+import type { WaitReason } from "@/lib/wards/eu-guard";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
+import { EU_WARD } from "@/content/eu/words";
+import { encrypt } from "@/lib/encryption";
 import { requireNurseScope } from "@/lib/nurse/scope";
 import { callEdge } from "@/lib/supabase/edge";
+import { euAssignRefusal, WAIT_NOTE_MAX } from "@/lib/wards/eu-guard";
 import { wardBuilderLiveFor } from "@/lib/wards/feature";
 
 /*
@@ -48,6 +52,9 @@ export async function nurseAssignBed(
 ): Promise<SimpleResult> {
   if (!uuid.safeParse(bedId).success || !uuid.safeParse(patientUserId).success)
     return { ok: false, error: "Unknown bed or patient." };
+  const s = await scope();
+  const refused = await euAssignRefusal(s.hospitalId, bedId);
+  if (refused) return { ok: false, error: refused };
   return hub({ op: "assign_bed", bed_id: bedId, patient_user_id: patientUserId });
 }
 
@@ -63,6 +70,29 @@ export async function nurseReleaseBed(
     assignment_id: assignmentId,
     reason,
     ...(next ? { next_state: next } : {}),
+  });
+}
+
+export async function nurseMoveEuSpace(
+  _wardId: string,
+  stayId: string,
+  target: { wardId?: string; bedId?: string; waitReason?: WaitReason; waitNote?: string },
+): Promise<SimpleResult> {
+  if (
+    ![stayId, target.wardId ?? stayId, target.bedId ?? stayId].every(
+      (x) => uuid.safeParse(x).success,
+    )
+  )
+    return { ok: false, error: "Unknown stay, ward or space." };
+  const note = target.waitNote?.trim();
+  if (note && note.length > WAIT_NOTE_MAX) return { ok: false, error: EU_WARD.waitNoteTooLong };
+  return hub({
+    op: "move_eu_space",
+    stay_id: stayId,
+    ...(target.wardId ? { ward_id: target.wardId } : {}),
+    ...(target.bedId ? { bed_id: target.bedId } : {}),
+    ...(!target.bedId && target.waitReason ? { space_wait_reason: target.waitReason } : {}),
+    ...(!target.bedId && note ? { space_wait_note_ciphertext: encrypt(note) } : {}),
   });
 }
 

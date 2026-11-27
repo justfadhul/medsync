@@ -2,7 +2,12 @@ import "server-only";
 
 import type { WardTab } from "./data";
 import type { BedWaitReason } from "@/db/schema/admissions";
-import type { BedState, RoomKind, WardLayout } from "@/supabase/functions/_shared/ward-layout";
+import type {
+  BedState,
+  BedType,
+  RoomKind,
+  WardLayout,
+} from "@/supabase/functions/_shared/ward-layout";
 import { and, asc, desc, eq, inArray, isNotNull, isNull, sql } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 
@@ -21,7 +26,7 @@ import {
 } from "@/db/schema/ward-builder";
 import { ipcFlagsFor } from "@/lib/ipc/read";
 import { ipcLabFeedLiveFor } from "@/lib/lab/feature";
-import { roomOfBed } from "@/supabase/functions/_shared/ward-layout";
+import { isArriving, roomOfBed } from "@/supabase/functions/_shared/ward-layout";
 import { openAssignments, wardTabs } from "./data";
 import { parseLayout } from "./layout-schema";
 import { arrivingTooLong, waitingFor } from "./waiting";
@@ -45,6 +50,8 @@ export interface BoardBed {
   services: string[];
   roomKind: RoomKind | null;
   roomName: string | null;
+  /** The bed's type in the layout document. */
+  type: BedType;
   /** Only for viewers allowed to see it: the MRN, and the name for the ward's own staff. */
   patient: { name: string | null; mrn: string | null } | null;
   /** Lab Phase 5 (IC-8): infection prevention precautions in force for the patient in this bed, never the condition. */
@@ -52,6 +59,8 @@ export interface BoardBed {
   assignmentId: string | null;
   /** Set when the bed was allocated for an admission (ADR 0199): an Arriving bed, or one it became. */
   admissionId: string | null;
+  /** Set when the space is held or occupied by an EU stay (Arriving until Arrived, then Occupied). */
+  euStayId: string | null;
   /** The admitting clinician of an Arriving bed; null for the doctor's picker (`patients: "none"`). */
   admittedBy: string | null;
 }
@@ -238,7 +247,7 @@ export async function loadBedBoard(
     if (a)
       return {
         // ADR 0199: allocated for an admission, nobody arrived yet.
-        state: a.admissionId && !a.arrivedAt ? ("arriving" as const) : ("occupied" as const),
+        state: isArriving(a) ? ("arriving" as const) : ("occupied" as const),
         since: a.startedAt.toISOString(),
         reason: null,
         a,
@@ -278,12 +287,14 @@ export async function loadBedBoard(
         services: services.filter((x) => x.bedId === b.bedId).map((x) => x.code),
         roomKind: room?.kind ?? null,
         roomName: room?.name ?? null,
+        type: b.type,
         patient:
           s.a && viewer.patients !== "none"
             ? { name: viewer.patients === "names" ? (p?.name ?? null) : null, mrn: p?.mrn ?? null }
             : null,
         assignmentId: s.a?.id ?? null,
         admissionId: s.a?.admissionId ?? null,
+        euStayId: s.a?.euStayId ?? null,
         admittedBy:
           (s.a?.admissionId &&
             admitted.find((x) => x.admissionId === s.a!.admissionId)?.admittedBy) ||

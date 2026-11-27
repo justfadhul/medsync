@@ -22,12 +22,14 @@ export function ReportsView({
   windows,
   min,
   pilotWeeks,
+  eu,
   lab,
 }: {
   data: ReportsViewData;
   windows: readonly number[];
   min: number;
   pilotWeeks: number;
+  eu: ReactNode;
   lab: ReactNode;
 }) {
   const router = useRouter();
@@ -299,6 +301,7 @@ export function ReportsView({
           )}
         </div>
 
+        {eu}
         {lab}
       </div>
     </div>

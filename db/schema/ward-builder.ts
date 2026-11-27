@@ -119,14 +119,24 @@ export const bedAssignments = pgTable(
     admissionId: uuid("admission_id"),
     arrivedAt: timestamp("arrived_at", { withTimezone: true }),
     arrivedBy: uuid("arrived_by"),
+    /** 0311 (ADR 0541): the EU stay this space serves; never with admission_id. FK in SQL. */
+    euStayId: uuid("eu_stay_id"),
   },
   (t) => [
     uniqueIndex("bed_assignments_one_open_per_bed")
       .on(t.bedId)
       .where(sql`${t.endedAt} IS NULL`),
-    uniqueIndex("bed_assignments_one_open_per_patient")
+    // 0312 (ADR 0542): one Occupied plus one Arriving place per patient (a boarder holds both).
+    uniqueIndex("bed_assignments_one_occupied_per_patient")
       .on(t.patientUserId)
-      .where(sql`${t.endedAt} IS NULL`),
+      .where(
+        sql`${t.endedAt} IS NULL AND (${t.arrivedAt} IS NOT NULL OR (${t.admissionId} IS NULL AND ${t.euStayId} IS NULL))`,
+      ),
+    uniqueIndex("bed_assignments_one_arriving_per_patient")
+      .on(t.patientUserId)
+      .where(
+        sql`${t.endedAt} IS NULL AND ${t.arrivedAt} IS NULL AND (${t.admissionId} IS NOT NULL OR ${t.euStayId} IS NOT NULL)`,
+      ),
     index("bed_assignments_ward_idx").on(t.wardId, t.endedAt),
     index("bed_assignments_hospital_idx").on(t.hospitalId),
   ],

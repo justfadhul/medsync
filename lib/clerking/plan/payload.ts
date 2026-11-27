@@ -21,6 +21,8 @@ export interface PlanPayload {
   /** The hospital's ward names, for Admit. */
   /** The wards that take admissions; counts (words) with WARD_BUILDER on (ADR 0197 §5). */
   wards: { id: string; name: string; counts: string | null }[];
+  /** EU_OBSERVATION (ADR 0541): the emergency units "Observe in EU" offers; absent with the flag off. */
+  euWards?: { id: string; name: string; counts: string | null }[];
   /** The viewer is an intern: discharging with NEWS2 of 5 or more needs a senior to agree. */
   intern: boolean;
   facts: {
@@ -49,6 +51,20 @@ export interface PlanPayload {
   stockAnswer?: { surface: "doctor" | "clinician"; patientUserId: string; encounterId: string };
   /** Pharmacy Phase 4 (5.2): the Repeats step's signed bounds and each placed line's terms; absent with the flag off. */
   repeats?: RepeatsPayload;
+  /** CARE_REQUESTS (ADR 0537): the departments a request can go to; absent with the flag off. Staff only, never patients. */
+  requests?: RequestsPayload | null;
+}
+
+export interface RequestsPayload {
+  departments: {
+    id: string;
+    name: string;
+    /** The admitting wards under this department: a review goes to the admit ward's department. */
+    wardIds: string[];
+    staff: { userId: string; name: string; cadre: string }[];
+  }[];
+  /** The viewer's own department: a review's target when the admit ward has none. */
+  ownDepartmentId: string | null;
 }
 
 export interface RepeatTerms {

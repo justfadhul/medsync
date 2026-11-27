@@ -15,6 +15,7 @@ import {
   useExamCatalogue,
 } from "@/components/clerking/use-catalogue";
 import { syncRecorded } from "@/components/emr/desk/model";
+import { CARE_REQUEST_COPY } from "@/content/care-requests";
 import { chartsToOpen } from "@/lib/emr/charts/rules";
 import { drugById } from "@/lib/prescribing/formulary";
 import { willRead } from "@/lib/prescribing/plan-rx";
@@ -106,6 +107,19 @@ export function FixtureDesk({ p, step }: { p: DeskPayload; step: string }) {
                     at: clock,
                   };
                 }),
+              ],
+              requests: [
+                ...x.record.requests,
+                ...r.requests.map((q) => ({
+                  id: nextId(),
+                  kind: q.kind,
+                  urgency: q.urgency,
+                  helpWanted: q.helpWanted,
+                  targetWords:
+                    x.requests?.departments.find((d) => d.id === q.targetDepartmentId)?.name ?? "",
+                  stateWord: CARE_REQUEST_COPY.state.sent,
+                  at: clock,
+                })),
               ],
               charts: [
                 ...x.record.charts,

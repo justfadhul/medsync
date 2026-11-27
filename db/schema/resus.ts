@@ -15,10 +15,12 @@ import {
 
 import { authUsers } from "./_auth";
 import { hospitalDepartments } from "./hospital-departments";
+import { hospitalWards } from "./hospital-wards";
 import { hospitals } from "./hospitals";
 import { patientIntakes } from "./patient-intakes";
 import { saNotifications } from "./sa-notifications";
 import { encounters } from "./scheduling";
+import { hospitalBeds } from "./services-hub";
 import { triageRecords } from "./triage";
 
 /**
@@ -274,6 +276,8 @@ export const hospitalCareUnits = pgTable(
     invasiveVentilation: boolean("invasive_ventilation").notNull().default(false),
     rrt: boolean("rrt").notNull().default(false),
     active: boolean("active").notNull().default(true),
+    /** 0313 (D7): the ward this unit is drawn as; set null if the ward goes. */
+    wardId: uuid("ward_id").references(() => hospitalWards.id, { onDelete: "set null" }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
@@ -306,6 +310,8 @@ export const resusBayProfiles = pgTable(
     ecpr: boolean("ecpr").notNull().default(false),
     verifiedBy: uuid("verified_by").references(() => authUsers.id, { onDelete: "set null" }),
     verifiedAt: timestamp("verified_at", { withTimezone: true }),
+    /** 0313 (D7): the resus space of an emergency unit this bay is; one bay per space. */
+    bedId: uuid("bed_id").references(() => hospitalBeds.id, { onDelete: "set null" }),
     active: boolean("active").notNull().default(true),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
@@ -320,6 +326,9 @@ export const resusBayProfiles = pgTable(
       sql`${t.energySequenceJ} IS NULL OR (cardinality(${t.energySequenceJ}) BETWEEN 1 AND 10 AND 0 < ALL (${t.energySequenceJ}) AND 400 >= ALL (${t.energySequenceJ}))`,
     ),
     uniqueIndex("rbp_bay_unique").on(t.hospitalId, t.bayLabel),
+    uniqueIndex("rbp_bed_unique")
+      .on(t.bedId)
+      .where(sql`${t.bedId} IS NOT NULL`),
   ],
 );
 export type ResusBayProfileRow = typeof resusBayProfiles.$inferSelect;

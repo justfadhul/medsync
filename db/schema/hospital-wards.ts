@@ -43,12 +43,18 @@ export const hospitalWards = pgTable(
     closedReason: text("closed_reason"),
     expectedReopenOn: date("expected_reopen_on"), // 0080: a date column; string mode
     archivedAt: timestamp("archived_at", { withTimezone: true }),
+    /** 0310 (ADR 0539, D3): for display only. The ward an EU sits under; the FK is in SQL. */
+    parentWardId: uuid("parent_ward_id"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [
     check("hospital_wards_bed_count_nonneg", sql`${t.bedCount} >= 0`),
     check("hospital_wards_state_check", sql`${t.state} IN ('active','inactive')`),
+    check(
+      "hospital_wards_parent_check",
+      sql`${t.parentWardId} IS NULL OR (${t.parentWardId} <> ${t.id} AND ${t.wardType} = 'emergency_observation')`,
+    ),
     uniqueIndex("hospital_wards_unique_slug").on(t.hospitalId, t.slug),
     index("hospital_wards_hospital_idx").on(t.hospitalId),
   ],

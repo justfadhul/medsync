@@ -7,7 +7,7 @@
  */
 import type { FloorCtx, Modal } from "./floor";
 import type { FloorPerson } from "@/lib/clinic-floor/fixture";
-import type { DoctorStatus, FloorRow, Outcome } from "@/lib/clinic-floor/model";
+import type { DoctorStatus, FloorRow } from "@/lib/clinic-floor/model";
 import { useState } from "react";
 
 import { Ticket } from "@/components/landing/tether/ticket";
@@ -715,7 +715,8 @@ function clinicDays(days: number[], from: number, target: number | null, n = 5):
 export function FinishDialog({ ctx, row }: { ctx: FloorCtx; row: FloorRow }) {
   const p = ctx.byId.get(row.intakeId)!;
   const cl = ctx.clinicOf(p.clinic);
-  const [out, setOut] = useState<Outcome | null>(null);
+  // The five the floor offers; "eu" is written by ha-eu-stay only (D8).
+  const [out, setOut] = useState<keyof typeof F.outs | null>(null);
   const [when, setWhen] = useState<When>("none");
   const [day, setDay] = useState<number | null>(null);
   const [who, setWho] = useState<"me" | "any">("me");
@@ -796,7 +797,7 @@ export function FinishDialog({ ctx, row }: { ctx: FloorCtx; row: FloorRow }) {
               {F.s1}
             </h3>
             <div className={c("cf-ofs")}>
-              {(Object.keys(F.outs) as Outcome[]).map((k) => (
+              {(Object.keys(F.outs) as (keyof typeof F.outs)[]).map((k) => (
                 <button
                   key={k}
                   type="button"

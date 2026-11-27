@@ -9,6 +9,7 @@ import type { ObsRequirement } from "./observations";
 import type { ProblemCard } from "./problems";
 import type { PlanRecord } from "./record";
 
+import { CARE_REQUEST_COPY } from "@/content/care-requests";
 import { CHART_FREQUENCY_WORD, CHART_NAME } from "@/lib/emr/charts/rules";
 import { ORDER_FREQUENCY_WORD, ORDER_PRIORITY_WORD } from "@/lib/emr/orders";
 import { EDIT_FIELD_WORD } from "@/lib/prescribing/plan-rx";
@@ -108,11 +109,23 @@ export function composePlanLines(i: ComposeInput): string[] {
           : ", urine output not measured";
     monitoring.push(s);
   }
-  if (plan.seniorReview) monitoring.push(`senior review ${SENIOR_REVIEW_WORD[plan.seniorReview]}`);
+  const basket = basketOf(plan);
+  const word = (u: string) =>
+    (CARE_REQUEST_COPY.urgency[u as keyof typeof CARE_REQUEST_COPY.urgency] ?? u).toLowerCase();
+  const review = record.requests.findLast((r) => r.kind === "review");
+  if (review)
+    monitoring.push(`senior review requested from ${review.targetWords}, ${word(review.urgency)}`);
+  else if (plan.seniorReview)
+    monitoring.push(
+      `senior review ${SENIOR_REVIEW_WORD[plan.seniorReview]}${
+        basket.requests.some((r) => r.kind === "review") ? " (not yet sent)" : ""
+      }`,
+    );
+  else if (plan.seniorReviewNotNeeded?.trim())
+    monitoring.push(`no senior review needed: ${plan.seniorReviewNotNeeded.trim()}`);
   if (monitoring.length)
     lines.push(sentence(monitoring[0]!.charAt(0).toUpperCase() + monitoring.join("; ").slice(1)));
 
-  const basket = basketOf(plan);
   cards.forEach((c, n) => {
     const parts: string[] = [];
     const linked = new Set(plan.problems?.[c.logicalId]?.linked ?? []);
@@ -147,6 +160,12 @@ export function composePlanLines(i: ComposeInput): string[] {
       sentence(`${n + 1}. ${c.display}: ${parts.length ? parts.join("; ") : "no plan recorded"}`),
     );
   });
+
+  for (const r of record.requests)
+    if (r.kind === "consult")
+      lines.push(
+        `Consult requested from ${r.targetWords} (${r.helpWanted ? `${CARE_REQUEST_COPY.help[r.helpWanted].toLowerCase()}, ` : ""}${word(r.urgency)}).`,
+      );
 
   const meds = record.medicines.filter((m) => m.answer !== "pending");
   if (meds.length)

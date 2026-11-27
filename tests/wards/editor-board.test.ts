@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import type { WardLayout } from "@/lib/wards/layout-schema";
 import { describe, expect, it } from "vitest";
 
@@ -373,5 +374,14 @@ describe("who may act on a ward's beds (ADR 0194 §3)", () => {
     expect(mayWorkBeds({ admin: false, inChargeWardIds: [], assignedWardIds: [] }, "w1")).toBe(
       false,
     );
+  });
+});
+
+describe("the board read: EU arrivals (one Arriving rule)", () => {
+  it("board.ts reads the stay and decides Arriving with isArriving", () => {
+    const src = readFileSync("lib/wards/board.ts", "utf8");
+    expect(src).toContain("isArriving(a)");
+    expect(src).toContain("euStayId: s.a?.euStayId ?? null");
+    expect(src).toContain("type: b.type");
   });
 });

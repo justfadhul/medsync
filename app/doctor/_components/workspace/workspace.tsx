@@ -38,6 +38,7 @@ export async function Workspace({
         mayAssign: data.mayAssign,
         emr: data.emr,
         renewals: data.renewals,
+        requests: data.requests,
       }).map((l) => l.id)}
       scope={data.scope}
       mayAssign={data.mayAssign}

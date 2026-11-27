@@ -6,6 +6,8 @@
 import type { PlanDraft } from "@/lib/clerking/plan/draft";
 import type { DispositionCode } from "@/lib/emr/encounter";
 
+import { EU_SEND } from "@/content/eu/words";
+
 /** Why an admitted patient waits for a bed. DRAFT wording for the CSO (ADR 0198 §5). */
 export const WAIT_REASON_WORDS = {
   no_free_bed: "No free bed",
@@ -31,6 +33,9 @@ export interface PlanStart {
   wardId: string | null;
   wardName: string | null;
   referTo: string | null;
+  /** Observe in EU: the emergency unit the Plan named (Send to EU starts here). */
+  euWardId: string | null;
+  euWardName: string | null;
   /** The Plan's own words ("Admit · Medical ward"), or null. */
   said: string | null;
 }
@@ -44,6 +49,8 @@ export function planStart(plan: PlanDraft | undefined | null): PlanStart {
     wardId: null,
     wardName: null,
     referTo: null,
+    euWardId: null,
+    euWardName: null,
     said: null,
   };
   if (!d) return none;
@@ -52,7 +59,9 @@ export function planStart(plan: PlanDraft | undefined | null): PlanStart {
       ? `${PLAN_WORDS.admit} · ${d.ward}`
       : d.kind === "refer" && d.referTo
         ? `${PLAN_WORDS.refer} · ${d.referTo}`
-        : PLAN_WORDS[d.kind]!;
+        : d.kind === "observe_eu" && d.ward
+          ? `${PLAN_WORDS.observe_eu} · ${d.ward}`
+          : PLAN_WORDS[d.kind]!;
   switch (d.kind) {
     case "discharge":
       return { ...none, code: "home", said };
@@ -67,7 +76,13 @@ export function planStart(plan: PlanDraft | undefined | null): PlanStart {
     case "refer":
       return { ...none, code: "referred_out", referTo: d.referTo ?? null, said };
     case "observe_eu":
-      return { ...none, observe: true, said };
+      return {
+        ...none,
+        observe: true,
+        euWardId: d.wardId ?? null,
+        euWardName: d.ward ?? null,
+        said,
+      };
   }
 }
 
@@ -216,4 +231,23 @@ export function stoppedRxIds(detail: Record<string, string> | null | undefined):
  *  at all request one (never a refusal). */
 export function admissionNeedsCosign(requirement: string | undefined): boolean {
   return requirement !== "allowed";
+}
+
+/** Send to EU: the emergency unit, then a space or a reason to wait for one. DRAFT wording for the CSO. */
+export interface EuDraft {
+  wardId: string | null;
+  bedId: string | null;
+  waitReason: WaitReason | null;
+  waitNote: string;
+}
+
+export function euStart(start: PlanStart): EuDraft {
+  return { wardId: start.euWardId, bedId: null, waitReason: null, waitNote: "" };
+}
+
+export function euBlocker(e: EuDraft): string | null {
+  if (!e.wardId) return EU_SEND.chooseUnit;
+  if (!e.bedId && !e.waitReason) return EU_SEND.chooseSpace;
+  if (!e.bedId && e.waitReason === "other" && !e.waitNote.trim()) return EU_SEND.sayWhy;
+  return null;
 }

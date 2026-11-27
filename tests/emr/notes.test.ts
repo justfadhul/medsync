@@ -103,17 +103,48 @@ const allRules = signable.flatMap((t) =>
   [...t.minimumToSign.required, ...t.minimumToSign.prompted].map((rule) => ({ template: t, rule })),
 );
 
+describe("tpl.consult", () => {
+  it("parses and needs assessment and recommendations", () => {
+    const raw = rawTemplates as unknown;
+    expect(parseTemplateCatalogue(raw).templates.map((t) => t.id)).toContain("tpl.consult");
+    const base = {
+      ...NOTE,
+      state: "draft",
+      templateId: "tpl.consult",
+      noteType: "consult",
+      signedAt: undefined,
+    };
+    const input = {
+      signedAt: NOTE.signedAt,
+      key: KEY,
+      lateEntryWindowMs: EMR_SETTINGS_DEFAULTS.lateEntryWindowMs,
+    };
+    const { signedAt: _drop, ...unsigned } = base;
+    void _drop;
+    const empty = planSign({ ...unsigned, content: { sections: { s02: {} } } }, input);
+    expect(empty.ok).toBe(false);
+    const full = planSign(
+      {
+        ...unsigned,
+        content: { sections: { s02: { narrative: "Sepsis." }, s03: { narrative: "Start review." } } },
+      },
+      input,
+    );
+    expect(full.ok).toBe(true);
+  });
+});
+
 describe("template catalogue (note-templates.v1.json)", () => {
-  it("parses, and its counts match: 10 templates, 2 modules, 65 sections, 27 required, 4 prompted", () => {
+  it("parses, and its counts match: 11 templates, 2 modules, 69 sections, 29 required, 4 prompted", () => {
     expect(NOTE_TEMPLATES.counts).toEqual({
-      templates: 10,
+      templates: 11,
       modules: 2,
-      sections: 65,
-      requiredRules: 27,
+      sections: 69,
+      requiredRules: 29,
       promptedRules: 4,
     });
-    expect(signable).toHaveLength(10);
-    expect(allRules).toHaveLength(31);
+    expect(signable).toHaveLength(11);
+    expect(allRules).toHaveLength(33);
   });
   it("every required rule names a real, non-optional section", () => {
     for (const t of signable) {

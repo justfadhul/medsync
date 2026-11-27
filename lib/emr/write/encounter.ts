@@ -13,9 +13,11 @@ import { encounters } from "@/db/schema/scheduling";
 import { admissionNeedsCosign } from "@/lib/emr/closure";
 import { completionWarnings, planTransition } from "@/lib/emr/encounter";
 import { decrypt, encrypt } from "@/lib/encryption";
+import { careRequestsLiveFor } from "@/lib/requests/feature";
 import { EmrWriteError } from "./context";
 import { stopMedicationStatement } from "./facts";
 import { ORDERING_CADRES, requireCadre } from "./orders";
+import { notifyWardIncoming } from "./requests";
 
 /**
  * Completion and administrative closure (PROMPT §5.10, ADR 0139). The Edge Function
@@ -310,6 +312,8 @@ export async function afterClose(
       });
       warnings.push("A senior co-sign of the admission has been requested.");
     }
+    // The ward's nurse in charge is told; a failed notice never fails the close (savepoint, caught).
+    if (careRequestsLiveFor(ctx.actor.hospitalId)) await notifyWardIncoming(ctx, input.admissionId);
   }
   return warnings;
 }

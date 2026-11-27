@@ -76,6 +76,8 @@ export function CriticalLive({
     // Pharmacy Phase 1 (D-PH1-47): a query or notice for this user, on the same private topic (one
     // channel per topic per client, so it rides here). `{kind, ref, at}`, no PHI; the page re-reads.
     channel.on("broadcast", { event: "pharmacy" }, refresh);
+    // Care requests (ADR 0533): a request or its update for this user (`notify_user_event(…, 'request', …)`).
+    channel.on("broadcast", { event: "request" }, refresh);
     void supabase.realtime
       .setAuth()
       .catch(() => undefined)

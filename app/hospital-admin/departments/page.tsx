@@ -8,6 +8,7 @@ import { requireHospitalAdminScope } from "@/lib/hospital-admin/scope";
 import { isDemoHospital } from "@/lib/lab/demo";
 import { loadDispensingServes } from "@/lib/pharmacy/dispensing-points";
 import { pharmacyDispensingLiveFor } from "@/lib/pharmacy/feature";
+import { dutyRotaLiveFor } from "@/lib/rota/feature";
 import {
   availabilityNow,
   loadAvailabilityEvents,
@@ -190,6 +191,7 @@ export default async function DepartmentsPage({ searchParams }: { searchParams: 
         points,
         goLive,
         pharmacyDemo,
+        rotaLive: dutyRotaLiveFor(h),
         rules,
         sessions,
         firstRun: {

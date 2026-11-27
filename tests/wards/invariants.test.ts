@@ -56,6 +56,7 @@ describe("ha-services-hub: the ward ops", () => {
       "allocate_admission_bed",
       "assign_bed",
       "confirm_arrival",
+      "move_eu_space",
       "release_admission_bed",
       "release_bed",
       "set_bed_state",

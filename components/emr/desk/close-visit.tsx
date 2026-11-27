@@ -3,7 +3,7 @@
 import type { DeskPayload } from "./model";
 import type { PlanDraft } from "@/lib/clerking/plan/draft";
 import type { FollowUpOptions, PickerBed } from "@/lib/emr/actions/close";
-import type { CloseDraft, HoldReasonCode, WaitReason } from "@/lib/emr/closure";
+import type { CloseDraft, EuDraft, HoldReasonCode, WaitReason } from "@/lib/emr/closure";
 import type { VisitSummaryContent } from "@/lib/patient/visit-summary";
 import type { BedState, WardLayout } from "@/supabase/functions/_shared/ward-layout";
 import type { ReactNode } from "react";
@@ -22,10 +22,12 @@ import { VisitSummaryView } from "@/components/patient/visit-summary-view";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { PlanView } from "@/components/wards/plan/plan-view";
+import { EU_SEND } from "@/content/eu/words";
 import {
   bookFollowUp,
   decideVisitSummaryAction,
   followUpOptions,
+  sendToEu,
   visitSummaryPreview,
   wardBeds,
 } from "@/lib/emr/actions/close";
@@ -34,6 +36,8 @@ import {
   closeBlocker,
   countsWords,
   dispositionDetail,
+  euBlocker,
+  euStart,
   FOLLOW_UP_WORDS,
   HOLD_WORDS,
   planStart,
@@ -41,10 +45,12 @@ import {
   WAIT_REASON_WORDS,
 } from "@/lib/emr/closure";
 import { DISPOSITION_CODES } from "@/lib/emr/encounter";
+import { durationWords } from "@/lib/eu/clock";
 import { cn } from "@/lib/utils";
 import { bedStateMeta } from "@/supabase/functions/_shared/ward-layout";
 import { ChoiceChips, PRESS } from "../orders/choice-chips";
 import { StatusWord } from "../status-word";
+import { EuFields } from "./eu-fields";
 import { CLOSURE_WORDS, DISPOSITION_WORDS } from "./model";
 
 /**
@@ -67,6 +73,7 @@ const REAL = {
   followUpOptions,
   bookFollowUp,
   wardBeds,
+  sendToEu,
   visitSummaryPreview,
   decideVisitSummaryAction,
 };
@@ -89,6 +96,14 @@ const FOLLOW_KIND = [
   { value: "none", label: "None" },
 ] as const;
 type FollowKind = (typeof FOLLOW_KIND)[number]["value"];
+
+/** hh:mm in the hospital's day (clocks are text, never colour). */
+const clock = (iso: string) =>
+  new Intl.DateTimeFormat("en-GB", {
+    hour: "2-digit",
+    minute: "2-digit",
+    timeZone: "Africa/Kampala",
+  }).format(new Date(iso));
 
 const timeWords = (iso: string) =>
   new Intl.DateTimeFormat("en-GB", {
@@ -199,6 +214,26 @@ function CloseStep({
   });
   const [msg, setMsg] = useState<Msg>(null);
   const [pending, startTransition] = useTransition();
+  const [e, setE] = useState<EuDraft>(() => euStart(start));
+  const setEu = useCallback((patch: Partial<EuDraft>) => setE((x) => ({ ...x, ...patch })), []);
+  const stay = c.eu.stay;
+  const [now] = useState(() => Date.now());
+  const sendHere = start.observe && c.eu.live && !stay;
+  const euWhy = euBlocker(e);
+  const send = () =>
+    startTransition(async () => {
+      beforeClose?.();
+      const r = await act.sendToEu({
+        ...base,
+        wardId: e.wardId,
+        ...(e.bedId
+          ? { bedId: e.bedId }
+          : { waitReason: e.waitReason ?? undefined, waitNote: e.waitNote }),
+      });
+      if (!r.ok) return setMsg({ ok: false, text: r.error });
+      setMsg({ ok: true, text: EU_SEND.sent });
+      onChanged();
+    });
   const set = useCallback((patch: Partial<CloseDraft>) => setD((x) => ({ ...x, ...patch })), []);
   const blocker = closeBlocker(d, { observe: start.observe, bedsLive: c.bedsLive });
   const leading = p.diagnoses.find((x) => x.rank === "primary")?.id;
@@ -255,6 +290,19 @@ function CloseStep({
           <span className="text-muted-foreground">No plan yet: choose below.</span>
         )}
       </p>
+      {stay ? (
+        <p className="text-body-s text-foreground">
+          {stay.boarding && stay.admit
+            ? EU_SEND.boarding(
+                stay.admit.wardName,
+                durationWords(now - Date.parse(stay.admit.since)),
+              )
+            : stay.status === "in_space"
+              ? EU_SEND.inSpace(stay.wardName, stay.bedLabel, clock(stay.since))
+              : EU_SEND.awaiting(stay.wardName)}
+          <span className="text-muted-foreground"> {EU_SEND.closeEnds}</span>
+        </p>
+      ) : null}
       {start.observe ? (
         <StatusWord tone="caution">
           The Plan says Observe in EU: this visit stays open. Change the Plan, or choose an outcome
@@ -277,6 +325,22 @@ function CloseStep({
             />
           </Group>
 
+          {sendHere ? (
+            <div className="flex flex-col gap-3">
+              <EuFields p={p} e={e} set={setEu} surface={surface} act={act} />
+              <div className="flex flex-wrap items-center gap-3">
+                <Button
+                  type="button"
+                  className={PRESS}
+                  disabled={!!euWhy || pending || !!msg?.ok}
+                  onClick={send}
+                >
+                  {EU_SEND.send}
+                </Button>
+                {euWhy ? <p className="text-body-s text-muted-foreground">{euWhy}</p> : null}
+              </div>
+            </div>
+          ) : null}
           {d.code === "admitted" ? <AdmitFields p={p} d={d} set={set} surface={surface} /> : null}
           {d.code === "referred_out" || d.code === "transferred" ? (
             <ReferFields d={d} set={set} />

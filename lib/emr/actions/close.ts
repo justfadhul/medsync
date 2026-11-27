@@ -2,7 +2,7 @@
 
 import type { ActionResult } from "@/lib/emr/write/context";
 import type { VisitSummaryContent } from "@/lib/patient/visit-summary";
-import type { WardLayout } from "@/supabase/functions/_shared/ward-layout";
+import type { BedType, RoomKind, WardLayout } from "@/supabase/functions/_shared/ward-layout";
 import { revalidatePath } from "next/cache";
 import { and, eq } from "drizzle-orm";
 import { z } from "zod";
@@ -14,10 +14,11 @@ import { followUpDate } from "@/lib/emr/closure";
 import { encounterCloseV2LiveFor, patientVisitSummaryLiveFor } from "@/lib/emr/feature";
 import { actionError, withPatientWrite } from "@/lib/emr/write/context";
 import { composeForEncounter, decideVisitSummary } from "@/lib/emr/write/visit-summary";
+import { encrypt } from "@/lib/encryption";
 import { fetchLines } from "@/lib/scheduling/booking-options";
 import { callEdge } from "@/lib/supabase/edge";
 import { loadBedBoard } from "@/lib/wards/board";
-import { wardBuilderLiveFor } from "@/lib/wards/feature";
+import { euObservationLiveFor, wardBuilderLiveFor } from "@/lib/wards/feature";
 import { DEFAULT_TIME_ZONE, localDateKey } from "@/supabase/functions/_shared/slots";
 
 /*
@@ -230,6 +231,8 @@ export interface PickerBed {
   state: string;
   services: string[];
   roomName: string | null;
+  roomKind: RoomKind | null;
+  type: BedType;
 }
 
 const BedArgs = z.object({ surface, wardId: uuid });
@@ -258,10 +261,73 @@ export async function wardBeds(
             state: b.state,
             services: b.services,
             roomName: b.roomName,
+            roomKind: b.roomKind,
+            type: b.type,
           })),
         }
       : null,
   };
+}
+
+/* ─── Send to the emergency unit (ADR 0541) ───────────────────────── */
+
+const SendToEuArgs = z.object({
+  surface,
+  patientUserId: uuid,
+  encounterId: uuid,
+  wardId: uuid,
+  bedId: uuid.optional(),
+  waitReason: z.enum(["no_free_bed", "extra_bed", "floor", "other"]).optional(),
+  waitNote: z.string().trim().max(500, "Keep the note under 500 characters.").optional(),
+});
+
+/** The doctor sends the patient to an EU from the close; the visit stays open. Only the encounter's own clinician (the function checks). */
+export async function sendToEu(
+  raw: unknown,
+): Promise<ActionResult<{ stayId: string; bed: string | null }>> {
+  const p = SendToEuArgs.safeParse(raw);
+  if (!p.success) return invalid(p.error);
+  const i = p.data;
+  const actor = await requireEmrActor(i.surface);
+  if (!euObservationLiveFor(actor.hospitalId)) return off("Sending to the EU");
+  if (!i.bedId === !i.waitReason)
+    return { ok: false, code: "invalid", error: "Choose a space, or say why the patient waits." };
+  if (!i.bedId && i.waitReason === "other" && !i.waitNote)
+    return { ok: false, code: "invalid", error: "Say why the patient waits." };
+  try {
+    await withPatientWrite(actor, i.patientUserId, async () => null);
+    const r = await callEdge<{ data?: { stay?: { stay_id?: string; bed?: string | null } } }>(
+      "ha-eu-stay",
+      {
+        op: "send_to_eu",
+        encounter_id: i.encounterId,
+        ward_id: i.wardId,
+        ...(i.bedId ? { bed_id: i.bedId } : { space_wait_reason: i.waitReason }),
+        ...(!i.bedId && i.waitReason === "other"
+          ? { space_wait_note_ciphertext: encrypt(i.waitNote!) }
+          : {}),
+        reason: "Sent to the emergency unit from the close of the visit.",
+      },
+      `${i.surface}.eu`,
+    );
+    if (!r.ok) return { ok: false, code: "conflict", error: r.error };
+    const stayId = r.data?.data?.stay?.stay_id;
+    if (!stayId)
+      return {
+        ok: false,
+        code: "conflict",
+        error: "The EU service answered, but not with a stay.",
+      };
+    revalidatePath(`/doctor/encounters/${i.encounterId}`);
+    return {
+      ok: true,
+      id: stayId,
+      serverTime: serverTime(),
+      data: { stayId, bed: r.data?.data?.stay?.bed ?? null },
+    };
+  } catch (e) {
+    return actionError(e);
+  }
 }
 
 /* ─── The patient copy (ADR 0203) ─────────────────────────────────── */

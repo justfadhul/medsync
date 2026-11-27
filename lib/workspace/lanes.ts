@@ -3,7 +3,7 @@
  *
  * The page reads only this list: its order is the board's order, `visibleFor`
  * decides who sees a lane, `hotkey` is the jump key (the EMR lanes take 8, 9
- * and 0, so the first seven keep the keys people know). A future engine (Alerts,
+ * and 0, the request lanes y and c, so the first seven keep the keys people know). A future engine (Alerts,
  * Tasks) plugs in here without touching the page, which is how the
  * sidebar stays at three items as MedSync grows. Cadre-agnostic on purpose, so
  * the nurse workspace can bring its own list later (D10).
@@ -16,8 +16,10 @@ export type LaneId =
   | "unassigned"
   | "waiting"
   | "in_progress"
+  | "asked_of_you"
   | "results_to_review"
   | "to_cosign"
+  | "department_consults"
   | "renewal_requests"
   | "needs_closing"
   | "done";
@@ -29,6 +31,8 @@ export interface LaneViewer {
   emr?: boolean;
   /** Pharmacy Phase 4 (5.1): PHARMACY_REPEATS is on here and the viewer may prescribe. */
   renewals?: boolean;
+  /** Care requests (ADR 0537): CARE_REQUESTS is on here. */
+  requests?: boolean;
 }
 
 export interface LaneDef {
@@ -49,6 +53,7 @@ export interface LaneDef {
 
 const always = () => true;
 const emrOn = (v: LaneViewer) => v.emr === true;
+const requestsOn = (v: LaneViewer) => v.requests === true;
 
 export const LANES: readonly LaneDef[] = [
   {
@@ -107,6 +112,16 @@ export const LANES: readonly LaneDef[] = [
     visibleFor: always,
   },
   {
+    // ADR 0537: reviews and consults routed to me (or accepted by me). `y`: the board's `a` assigns.
+    id: "asked_of_you",
+    label: "Asked of you",
+    short: "Asked",
+    scope: "mine",
+    hotkey: "y",
+    empty: "No requests waiting for you.",
+    visibleFor: requestsOn,
+  },
+  {
     // E8: after In progress — released results on orders I placed or cover, not yet acknowledged.
     id: "results_to_review",
     label: "Results to review",
@@ -125,6 +140,16 @@ export const LANES: readonly LaneDef[] = [
     hotkey: "0",
     empty: "No notes waiting for your co-signature.",
     visibleFor: emrOn,
+  },
+  {
+    // ADR 0537 (D6): open requests to the department I work in, for anyone there to pick up.
+    id: "department_consults",
+    label: "Consults for your department",
+    short: "Dept consults",
+    scope: "department",
+    hotkey: "c",
+    empty: "No consults waiting for your department.",
+    visibleFor: requestsOn,
   },
   {
     id: "renewal_requests",

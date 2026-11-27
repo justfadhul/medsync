@@ -8,6 +8,7 @@ import { deliverAfterCommit, runEscalations } from "@/lib/lab/criticals/store";
 import { logger } from "@/lib/logger";
 import { createAfricasTalkingSender } from "@/lib/notifications/africastalking";
 import { enqueueResultsReady, sendResultsReady } from "@/lib/notify/results-ready-store";
+import { errorCode, runCareRequestEscalations } from "@/lib/requests/escalation-run";
 
 export const dynamic = "force-dynamic";
 
@@ -38,6 +39,19 @@ async function run(request: Request) {
     const { failed } = await deliverAfterCommit(database, jobs);
     // Lab Phase 5 (IC-7): IPC alerts with no action within the window escalate (the same minute's tick).
     const ipcEscalated = await db.transaction((tx) => escalateIpcAlerts(tx as never, new Date()));
+    // Care requests (ADR 0536) on the same tick: a failure is logged by name and never fails the lab run.
+    let careRequestsEscalated: number | null = null;
+    try {
+      ({ escalated: careRequestsEscalated } = await runCareRequestEscalations(database, {
+        now: new Date(),
+        source: "scheduler",
+      }));
+    } catch (e) {
+      logger.error("cron.lab-escalations.care_requests_failed", {
+        reason: e instanceof Error ? e.name : "unknown",
+        code: errorCode(e),
+      });
+    }
     // Lab Phase 5 (PS-6): results-ready SMS, after and apart from every release; a failure here never throws back.
     let resultsReady: unknown = null;
     try {
@@ -55,6 +69,7 @@ async function run(request: Request) {
       delivered: jobs.length - failed,
       failed,
       ipcEscalated,
+      careRequestsEscalated,
       resultsReady,
     });
   } catch (e) {

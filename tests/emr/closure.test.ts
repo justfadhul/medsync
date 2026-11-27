@@ -11,6 +11,8 @@ import {
   closeBlocker,
   countsWords,
   dispositionDetail,
+  euBlocker,
+  euStart,
   EMPTY_CLOSE,
   followUpDate,
   MAX_STOPPED,
@@ -48,6 +50,36 @@ describe("planStart (ADR 0197 §1–2)", () => {
     expect(closeBlocker(startDraft(s), { observe: true })).toMatch(
       /Observe in EU: the visit stays open/,
     );
+  });
+});
+
+describe("Send to EU (the close's EU rules)", () => {
+  it("planStart carries the Plan's emergency unit", () => {
+    expect(
+      planStart(plan({ kind: "observe_eu", ward: "OPD EU", wardId: WARD })),
+    ).toMatchObject({
+      observe: true,
+      code: null,
+      euWardId: WARD,
+      euWardName: "OPD EU",
+      said: "Observe in EU · OPD EU",
+    });
+    expect(planStart(plan({ kind: "observe_eu" }))).toMatchObject({
+      euWardId: null,
+      said: "Observe in EU",
+    });
+  });
+
+  it("euBlocker names what is missing", () => {
+    const start = (d: PlanDraft["disposition"]) => euStart(planStart(plan(d)));
+    expect(euBlocker(start({ kind: "observe_eu" }))).toBe("Choose the emergency unit.");
+    const e = start({ kind: "observe_eu", ward: "OPD EU", wardId: WARD });
+    expect(e.wardId).toBe(WARD);
+    expect(euBlocker(e)).toBe("Choose a space, or say why the patient waits for one.");
+    expect(euBlocker({ ...e, bedId: RX(1) })).toBeNull();
+    expect(euBlocker({ ...e, waitReason: "floor" })).toBeNull();
+    expect(euBlocker({ ...e, waitReason: "other" })).toBe("Say why the patient waits.");
+    expect(euBlocker({ ...e, waitReason: "other", waitNote: "Theatre" })).toBeNull();
   });
 });
 

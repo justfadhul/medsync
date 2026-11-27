@@ -3,7 +3,7 @@ import "server-only";
 import { randomUUID } from "node:crypto";
 import type { WriteCtx } from "./context";
 import type { WriteResult } from "./orders";
-import type { PlanBasketRx, PlanOrderLine } from "@/lib/clerking/plan/draft";
+import type { PlanBasketRx, PlanOrderLine, PlanRequestLine } from "@/lib/clerking/plan/draft";
 import type { ChartFrequency, ObsFrequency, PlanChartItem } from "@/lib/emr/charts/rules";
 import type { EmrTx } from "@/lib/emr/db";
 import type { DemographicFact, ObservationFact, PregnancyFact } from "@/lib/facts/types";
@@ -46,6 +46,7 @@ import { openEncounter, placeOrders, replayed, requireCadre } from "./orders";
 import { answerQuery, chooseAlternative } from "./pharmacy-answers";
 import { prescribeRequirement, PRESCRIBING_CADRES, statementRoute } from "./prescriptions";
 import { authoriseRepeats, renewFrom } from "./repeats";
+import { placeRequests } from "./requests";
 
 /**
  * Placing the Plan (ADRs 0184, 0186, 0189): the basket's orders and prescriptions in one
@@ -651,6 +652,7 @@ export interface PlacePlanInput {
   encounterId: string;
   orders: PlanOrderLine[];
   prescriptions: PlanRx[];
+  requests: PlanRequestLine[];
   observationFrequency: ObsFrequency | null;
   measureUrine: boolean;
   /** Prescribing kit F1 (PRESCRIBE_V2): the place it was sent from, stored on every line. */
@@ -662,9 +664,16 @@ export interface PlacePlanInput {
 export async function placePlan(
   ctx: WriteCtx,
   input: PlacePlanInput,
-): Promise<WriteResult & { orderIds: string[]; prescriptionIds: string[]; chartIds: string[] }> {
+): Promise<
+  WriteResult & {
+    orderIds: string[];
+    prescriptionIds: string[];
+    chartIds: string[];
+    requestIds: string[];
+  }
+> {
   requireCadre(ctx, PRESCRIBING_CADRES, "place the plan");
-  if (!input.orders.length && !input.prescriptions.length)
+  if (!input.orders.length && !input.prescriptions.length && !input.requests.length)
     throw new EmrWriteError("invalid", "The basket is empty.");
   const encounter = await openEncounter(ctx, input.patientUserId, input.encounterId);
   const warnings: string[] = [];
@@ -783,6 +792,15 @@ export async function placePlan(
     });
   }
 
+  const requestIds = input.requests.length
+    ? await placeRequests(ctx, {
+        patientUserId: input.patientUserId,
+        encounterId: encounter.id,
+        placementId: randomUUID(),
+        lines: input.requests,
+      })
+    : [];
+
   const chartIds = await openPlanCharts(ctx, {
     patientUserId: input.patientUserId,
     encounterId: encounter.id,
@@ -791,9 +809,10 @@ export async function placePlan(
   });
   await stampActivity(ctx, encounter.id);
   return {
-    id: orderIds[0] ?? prescriptionIds[0]!,
+    id: orderIds[0] ?? prescriptionIds[0] ?? requestIds[0]!,
     orderIds,
     prescriptionIds,
+    requestIds,
     chartIds,
     warnings,
   };
@@ -849,6 +868,7 @@ export async function sendPrescribed(
     encounterId: input.encounterId,
     orders: [],
     prescriptions: input.lines,
+    requests: [],
     observationFrequency: null,
     measureUrine: false,
     place: input.place,

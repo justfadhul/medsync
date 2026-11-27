@@ -24,10 +24,12 @@ import { c } from "@/components/reception/ui";
 import { DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { FLOOR, FLOOR_ERRORS } from "@/content/clinic-floor/floor";
 import { TD } from "@/content/clinic-floor/triage-dialog";
+import { EU_RESUS } from "@/content/eu/words";
 import { fill } from "@/content/lab-workspace-v2";
 import {
   bandOf,
   doctorLoad,
+  euResusChoices,
   GCS_MAX,
   gcsBand,
   gcsNote,
@@ -63,7 +65,8 @@ import t from "./triage-dialog.module.css";
 
 const P = FLOOR.panel;
 type Tab = "flags" | "news" | "other" | "next" | "send";
-type D = Draft & { flags: string[]; gcs: Gcs; tab: Tab };
+/** `eu`: the EU resus space chosen (D4), sent only at Level 1–2 and online. */
+type D = Draft & { flags: string[]; gcs: Gcs; tab: Tab; eu: string | null };
 
 // The draft temperature words show outside production until the CSO signs them; there the engine's own word stays.
 const TEMP_WORDS = TEMPERATURE_WORDS_CSO_SIGNED || process.env.NODE_ENV !== "production";
@@ -166,6 +169,7 @@ export function TriageDialog({ ctx, p, re }: { ctx: FloorCtx; p: FloorPerson; re
     flags: [],
     gcs: { e: null, v: null, m: null },
     tab: "flags",
+    eu: null,
   }));
   const [busy, setBusy] = useState(false);
   const set = (x: Partial<D>) => setD((o) => ({ ...o, ...x }));
@@ -219,6 +223,9 @@ export function TriageDialog({ ctx, p, re }: { ctx: FloorCtx; p: FloorPerson; re
   const tier = ACUITY_TIERS.find((x) => x.level === shown)!;
   const oxygen = d.o2 ? "oxygen" : "air";
   const resus = ctx.user.role === "doctor" ? "/doctor/resus" : "/nurse/resus";
+  const euSpaces = euResusChoices(level, ctx.data.euResus);
+  // Online only (it is not queued, ADR 0497) and only a space still offered at this level.
+  const euBed = (!ctx.offline && euSpaces.find((x) => x.bedId === d.eu)) || null;
 
   const send = async () => {
     if (off || !result || !level) return;
@@ -245,6 +252,7 @@ export function TriageDialog({ ctx, p, re }: { ctx: FloorCtx; p: FloorPerson; re
       departmentId: d.clinic,
       doctorUserId: d.doc,
       note: note || null,
+      euBedId: euBed?.bedId ?? null,
     });
     setBusy(false);
     if (!res.ok) return ctx.say(res.error ?? FLOOR_ERRORS.saveFailed);
@@ -274,7 +282,11 @@ export function TriageDialog({ ctx, p, re }: { ctx: FloorCtx; p: FloorPerson; re
       ),
     );
     close();
-    if (!re) ctx.say(fill(P.sent, { name: p.name, clinic: clinic.short, level: levelTxt(level) }));
+    // The triage is saved; a send to EU resus that was refused says why.
+    if (res.error) ctx.say(res.error);
+    else if (euBed) ctx.say(EU_RESUS.sent(euBed.wardName, euBed.label));
+    else if (!re)
+      ctx.say(fill(P.sent, { name: p.name, clinic: clinic.short, level: levelTxt(level) }));
     else if (before != null && level < before)
       ctx.say(fill(P.movedUp, { name: p.name, level: levelTxt(level) }));
     else if (before != null && level > before)
@@ -859,6 +871,27 @@ export function TriageDialog({ ctx, p, re }: { ctx: FloorCtx; p: FloorPerson; re
             ? fill(TD.send.alertOne, { n: level, doctor: ctx.docName(d.doc), clinic: clinic.short })
             : fill(TD.send.alert, { n: level, clinic: clinic.short })}
         </p>
+      ) : null}
+      {euSpaces.length ? (
+        <>
+          <span className={t.cap}>{EU_RESUS.title}</span>
+          <div className={t.chips}>
+            {euSpaces.map((x) => (
+              <button
+                key={x.bedId}
+                type="button"
+                className={t.chip}
+                data-plain
+                aria-pressed={d.eu === x.bedId}
+                disabled={ctx.offline}
+                onClick={() => set({ eu: d.eu === x.bedId ? null : x.bedId })}
+              >
+                {EU_RESUS.chip(x.wardName, x.label)}
+              </button>
+            ))}
+          </div>
+          {ctx.offline ? <p className={t.sub}>{EU_RESUS.offline}</p> : null}
+        </>
       ) : null}
       <input
         className={t.reason}

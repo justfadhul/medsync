@@ -46,6 +46,8 @@ export interface LayoutEditorData {
   published: { version: number; publishedAt: string } | null;
   register: RegisterBed[];
   occupiedBedIds: string[];
+  /** EU_OBSERVATION is live for this hospital (set by the page). */
+  euLive?: boolean;
 }
 
 /** The ward's tabs: active wards, with whether each has a published layout. */
@@ -137,6 +139,7 @@ export async function openAssignments(hospitalId: string, wardId: string) {
       patientUserId: bedAssignments.patientUserId,
       startedAt: bedAssignments.startedAt,
       admissionId: bedAssignments.admissionId,
+      euStayId: bedAssignments.euStayId,
       arrivedAt: bedAssignments.arrivedAt,
     })
     .from(bedAssignments)

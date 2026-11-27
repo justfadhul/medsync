@@ -13,6 +13,7 @@ import type { RegisterBed, WardLayout } from "../_shared/ward-layout.ts";
 import type { Ctx, OpHandler } from "./common.ts";
 import { z } from "npm:zod@4.4.3";
 
+import { EU_SEND_FROM_VISIT, euObservationOn, euRefusal } from "../_shared/eu.ts";
 import {
   blockingFailures,
   buildLayoutSchema,
@@ -71,6 +72,27 @@ export const WardOpSchema = z.discriminatedUnion("op", [
     /** Where the bed goes next: to be cleaned, or straight back to free. */
     next_state: z.enum(["cleaning", "free"]).optional(),
   }),
+  z.object({
+    op: z.literal("move_eu_space"),
+    stay_id: uuid,
+    ward_id: uuid.optional(),
+    bed_id: uuid.optional(),
+    space_wait_reason: z.enum(["no_free_bed", "extra_bed", "floor", "other"]).optional(),
+    space_wait_note_ciphertext: z.string().max(4000).optional(),
+    reason,
+  }),
+  z.object({
+    op: z.literal("link_resus_bay"),
+    bay_profile_id: uuid,
+    bed_id: uuid.nullable(),
+    reason,
+  }),
+  z.object({
+    op: z.literal("link_care_unit"),
+    care_unit_id: uuid,
+    ward_id: uuid.nullable(),
+    reason,
+  }),
   z.object({ op: z.literal("allocate_admission_bed"), admission_id: uuid, bed_id: uuid, reason }),
   z.object({ op: z.literal("confirm_arrival"), assignment_id: uuid, reason }),
   z.object({
@@ -87,6 +109,7 @@ export const WARD_STAFF_OPS = new Set([
   "set_bed_state",
   "assign_bed",
   "release_bed",
+  "move_eu_space",
   "allocate_admission_bed",
   "confirm_arrival",
   "release_admission_bed",
@@ -100,6 +123,7 @@ interface WardRow {
   id: string;
   name: string;
   ward_type: string | null;
+  age_group: string | null;
   bed_count: number;
   archived_at: string | null;
 }
@@ -108,7 +132,7 @@ async function loadWard(ctx: Ctx, id: string): Promise<WardRow> {
   const w = must(
     await ctx.sb
       .from("hospital_wards")
-      .select("id, name, ward_type, bed_count, archived_at")
+      .select("id, name, ward_type, age_group, bed_count, archived_at")
       .eq("id", id)
       .eq("hospital_id", ctx.hospitalId)
       .maybeSingle(),
@@ -285,10 +309,13 @@ async function openAssignmentOn(ctx: Ctx, bedId: string) {
   ) as { id: string } | null;
 }
 
-/** supabase-js errors from the publish function carry the SQL message ("WL409 …"). */
+/** supabase-js errors from the publish function carry the SQL message ("WL409 …", "EU409 …"). */
 function hubErrorFrom(e: { message: string; code?: string }): HubError | null {
-  const m = /^(?:WL|AD)(409|404|400) (.*)$/s.exec(e.message);
+  const m = /^(?:WL|AD|EU)(409|404|400) (.*)$/s.exec(e.message);
   if (m) return new HubError(m[2]!, m[1] === "409" ? 409 : 400);
+  // A deadlock or serialization failure: the words say try again.
+  const retry = euRefusal(e);
+  if (retry) return new HubError(retry, 409);
   if (e.code === "23505")
     return new HubError("Someone changed this at the same moment. Look again, then retry.", 409);
   return null;
@@ -364,7 +391,7 @@ const publishWardLayout: OpHandler = async (ctx, i) => {
   const { draft } = await layoutsOf(ctx, w.id);
   if (!draft) throw new HubError("There is no draft to publish. Save the layout first.", 409);
   const doc = parseDocument(draft.document);
-  const checks = layoutChecks(doc, w.ward_type);
+  const checks = layoutChecks(doc, w.ward_type, w.age_group);
   const blocking = blockingFailures(checks);
   if (blocking.length) throw new HubError(blocking.map((c) => c.text).join(" · "), 409);
   const warnings = warningTexts(checks);
@@ -505,18 +532,24 @@ const WAITING_INTAKE = ["arrived", "awaiting_triage", "triaged"];
 const assignBed: OpHandler = async (ctx, i) => {
   const b = await loadBed(ctx, i.bed_id);
   await assertWardWorker(ctx, b.ward_id);
+  // Server-side twin of the app's guard: a direct hub call cannot bypass it.
+  if (euObservationOn(Deno.env.get("EU_OBSERVATION"), ctx.hospitalId)) {
+    const w = await loadWard(ctx, b.ward_id);
+    if (w.ward_type === "emergency_observation") throw new HubError(EU_SEND_FROM_VISIT, 409);
+  }
   if (b.closed_at) throw new HubError(`Bed ${b.label} is out of service.`, 409);
   if (await openAssignmentOn(ctx, b.id))
     throw new HubError(`Bed ${b.label} already has a patient.`, 409);
-  const elsewhere = must(
+  // A boarder holds two open rows (EU space + ward bed, ADR 0542); any open row refuses a direct bed.
+  const [elsewhere] = must(
     await ctx.sb
       .from("bed_assignments")
       .select("id, hospital_beds(label)")
       .eq("patient_user_id", i.patient_user_id)
       .is("ended_at", null)
-      .maybeSingle(),
+      .limit(1),
     "patient's bed",
-  ) as { id: string; hospital_beds: { label: string } | null } | null;
+  ) as { id: string; hospital_beds: { label: string } | null }[];
   if (elsewhere)
     throw new HubError(
       `This patient is already in bed ${elsewhere.hospital_beds?.label ?? "elsewhere"}. Release them there first.`,
@@ -586,7 +619,7 @@ const releaseBed: OpHandler = async (ctx, i) => {
     await ctx.sb
       .from("bed_assignments")
       .select(
-        "id, bed_id, ward_id, patient_user_id, ended_at, admission_id, arrived_at, hospital_beds(label)",
+        "id, bed_id, ward_id, patient_user_id, ended_at, admission_id, arrived_at, eu_stay_id, hospital_beds(label)",
       )
       .eq("id", i.assignment_id)
       .eq("hospital_id", ctx.hospitalId)
@@ -600,10 +633,13 @@ const releaseBed: OpHandler = async (ctx, i) => {
     ended_at: string | null;
     admission_id: string | null;
     arrived_at: string | null;
+    eu_stay_id: string | null;
     hospital_beds: { label: string } | null;
   } | null;
   if (!a) throw new HubError("That bed assignment isn't at this hospital.");
   if (a.ended_at) throw new HubError("The patient has already left this bed.", 409);
+  if (a.eu_stay_id)
+    throw new HubError("Use Move to change the space; the stay ends when the visit closes.", 409);
   // An arriving patient's bed is cancelled with its admission (ADR 0199 §5), never released alone.
   if (a.admission_id && !a.arrived_at)
     throw new HubError("This patient hasn't arrived yet. Use Cancel on the arriving bed.", 409);
@@ -671,9 +707,151 @@ async function rpc(ctx: Ctx, fn: string, p: Record<string, unknown>) {
   const r = await ctx.sb.rpc(fn, {
     p: { ...p, hospital_id: ctx.hospitalId, actor: ctx.callerId },
   });
-  if (r.error) throw hubErrorFrom(r.error) ?? new Error(`${fn}: ${r.error.message}`);
+  // Never the raw DB message: the name and SQLSTATE only.
+  if (r.error) throw hubErrorFrom(r.error) ?? new Error(`${fn}: ${r.error.code ?? "error"}`);
   return r.data as Record<string, unknown>;
 }
+
+const moveEuSpace: OpHandler = async (ctx, i) => {
+  const sr = await ctx.sb
+    .from("eu_stays")
+    .select("id, ward_id, patient_user_id, status")
+    .eq("id", i.stay_id)
+    .eq("hospital_id", ctx.hospitalId)
+    .maybeSingle();
+  if (missing(sr.error)) throw new HubError("The emergency unit is not set up yet.", 409);
+  if (sr.error) throw new Error(`eu stay: ${sr.error.code ?? "error"}`);
+  const stay = sr.data as {
+    id: string;
+    ward_id: string;
+    patient_user_id: string;
+    status: string;
+  } | null;
+  if (!stay) throw new HubError("That stay isn't at this hospital.");
+  await assertWardWorker(ctx, stay.ward_id);
+  if (i.ward_id && i.ward_id !== stay.ward_id) await assertWardWorker(ctx, i.ward_id);
+  return {
+    audit: {
+      action: "move_eu_space",
+      reason: reasonOr(i.reason, "Patient moved to another space in the emergency unit"),
+      before: { stay_id: stay.id, ward_id: stay.ward_id, patient_user_id: stay.patient_user_id },
+      after: {
+        ward_id: i.ward_id ?? stay.ward_id,
+        bed_id: i.bed_id ?? null,
+        space_wait_reason: i.space_wait_reason ?? null,
+      },
+    },
+    apply: () =>
+      rpc(ctx, "move_eu_space", {
+        stay_id: stay.id,
+        ward_id: i.ward_id,
+        bed_id: i.bed_id,
+        space_wait_reason: i.space_wait_reason,
+        space_wait_note_ciphertext: i.space_wait_note_ciphertext,
+      }),
+  };
+};
+
+/** Admin ops (not in WARD_STAFF_OPS): a resus bay points at a resus space of an EU, a care unit at a ward (D7). */
+const linkResusBay: OpHandler = async (ctx, i) => {
+  const bay = must(
+    await ctx.sb
+      .from("resus_bay_profiles")
+      .select("id, bay_label")
+      .eq("id", i.bay_profile_id)
+      .eq("hospital_id", ctx.hospitalId)
+      .maybeSingle(),
+    "resus bay",
+  ) as { id: string; bay_label: string } | null;
+  if (!bay) throw new HubError("That resus bay isn't at this hospital.");
+  if (i.bed_id) {
+    const b = must(
+      await ctx.sb
+        .from("hospital_beds")
+        .select("id, bed_type, archived_at, hospital_wards(ward_type)")
+        .eq("id", i.bed_id)
+        .eq("hospital_id", ctx.hospitalId)
+        .maybeSingle(),
+      "bed",
+    ) as {
+      bed_type: string | null;
+      archived_at: string | null;
+      hospital_wards: { ward_type: string | null } | null;
+    } | null;
+    if (
+      !b ||
+      b.bed_type !== "resus" ||
+      b.archived_at ||
+      b.hospital_wards?.ward_type !== "emergency_observation"
+    )
+      throw new HubError("Choose a resus space of an emergency unit.");
+    const used = await ctx.sb
+      .from("resus_bay_profiles")
+      .select("id")
+      .eq("bed_id", i.bed_id)
+      .neq("id", bay.id)
+      .limit(1);
+    if (used.error) throw new Error(`bay link: ${used.error.code ?? "error"}`);
+    if ((used.data ?? []).length > 0)
+      throw new HubError("Another resus bay already uses that space.", 409);
+  }
+  return {
+    audit: {
+      action: "link_resus_bay",
+      reason: reasonOr(
+        i.reason,
+        i.bed_id ? "Resus bay linked to an emergency unit space" : "Resus bay link removed",
+      ),
+      after: { bay_profile_id: bay.id, bed_id: i.bed_id },
+    },
+    apply: async () => {
+      const r = await ctx.sb
+        .from("resus_bay_profiles")
+        .update({ bed_id: i.bed_id })
+        .eq("id", bay.id)
+        .eq("hospital_id", ctx.hospitalId);
+      if (r.error) throw hubErrorFrom(r.error) ?? new Error(`link bay: ${r.error.code ?? "error"}`);
+      return { bay_profile_id: bay.id, bed_id: i.bed_id };
+    },
+  };
+};
+
+const linkCareUnit: OpHandler = async (ctx, i) => {
+  const u = must(
+    await ctx.sb
+      .from("hospital_care_units")
+      .select("id")
+      .eq("id", i.care_unit_id)
+      .eq("hospital_id", ctx.hospitalId)
+      .maybeSingle(),
+    "care unit",
+  ) as { id: string } | null;
+  if (!u) throw new HubError("That care unit isn't at this hospital.");
+  if (i.ward_id) {
+    const w = await loadWard(ctx, i.ward_id).catch(() => null);
+    if (!w || w.archived_at) throw new HubError("Choose a ward of this hospital.");
+  }
+  return {
+    audit: {
+      action: "link_care_unit",
+      reason: reasonOr(
+        i.reason,
+        i.ward_id ? "Care unit linked to a ward" : "Care unit link removed",
+      ),
+      after: { care_unit_id: u.id, ward_id: i.ward_id },
+    },
+    apply: async () => {
+      const r = await ctx.sb
+        .from("hospital_care_units")
+        .update({ ward_id: i.ward_id })
+        .eq("id", u.id)
+        .eq("hospital_id", ctx.hospitalId);
+      if (r.error)
+        throw hubErrorFrom(r.error) ?? new Error(`link unit: ${r.error.code ?? "error"}`);
+      return { care_unit_id: u.id, ward_id: i.ward_id };
+    },
+  };
+};
 
 const allocateAdmissionBed: OpHandler = async (ctx, i) => {
   const a = await loadAdmission(ctx, i.admission_id);
@@ -749,6 +927,9 @@ export const WARD_OPS: Record<string, OpHandler> = {
   set_bed_state: setBedState,
   assign_bed: assignBed,
   release_bed: releaseBed,
+  move_eu_space: moveEuSpace,
+  link_resus_bay: linkResusBay,
+  link_care_unit: linkCareUnit,
   allocate_admission_bed: allocateAdmissionBed,
   confirm_arrival: confirmArrival,
   release_admission_bed: releaseAdmissionBed,
@@ -757,7 +938,7 @@ export const WARD_OPS: Record<string, OpHandler> = {
 /* ─── seams for the structure ops (0090 may not be applied yet) ─────── */
 
 /** Postgres "relation does not exist": the ward builder's tables before 0090 is applied. */
-const missing = (e: { code?: string } | null) => e?.code === "42P01";
+const missing = (e: { code?: string } | null) => e?.code === "42P01" || e?.code === "PGRST205";
 
 /** True when the ward has a published layout (its beds then come from the layout, ADR 0192 §6). */
 export async function hasPublishedLayout(ctx: Ctx, wardId: string): Promise<boolean> {

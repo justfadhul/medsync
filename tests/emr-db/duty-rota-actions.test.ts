@@ -1,0 +1,413 @@
+/**
+ * Rota writes and reads (ADR 0534) on the PGlite lane: writes run in asClinicalWriter under the 0307 guard and
+ * its refusals come back in content/duty-rota.ts words; reads derive state through lib/rota/cover.ts, and the
+ * cover panel carries staff names and places only, never a patient (ADR 0199). Runs with EMR_PGLITE=1.
+ */
+import type { Lane } from "./_pglite";
+import type { RotaActor } from "@/lib/rota/write";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
+
+import { DUTY_ROTA_COPY } from "@/content/duty-rota";
+import { encrypt, generateKey } from "@/lib/encryption";
+import { coverForWard, loadRotaWeek, myDuties } from "@/lib/rota/read";
+import { archivePost, assignDuty, createPost, endDuty } from "@/lib/rota/write";
+import { authUser, bootLane, clinician, department, encounter, hospital, laneOn } from "./_pglite";
+
+const saved = process.env.DUTY_ROTA;
+
+describe.skipIf(!laneOn)("rota writes and reads (PGlite lane)", () => {
+  let lane: Lane;
+  let h: string;
+  let med: string;
+  let ward: string;
+  let admin: RotaActor;
+  let mo: string;
+  let intern: string;
+  let c1: string;
+  let surgeon: string;
+  let wardPost: string;
+  let consultantPost: string;
+  let night: string;
+  let mrn: string;
+  const opts = (now?: Date) => ({ database: lane.db, now });
+  const name = (userId: string, full: string) =>
+    lane.pg.query(
+      `INSERT INTO public.users (id, full_name, email) VALUES ($1, $2, $3)
+       ON CONFLICT (id) DO UPDATE SET full_name = excluded.full_name`,
+      [userId, full, `${userId}@lane.test`],
+    );
+  const ok = async <T>(p: Promise<{ ok: boolean; error?: string; data?: T }>) => {
+    const r = await p;
+    if (!r.ok) throw new Error(r.error);
+    return r.data as T;
+  };
+
+  beforeAll(async () => {
+    process.env.DUTY_ROTA = "1";
+    process.env.MEDSYNC_PHI_KEY ??= generateKey();
+    lane = await bootLane();
+    const pg = lane.pg;
+    h = await hospital(pg, "Rota actions");
+    med = await department(pg, h, "Medicine");
+    ward = (
+      await pg.query<{ id: string }>(
+        `INSERT INTO public.hospital_wards (hospital_id, department_id, name, slug, bed_count) VALUES ($1, $2, 'Ward 4', 'ward-4', 1)
+         RETURNING id`,
+        [h, med],
+      )
+    ).rows[0]!.id;
+    const a = await authUser(pg, "admin");
+    await pg.query(
+      `INSERT INTO public.user_roles (user_id, role, hospital_id) VALUES ($1, 'hospital_admin', $2)`,
+      [a, h],
+    );
+    admin = { userId: a, hospitalId: h };
+    mo = (await clinician(pg, { hospitalId: h, departmentId: med })).userId;
+    intern = (await clinician(pg, { hospitalId: h, departmentId: med, cadre: "INTERN_DOCTOR" }))
+      .userId;
+    c1 = (await clinician(pg, { hospitalId: h, departmentId: med, cadre: "CONSULTANT" })).userId;
+    await name(mo, "Dr Okello Rota");
+    await name(c1, "Dr Achieng Rota");
+    await name(intern, "Dr Intern Rota");
+    // Another department's MO: eligible for Medicine's posts too (R36), listed after Medicine's own.
+    surgeon = (
+      await clinician(pg, { hospitalId: h, departmentId: await department(pg, h, "Surgery") })
+    ).userId;
+    await name(surgeon, "Dr Surgeon Rota");
+
+    // A patient on the ward: neither the name nor the MRN may reach a cover panel.
+    const p = await authUser(pg, "patient");
+    await name(p, "Nakato Patientname");
+    mrn = (
+      await pg.query<{ patient_code: string }>(
+        `INSERT INTO public.patient_profiles (id, first_name_encrypted, surname_encrypted, sex, date_of_birth, id_type,
+           phone_encrypted, district_id)
+         VALUES ($1, $2, $3, 'female', '1968-03-01', 'none', $4, (SELECT id FROM public.districts LIMIT 1))
+         RETURNING patient_code`,
+        [p, encrypt("Nakato"), encrypt("Patientname"), encrypt("0700000000")],
+      )
+    ).rows[0]!.patient_code;
+    const bed = (
+      await pg.query<{ id: string }>(
+        `INSERT INTO public.hospital_beds (hospital_id, ward_id, label) VALUES ($1, $2, 'B1') RETURNING id`,
+        [h, ward],
+      )
+    ).rows[0]!.id;
+    const enc = await encounter(pg, {
+      hospitalId: h,
+      patientUserId: p,
+      clinicianUserId: mo,
+      departmentId: med,
+    });
+    await pg.query(`SELECT public.admit_from_encounter($1::jsonb)`, [
+      JSON.stringify({ encounter_id: enc, actor: mo, ward_id: ward, bed_id: bed }),
+    ]);
+
+    wardPost = (
+      await ok<{ id: string }>(
+        createPost(
+          admin,
+          {
+            departmentId: med,
+            wardId: ward,
+            name: "Ward 4 doctor",
+            level: "senior",
+            eligibleCadres: ["MEDICAL_OFFICER"],
+            takesConsults: false,
+            escalatesToPostId: null,
+            capacity: 1,
+          },
+          opts(),
+        ),
+      )
+    ).id;
+    consultantPost = (
+      await ok<{ id: string }>(
+        createPost(
+          admin,
+          {
+            departmentId: med,
+            wardId: null,
+            name: "Consultant in charge",
+            level: "consultant",
+            eligibleCadres: ["CONSULTANT"],
+            takesConsults: true,
+            escalatesToPostId: null,
+            capacity: 1,
+          },
+          opts(),
+        ),
+      )
+    ).id;
+    night = (
+      await ok<{ id: string }>(
+        assignDuty(
+          admin,
+          {
+            postId: wardPost,
+            userId: mo,
+            day: "2026-11-24",
+            shift: "night",
+            kind: "rostered",
+            coversAssignmentId: null,
+          },
+          opts(),
+        ),
+      )
+    ).id;
+  }, 900_000);
+
+  afterAll(() => {
+    if (saved === undefined) delete process.env.DUTY_ROTA;
+    else process.env.DUTY_ROTA = saved;
+  });
+
+  it("assign writes the shift window in Kampala time", async () => {
+    const r = await lane.pg.query<{ starts_at: Date; ends_at: Date; created_by: string }>(
+      `SELECT starts_at, ends_at, created_by FROM public.duty_assignments WHERE id = $1`,
+      [night],
+    );
+    expect(new Date(r.rows[0]!.starts_at).toISOString()).toBe("2026-11-24T14:00:00.000Z");
+    expect(new Date(r.rows[0]!.ends_at).toISOString()).toBe("2026-11-25T05:00:00.000Z");
+    expect(r.rows[0]!.created_by).toBe(admin.userId);
+  });
+
+  it("a guard refusal comes back in words", async () => {
+    const r = await assignDuty(
+      admin,
+      {
+        postId: consultantPost,
+        userId: intern,
+        day: "2026-11-26",
+        shift: "day",
+        kind: "rostered",
+        coversAssignmentId: null,
+      },
+      opts(),
+    );
+    expect(r).toEqual({ ok: false, code: "forbidden", error: DUTY_ROTA_COPY.refusal.rota_grade });
+
+    // The guard on ending: only a rota maker ends a duty.
+    const notMaker = await endDuty(
+      { userId: mo, hospitalId: h },
+      { assignmentId: night, reason: "Unwell" },
+      opts(new Date("2026-11-24T10:00:00Z")),
+    );
+    expect(notMaker).toEqual({
+      ok: false,
+      code: "forbidden",
+      error: DUTY_ROTA_COPY.refusal.rota_maker,
+    });
+
+    // Flag off: refused as a config error, nothing written.
+    process.env.DUTY_ROTA = "";
+    const off = await archivePost(admin, { postId: consultantPost }, opts());
+    process.env.DUTY_ROTA = "1";
+    expect(off).toMatchObject({ ok: false, code: "config" });
+  });
+
+  it("an archived post is not found, never a raw guard error", async () => {
+    const post = (
+      await ok<{ id: string }>(
+        createPost(
+          admin,
+          {
+            departmentId: med,
+            wardId: null,
+            name: "Old post",
+            level: "junior",
+            eligibleCadres: ["MEDICAL_OFFICER"],
+            takesConsults: false,
+            escalatesToPostId: null,
+            capacity: 1,
+          },
+          opts(),
+        ),
+      )
+    ).id;
+    await ok(archivePost(admin, { postId: post }, opts()));
+    const again = { ok: false, code: "not_found", error: DUTY_ROTA_COPY.notFound };
+    expect(await archivePost(admin, { postId: post }, opts())).toEqual(again);
+    expect(
+      await assignDuty(
+        admin,
+        {
+          postId: post,
+          userId: mo,
+          day: "2026-11-27",
+          shift: "day",
+          kind: "rostered",
+          coversAssignmentId: null,
+        },
+        opts(),
+      ),
+    ).toEqual(again);
+  });
+
+  it("leave after the week still marks a duty crossing the week's end", async () => {
+    const firm = (
+      await ok<{ id: string }>(
+        createPost(
+          admin,
+          {
+            departmentId: med,
+            wardId: null,
+            name: "Firm week",
+            level: "senior",
+            eligibleCadres: ["MEDICAL_OFFICER"],
+            takesConsults: false,
+            escalatesToPostId: null,
+            capacity: 1,
+          },
+          opts(),
+        ),
+      )
+    ).id;
+    // Sunday 08:00 for seven days: past the shown week's end (Monday 30 Nov, 00:00 Kampala).
+    const id = (
+      await ok<{ id: string }>(
+        assignDuty(
+          admin,
+          {
+            postId: firm,
+            userId: mo,
+            day: "2026-11-29",
+            shift: "week",
+            kind: "rostered",
+            coversAssignmentId: null,
+          },
+          opts(),
+        ),
+      )
+    ).id;
+    await lane.pg.query(
+      `INSERT INTO public.availability_blocks (hospital_id, clinician_user_id, kind, starts_at, ends_at, state)
+       VALUES ($1, $2, 'leave', '2026-12-02T08:00:00+03:00', '2026-12-03T08:00:00+03:00', 'active')`,
+      [h, mo],
+    );
+    const week = await loadRotaWeek(h, med, "2026-11-23", opts(new Date("2026-11-25T06:00:00Z")));
+    expect(week.assignments.find((a) => a.id === id)?.state).toBe("needs_cover");
+  });
+
+  it("eligible is everyone at the hospital a live post accepts, own department first", async () => {
+    const week = await loadRotaWeek(h, med, "2026-11-23", opts(new Date("2026-11-25T06:00:00Z")));
+    const ids = week.eligible.map((e) => e.userId);
+    expect(ids).toEqual(expect.arrayContaining([mo, c1, surgeon]));
+    expect(ids).not.toContain(intern);
+    expect(ids.indexOf(surgeon)).toBeGreaterThan(Math.max(ids.indexOf(mo), ids.indexOf(c1)));
+    expect(week.eligible.find((e) => e.userId === mo)?.departmentName).toBeNull();
+    expect(week.eligible.find((e) => e.userId === surgeon)?.departmentName).toMatch(/^Surgery/);
+  });
+
+  it("flag off, the reads return nothing", async () => {
+    process.env.DUTY_ROTA = "";
+    try {
+      const at = new Date("2026-11-24T20:00:00Z");
+      expect(await loadRotaWeek(h, med, "2026-11-23", opts(at))).toEqual({
+        posts: [],
+        assignments: [],
+        gaps: [],
+        eligible: [],
+        needsCover: [],
+        published: false,
+        templates: [],
+        swapsToDecide: [],
+        delegates: [],
+      });
+      expect(await myDuties(mo, h, at, opts())).toEqual([]);
+      expect(await coverForWard(h, ward, at, opts())).toEqual({ step: "none", people: [] });
+    } finally {
+      process.env.DUTY_ROTA = "1";
+    }
+  });
+
+  it("needs cover appears when leave is approved later", async () => {
+    const id = (
+      await ok<{ id: string }>(
+        assignDuty(
+          admin,
+          {
+            postId: consultantPost,
+            userId: c1,
+            day: "2026-11-26",
+            shift: "day",
+            kind: "rostered",
+            coversAssignmentId: null,
+          },
+          opts(),
+        ),
+      )
+    ).id;
+    await lane.pg.query(
+      `INSERT INTO public.availability_blocks (hospital_id, clinician_user_id, kind, starts_at, ends_at, state, notes)
+       VALUES ($1, $2, 'leave', '2026-11-26T10:00:00+03:00', '2026-11-26T12:00:00+03:00', 'active', 'Private reason')`,
+      [h, c1],
+    );
+    const week = await loadRotaWeek(h, med, "2026-11-23", opts(new Date("2026-11-25T06:00:00Z")));
+    const row = week.assignments.find((a) => a.id === id);
+    expect(row).toMatchObject({ state: "needs_cover", name: "Dr Achieng Rota", endedAt: null });
+    expect(JSON.stringify(week)).not.toContain("Private reason");
+    expect(week.gaps.some((g) => g.postId === consultantPost)).toBe(true);
+    expect(week.eligible.map((e) => e.userId)).toEqual(expect.arrayContaining([mo, c1]));
+    const db = await lane.pg.query(`SELECT ended_at FROM public.duty_assignments WHERE id = $1`, [
+      id,
+    ]);
+    expect(db.rows).toEqual([{ ended_at: null }]);
+  });
+
+  it("cover for a ward names staff only", async () => {
+    const cover = await coverForWard(h, ward, new Date("2026-11-24T20:00:00Z"), opts());
+    expect(cover).toEqual({
+      step: "ward_post",
+      people: [
+        { name: "Dr Okello Rota", postName: "Ward 4 doctor", until: "2026-11-25T05:00:00.000Z" },
+      ],
+    });
+    const json = JSON.stringify(cover);
+    for (const s of ["Nakato", "Patientname", mrn]) expect(json).not.toContain(s);
+  });
+
+  it("my duties shows the chip's post and end", async () => {
+    expect(await myDuties(mo, h, new Date("2026-11-24T12:00:00Z"), opts())).toEqual([
+      {
+        postName: "Ward 4 doctor",
+        until: new Date("2026-11-25T05:00:00.000Z"),
+        state: "planned",
+      },
+    ]);
+  });
+
+  it("needs cover reaches into the 72 h after the shown week", async () => {
+    // Tuesday 1 Dec, after the week of 23 Nov; seen on Sunday 29 Nov, so inside the next 72 h.
+    const id = (
+      await ok<{ id: string }>(
+        assignDuty(
+          admin,
+          {
+            postId: consultantPost,
+            userId: c1,
+            day: "2026-12-01",
+            shift: "day",
+            kind: "rostered",
+            coversAssignmentId: null,
+          },
+          opts(),
+        ),
+      )
+    ).id;
+    await lane.pg.query(
+      `INSERT INTO public.availability_blocks (hospital_id, clinician_user_id, kind, starts_at, ends_at, state)
+       VALUES ($1, $2, 'leave', '2026-12-01T08:00:00+03:00', '2026-12-02T08:00:00+03:00', 'active')`,
+      [h, c1],
+    );
+    const week = await loadRotaWeek(h, med, "2026-11-23", opts(new Date("2026-11-29T10:00:00Z")));
+    expect(week.assignments.some((a) => a.id === id)).toBe(false);
+    expect(week.needsCover.find((a) => a.id === id)).toMatchObject({
+      name: "Dr Achieng Rota",
+      postId: consultantPost,
+    });
+    // Seen earlier in the week, 1 Dec is past the 72 h: not listed.
+    const early = await loadRotaWeek(h, med, "2026-11-23", opts(new Date("2026-11-25T06:00:00Z")));
+    expect(early.needsCover.some((a) => a.id === id)).toBe(false);
+  });
+});

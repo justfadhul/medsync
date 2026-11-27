@@ -6,10 +6,11 @@ import type {
   DeskSnapshot,
 } from "@/app/nurse/resus/[episodeId]/_components/v2/types";
 import type { BayProfile, CareLevel, CareUnit, EpisodePhase, OutcomeCode } from "@/lib/resus/model";
-import { and, asc, eq } from "drizzle-orm";
+import { and, asc, eq, inArray, isNull } from "drizzle-orm";
 
 import { db } from "@/db";
 import { hospitalDepartments } from "@/db/schema/hospital-departments";
+import { hospitalWards } from "@/db/schema/hospital-wards";
 import {
   hospitalCareUnits,
   hospitalResusSettings,
@@ -19,16 +20,19 @@ import {
   resusEpisodes,
   resusTimelineEvents,
 } from "@/db/schema/resus";
+import { hospitalBeds } from "@/db/schema/services-hub";
 import { users } from "@/db/schema/users";
 import { resolveCapabilities } from "@/lib/doctor/capabilities";
 import { emrV1LiveFor } from "@/lib/emr/feature";
 import { loadTestMenu } from "@/lib/emr/read/orders";
 import { stopAuthority } from "@/lib/resus/als/termination";
 import { canAdminCloseResus } from "@/lib/resus/authority";
+import { bayLabel } from "@/lib/resus/bay-label";
 import { fetchResusPatient } from "@/lib/resus/board";
 import { fetchResusResponders, fetchResusRoster } from "@/lib/resus/record";
 import { requireResusScope } from "@/lib/resus/scope";
 import { fetchAllResusEvents } from "@/lib/resus/v2-record";
+import { euObservationLiveFor } from "@/lib/wards/feature";
 
 type EpisodeRow = typeof resusEpisodes.$inferSelect & { departmentName: string | null };
 const iso = (d: Date | null) => (d ? d.toISOString() : null);
@@ -180,9 +184,32 @@ export async function loadDeskV2(args: {
       emrV1LiveFor(scope.hospitalId) ? loadTestMenu(db, scope.hospitalId) : null,
     ]);
   const settings = settingsRow[0];
+  // D7: a bay drawn in an emergency unit is named by its ward and space; flag off, as today.
+  const linked = bays.flatMap((b) => (b.bedId ? [b.bedId] : []));
+  const places = new Map<string, { ward: string; space: string }>();
+  if (linked.length > 0 && euObservationLiveFor(scope.hospitalId))
+    for (const r of await db
+      .select({ id: hospitalBeds.id, space: hospitalBeds.label, ward: hospitalWards.name })
+      .from(hospitalBeds)
+      .innerJoin(hospitalWards, eq(hospitalWards.id, hospitalBeds.wardId))
+      .where(
+        and(
+          inArray(hospitalBeds.id, linked),
+          eq(hospitalBeds.bedType, "resus"),
+          isNull(hospitalBeds.archivedAt),
+          isNull(hospitalWards.archivedAt),
+          eq(hospitalWards.wardType, "emergency_observation"),
+        ),
+      ))
+      places.set(r.id, { ward: r.ward, space: r.space });
   const bayProfiles: BayProfile[] = bays.map((b) => ({
     id: b.id,
-    label: b.deviceModel ? `${b.bayLabel} · ${b.deviceModel}` : b.bayLabel,
+    label: bayLabel({
+      bayLabel: b.bayLabel,
+      deviceModel: b.deviceModel,
+      ward: (b.bedId && places.get(b.bedId)?.ward) || null,
+      space: (b.bedId && places.get(b.bedId)?.space) || null,
+    }),
     waveform: b.waveform as BayProfile["waveform"],
     energySequenceJ: b.energySequenceJ ?? null,
     capnography: b.capnography,

@@ -9,8 +9,10 @@ import { presetsFor } from "@/lib/wards/presets";
 import {
   baysDoc,
   bedUuid,
+  BOARD_NOW,
   boardData,
   editorData,
+  euListData,
   FLOOR,
   FX,
   openWardDoc,
@@ -192,6 +194,26 @@ export function FixtureWardBuilder({ screen }: { screen: Screen }) {
           links={NURSE_LINKS}
           live={false}
           initialSelected="b7"
+        />
+      );
+    case "board-eu-plan":
+    case "board-eu-list":
+    case "board-eu-list-nonames":
+      return (
+        <BedBoard
+          data={boardData()}
+          hospitalId={FX.hospital}
+          mayAct
+          actions={BOARD_ACTIONS}
+          links={NURSE_LINKS}
+          live={false}
+          eu={{
+            data: euListData(screen !== "board-eu-list-nonames"),
+            nowMs: BOARD_NOW,
+            links: { resus: (id) => `/nurse/resus/${id}` },
+            triageSystem: "sats",
+            initialView: screen === "board-eu-plan" ? "plan" : "list",
+          }}
         />
       );
     default:

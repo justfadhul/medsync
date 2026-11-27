@@ -21,7 +21,8 @@ export type DoctorIconKey =
   | "supervisees"
   | "cosign_queue"
   | "triage"
-  | "resus";
+  | "resus"
+  | "eu";
 
 export type DoctorFeatureSlug =
   | ""
@@ -33,6 +34,7 @@ export type DoctorFeatureSlug =
   | "encounters"
   | "triage"
   | "resus"
+  | "eu"
   | "tasks"
   | "supervisees"
   | "cosign-queue";
@@ -171,6 +173,16 @@ export const WORKSPACE_NAV: ReadonlyArray<DoctorFeatureArea> = [
     visibleTo: "all",
   },
 ];
+
+/** The emergency unit's entry; added to either nav only where EU_OBSERVATION is live. */
+export const EU_NAV: DoctorFeatureArea = {
+  slug: "eu",
+  label: "Emergency unit",
+  hint: "The EU's spaces and, for the EU doctor on duty, its patients",
+  iconKey: "eu",
+  placeholder: false,
+  visibleTo: "all",
+};
 
 export function doctorFeaturePath(slug: DoctorFeatureSlug): string {
   return slug === "" ? "/doctor" : `/doctor/${slug}`;

@@ -135,6 +135,9 @@ export * from "./ward-builder";
 // ─── Closing the encounter: admissions and the patient's copy (migration 0091 — GATED, ADRs 0197–0203)
 export * from "./admissions";
 
+// ─── The EU stay: observation that keeps the visit open (migration 0311 — GATED, ADR 0541)
+export * from "./eu";
+
 // ─── NCDSync, the hospital NCD registry (migration 0093 — GATED, ADRs 0209–0214)
 export * from "./ncd-registry";
 
@@ -178,3 +181,9 @@ export * from "./patient-payments";
 
 // ─── Care mode and care programmes (migration 0301, GATED) ───
 export * from "./patient-care";
+
+// ─── Care requests: reviews and consults (migration 0306, GATED, ADR 0533) ───
+export * from "./care-requests";
+
+// ─── Duty rota: posts and assignments (migration 0307, GATED, ADR 0534) ───
+export * from "./duty-rota";

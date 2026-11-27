@@ -5,6 +5,112 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); version
 
 ## [Unreleased]
 
+### Added — EU indicators on the hospital's Reports page ([ADR 0543](docs/adr/0543-the-eu-tracking-board-and-its-clocks.md)) — 24 Nov 2026
+
+The hospital admin's Reports page gains an Emergency unit section: deaths in the EU within 2, 8 and 24 hours of hospital arrival (MoH), length of stay, boarding time and the share of finished stays over the limit, each with its basis and window. Medians show "too few to report" under the sample floor; a death with no usable arrival time is counted on its own line; a failed read says "not available" and prints no figure. Counts from recorded times; nothing is a target. Behind `EU_OBSERVATION`. No migration. Wording is draft.
+
+**Owner steps for Observe in EU (ADRs 0539–0544):**
+
+0. Apply migrations 0306–0313 on production **before merging this branch**, because merging deploys the app; deploy the functions only after them too. The existing pages read the new columns even with every flag off: without 0310, 0311 and 0313 the resus desk, the admin Departments and Wards pages, the live bed board, the close dialog and the hub's ward operations (bed release, ward edits) fail. Applying 0312 also ends admissions into any ward of type Emergency observation, whatever the flag; the close dialog no longer offers them.
+1. Apply migrations 0310, 0311, 0312 and 0313 in order, from this branch's worktree: `cd /Users/carolinemurizihiwe/Desktop/medsync/.claude/worktrees/admin-clinics-harmonize-efe20d && npm run db:migrate`. All four are GATED.
+2. Deploy the functions `ha-services-hub`, `ha-eu-stay` and `ha-complete-encounter`.
+3. Set the function secret `EU_OBSERVATION` to match the app flag.
+4. Deploy the app, then set `EU_OBSERVATION` per hospital (`1` or a comma list of hospital ids). It works only where `WARD_BUILDER` and `ENCOUNTER_CLOSE_V2` are also on; the function secret cannot see those, so set it only for the same hospitals.
+5. Turn on `DUTY_ROTA` for the same hospitals: the doctor's EU view shows names and the tracking list only to the rota's on-duty EU doctor, so without the rota no doctor gets them (nurses and the admin still do).
+
+### Added — The EU board, its clocks and names; who may start a stay; links to the resus desk ([ADR 0543](docs/adr/0543-the-eu-tracking-board-and-its-clocks.md), [0544](docs/adr/0544-who-may-start-an-eu-stay.md)) — 24 Nov 2026
+
+The emergency unit has a tracking list with four clocks and a "Needs attention" list, names only for EU staff (each reveal logged), a triage-nurse path for Level 1 and 2 patients to EU resus spaces, and resus bays and care units that link to the drawn EU. Behind `EU_OBSERVATION`. Wording is draft.
+
+- **Migration 0313 is GATED:** apply it before the app and the functions, with `cd <the worktree of this branch> && npm run db:migrate` (run it in the folder that holds the migration). It adds the `eu_staff` access basis, the floor's `eu` outcome, `send_to_eu_resus`, the triage-stay rule (a triage stay is ended or adopted only by its own visit), `resus_bay_profiles.bed_id`, `hospital_care_units.ward_id`, their guards and the triggers that clear a link when its space or ward is archived or re-typed. Deploy order: the migration, then `ha-eu-stay`, `ha-complete-encounter` and `ha-services-hub`, then set the function secret `EU_OBSERVATION` to match the app flag, then turn the app flag on. The app's Drizzle selects on `resus_bay_profiles` and `hospital_care_units` read the new columns, so 0313 comes before the app deploy.
+- Names show to nurses with an open nursing assignment on the ward, its in-charge, the rota's EU doctor and the hospital admin; until 0313 is applied they stay hidden. The rota is "planned", never "present". Only the encounter's own clinician sends to the EU.
+- Open for the owner/CSO: Level 5 reads "Green" on the EU board while the floor says "L5 · Blue"; all wording; unidentified patients cannot take the triage-to-resus path; the clinic alert still fires for EU-resus triage; `link_care_unit` has no screen; the queue-start link can be re-stamped by `ha-complete-encounter`.
+
+### Added — Boarding in the EU: admit from the EU, arrival ends the stay ([ADR 0542](docs/adr/0542-boarding-in-the-eu.md)) — 24 Nov 2026
+
+A doctor can admit a patient who is in an emergency unit. The patient boards: they keep their EU space, hold a ward bed (Arriving) and have an open inpatient record from the decision; the ward's Arrived ends the EU space and the stay in one step. Behind `EU_OBSERVATION`. Wording is draft.
+
+- **Migration 0312 is GATED:** apply it after 0311 and before this branch is merged (merging deploys the app), with `cd <the worktree of this branch> && npm run db:migrate` (run it in the folder that holds the migration). It replaces the one-open-bed-per-patient index with one Occupied and one Arriving place per patient, and redefines the assignment and admission guards, `admit_from_encounter`, `allocate_admission_bed`, `confirm_bed_arrival`, `move_eu_space`, the close guard and `end_eu_stay`. The index build briefly locks `bed_assignments` for writes (it is not concurrent), so apply it outside a busy bed-allocation window. Deploy order: the migration, then `ha-complete-encounter` and `ha-services-hub`, then the app.
+- The inpatient record opens at the decision to admit for a boarder (ADR 0200 decision 5, for boarders only). Admit-from-EU is refused for an EU ward, from another visit than the stay's own, and when a ward bed is chosen while the EU space is still Arriving.
+- A boarder who leaves the EU before the ward (died, home) has the admission cancelled and its Arriving ward bed ended in the same step. The close dialog shows "Admitted · ward · waiting ..." only where it is opened for the source visit after the admission; otherwise boarding shows on the EU board (Phase 4).
+- Open for the owner/CSO: re-admission of a boarder after the ward admission falls through (not supported today), the new refusal and cancel wording, and the boarding wait clock.
+
+### Added — The EU stay: Observe in EU keeps the visit open ([ADR 0541](docs/adr/0541-the-eu-stay-observe-stays-open.md)) — 24 Nov 2026
+
+A doctor can send a patient to an emergency unit from the close; the visit stays open, the patient holds a space (or waits for one), and closing the visit with an outcome ends the stay. Behind `EU_OBSERVATION`. Wording is draft.
+
+- **Migration 0311 is GATED:** apply it on production before this branch is merged (merging deploys the app, and the bed board, the close dialog and bed release read `bed_assignments.eu_stay_id` with the flag off), with `cd <the worktree of this branch> && npm run db:migrate` (run it in the folder that holds the migration). It adds `eu_stays` (with its guard, RLS and audit), `bed_assignments.eu_stay_id`, `observe_in_eu`, `move_eu_space`, `end_eu_stay`, an Arrived branch for EU spaces, and a trigger so a visit with an open stay closes only through `end_eu_stay`. Deploy order: the migration, then `ha-eu-stay`, `ha-complete-encounter` and `ha-services-hub`, then the flag. The function secret `EU_OBSERVATION` must match the app flag.
+- Only the visit's own clinician sends (`ha-eu-stay`). A triage nurse's open stay is adopted by the doctor's send, who becomes responsible.
+- The board shows an EU space Arriving until the ward confirms Arrived (Occupied; no inpatient record opens), and ward staff Move a patient to another free space or to the waiting list; Release is refused for an EU space, and assigning a bed on an EU ward is refused while the flag is on.
+- Closing the visit ends the space, the stay and the visit in one step; a close with no outcome, or an admission, is refused while a stay is open (admitting from the EU comes with boarding, Phase 3).
+- Open for the owner/CSO: all wording (including the two "Visit completed" labels), the 24 h limit (clocks and the limit exist but nothing shows or flags them yet), cross-EU moves from the board, a theatre outcome.
+
+### Added — Emergency unit in the ward builder, behind EU_OBSERVATION ([ADR 0539](docs/adr/0539-an-emergency-unit-is-a-ward-type.md), [0540](docs/adr/0540-eu-space-types-chair-and-resus.md)) — 24 Nov 2026
+
+An emergency observation ward gets chair and resus spaces, its own checks and a template, may be attached to an ordinary ward for display, and never appears under Admit (whatever the flag; the database refuses an admission into an EU once 0312 is applied). Behind `EU_OBSERVATION` (needs `WARD_BUILDER` and `ENCOUNTER_CLOSE_V2`). Wording and sizes are draft.
+
+- **Migration 0310 is GATED:** apply it on production before this branch is merged (merging deploys the app, and the admin Departments and Wards pages and ward edits read `hospital_wards.parent_ward_id` with the flag off), with `cd <the worktree of this branch> && npm run db:migrate` (run it in the folder that holds the migration). It adds the chair and resus bed types, `hospital_wards.parent_ward_id` and a guard that refuses an EU, archived or other-hospital parent. Then deploy `ha-services-hub`, then set the flag.
+- Chair (2 by 2) and resus (3 by 4) spaces and an Emergency unit template, offered only on an EU ward with the flag on. A chair or resus space on any other ward blocks publishing.
+- Four warning checks on EU wards (resus services, resus trolley within 5 m, an isolation room, children's cots in a room); they never block and run whatever the flag.
+- Changing a ward to or from Emergency observation is refused while patients are in its beds; a ward with EUs attached cannot become one.
+- Open for the owner/CSO: chair and resus sizes, the 5 m reach, whether any check blocks, all wording.
+
+### Added — Rota upkeep ([ADR 0538](docs/adr/0538-rota-upkeep.md)) — 24 Nov 2026
+
+Week templates, publishing, cover and swap requests, and a delegate who makes the rota. Behind `DUTY_ROTA`. Wording is draft.
+
+- **Migration 0309 is GATED:** apply it before using these, with `cd <the worktree of this branch> && npm run db:migrate` (run it in the folder that holds the migration). It adds `duty_rota_templates`, `duty_rota_delegates`, `duty_rota_week_events`, `duty_swap_requests` and `duty_swap_request_events`, replaces the assignment guard, and gives `private.duty_rota_maker()` a publish argument.
+- Templates fill a week with drafts, skipping any window the person already holds; a refused draft is reported and never stops the rest. A maker publishes a week and unlocks it with a reason; a published week refuses new or ended duties.
+- Cover and swap: the holder asks a colleague, the colleague accepts or declines, a rota maker approves or refuses; approval changes the rota in one step, all or nothing, and only for a cover-shaped write. No notices in v1.
+- Delegate: the admin or a head hands the rota over, with or without publish, until a day or revoked; it lapses when the grantor stops being an owner; live staff only; one per person per department. Delegates reach `/doctor/rota` and cannot hand it on.
+- Every refusal has words on screen, never a database message.
+- Open for the owner/CSO: non-doctor delegates (nurse managers) have no page yet; no notices for swaps; all wording.
+
+Later (Phase 5, not built):
+
+- FHIR ServiceRequest/Task/DocumentReference projection (`lib/emr/fhir.ts:461`);
+- staff SMS;
+- moving resus mobilisation (`lib/resus/mobilise.ts`) and the lab level-1 ladder onto the rota, with the SQL twin of `whoCovers`;
+- optional sign-on;
+- the D12 first-contact clinician;
+- the turnaround report;
+- the redirect prompt on admission cancel or ward change;
+- the admin activity-feed lines for the rota.
+
+### Added — Escalation of unanswered requests ([ADR 0536](docs/adr/0536-escalation-of-unanswered-requests.md)) — 24 Nov 2026
+
+A review or consult nobody takes up moves to the next person, on the lab's one-minute tick. No flag: with no signed response times there is no automatic escalation. Wording is draft.
+
+- **Migration 0308 is GATED:** apply it before the response times can be saved, with `cd <the worktree of this branch> && npm run db:migrate` (run it in the folder that holds the migration). It adds `care_request_response_versions`, `care_requests.due_at`, and lets `escalation_heartbeats` record `care_requests`. The owner sets the scheduler up once with `private.schedule_lab_escalations(url)` from 0106.
+- The clock (approved D4): a review "now" 15 min and "within 1 h" 60 min until accepted; an urgent consult 120 min until accepted (and overdue if unreplied by the end of the day); routine 1440 min until replied. Level 1 is the post above, else the department head; level 2 the hospital contacts. An empty level is passed at once. The requester is told at each step.
+- The times are set by the hospital admin and countersigned by the CSO (`/hospital-admin/departments/rota/response-times`, `/admin/care-request-signoffs`); each signer signs exactly the numbers shown. Signing never makes open requests escalate at once. A fully declined request never escalates; one escalation per request, even with two runs at once.
+- Requests lists show "Due by 14:30", "Overdue by 25 min" (a neutral tag with a clock, never red) or, with nothing signed, "Asked 40 min ago". A banner, "Escalations may be delayed", shows when the scheduler has not run for three minutes.
+- Open for the owner/CSO: the numbers each hospital signs; all wording; a nav link to the two sign pages; who is asked when no head is set.
+
+### Added — The duty rota ([ADR 0534](docs/adr/0534-duty-rota-posts-and-assignments.md)) — 24 Nov 2026
+
+Posts and who is rostered on them, so a review or consult can reach the person on duty. Behind `DUTY_ROTA` (off by default; `1` or hospital ids; independent of `CARE_REQUESTS`). Wording is draft.
+
+- **Migration 0307 is GATED:** apply it before turning the flag on, with `cd <the worktree of this branch> && npm run db:migrate` (run it in the folder that holds the migration). It adds `duty_posts` and `duty_assignments` with their guard, and the foreign key from a request's routing event to its post.
+- Posts are archived, assignments ended, never edited. The rota says "rostered", never "present". The hospital admin and heads of department make it, by day and shift (Kampala time); a guard refuses a grade that does not fit, leave, double booking, a full post, and a cover on another post.
+- Leave comes from Clinics & schedule and never removes a duty: it marks it "Needs cover", in the week grid and the gap report (this week and the next 72 hours).
+- Pages: `/hospital-admin/departments/rota?department=<id>` (linked from the department) and `/doctor/rota` for heads, with the doctor's own duties. The wards page shows who covers each ward now; the doctor's top bar shows "On call: <post> until <time>".
+- Routing: when the rota is on, a review or consult goes to the person on the post first (a review: the ward's senior or consultant post, else the department's takes-consults post), before the team list. A holder who cannot take it is passed over and the skip is recorded.
+- Not built: the delegate who makes the rota, week templates and publishing, the "who covers" resolver in SQL.
+- Open for the owner/CSO: a back-dated end through the database; weekly recurring leave is ignored; all wording.
+
+### Added — Review requests and consults ([ADR 0533](docs/adr/0533-one-request-record-for-reviews-and-consults.md), [0535](docs/adr/0535-care-team-chart-access.md), [0537](docs/adr/0537-requests-ride-the-plan-basket.md)) — 24 Nov 2026
+
+Senior review and "ask another team" become real requests, placed with the Plan and answered by a signed note. Behind `CARE_REQUESTS` (off by default; needs `EMR_V1`, the Plan entry also needs `CLERKING_PLAN_V2`). Wording is draft.
+
+- **Migration 0306 is GATED:** apply it before turning the flag on, with `cd <the worktree of this branch> && npm run db:migrate` (run it in the folder that holds the migration). It adds `care_requests` and `care_request_events`, the `consult` note type, three notice kinds, and the `care_team` chart-access basis.
+- One request record for both kinds, state derived from its events. Seen is not acknowledged; accept, decline (with a reason), redirect, reply, close and cancel are separate acts. The requesting team stays responsible.
+- Routing: named people, then the team list (reviews to senior cadres), the requester's supervisor, the department head, hospital contacts, else "Reached nobody: phone the team". Skips are recorded. No request reaches a pharmacist.
+- Requests ride the Plan basket and Place, all or nothing. "Not needed" asks why. The nurse in charge is told at admission.
+- Chart access for the people asked, while open and 30 days after the reply; decliners and earlier rounds lose it but still read the request. Every open is logged.
+- The doctor workspace board gains "Asked of you" and "Consults for your department" lanes; doctors and clinicians both get a requests page (`/doctor/requests`, `/clinician/requests`); a staff notices list. Restricted requests without a chart basis are nameless, with no MRN.
+- Open for the owner/CSO: restricted (HIV/TB) requests readable by the whole target department; chart access with no time limit on an open request; Phase 1 consults with no named person reach the whole department; all wording.
+
 ### Changed — Clinic floor: triage is a centred pop-up with scores, the NEWS2 map and trends — 23 Nov 2026
 
 From the owner's approved clickable prototype ([ADR 0531](docs/adr/0531-clinic-floor-triage-is-a-pop-up.md)); it replaces the floor's triage side panel. Seen on localhost with example patients at a test hospital. Wording is draft.

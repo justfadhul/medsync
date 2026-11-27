@@ -101,6 +101,15 @@ describe.skipIf(!laneOn)("0295: clinic floor", () => {
     ).rejects.toThrow(/check/i);
   });
 
+  it("0313: a finish may say eu (Observed in EU); the list stays closed", async () => {
+    const ins = `INSERT INTO public.clinic_floor_events (hospital_id, intake_id, kind, detail, client_id, by_user_id)
+                 VALUES ($1, $2, 'finish', $3, $4, $5)`;
+    await pg.query(ins, [H, intake, "eu", randomUUID(), doc]);
+    await expect(pg.query(ins, [H, intake, "bogus", randomUUID(), doc])).rejects.toThrow(
+      /clinic_floor_events_detail_check/,
+    );
+  });
+
   it("append-only, and no column for a name, phone or vital", async () => {
     const cols = (
       await pg.query<{ column_name: string }>(

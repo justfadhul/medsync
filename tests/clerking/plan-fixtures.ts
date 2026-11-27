@@ -46,9 +46,48 @@ export const PLAN_DX: DeskDiagnosis[] = [
   },
 ];
 
-export function planFixture(variant: { allergy?: boolean; placed?: boolean } = {}): PlanPayload {
+/** CARE_REQUESTS on (ADR 0537): the departments the Plan can ask, with synthetic staff. */
+export const PLAN_REQUESTS: NonNullable<PlanPayload["requests"]> = {
+  departments: [
+    {
+      id: "00000000-0000-4000-8000-0000000000b1",
+      name: "Medicine",
+      wardIds: ["00000000-0000-4000-8000-0000000000a3"],
+      staff: [
+        {
+          userId: "00000000-0000-4000-8000-0000000000c1",
+          name: "Consultant One",
+          cadre: "Consultant",
+        },
+        {
+          userId: "00000000-0000-4000-8000-0000000000c2",
+          name: "Registrar Two",
+          cadre: "Registrar",
+        },
+      ],
+    },
+    {
+      id: "00000000-0000-4000-8000-0000000000b2",
+      name: "Nephrology",
+      wardIds: [],
+      staff: [
+        {
+          userId: "00000000-0000-4000-8000-0000000000c3",
+          name: "Consultant Three",
+          cadre: "Consultant",
+        },
+      ],
+    },
+  ],
+  ownDepartmentId: "00000000-0000-4000-8000-0000000000b1",
+};
+
+export function planFixture(
+  variant: { allergy?: boolean; placed?: boolean; requests?: boolean } = {},
+): PlanPayload {
   const at = "2026-09-27T20:10:00.000Z";
   return {
+    ...(variant.requests ? { requests: PLAN_REQUESTS } : {}),
     prescribing: true,
     wards: [
       { id: "00000000-0000-4000-8000-0000000000a1", name: "HDU", counts: null },
@@ -90,6 +129,7 @@ export function planFixture(variant: { allergy?: boolean; placed?: boolean } = {
         { id: "00000000-0000-4000-8000-00000000f002", display: "Amlodipine", answer: "continued" },
       ],
       charts: [],
+      requests: [],
     },
   };
 }
@@ -97,7 +137,7 @@ export function planFixture(variant: { allergy?: boolean; placed?: boolean } = {
 /** The Plan screens: the v2 desk payload with the visit's problems and the Plan payload. */
 export function withPlanFixture(
   p: DeskPayload,
-  variant: { allergy?: boolean; placed?: boolean } = {},
+  variant: { allergy?: boolean; placed?: boolean; requests?: boolean } = {},
 ): DeskPayload {
   const k = p.clerking!;
   return {

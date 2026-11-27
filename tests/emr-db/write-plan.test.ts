@@ -9,6 +9,7 @@ import { randomUUID } from "node:crypto";
 import type { Lane } from "./_pglite";
 import type { EmrActor } from "@/lib/emr/actor";
 import type { WriteCtx } from "@/lib/emr/write/context";
+import type { PlanRequestLine } from "@/lib/clerking/plan/draft";
 import type { PlanRx } from "@/lib/prescribing/plan-rx";
 import { beforeAll, describe, expect, it } from "vitest";
 
@@ -170,6 +171,7 @@ describe.skipIf(!laneOn)("placing the Plan (PGlite lane)", () => {
           answered(drug(v.cond)),
           { ...fluid(v.cond), answers: [{ code: "allergy_status", answer: "aware_monitor" }] },
         ],
+        requests: [],
         observationFrequency: "hourly",
         measureUrine: true,
       }),
@@ -252,6 +254,7 @@ describe.skipIf(!laneOn)("placing the Plan (PGlite lane)", () => {
           encounterId: v.e,
           orders: [],
           prescriptions: [rx],
+          requests: [],
           observationFrequency: null,
           measureUrine: false,
         }),
@@ -283,6 +286,7 @@ describe.skipIf(!laneOn)("placing the Plan (PGlite lane)", () => {
           encounterId: v.e,
           orders: [],
           prescriptions: [rx],
+          requests: [],
           observationFrequency: null,
           measureUrine: false,
         }),
@@ -319,6 +323,7 @@ describe.skipIf(!laneOn)("placing the Plan (PGlite lane)", () => {
           encounterId: v.e,
           orders: [],
           prescriptions: [rx],
+          requests: [],
           observationFrequency: null,
           measureUrine: false,
         }),
@@ -369,6 +374,7 @@ describe.skipIf(!laneOn)("placing the Plan (PGlite lane)", () => {
             },
           ],
           prescriptions: [],
+          requests: [],
           observationFrequency,
           measureUrine: false,
         }),
@@ -430,5 +436,99 @@ describe.skipIf(!laneOn)("placing the Plan (PGlite lane)", () => {
     await expect(
       q(`UPDATE fluid_balance_entries SET volume_ml = 0 WHERE id = $1`, [entry!.id]),
     ).rejects.toThrow(/append-only/);
+  });
+
+  const consult = (cond: string): PlanRequestLine => ({
+    clientKey: key(),
+    kind: "consult",
+    targetDepartmentId: dept,
+    wardId: null,
+    namedUserIds: [],
+    urgency: "routine",
+    helpWanted: "advice",
+    reasonConditionIds: [cond],
+    question: "Is this sepsis?",
+    phoned: null,
+    display: "Consult",
+  });
+  const oneOrder = (cond: string) => ({
+    clientKey: key(),
+    testId: TEST_UUIDS["test.blood_culture"]!,
+    testKey: "test.blood_culture",
+    display: "Blood culture",
+    priority: "emergency" as const,
+    frequency: null,
+    reasonConditionIds: [cond],
+  });
+  const basket = (v: { p: string; e: string }, over: Record<string, unknown>) =>
+    as(mo, v.p, (ctx) =>
+      placePlan(ctx, {
+        patientUserId: v.p,
+        encounterId: v.e,
+        orders: [],
+        prescriptions: [],
+        requests: [],
+        observationFrequency: null,
+        measureUrine: false,
+        ...over,
+      }),
+    );
+
+  it("places a request with the orders, in one transaction", async () => {
+    const v = await visit();
+    const r = await basket(v, { orders: [oneOrder(v.cond)], requests: [consult(v.cond)] });
+    expect(r.requestIds).toHaveLength(1);
+    expect(r.orderIds).toHaveLength(1);
+    const [n] = await q<{ n: number }>(
+      `SELECT count(*)::int AS n FROM encounter_orders WHERE id = ANY($1)`,
+      [r.orderIds],
+    );
+    expect(n!.n).toBe(1);
+  });
+
+  it("all or nothing: a refused request places no order", async () => {
+    const v = await visit();
+    // The order's own reason stays valid; only the consult's condition is superseded.
+    const other = await as(mo, v.p, (ctx) =>
+      recordEncounterDiagnosis(ctx, {
+        patientUserId: v.p,
+        encounterId: v.e,
+        clientKey: key(),
+        termId: dxTermUuid("dx.anaemia"),
+        rank: "secondary",
+      }),
+    );
+    await q(
+      `INSERT INTO public.conditions (id, logical_id, version, supersedes_id, hospital_id, patient_user_id,
+         encounter_id, effective_at, recorded_by_user_id, source, trust, category, text_ciphertext,
+         clinical_status, verification, asserted_by, sensitivity, rank)
+       VALUES (gen_random_uuid(), $1, 2, $1, $2, $3, $4, now(), $5, 'clinician', 3, 'encounter_diagnosis',
+         'iv:tag:ct', 'active', 'confirmed', 'clinician', 'standard', 'secondary')`,
+      [v.cond, h, v.p, v.e, mo.userId],
+    );
+    await expect(
+      basket(v, { orders: [oneOrder(other.id)], requests: [consult(v.cond)] }),
+    ).rejects.toThrow(/has changed or was entered in error/);
+    const [o] = await q<{ n: number }>(
+      `SELECT count(*)::int AS n FROM encounter_orders WHERE encounter_id = $1`,
+      [v.e],
+    );
+    const [c] = await q<{ n: number }>(
+      `SELECT count(*)::int AS n FROM care_requests WHERE encounter_id = $1`,
+      [v.e],
+    );
+    expect([o!.n, c!.n]).toEqual([0, 0]);
+  });
+
+  it("a basket of only requests places", async () => {
+    const v = await visit();
+    const r = await basket(v, { requests: [consult(v.cond)] });
+    expect(r.id).toBe(r.requestIds[0]);
+    expect(r.orderIds).toEqual([]);
+  });
+
+  it("an empty basket is still refused", async () => {
+    const v = await visit();
+    await expect(basket(v, {})).rejects.toThrow(/The basket is empty/);
   });
 });

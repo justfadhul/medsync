@@ -93,6 +93,8 @@ const ACTIONS: Partial<CloseActions> = {
         state: b.state,
         services: b.services,
         roomName: b.roomName,
+        roomKind: b.roomKind,
+        type: b.type,
       })),
     }),
   followUpOptions: async () =>
@@ -156,6 +158,7 @@ function payload(p: DeskPayload, open: boolean): ClosePayload {
       ],
       bedsLive: true,
       summaryLive: true,
+      eu: { live: false, wards: [], stay: null },
       takeHome: [
         {
           id: "00000000-0000-4000-8000-00000000c0e1",

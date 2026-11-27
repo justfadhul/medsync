@@ -13,6 +13,7 @@ import { users } from "@/db/schema/users";
 import { getAuthState } from "@/lib/auth";
 import { reachableAffiliation } from "@/lib/auth/reachable";
 import { logger } from "@/lib/logger";
+import { JUNIOR_CADRE_CODES, SENIOR_CADRE_CODES } from "./cadres";
 
 /**
  * Doctor workspace scope. The single source of truth for "who is the
@@ -30,16 +31,7 @@ import { logger } from "@/lib/logger";
  * switcher for doctors holding >1 affiliation is a polish ticket.
  */
 
-/** Junior cadres — these are the ones whose flagged actions can route to co-sign. */
-export const JUNIOR_CADRE_CODES = ["INTERN_DOCTOR", "CLINICAL_OFFICER"] as const;
-
-/** Senior cadres — these can review + co-sign. */
-export const SENIOR_CADRE_CODES = [
-  "MEDICAL_OFFICER",
-  "MEDICAL_OFFICER_SG",
-  "CONSULTANT",
-  "SENIOR_CONSULTANT",
-] as const;
+export { JUNIOR_CADRE_CODES, SENIOR_CADRE_CODES };
 
 /**
  * Every cadre the doctor workspace serves: the juniors (co-signed) and the

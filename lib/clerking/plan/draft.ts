@@ -8,6 +8,12 @@ import { z } from "zod";
 
 import { ORDER_FREQUENCIES, ORDER_PRIORITIES } from "@/lib/emr/orders";
 import { PlanRxReplaces, PlanRxSchema } from "@/lib/prescribing/plan-rx";
+import {
+  CONSULT_URGENCIES,
+  HELP_WANTED,
+  REQUEST_KINDS,
+  REVIEW_URGENCIES,
+} from "@/lib/requests/engine";
 
 const id = z.string().max(80);
 const uuid = z.uuid();
@@ -17,7 +23,7 @@ export const DISPOSITIONS = ["admit", "observe_eu", "refer", "discharge"] as con
 export type Disposition = (typeof DISPOSITIONS)[number];
 export const OBS_FREQUENCIES = ["continuous", "hourly", "4h", "12h"] as const;
 export type ObsFrequencyChoice = (typeof OBS_FREQUENCIES)[number];
-export const SENIOR_REVIEW = ["now", "within_1h", "routine"] as const;
+export const SENIOR_REVIEW = REVIEW_URGENCIES;
 export type SeniorReview = (typeof SENIOR_REVIEW)[number];
 
 export const PlanOrderLineSchema = z.object({
@@ -44,13 +50,44 @@ export const PlanBasketRxSchema = PlanRxSchema.extend({
 });
 export type PlanBasketRx = z.infer<typeof PlanBasketRxSchema>;
 
+/** A review or consult in the basket (ADR 0537); the refine mirrors care_requests' CHECKs (0306). */
+export const PlanRequestLineSchema = z
+  .object({
+    clientKey: z.string().trim().min(8).max(120),
+    kind: z.enum(REQUEST_KINDS),
+    targetDepartmentId: uuid,
+    wardId: uuid.nullable(),
+    namedUserIds: z.array(uuid).max(5),
+    urgency: z.union([z.enum(REVIEW_URGENCIES), z.enum(CONSULT_URGENCIES)]),
+    helpWanted: z.enum(HELP_WANTED).nullable(),
+    reasonConditionIds: z.array(uuid).max(10),
+    question: text(2_000),
+    phoned: z.object({ userId: uuid, at: z.iso.datetime({ offset: true }) }).nullable(),
+    /** The basket words; never sent to the request table. */
+    display: text(300),
+  })
+  .superRefine((l, ctx) => {
+    const issue = (path: string, message: string) =>
+      ctx.addIssue({ code: "custom", path: [path], message });
+    const urgencies: readonly string[] = l.kind === "review" ? REVIEW_URGENCIES : CONSULT_URGENCIES;
+    if (!urgencies.includes(l.urgency)) issue("urgency", "Not an urgency for this kind.");
+    if (l.kind === "review" && l.helpWanted !== null)
+      issue("helpWanted", "A review takes no help wanted.");
+    if (l.kind === "consult") {
+      if (l.helpWanted === null) issue("helpWanted", "Say what help is wanted.");
+      if (!l.reasonConditionIds.length) issue("reasonConditionIds", "Choose the problem.");
+      if (!l.question.trim()) issue("question", "Write the question.");
+    }
+  });
+export type PlanRequestLine = z.infer<typeof PlanRequestLineSchema>;
+
 export const PlanSchema = z.object({
   disposition: z
     .object({
       kind: z.enum(DISPOSITIONS),
-      /** Admit: the ward's name (the words; drafts saved before ADR 0197 have only this); Refer: where to. */
+      /** Admit or Observe in EU: the ward's name (the words; drafts saved before ADR 0197 have only this); Refer: where to. */
       ward: text(120).optional(),
-      /** Admit: the ward's id (ADR 0197 §5), what the close admits to. */
+      /** Admit or Observe in EU: the ward's id (ADR 0197 §5), what the close admits or sends to. */
       wardId: uuid.optional(),
       referTo: text(200).optional(),
     })
@@ -82,8 +119,11 @@ export const PlanSchema = z.object({
     .object({
       orders: z.array(PlanOrderLineSchema).max(40),
       prescriptions: z.array(PlanBasketRxSchema).max(40),
+      requests: z.array(PlanRequestLineSchema).max(10).optional(),
     })
     .optional(),
+  /** Why no senior review is asked for (the checklist's other way to settle it). */
+  seniorReviewNotNeeded: text(300).optional(),
   talkedThrough: z.record(id, z.boolean()).optional(),
   followUp: z
     .object({
@@ -103,4 +143,8 @@ export type PlanDraft = z.infer<typeof PlanSchema>;
 
 export const EMPTY_PLAN: PlanDraft = {};
 
-export const basketOf = (d: PlanDraft) => d.basket ?? { orders: [], prescriptions: [] };
+export const basketOf = (d: PlanDraft) => ({
+  orders: d.basket?.orders ?? [],
+  prescriptions: d.basket?.prescriptions ?? [],
+  requests: d.basket?.requests ?? [],
+});

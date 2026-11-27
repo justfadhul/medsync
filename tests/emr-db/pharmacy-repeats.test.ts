@@ -169,6 +169,7 @@ describe.skipIf(!laneOn)("repeats and renewals, written (PGlite lane)", () => {
         encounterId: v.enc,
         orders: [],
         prescriptions: [line],
+        requests: [],
         observationFrequency: null,
         measureUrine: false,
       }),

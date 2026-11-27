@@ -3,6 +3,9 @@ import type { Metadata } from "next";
 
 import { WARDS } from "@/content/hospital-admin/wards";
 import { requireHospitalAdminScope } from "@/lib/hospital-admin/scope";
+import { dutyRotaLiveFor } from "@/lib/rota/feature";
+import { coverForWard } from "@/lib/rota/read";
+import { soft } from "@/lib/rota/soft";
 import {
   loadDepartments,
   loadPlaces,
@@ -12,8 +15,9 @@ import {
 } from "@/lib/services/data";
 import { loadBedBoard } from "@/lib/wards/board";
 import { layoutStatusByWard, wardTabs } from "@/lib/wards/data";
-import { wardBuilderLiveFor } from "@/lib/wards/feature";
+import { euObservationLiveFor, wardBuilderLiveFor } from "@/lib/wards/feature";
 import { WardsView } from "./_components/wards-view";
+import { loadResusDesk } from "./_lib/resus-desk";
 
 export const metadata: Metadata = { title: WARDS.title };
 export const dynamic = "force-dynamic";
@@ -55,16 +59,30 @@ export default async function WardsPage({
         doc: b.doc,
         states: Object.fromEntries(b.beds.map((x) => [x.key, x.state])),
       });
+  const now = new Date();
+  const covers = dutyRotaLiveFor(h)
+    ? new Map(
+        await Promise.all(
+          wards
+            .filter((w) => !w.archived)
+            .map(async (w) => [w.id, await soft(coverForWard(h, w.id, now), undefined)] as const),
+        ),
+      )
+    : null;
+  const resus = euObservationLiveFor(h) ? await loadResusDesk(h) : null;
   const items: WardItem[] = wards.map((w) => ({
     ...w,
     layout: layouts ? (layouts[w.id] ?? { published: false, draft: false }) : null,
     plan: plans.get(w.id) ?? null,
+    cover: covers?.get(w.id),
   }));
   const sp = await searchParams;
   return (
     <WardsView
       wards={items}
       builder={builder}
+      euLive={euObservationLiveFor(h)}
+      resus={resus}
       departments={departments
         .filter((d) => d.parentId === null && !d.archived)
         .map((d) => ({ id: d.id, name: d.name }))}
