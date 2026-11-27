@@ -20,6 +20,7 @@ import {
   PlusIcon,
   SearchIcon,
   SendIcon,
+  Settings2Icon,
   ShieldCheckIcon,
   ShoppingCartIcon,
   TruckIcon,
@@ -30,10 +31,12 @@ import {
 } from "lucide-react";
 
 import { EmergencyInline } from "@/components/lab/emergency-inline";
+import { TetherWorkspaceFrame } from "@/components/tether/workspace-frame";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { RW } from "@/content/pharmacy-rework";
 import { fill, PHWS2 } from "@/content/pharmacy-workspace-v2";
+import { TETHER_PL } from "@/content/tether-pharmacy-lab";
 import { pageOf, PAGES, sectionOf, SETUP_HREF } from "@/lib/pharmacy/ia";
 import { cn } from "@/lib/utils";
 import { flush, useOutbox } from "../_lib/outbox";
@@ -73,6 +76,8 @@ export interface ShellPoint {
 }
 
 export interface PharmacyShellPayload {
+  hospitalId: string;
+  userId: string;
   hospitalName: string;
   userName: string;
   initials: string;
@@ -94,9 +99,15 @@ export interface PharmacyShellPayload {
  */
 export function PharmacyShell({
   payload,
+  desk = false,
+  duty = null,
   children,
 }: {
   payload: PharmacyShellPayload;
+  /** On Tether: draw in the desk frame (ADR 0545). */
+  desk?: boolean;
+  /** The read-only roster chip, in the desk frame only. */
+  duty?: ReactNode;
   children: ReactNode;
 }) {
   const pathname = usePathname();
@@ -176,114 +187,88 @@ export function PharmacyShell({
     // eslint-disable-next-line react-hooks/exhaustive-deps -- firstHref reads `visible`, which `sections` follows.
   }, [sections, router]);
 
-  return (
-    <div
-      data-ds="tide"
-      data-ds-light=""
-      className="bg-background text-foreground flex min-h-svh flex-col gap-3 px-4 pt-3 pb-24 font-sans text-[14px] leading-[1.45] min-[761px]:flex-row min-[761px]:gap-4 min-[761px]:p-4 print:block print:p-0"
-    >
-      <Rail
-        payload={payload}
-        sections={sections}
-        here={here}
-        count={sectionCount}
-        href={firstHref}
-      />
-      <div className="flex min-w-0 flex-1 flex-col gap-3">
-        {payload.overrides.length ? (
-          <p
-            role="status"
-            className="bg-status-caution-bg text-body-s rounded-tide-row px-4 py-2 text-amber-900 print:hidden"
-          >
-            {fill(S.overridesBand, { names: payload.overrides.join(", ") })}
-          </p>
-        ) : null}
-        {payload.demo ? (
-          <p
-            role="status"
-            className="bg-tide-sunken text-body-s text-ink-700 rounded-tide-row px-4 py-2 print:hidden"
-          >
-            {S.demoBand}
-          </p>
-        ) : null}
-        <WitnessInbox />
-        <header className="flex flex-wrap items-center gap-2 print:hidden">
-          <button
-            type="button"
-            onClick={() => setStartOpen(true)}
-            aria-label={S.startLabel}
-            className="bg-tide-lagoon text-tide-on-lagoon focus-visible:shadow-focus hidden h-10 items-center gap-1.5 rounded-full pr-4 pl-3 text-[13.5px] font-semibold outline-none min-[761px]:inline-flex"
-          >
-            <PlusIcon aria-hidden className="size-4" strokeWidth={2.25} />
-            {S.start}
-          </button>
-          <button
-            type="button"
-            onClick={() => setFindOpen(true)}
-            className="bg-card text-tide-ink-3 shadow-tide-card focus-visible:shadow-focus flex h-10 min-w-0 flex-[1_1_220px] items-center gap-2.5 rounded-full pr-2 pl-4 text-left outline-none min-[761px]:max-w-[520px]"
-            aria-keyshortcuts="Control+K Meta+K /"
-          >
-            <SearchIcon aria-hidden className="size-4 shrink-0" />
-            <span className="text-body-s min-w-0 flex-1 truncate">{S.find}</span>
-            <kbd className="bg-background text-kbd text-ink-600 hidden rounded-md px-1.5 py-1 font-mono shadow-[inset_0_0_0_1px_var(--color-ink-300)] sm:inline">
-              {S.findKey}
-            </kbd>
-          </button>
-          <span className="hidden flex-1 min-[761px]:block" />
-          <StationChip payload={payload} />
-          <NetworkPill />
-          <EmergencyInline label={S.emergency} />
-        </header>
-        <div className="flex flex-col gap-2">
-          {sectionPages.length > 1 ? (
-            <nav
-              aria-label={here ? RW.sections[here] : undefined}
-              className="-mx-1 flex gap-1 overflow-x-auto px-1 pb-1 print:hidden"
-            >
-              {sectionPages.map((p) => {
-                const on = page?.key === p.key;
-                const n = payload.counts[p.key];
-                return (
-                  <Link
-                    key={p.key}
-                    href={p.href}
-                    prefetch={false}
-                    aria-current={on ? "page" : undefined}
-                    className={cn(
-                      "focus-visible:shadow-focus inline-flex min-h-11 shrink-0 items-center gap-2 rounded-full px-4 text-[13.5px] outline-none sm:min-h-9",
-                      on
-                        ? "bg-tide-navy-900 text-tide-on-band font-semibold"
-                        : "bg-card text-ink-700 shadow-tide-card hover:text-foreground",
-                    )}
-                  >
-                    {RW.pages[p.key as keyof typeof RW.pages]}
-                    {n ? <span className="tabular-nums">{n}</span> : null}
-                  </Link>
-                );
-              })}
-            </nav>
-          ) : null}
-          <div className="flex flex-col gap-0.5">
-            <span className="text-overline text-tide-ink-3 inline-flex items-center gap-1.5 uppercase">
-              <span aria-hidden className="bg-area-medicines size-[7px] rounded-full" />
-              {fill(S.overline, { hospital: payload.hospitalName })}
-            </span>
-            <h1 className="text-foreground text-[24px] leading-[28px] tracking-[-0.02em]">
-              {title}
-            </h1>
-            {lead ? <p className="text-body-s text-ink-600">{lead}</p> : null}
-          </div>
-        </div>
-        <main className="min-w-0 flex-1">{children}</main>
+  const bands = (
+    <>
+      {payload.overrides.length ? (
+        <p
+          role="status"
+          className="bg-status-caution-bg text-body-s rounded-tide-row px-4 py-2 text-amber-900 print:hidden"
+        >
+          {fill(S.overridesBand, { names: payload.overrides.join(", ") })}
+        </p>
+      ) : null}
+      {payload.demo ? (
+        <p
+          role="status"
+          className="bg-tide-sunken text-body-s text-ink-700 rounded-tide-row px-4 py-2 print:hidden"
+        >
+          {S.demoBand}
+        </p>
+      ) : null}
+      <WitnessInbox />
+    </>
+  );
+  const titleBlock = (
+    <div className="flex flex-col gap-2">
+      {sectionPages.length > 1 ? (
+        <nav
+          aria-label={here ? RW.sections[here] : undefined}
+          className="-mx-1 flex gap-1 overflow-x-auto px-1 pb-1 print:hidden"
+        >
+          {sectionPages.map((p) => {
+            const on = page?.key === p.key;
+            const n = payload.counts[p.key];
+            return (
+              <Link
+                key={p.key}
+                href={p.href}
+                prefetch={false}
+                aria-current={on ? "page" : undefined}
+                className={cn(
+                  "focus-visible:shadow-focus inline-flex min-h-11 shrink-0 items-center gap-2 rounded-full px-4 text-[13.5px] outline-none sm:min-h-9",
+                  on
+                    ? "bg-tide-navy-900 text-tide-on-band font-semibold"
+                    : "bg-card text-ink-700 shadow-tide-card hover:text-foreground",
+                )}
+              >
+                {RW.pages[p.key as keyof typeof RW.pages]}
+                {n ? <span className="tabular-nums">{n}</span> : null}
+              </Link>
+            );
+          })}
+        </nav>
+      ) : null}
+      <div className="flex flex-col gap-0.5">
+        <span className="text-overline text-tide-ink-3 inline-flex items-center gap-1.5 uppercase">
+          <span aria-hidden className="bg-area-medicines size-[7px] rounded-full" />
+          {fill(S.overline, { hospital: payload.hospitalName })}
+        </span>
+        <h1 className="text-foreground text-[24px] leading-[28px] tracking-[-0.02em]">{title}</h1>
+        {lead ? <p className="text-body-s text-ink-600">{lead}</p> : null}
       </div>
-      <BottomPill
-        sections={sections}
-        here={here}
-        count={sectionCount}
-        href={firstHref}
-        onStart={() => setStartOpen(true)}
-        onMore={() => setMoreOpen(true)}
-      />
+    </div>
+  );
+  const findToNetwork = (
+    <>
+      <button
+        type="button"
+        onClick={() => setFindOpen(true)}
+        className="bg-card text-tide-ink-3 shadow-tide-card focus-visible:shadow-focus flex h-10 min-w-0 flex-[1_1_220px] items-center gap-2.5 rounded-full pr-2 pl-4 text-left outline-none min-[761px]:max-w-[520px]"
+        aria-keyshortcuts="Control+K Meta+K /"
+      >
+        <SearchIcon aria-hidden className="size-4 shrink-0" />
+        <span className="text-body-s min-w-0 flex-1 truncate">{S.find}</span>
+        <kbd className="bg-background text-kbd text-ink-600 hidden rounded-md px-1.5 py-1 font-mono shadow-[inset_0_0_0_1px_var(--color-ink-300)] sm:inline">
+          {S.findKey}
+        </kbd>
+      </button>
+      <span className="hidden flex-1 min-[761px]:block" />
+      <StationChip payload={payload} />
+      <NetworkPill />
+    </>
+  );
+  const dialogs = (
+    <>
       <StartDialog open={startOpen} onOpenChange={setStartOpen} pages={payload.pages} />
       <MoreDialog
         open={moreOpen}
@@ -298,6 +283,99 @@ export function PharmacyShell({
         onOpenChange={setFindOpen}
         pages={payload.pages}
       />
+    </>
+  );
+
+  if (desk) {
+    const setupOn = here === "setup";
+    return (
+      <TetherWorkspaceFrame
+        label={S.sectionsLabel}
+        hospitalName={payload.hospitalName}
+        userName={payload.userName}
+        place={TETHER_PL.pharmacy.role}
+        nav={[
+          ...sections.map((x) => {
+            const n = sectionCount(x);
+            return {
+              key: x,
+              href: firstHref(x),
+              label: RW.sections[x],
+              icon: ICON[x],
+              on: here === x,
+              count: n,
+              ariaLabel: n ? `${RW.sections[x]}, ${n}` : undefined,
+            };
+          }),
+          { key: "setup", href: SETUP_HREF, label: S.setup, icon: Settings2Icon, on: setupOn },
+        ]}
+        top={
+          <>
+            <button
+              type="button"
+              onClick={() => setStartOpen(true)}
+              aria-label={S.startLabel}
+              className="bg-tide-lagoon text-tide-on-lagoon focus-visible:shadow-focus inline-flex h-10 items-center gap-1.5 rounded-full pr-4 pl-3 text-[13.5px] font-semibold outline-none"
+            >
+              <PlusIcon aria-hidden className="size-4" strokeWidth={2.25} />
+              {S.start}
+            </button>
+            {findToNetwork}
+            {duty}
+          </>
+        }
+        keys={TETHER_PL.keys.pharmacy}
+        after={dialogs}
+      >
+        <div className="flex min-w-0 flex-1 flex-col gap-3 font-sans">
+          {bands}
+          {titleBlock}
+          <main className="min-w-0 flex-1">{children}</main>
+        </div>
+      </TetherWorkspaceFrame>
+    );
+  }
+
+  return (
+    <div
+      data-ds="tide"
+      data-ds-light=""
+      className="bg-background text-foreground flex min-h-svh flex-col gap-3 px-4 pt-3 pb-24 font-sans text-[14px] leading-[1.45] min-[761px]:flex-row min-[761px]:gap-4 min-[761px]:p-4 print:block print:p-0"
+    >
+      <Rail
+        payload={payload}
+        sections={sections}
+        here={here}
+        count={sectionCount}
+        href={firstHref}
+      />
+      <div className="flex min-w-0 flex-1 flex-col gap-3">
+        {bands}
+        <header className="flex flex-wrap items-center gap-2 print:hidden">
+          <button
+            type="button"
+            onClick={() => setStartOpen(true)}
+            aria-label={S.startLabel}
+            className="bg-tide-lagoon text-tide-on-lagoon focus-visible:shadow-focus hidden h-10 items-center gap-1.5 rounded-full pr-4 pl-3 text-[13.5px] font-semibold outline-none min-[761px]:inline-flex"
+          >
+            <PlusIcon aria-hidden className="size-4" strokeWidth={2.25} />
+            {S.start}
+          </button>
+          {findToNetwork}
+          <EmergencyInline label={S.emergency} />
+        </header>
+        {titleBlock}
+        <main className="min-w-0 flex-1">{children}</main>
+      </div>
+      <BottomPill
+        sections={sections}
+        here={here}
+        count={sectionCount}
+        href={firstHref}
+        onStart={() => setStartOpen(true)}
+        onMore={() => setMoreOpen(true)}
+      />
+      {dialogs}
     </div>
   );
 }
