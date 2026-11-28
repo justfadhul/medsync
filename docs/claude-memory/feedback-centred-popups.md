@@ -9,12 +9,14 @@ metadata:
 ---
 
 Every pop-up in MedSync is a centred, landscape card, `components/medsync/editor-dialog.tsx` (`EditorDialog`). This covers detail panels, editors, catalogues and forms that open over a page.
+
 - Use `wide` with sections side by side for panels, and `medium` for short forms.
 - Nothing slides in from an edge. The phone navigation menu is the only exception.
 
 **Why:** the owner saw the Departments & services hub's right-side panels and said to remove them, and to make it a rule that pop-ups are only centred, in landscape, "just like how we've been doing for the previous things" (the scheduling console and the doctor and clinician schedules already used EditorDialog).
 
 **How to apply:**
+
 - Never reach for `SheetContent` with a side for new UI. Use EditorDialog with the Sheet's header, body and footer pieces.
 - It's recorded in ADR 0161, DESIGN-medsync.md ("Pop-ups") and AGENTS.md.
 - The side sheets that remain (Staff, the superadmin console, the doctor workspace's panel and triage sheets, responsive-sheet) move to the card when next touched.

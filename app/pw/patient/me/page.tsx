@@ -1,3 +1,4 @@
+import type { MeSection } from "./_components/me-view";
 import type { Metadata } from "next";
 import {
   ageWords,
@@ -29,7 +30,7 @@ import { fetchHousehold } from "@/lib/patient/household";
 import { requirePatientScope } from "@/lib/patient/scope";
 import pkg from "@/package.json";
 import { MeMembership } from "./_components/me-membership";
-import { MeView, type MeSection } from "./_components/me-view";
+import { MeView } from "./_components/me-view";
 import {
   DetailsSection,
   HealthSection,
@@ -90,10 +91,15 @@ export default async function MePage({ searchParams }: { searchParams: Promise<{
       name={name ?? C.holderUnknown}
       memberNo={memberNumber(id?.code ?? null)}
       id={{
-        ageSex: [ageWords(id?.dob ?? null, now), sexLetter(id?.sex ?? null)].filter(Boolean).join(" · ") || null,
+        ageSex:
+          [ageWords(id?.dob ?? null, now), sexLetter(id?.sex ?? null)]
+            .filter(Boolean)
+            .join(" · ") || null,
         nextOfKin: nok === null ? null : nok ? C.nokOnFile(facility) : C.nokNone,
         ifFound:
-          emergencyPhone && facility ? C.ifFoundCall(facility, emergencyPhone) : C.ifFoundReturn(facility),
+          emergencyPhone && facility
+            ? C.ifFoundCall(facility, emergencyPhone)
+            : C.ifFoundReturn(facility),
         emergencyContact: emergencyPhone ?? "—",
         bloodGroup: null,
         allergies: lines.allergies === "None listed" ? [] : [lines.allergies],
@@ -111,11 +117,20 @@ export default async function MePage({ searchParams }: { searchParams: Promise<{
         conditions: null,
         allergies: lines.allergies,
         nextOfKin: nok === null ? null : nok ? C.nokOnFile(facility) : C.nokNone,
-        ifFound: emergencyPhone && facility ? C.ifFoundCall(facility, emergencyPhone) : C.ifFoundReturn(facility),
+        ifFound:
+          emergencyPhone && facility
+            ? C.ifFoundCall(facility, emergencyPhone)
+            : C.ifFoundReturn(facility),
       }}
     />
   ) : undefined;
-  const conditions = C.historySub(hOff, h.conditions.length, "condition", "conditions", C.noneAdded);
+  const conditions = C.historySub(
+    hOff,
+    h.conditions.length,
+    "condition",
+    "conditions",
+    C.noneAdded,
+  );
   const careOn = careModeOn();
 
   return (
@@ -131,7 +146,9 @@ export default async function MePage({ searchParams }: { searchParams: Promise<{
           allergies: lines.allergies,
           nextOfKin: nok === null ? null : nok ? C.nokOnFile(facility) : C.nokNone,
           ifFound:
-            emergencyPhone && facility ? C.ifFoundCall(facility, emergencyPhone) : C.ifFoundReturn(facility),
+            emergencyPhone && facility
+              ? C.ifFoundCall(facility, emergencyPhone)
+              : C.ifFoundReturn(facility),
         }}
         cardConditions={lines.conditions}
         sex={sexLetter(id?.sex ?? null)}
@@ -147,17 +164,35 @@ export default async function MePage({ searchParams }: { searchParams: Promise<{
             .filter(Boolean)
             .join(" · "),
           stats: [
-            { section: "health", n: hOff ? "–" : String(h.conditions.length), label: M.stats.conditions },
-            { section: "health", n: hOff ? "–" : String(h.allergies.length), label: M.stats.allergies },
-            { section: "people", n: household ? String(household.length) : "–", label: M.stats.people },
-            { section: "records", n: records ? String(records.length) : "–", label: M.stats.records },
+            {
+              section: "health",
+              n: hOff ? "–" : String(h.conditions.length),
+              label: M.stats.conditions,
+            },
+            {
+              section: "health",
+              n: hOff ? "–" : String(h.allergies.length),
+              label: M.stats.allergies,
+            },
+            {
+              section: "people",
+              n: household ? String(household.length) : "–",
+              label: M.stats.people,
+            },
+            {
+              section: "records",
+              n: records ? String(records.length) : "–",
+              label: M.stats.records,
+            },
           ],
         }}
         subs={{
           card: M.sections.card.sub,
           health: conditions,
           records: C.recordsSub,
-          people: household ? C.historySub(false, household.length, "person", "people", C.nobody) : undefined,
+          people: household
+            ? C.historySub(false, household.length, "person", "people", C.nobody)
+            : undefined,
           places:
             places.status === "off"
               ? C.placesOff
@@ -179,9 +214,7 @@ export default async function MePage({ searchParams }: { searchParams: Promise<{
           ),
           ...(careOn
             ? {
-                mycare: (
-                  <TextLink href="/patient/care/my-care">{M.sections.mycare.title}</TextLink>
-                ),
+                mycare: <TextLink href="/patient/care/my-care">{M.sections.mycare.title}</TextLink>,
               }
             : {}),
           records: <RecordsSection records={records} />,

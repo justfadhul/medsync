@@ -11,9 +11,9 @@ import {
   closeBlocker,
   countsWords,
   dispositionDetail,
+  EMPTY_CLOSE,
   euBlocker,
   euStart,
-  EMPTY_CLOSE,
   followUpDate,
   MAX_STOPPED,
   planStart,
@@ -55,9 +55,7 @@ describe("planStart (ADR 0197 §1–2)", () => {
 
 describe("Send to EU (the close's EU rules)", () => {
   it("planStart carries the Plan's emergency unit", () => {
-    expect(
-      planStart(plan({ kind: "observe_eu", ward: "OPD EU", wardId: WARD })),
-    ).toMatchObject({
+    expect(planStart(plan({ kind: "observe_eu", ward: "OPD EU", wardId: WARD }))).toMatchObject({
       observe: true,
       code: null,
       euWardId: WARD,

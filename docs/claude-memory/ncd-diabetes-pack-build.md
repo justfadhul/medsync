@@ -15,7 +15,7 @@ Owner handed over `~/Downloads/medsync-ncd-diabetes` (pack MS-NCD-DM-PACK-001 0.
 - Owner downloaded `~/Downloads/UCG-2023-Publication-Final-PDF-Version-1.pdf` (1158 pp, text layer; 8.1.3 = PDF p536) and `WHO HEARTS-D.pdf`. Extracted text in session scratchpad `ucg/`. 2026 Integrated DM guideline and Uganda HIV 2022 NOT supplied.
 - Next migration 0092 (0091 is on feat/encounter-closure, unmerged).
 
-- Phase 0 done (0e78cef). Phase 1 review loop: R4→0.3.1 (d8396bf), R5→0.3.2 (f095619), R6→0.3.3 (a38197f, structural: DM_ANY context, interrupt folding by k_r6.ACUTE_ORDER, k_grid.py escalation-floor build check D-DM-41). Fix layers live in pack tools/build/k_r4/k_r5/k_r6(+_vignettes).py; rebuild+sync with scratchpad sync.sh <version>. GATE A doc generator: scratchpad gate_a.py → docs/ncd/diabetes/gate-a.md (needs phase-1/review-rounds.md).
+- Phase 0 done (0e78cef). Phase 1 review loop: R4→0.3.1 (d8396bf), R5→0.3.2 (f095619), R6→0.3.3 (a38197f, structural: DM_ANY context, interrupt folding by k_r6.ACUTE_ORDER, k_grid.py escalation-floor build check D-DM-41). Fix layers live in pack tools/build/k_r4/k_r5/k_r6(+\_vignettes).py; rebuild+sync with scratchpad sync.sh <version>. GATE A doc generator: scratchpad gate_a.py → docs/ncd/diabetes/gate-a.md (needs phase-1/review-rounds.md).
 
 - Rounds R7→0.3.4 (392a405), R8→0.3.5 (924b40d), R9→0.3.6 (90c1010; k_r8/k_r9). 2026-10-05 owner chose: ONE more round (R10), then GATE A; open criticals become go-live blockers; GATE A signature authorises shadow build, not clinical use.
 

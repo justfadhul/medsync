@@ -1,5 +1,6 @@
 "use client";
 
+import type { TetherCardData } from "@/components/tide/tether-card";
 import type { MedicalId } from "@/components/tide/v2-membership";
 import type { Plan, PlusTier, Tier } from "@patient-core/membership";
 import type { Network, PromptView } from "@patient-core/payments";
@@ -8,7 +9,6 @@ import { feeText } from "@patient-core/fees";
 import { maskMsisdn, NETWORK_NAME } from "@patient-core/payments";
 
 import { buttonClass } from "@/components/tide/kit";
-import type { TetherCardData } from "@/components/tide/tether-card";
 import { TetherCard } from "@/components/tide/tether-card";
 import { MembershipCard, TierCard } from "@/components/tide/v2-membership";
 import { PromptStatus } from "@/components/tide/v2-pay";

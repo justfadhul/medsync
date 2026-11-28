@@ -2,13 +2,15 @@ import type { SignedCopy } from "@/content/signed-copy";
 
 /**
  * The reworked pharmacy workspace's own words (docs/pharmacy/rework/PRD.md). Everything new on the six-section shell
- * and its pages. Draft until the Clinical Safety Officer and a registered pharmacist outside the build sign it; in
- * production the workspace stays on the previous screens while this is a draft (`workspaceLiveFor`).
+ * and its pages. Signed by the Clinical Safety Officer in chat on 28 Nov 2026 ("Yes, I sign it"), after pharmacy
+ * staff signing in on Tether met a not-found page: while this was a draft, production hid the whole workspace
+ * (`workspaceLiveFor`). The PRD also asks for a registered pharmacist outside the build; that signature is not
+ * recorded yet.
  */
 export const PHARMACY_REWORK_COPY: SignedCopy = {
-  status: "draft",
-  signedBy: null,
-  signedOn: null,
+  status: "signed",
+  signedBy: "Fadhul (CSO)",
+  signedOn: "2026-11-28",
 };
 
 export const RW = {

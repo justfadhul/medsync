@@ -15,7 +15,7 @@
 ## Global Constraints
 
 - **Read first:** `AGENTS.md` (via `CLAUDE.md`). Next 16: read the relevant guide in `node_modules/next/dist/docs/` before writing route or server-action code.
-- **Migrations:** `0306_care_requests.sql`, `0307_duty_rota.sql`, `0308_care_request_escalation.sql`, `0309_duty_rota_upkeep.sql`. All are GATED and start with the header used by 0296–0305: line 1 is `-- GATED — applied by the owner (\`npm run db:migrate\`), never auto-run.`, line 2 is `-- 0306: <title> (ADR 05xx).`, then a numbered summary in the style of 0100/0101, ending with `ADDITIVE and re-runnable.` Every statement is re-runnable (`IF NOT EXISTS`, `CREATE OR REPLACE`, `DROP … IF EXISTS` then `ADD`). Migrations are immutable once shipped: nothing in 0001–0305 is edited. **No task runs a migration against a real database.** The only place they run is the PGlite lane.
+- **Migrations:** `0306_care_requests.sql`, `0307_duty_rota.sql`, `0308_care_request_escalation.sql`, `0309_duty_rota_upkeep.sql`. All are GATED and start with the header used by 0296–0305: line 1 is `-- GATED — applied by the owner (\`npm run db:migrate\`), never auto-run.`, line 2 is `-- 0306: <title> (ADR 05xx).`, then a numbered summary in the style of 0100/0101, ending with `ADDITIVE and re-runnable.` Every statement is re-runnable (`IF NOT EXISTS`, `CREATE OR REPLACE`, `DROP … IF EXISTS`then`ADD`). Migrations are immutable once shipped: nothing in 0001–0305 is edited. **No task runs a migration against a real database.** The only place they run is the PGlite lane.
 - **RLS:** every new table runs `ENABLE` + `FORCE ROW LEVEL SECURITY`, `REVOKE ALL … FROM anon, authenticated`, `GRANT SELECT … TO medsync_clinical_reader` with a named policy, and gets an `audit_log_changes()` trigger. Append-only tables also get `block_modify_append_only()`, as in `0273_pharmacy_roster.sql:450-460`.
 - **Write paths.** Neither feature uses an Edge Function. The nearest precedents write on the server connection, and the code follows them:
   - **Requests** are EMR records. They follow the Plan's own path: `lib/emr/actions/*.ts` (Zod, then `requireEmrActor`, then the flag) calls `lib/emr/write/*.ts` inside `asClinicalWriter`. Reference: `lib/emr/actions/plan.ts:43-50`, with `runEmrWrite` at `lib/emr/write/orders.ts:534` and `withPatientWrite` at `lib/emr/write/context.ts:38`.
@@ -38,6 +38,7 @@
   - `0538-rota-upkeep.md`.
 
   0532 is taken on `origin/claude/clinic-line-doctor`, so 0533 is the next free number. ADRs are immutable once committed.
+
 - **Design** (`DESIGN-medsync.md`, MedSync Tide, is authoritative; AGENTS.md still says Chroma, and Tide wins):
   - pop-ups are centred dialogs: `EmrDialog` (`components/emr/emr-dialog.tsx`) on clinical surfaces, `EditorDialog` (`components/medsync/editor-dialog.tsx`) on admin surfaces;
   - every request state and duty state, "Overdue" included, is a neutral square `Tag hue="slate"` (`components/medsync/tag.tsx`) with its word, plus a Lucide icon for Overdue (`Clock`). Never red, amber or green;
@@ -68,21 +69,21 @@
 
 ## Corrections to the spec (follow the code)
 
-| Spec says | Code says | Plan does |
-| --- | --- | --- |
-| `PlacePlanRequest` sits with `placePlan` (brief) | `PlacePlanRequest` is the client type at `components/clerking/plan/plan-step.tsx:60`. The action's Zod object is `PlacePlan` (`lib/emr/actions/plan.ts:22`) and the write input is `PlacePlanInput` (`lib/emr/write/plan.ts:649`) | Extends all three |
-| `placePlan` is `lib/emr/write/plan.ts:662-834` | It ends at `:800`. `:836` is `sendPrescribed` | — |
-| The nurse notice goes in `afterClose`, "in the clinician's transaction after the close" | `afterClose` runs in a **second** `withPatientWrite` after `ha-complete-encounter` returns, and its errors become warnings (`lib/emr/actions/encounter.ts:164-180`) | The notice goes there, in a savepoint |
-| `phi_access_log` must learn `care_team` | Already allowed: `0101_lab_work_access_basis.sql:145`, `db/schema/doctor-workspace.ts:177`, `EmrAccessBasis` at `lib/emr/access.ts:19` | No log or type change |
-| A heartbeat with `source = 'care_requests'` | `escalation_heartbeats.source` CHECK is `('scheduler','lazy')` (`0102_lab_criticals.sql:151`) | 0308 widens it |
-| A new cron route `/api/cron/care-request-escalations` with its own pg_cron job | `app/api/cron/lab-escalations/route.ts` already hosts IPC and results-ready work on the same tick | The care-request run joins that tick: no new schedule function |
-| Reply by a note with `care_request_id` on `clinical_notes` | `clinical_notes` has an immutability trigger naming its columns (`0071_emr_record_spine.sql:302-305`) | The `replied` event names the note (`note_id`). No column on notes |
-| A `consult` note type exists to write | No `tpl.consult` in `data/emr/note-templates.v1.json`, and `requireDocumenter` (`lib/emr/write/notes.ts:79-86`) refuses allied cadres | Task 5 adds the template. The reply signs through `insertSignedNote` (`notes.ts:787`) with its own cadre list |
-| Notifications are shown in-app | Nothing reads `sa_notifications` for staff. Only triage and resus write it | Task 12 adds a minimal notices list |
-| Clinician workspace lists | `app/clinician/page.tsx` redirects to availability, and there is no board. Pharmacists are redirected to `/pharmacy` (`app/clinician/layout.tsx`) | A `/clinician/requests` page. Pharmacists cannot receive consults in v1 |
-| `whoCovers` in TS **and** SQL | Nothing in phases 1–4 needs the SQL twin; its consumers (resus, lab ladder) are Phase 5 | TS only. The SQL twin moves to Phase 5 |
-| Design is Chroma (AGENTS.md) | `DESIGN-medsync.md` is Tide (ADR 0360) | Tide |
-| `availability_blocks` states | Drizzle `db/schema/scheduling.ts:93` lists `('active','cancelled')`; SQL `0296:117-119` adds `requested`, `declined` | Leave reads use `kind='leave' AND state='active'`, unaffected. Drift noted, not fixed here |
+| Spec says                                                                               | Code says                                                                                                                                                                                                                         | Plan does                                                                                                     |
+| --------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
+| `PlacePlanRequest` sits with `placePlan` (brief)                                        | `PlacePlanRequest` is the client type at `components/clerking/plan/plan-step.tsx:60`. The action's Zod object is `PlacePlan` (`lib/emr/actions/plan.ts:22`) and the write input is `PlacePlanInput` (`lib/emr/write/plan.ts:649`) | Extends all three                                                                                             |
+| `placePlan` is `lib/emr/write/plan.ts:662-834`                                          | It ends at `:800`. `:836` is `sendPrescribed`                                                                                                                                                                                     | —                                                                                                             |
+| The nurse notice goes in `afterClose`, "in the clinician's transaction after the close" | `afterClose` runs in a **second** `withPatientWrite` after `ha-complete-encounter` returns, and its errors become warnings (`lib/emr/actions/encounter.ts:164-180`)                                                               | The notice goes there, in a savepoint                                                                         |
+| `phi_access_log` must learn `care_team`                                                 | Already allowed: `0101_lab_work_access_basis.sql:145`, `db/schema/doctor-workspace.ts:177`, `EmrAccessBasis` at `lib/emr/access.ts:19`                                                                                            | No log or type change                                                                                         |
+| A heartbeat with `source = 'care_requests'`                                             | `escalation_heartbeats.source` CHECK is `('scheduler','lazy')` (`0102_lab_criticals.sql:151`)                                                                                                                                     | 0308 widens it                                                                                                |
+| A new cron route `/api/cron/care-request-escalations` with its own pg_cron job          | `app/api/cron/lab-escalations/route.ts` already hosts IPC and results-ready work on the same tick                                                                                                                                 | The care-request run joins that tick: no new schedule function                                                |
+| Reply by a note with `care_request_id` on `clinical_notes`                              | `clinical_notes` has an immutability trigger naming its columns (`0071_emr_record_spine.sql:302-305`)                                                                                                                             | The `replied` event names the note (`note_id`). No column on notes                                            |
+| A `consult` note type exists to write                                                   | No `tpl.consult` in `data/emr/note-templates.v1.json`, and `requireDocumenter` (`lib/emr/write/notes.ts:79-86`) refuses allied cadres                                                                                             | Task 5 adds the template. The reply signs through `insertSignedNote` (`notes.ts:787`) with its own cadre list |
+| Notifications are shown in-app                                                          | Nothing reads `sa_notifications` for staff. Only triage and resus write it                                                                                                                                                        | Task 12 adds a minimal notices list                                                                           |
+| Clinician workspace lists                                                               | `app/clinician/page.tsx` redirects to availability, and there is no board. Pharmacists are redirected to `/pharmacy` (`app/clinician/layout.tsx`)                                                                                 | A `/clinician/requests` page. Pharmacists cannot receive consults in v1                                       |
+| `whoCovers` in TS **and** SQL                                                           | Nothing in phases 1–4 needs the SQL twin; its consumers (resus, lab ladder) are Phase 5                                                                                                                                           | TS only. The SQL twin moves to Phase 5                                                                        |
+| Design is Chroma (AGENTS.md)                                                            | `DESIGN-medsync.md` is Tide (ADR 0360)                                                                                                                                                                                            | Tide                                                                                                          |
+| `availability_blocks` states                                                            | Drizzle `db/schema/scheduling.ts:93` lists `('active','cancelled')`; SQL `0296:117-119` adds `requested`, `declined`                                                                                                              | Leave reads use `kind='leave' AND state='active'`, unaffected. Drift noted, not fixed here                    |
 
 ## Decisions this plan fixes (inside D1–D12)
 
@@ -97,6 +98,7 @@
   7. nobody. The request is placed with a `routed` row with no recipient (step `none`) and shows "Reached nobody: phone the team". It never blocks the basket.
 
   The requester is always excluded; inactive staff are skipped, and the skip is recorded.
+
 - **Rounds:** a `redirected` event starts a new routing round. Seen, accepted and declined count only within the current round. Cancelled, closed and replied are final.
 - **Phoned:** `phoned_user_id`/`phoned_at` on the request. The engine counts it as accepted at `phoned_at`. Nobody writes an event on another person's behalf.
 - **Reply:** one dialog composes and signs the note in one step through `insertSignedNote`:
@@ -107,19 +109,21 @@
   - seen, accept, decline, redirect, close, cancel.
 
   Reply needs chart access (`withPatientWrite`). Accepting creates it through the `care_team` arm.
+
 - **Notices** are written in a savepoint (`ctx.tx.transaction`) inside the request's transaction. They commit only with the request, and their failure is caught and never rolls the request back. This deviates from "after commit" in the spec; the reason is that no notice can outlive an unplaced request. The live nudge uses the existing `private.notify_user_event(user, 'request', kind, request_id)` (`0125_pharmacy_review.sql:116`).
 - **Double booking:** the same person on the same post in overlapping windows is refused, and so is a post past its `capacity`. Holding two different posts at once (consultant in charge plus on call) is allowed.
 - **Needs cover** is derived: an assignment overlapping an `availability_blocks` leave block with `state='active'`. It is never stored and never removes the duty.
 - **Escalation clock (D4, approved):**
 
-  | Request | Clock runs until | Time | Notes |
-  | --- | --- | --- | --- |
-  | Review `now` | accepted | 15 min | |
-  | Review `within_1h` | accepted | 60 min | |
-  | Consult `urgent_today` | accepted | 120 min | also marked overdue if not replied by the end of the Kampala day |
-  | Routine (both kinds) | replied | 1440 min | |
+  | Request                | Clock runs until | Time     | Notes                                                            |
+  | ---------------------- | ---------------- | -------- | ---------------------------------------------------------------- |
+  | Review `now`           | accepted         | 15 min   |                                                                  |
+  | Review `within_1h`     | accepted         | 60 min   |                                                                  |
+  | Consult `urgent_today` | accepted         | 120 min  | also marked overdue if not replied by the end of the Kampala day |
+  | Routine (both kinds)   | replied          | 1440 min |                                                                  |
 
   Each level waits the same window from when it was reached. Level 2 is the last; the request stays open and overdue there.
+
 - **Ladder (D7):**
   - level 1: the holders of `escalates_to_post_id` of the post at level 0, else the department head;
   - level 2: the hospital contacts.
@@ -141,10 +145,12 @@
 ### Task 1: Flag, request engine and copy
 
 **Files:**
+
 - Create: `lib/requests/feature.ts`, `lib/requests/engine.ts`, `content/care-requests.ts`
 - Test: `tests/requests/engine.test.ts` (default lane)
 
 **Interfaces:**
+
 - Produces:
   - `careRequestsLiveFor(hospitalId: string): boolean`: `CARE_REQUESTS` is `1` or lists the id, and `emrV1LiveFor(hospitalId)`.
   - `REQUEST_KINDS = ["review","consult"] as const`
@@ -191,8 +197,8 @@
   - `flag`: with `CARE_REQUESTS="h1"` and `EMR_V1="1"` plus `ENCOUNTER_ENGINE_LIVE="1"`, `careRequestsLiveFor("h1")` is true and `careRequestsLiveFor("h2")` is false. Unset, it is false. (Set and restore env per test.)
 
 - [ ] **Step 2: Run and see them fail**
-  Run: `npx vitest run tests/requests/engine.test.ts`
-  Expected: FAIL, `Cannot find module '@/lib/requests/engine'`.
+      Run: `npx vitest run tests/requests/engine.test.ts`
+      Expected: FAIL, `Cannot find module '@/lib/requests/engine'`.
 
 - [ ] **Step 3: Implement**
   - Write `lib/requests/feature.ts`, `lib/requests/engine.ts` and `content/care-requests.ts` to the interfaces.
@@ -200,8 +206,8 @@
   - Anomalies are listed, never thrown: an event after a final one, or a `seen` by someone not routed.
 
 - [ ] **Step 4: Run and see them pass**
-  Run: `npx vitest run tests/requests/engine.test.ts`
-  Expected: PASS, 10 tests.
+      Run: `npx vitest run tests/requests/engine.test.ts`
+      Expected: PASS, 10 tests.
 
 - [ ] **Step 5: Commit**
   ```bash
@@ -212,10 +218,12 @@
 ### Task 2: Routing (pure)
 
 **Files:**
+
 - Create: `lib/requests/routing.ts`
 - Test: `tests/requests/routing.test.ts` (default lane)
 
 **Interfaces:**
+
 - Consumes: `RouteStep` from Task 1.
 - Produces:
   - `interface Candidate { userId: string; active: boolean; postId?: string|null }`
@@ -238,6 +246,7 @@
 ### Task 3: Migration 0306 (tables, CHECKs, RLS) and the Drizzle mirror
 
 **Files:**
+
 - Create: `supabase/migrations/0306_care_requests.sql`, `db/schema/care-requests.ts`
 - Modify:
   - `db/schema/index.ts` (export);
@@ -249,56 +258,58 @@
   - `tests/emr-db/drizzle-parity.test.ts` runs unchanged.
 
 **Interfaces:**
+
 - Produces the SQL and Drizzle tables `care_requests` (`careRequests`) and `care_request_events` (`careRequestEvents`):
 
   `care_requests`: written once, never updated or deleted (`block_modify_append_only`).
 
-  | Column | Type and rule |
-  | --- | --- |
-  | `id` | uuid pk |
-  | `hospital_id` | not null, fk `hospitals` |
-  | `patient_user_id` | not null |
-  | `encounter_id` | not null, fk `encounters` |
-  | `admission_id` | null, fk `admissions` |
-  | `ward_id` | null, fk `hospital_wards` |
-  | `kind` | CHECK `review`, `consult` |
-  | `target_department_id` | not null, fk `hospital_departments` |
-  | `named_user_ids` | `uuid[]` not null default `'{}'`, cardinality ≤ 5 |
-  | `urgency` | CHECK: `kind='review'` takes `now`, `within_1h` or `routine`; `kind='consult'` takes `urgent_today` or `routine` |
-  | `help_wanted` | CHECK: not null exactly when `kind='consult'`, in `advice`, `see_patient` |
-  | `reason_condition_ids` | `uuid[]` not null default `'{}'`; CHECK `kind='review' OR cardinality ≥ 1` |
-  | `question_ciphertext` | CHECK `kind='review' OR not null` |
-  | `phoned_user_id`, `phoned_at` | both null or both set |
-  | `requester_user_id`, `requester_cadre`, `requested_at` | not null |
-  | `placement_id` | uuid not null |
-  | `client_key` | text not null, unique |
-  | `sensitivity` | CHECK `standard`, `restricted` |
-  | `created_at` | |
+  | Column                                                 | Type and rule                                                                                                    |
+  | ------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------- |
+  | `id`                                                   | uuid pk                                                                                                          |
+  | `hospital_id`                                          | not null, fk `hospitals`                                                                                         |
+  | `patient_user_id`                                      | not null                                                                                                         |
+  | `encounter_id`                                         | not null, fk `encounters`                                                                                        |
+  | `admission_id`                                         | null, fk `admissions`                                                                                            |
+  | `ward_id`                                              | null, fk `hospital_wards`                                                                                        |
+  | `kind`                                                 | CHECK `review`, `consult`                                                                                        |
+  | `target_department_id`                                 | not null, fk `hospital_departments`                                                                              |
+  | `named_user_ids`                                       | `uuid[]` not null default `'{}'`, cardinality ≤ 5                                                                |
+  | `urgency`                                              | CHECK: `kind='review'` takes `now`, `within_1h` or `routine`; `kind='consult'` takes `urgent_today` or `routine` |
+  | `help_wanted`                                          | CHECK: not null exactly when `kind='consult'`, in `advice`, `see_patient`                                        |
+  | `reason_condition_ids`                                 | `uuid[]` not null default `'{}'`; CHECK `kind='review' OR cardinality ≥ 1`                                       |
+  | `question_ciphertext`                                  | CHECK `kind='review' OR not null`                                                                                |
+  | `phoned_user_id`, `phoned_at`                          | both null or both set                                                                                            |
+  | `requester_user_id`, `requester_cadre`, `requested_at` | not null                                                                                                         |
+  | `placement_id`                                         | uuid not null                                                                                                    |
+  | `client_key`                                           | text not null, unique                                                                                            |
+  | `sensitivity`                                          | CHECK `standard`, `restricted`                                                                                   |
+  | `created_at`                                           |                                                                                                                  |
 
   `care_request_events`: append-only.
 
-  | Column | Type and rule |
-  | --- | --- |
-  | `id` | |
-  | `request_id` | fk `care_requests`, ON DELETE RESTRICT |
-  | `hospital_id` | |
-  | `kind` | CHECK `EVENT_KINDS` |
-  | `at` | default now |
-  | `actor_user_id` | null |
-  | `recipient_user_id` | null |
-  | `level` | smallint default 0, CHECK 0–2 |
-  | `step` | CHECK `ROUTE_STEPS`, not null exactly when `kind='routed'` |
-  | `post_id` | uuid null; the FK arrives in 0307 |
-  | `reason_code` | not null when `kind IN ('declined','redirected','cancelled')` |
-  | `note_ciphertext` | null |
-  | `note_id` | fk `clinical_notes`; not null exactly when `kind='replied'` |
-  | `redirect_department_id` | fk; not null exactly when `kind='redirected'` |
-  | `expect_at` | timestamptz null |
-  | `client_key` | text unique null |
+  | Column                   | Type and rule                                                 |
+  | ------------------------ | ------------------------------------------------------------- |
+  | `id`                     |                                                               |
+  | `request_id`             | fk `care_requests`, ON DELETE RESTRICT                        |
+  | `hospital_id`            |                                                               |
+  | `kind`                   | CHECK `EVENT_KINDS`                                           |
+  | `at`                     | default now                                                   |
+  | `actor_user_id`          | null                                                          |
+  | `recipient_user_id`      | null                                                          |
+  | `level`                  | smallint default 0, CHECK 0–2                                 |
+  | `step`                   | CHECK `ROUTE_STEPS`, not null exactly when `kind='routed'`    |
+  | `post_id`                | uuid null; the FK arrives in 0307                             |
+  | `reason_code`            | not null when `kind IN ('declined','redirected','cancelled')` |
+  | `note_ciphertext`        | null                                                          |
+  | `note_id`                | fk `clinical_notes`; not null exactly when `kind='replied'`   |
+  | `redirect_department_id` | fk; not null exactly when `kind='redirected'`                 |
+  | `expect_at`              | timestamptz null                                              |
+  | `client_key`             | text unique null                                              |
 
   Further CHECK: `actor_user_id` is not null when `kind IN ('seen','accepted','declined','redirected','replied','closed','cancelled')`.
 
   Indexes: `(request_id, at)`, `(recipient_user_id, at DESC) WHERE kind='routed'`, and `care_requests (hospital_id, target_department_id, requested_at DESC)`.
+
 - Drizzle row types: `export type CareRequestRow = typeof careRequests.$inferSelect` and `CareRequestEventRow`.
 - Also in 0306:
   - `clinical_notes_note_type_check` widened with `'consult'` (DROP IF EXISTS then ADD, the 0101:143 pattern);
@@ -338,10 +349,12 @@
 ### Task 4: The `care_team` access arm (0306, section 5)
 
 **Files:**
+
 - Modify: `supabase/migrations/0306_care_requests.sql` (append section 5; not yet shipped)
 - Test: `tests/emr-db/care-team-access.test.ts` (PGlite)
 
 **Interfaces:**
+
 - Produces:
   - `private.care_team_patients(p_user uuid, p_hospital uuid) RETURNS SETOF uuid`: `SECURITY DEFINER STABLE`, `REVOKE ALL … FROM PUBLIC`. It returns the patients of requests at `p_hospital` where an event names `p_user` as `recipient_user_id` of a `routed` row or `actor_user_id` of an `accepted` row, and the request is either open (no `replied`, `closed` or `cancelled` event) or has a `replied` event in the last 30 days (`DEPARTMENT_WINDOW_DAYS`, `lib/encounter/scope.ts:43`) and no `cancelled` event.
   - `private.patient_access_basis` and `private.accessible_patient_ids`, both `CREATE OR REPLACE`d by copying the body at `0101_lab_work_access_basis.sql:23-140` verbatim. The `-- 5. care_team — seam` comment (`:85`) becomes a real arm. In the per-patient body it reads `WHEN EXISTS (SELECT 1 FROM clin) AND p_patient IN (SELECT private.care_team_patients(p_user, p_hospital)) THEN 'care_team'`. The set body adds a `UNION` of `SELECT private.care_team_patients(me.uid, me.hid) … WHERE EXISTS (SELECT 1 FROM clin)`. Both bodies call the same function, so they agree by construction.
@@ -362,10 +375,12 @@
 ### Task 5: The consult note template
 
 **Files:**
+
 - Modify: `data/emr/note-templates.v1.json` (add `tpl.consult`, update `counts`)
 - Test: `tests/emr/notes.test.ts` (default lane)
 
 **Interfaces:**
+
 - Produces template `tpl.consult`: `version "1.0.0"`, `noteType "consult"`, `title "Consult reply"`, `reference "2.12 (draft wording)"`. Sections:
   - `s01` Findings: `mixed`, items `finding`, `exam_finding`, optional;
   - `s02` Assessment: `structured`, items `problems_addressed`, required;
@@ -373,6 +388,7 @@
   - `s04` Follow-up: `structured`, items `follow_up`, optional.
 
   `minimumToSign.required` is `req.assessment` (`section_has_content`, `s02`) and `req.recommendations` (`section_has_content`, `s03`). `counts` becomes `templates 11, sections 69, requiredRules 29`; the others are unchanged.
+
 - [ ] **Step 1: Failing test** in `tests/emr/notes.test.ts`: `tpl.consult parses and needs assessment and recommendations`. `parseTemplateCatalogue(raw)` includes `tpl.consult`. Run `planSign` on content with empty `s02` and you get `ok: false`; with narrative in `s02` and `s03` you get `ok: true`.
 - [ ] **Step 2:** `npx vitest run tests/emr/notes.test.ts`. Expected: FAIL (template missing).
 - [ ] **Step 3:** Add the template and the counts.
@@ -382,11 +398,13 @@
 ### Task 6: Placing requests (write path, routing loader, notices)
 
 **Files:**
+
 - Create: `lib/emr/write/requests.ts`
 - Modify: `lib/emr/write/orders.ts`. Extract the reason check at `:357-384` into an exported `checkReasonConditions` and call it from `placeOrders` with behaviour unchanged.
 - Test: `tests/emr-db/care-requests.test.ts` (PGlite)
 
 **Interfaces:**
+
 - Consumes: `route`, `RouteCandidates` (Task 2); `careRequests`, `careRequestEvents` (Task 3); `CARE_REQUEST_COPY.noticeSubject` (Task 1).
 - Produces:
   - `checkReasonConditions(tx: EmrTx, patientUserId: string, ids: readonly string[]): Promise<{ restricted: boolean }>`. It throws the existing `invalid` or `conflict` `EmrWriteError` messages.
@@ -421,11 +439,13 @@
 ### Task 7: The request lifecycle (seen, accept, decline, redirect, reply, close, cancel)
 
 **Files:**
+
 - Modify: `lib/emr/write/requests.ts`
 - Create: `lib/emr/actions/requests.ts`
 - Test: `tests/emr-db/care-requests-lifecycle.test.ts` (PGlite)
 
 **Interfaces:**
+
 - Consumes: `deriveRequest`, `canAct`, `Relation` (Task 1); `insertSignedNote` (`lib/emr/write/notes.ts:787`).
 - Produces (write functions):
   - `withRequestWrite<T>(actor: EmrActor, requestId: string, fn: (c: RequestCtx) => Promise<T>, opts?: { database?: EmrDb; now?: Date }): Promise<T>`. It runs `asClinicalWriter`, loads the request (`not_found` unless it is this hospital's), `SELECT … FOR UPDATE`s the request row, loads its events, computes `Relation` and `deriveRequest`, then calls `fn`.
@@ -460,6 +480,7 @@
 ### Task 8: Requests ride the Plan basket (server side)
 
 **Files:**
+
 - Modify:
   - `lib/clerking/plan/draft.ts`: `PlanRequestLineSchema`; `basket.requests`; `seniorReviewNotNeeded`; `basketOf`.
   - `lib/emr/actions/plan.ts:22-50`: `PlacePlan.requests`, and the flag check.
@@ -467,6 +488,7 @@
 - Test: `tests/clerking/plan.test.ts` (default lane); `tests/emr-db/write-plan.test.ts` (PGlite)
 
 **Interfaces:**
+
 - Produces:
   - `PlanRequestLineSchema`, a Zod object:
     - `clientKey`: string, trimmed, 8–120;
@@ -482,6 +504,7 @@
     - `display`: text, ≤ 300 (the basket words, never sent to the request table).
 
     It has a `superRefine` mirroring the SQL CHECKs: a consult needs `helpWanted`, at least one reason and a non-empty question; urgencies must match the kind.
+
   - `type PlanRequestLine = z.infer<typeof PlanRequestLineSchema>`
   - `PlanSchema.basket.requests: z.array(PlanRequestLineSchema).max(10).optional()`
   - `PlanSchema.seniorReviewNotNeeded: text(300).optional()`
@@ -489,6 +512,7 @@
   - `PlacePlan` (action) gains `requests: z.array(PlanRequestLineSchema).max(10).default([])`. When `requests.length` is non-zero and `!careRequestsLiveFor(hospitalId)`, it throws `EmrWriteError("config", "Requests are not switched on here.")`.
   - `PlacePlanInput.requests: PlanRequestLine[]`
   - `placePlan` result: `WriteResult & { orderIds; prescriptionIds; chartIds; requestIds: string[] }`. `placeRequests` runs after the prescriptions and before `openPlanCharts`, with its own `placementId` (`randomUUID()`). The empty check reads `!orders.length && !prescriptions.length && !requests.length`. The id is `orderIds[0] ?? prescriptionIds[0] ?? requestIds[0]!`.
+
 - [ ] **Step 1: Failing pure tests** in `tests/clerking/plan.test.ts`:
   - `drafts saved before requests still parse`: `PlanSchema.parse({ basket: { orders: [], prescriptions: [] } })`, then `basketOf(...)`, gives `requests` equal to `[]`.
   - `a consult line needs help wanted, a problem and a question`: `PlanRequestLineSchema.safeParse` fails without each.
@@ -506,6 +530,7 @@
 ### Task 9: Requests in the Plan screen (minimal, behind the flag)
 
 **Files:**
+
 - Modify:
   - `lib/clerking/plan/record.ts`: `PlacedRequest`, `PlanRecord.requests`, `EMPTY_RECORD`.
   - `lib/clerking/plan/payload.ts`: `PlanPayload.requests?`.
@@ -520,6 +545,7 @@
 - Test: `tests/clerking/plan.test.ts`, `tests/clerking/plan-step.test.ts` (default lane)
 
 **Interfaces:**
+
 - Produces:
   - `interface PlacedRequest { id: string; kind: RequestKind; urgency: string; targetWords: string; stateWord: string; at: string }`. `PlanRecord.requests: PlacedRequest[]` (`EMPTY_RECORD.requests = []`).
   - `PlanPayload.requests?: { departments: { id: string; name: string; staff: { userId: string; name: string; cadre: string }[] }[]; ownDepartmentId: string|null } | null`. Absent with the flag off. Staff names only, never patients.
@@ -534,12 +560,14 @@
     - "Already discussed by phone with…" (optional, one person from the department, `at` = now).
 
     The footer has "Add to basket", which is disabled and says why until the line is valid.
+
   - Behaviour of `Where` when `v.payload.requests` is set:
     - the Senior review `Seg` gains a fourth option `{ id: "not_needed", label: "Not needed" }`. Picking it shows a reason input (three words or more, `REASON_WORDS`) stored in `seniorReviewNotNeeded`, and clears any review basket line;
     - picking a time sets `seniorReview` and upserts the one review line. Its `clientKey` is created with `crypto.randomUUID()` when the line is first added and kept on later changes. The target is the chosen admit ward's department if `disposition.wardId` resolves to a department, else `ownDepartmentId`, with `wardId` from the disposition;
     - a ghost Button "Ask another team" under the row opens `ConsultDialog`.
 
     With the flag off, `Where` renders exactly as today.
+
   - `Basket` lists request lines (display, a neutral `Tag` with the urgency word, Remove). Removing the review line also clears `seniorReview`. The button text comes from a new exported `placeWords(n: number, m: number, k: number): string`. When `k === 0` it returns today's exact string (`plan-step.tsx:303`); otherwise `Place 1 order, 2 prescriptions and 1 request`.
   - `place()` sends `requests: b.requests` and drops the placed request keys like the others (`plan-step.tsx:410-423`).
   - `checklist`, senior review item: `done = !!plan.seniorReview || words(plan.seniorReviewNotNeeded ?? "") >= REASON_WORDS`. The detail is `"Choose when, or say why not."` with the flag's option present, and `"Choose when."` otherwise. The flag-off result is unchanged.
@@ -548,6 +576,7 @@
     - a review line still in the basket writes `senior review <word> (not yet sent)`;
     - `seniorReviewNotNeeded` writes `no senior review needed: <reason>`;
     - each placed consult adds one line, `Consult requested from <targetWords> (<help word>, <urgency word>).`
+
 - [ ] **Step 1: Failing tests:**
   - `tests/clerking/plan.test.ts`:
     - `senior review is met by not needed with a reason`;
@@ -565,6 +594,7 @@
 ### Task 10: Reading requests: the lists and the workspace lanes
 
 **Files:**
+
 - Create: `lib/emr/read/requests.ts`
 - Modify:
   - `lib/workspace/lanes.ts`: two lanes;
@@ -577,6 +607,7 @@
   - `tests/emr-db/care-requests-reads.test.ts` (PGlite).
 
 **Interfaces:**
+
 - Produces:
   - `interface RequestRow { id; kind; urgency; helpWanted; stateWord; overdue: boolean; patientUserId; patientName: string|null; mrn: string|null; wardName: string|null; departmentName; requesterName; requesterCadre; questionFirstLine: string|null; askedAtMs: number; mine: boolean; restricted: boolean }`
   - `askedOfMe(actor: EmrActor, opts?: { database?: EmrDb; now?: Date }): Promise<RequestRow[]>`: open requests where the actor is a current-round recipient or the accepter. Overdue first, then urgency (`now`, `urgent_today`, `within_1h`, `routine`), then oldest.
@@ -591,12 +622,14 @@
     - both `visibleFor: v => v.requests === true`.
 
     `LaneViewer.requests?: boolean`. The `LANES` order puts `asked_of_you` after `in_progress` and `department_consults` after `to_cosign`.
+
   - `FlowTask.kind` gains `"request_mine" | "request_department"`.
     - In `computeFlow`, the `request_mine` branch comes before the `toReview || toCosign` branch (`flow.ts:722`): lane `asked_of_you`, primary `{ kind: "view", label: "Answer", encounterId }`.
     - The `request_department` branch comes after it: lane `department_consults`, label "Pick up".
     - The label is null for a restricted request, else `"Consult · <department>"` or `"Review"`.
   - `WorkspaceData.requests: boolean`. `loadEmrTasks` adds the two task sources when `careRequestsLiveFor(viewer.hospitalId)`.
   - `EMR_LANE_HREF.asked_of_you = "/doctor/requests"` and `department_consults = "/doctor/requests?view=department"`. `TIME_WORD` gets `["asked","ago"]` for both.
+
 - [ ] **Step 1: Failing tests:**
   - `tests/workspace/flow.test.ts`: update the order and hotkey expectations to include `asked_of_you`/`a` after `in_progress`/`5`, and `department_consults`/`c` after `to_cosign`/`0`. Add `request lanes show only with the flag`: `visibleLanes({ mayAssign: true, emr: true })` has neither, and `{…, requests: true}` has both.
   - `tests/emr-db/care-requests-reads.test.ts`:
@@ -613,6 +646,7 @@
 ### Task 11: The request pages and dialogs (doctor and clinician)
 
 **Files:**
+
 - Create:
   - `app/doctor/requests/page.tsx`
   - `app/clinician/requests/page.tsx`
@@ -626,6 +660,7 @@
 - Test: `tests/requests/request-dialog.test.ts` (default lane; jsdom, the style of `tests/clerking/plan-step.test.ts`)
 
 **Interfaces:**
+
 - Consumes: the Task 10 reads and the Task 7 actions.
 - Produces:
   - `RequestsView({ surface, asked, department, sent, now }: { surface: "doctor"|"clinician"; asked: RequestRow[]; department: RequestRow[]; sent: RequestRow[]; now: number })`. Rows read: patient and ward, from whom, the first line of the question, its age (elapsed words), the state `Tag`, and one action.
@@ -639,8 +674,10 @@
     - Redirect (department plus reason);
     - Reply (opens `ReplyDialog`);
     - for the requester: Cancel (reason), Redirect when declined, Close after replied.
+
   - `ReplyDialog`: findings (optional), assessment (required), recommendations (required), and follow-up chips "I will see the patient again" or "No follow-up needed". Submitting calls `replyToRequestAction`.
   - Both pages call `notFound()` unless `careRequestsLiveFor`. The doctor page uses `requireDoctorScope` and the clinician page `requireClinicianScope`. Both load with `requireEmrActor(surface)`.
+
 - [ ] **Step 1: Failing tests:**
   - `the dialog says who is responsible`: the text includes "The requesting team stays responsible for the patient.";
   - `actions follow canAct`: with a detail where only `accept` is allowed, there is no Reply button;
@@ -654,6 +691,7 @@
 ### Task 12: The nurse in charge is told at admission, and the notices list
 
 **Files:**
+
 - Modify:
   - `lib/emr/write/encounter.ts:241-313`: the end of `afterClose`;
   - `app/nurse/page.tsx`: notices for in-charge nurses;
@@ -662,6 +700,7 @@
 - Test: `tests/emr-db/ward-incoming.test.ts` (PGlite); `tests/requests/staff-notices.test.ts` (default lane)
 
 **Interfaces:**
+
 - Produces:
   - In `afterClose`, when `input.admissionId` is set and `careRequestsLiveFor(ctx.actor.hospitalId)`: `notifyWardIncoming(ctx: WriteCtx, admissionId: string): Promise<void>`, exported from `lib/emr/write/requests.ts`. It reads the admission's `ward_id` and ward name, plus the open `ward_in_charge_assignments` for that ward (substantive and acting, `db/schema/nurse-workspace.ts:83-113`). It inserts `sa_notifications` kind `ward_incoming` with subject `noticeSubject("ward_incoming", wardName)` and body "A patient is being admitted to your ward. See the bed board." (draft; no patient). It sends `notify_user_event(…, 'request', 'ward_incoming', admissionId)`, runs in a savepoint and never throws.
   - `myNotices(userId: string, kinds: readonly string[], limit = 20): Promise<{ id; kind; subject; body; at: string; read: boolean }[]>`: own rows, undismissed, newest first (server `db`, filtered by `recipient_user_id`).
@@ -681,6 +720,7 @@
 ### Task 13: Phase 1 records and checks
 
 **Files:**
+
 - Create:
   - `docs/adr/0533-one-request-record-for-reviews-and-consults.md`: D1, D2, D3, D5, D6, D11, routing order, rounds, notices in a savepoint, the nurse notice.
   - `docs/adr/0535-care-team-chart-access.md`: the arm, the 30-day window, the D6 split between seeing the list and opening the chart, ADR 0199 kept, TS seams left.
@@ -704,10 +744,12 @@ Each ADR uses the 0531 shape: title, a **Status** line ("Accepted, 24 Nov 2026. 
 ### Task 14: Rota engine (pure): shifts, whoCovers, duty state, gaps
 
 **Files:**
+
 - Create: `lib/rota/feature.ts`, `lib/rota/cover.ts`, `content/duty-rota.ts`
 - Test: `tests/rota/cover.test.ts` (default lane)
 
 **Interfaces:**
+
 - Produces:
   - `dutyRotaLiveFor(hospitalId: string): boolean` (`DUTY_ROTA=1` or ids).
   - `POST_LEVELS = ["junior","senior","consultant","nurse_in_charge","allied"] as const`
@@ -752,46 +794,48 @@ Each ADR uses the 0531 shape: title, a **Status** line ("Accepted, 24 Nov 2026. 
 ### Task 15: Migration 0307 (posts, assignments, guard) and Drizzle
 
 **Files:**
+
 - Create: `supabase/migrations/0307_duty_rota.sql`, `db/schema/duty-rota.ts`
 - Modify: `db/schema/index.ts`
 - Test: `tests/rota/migration-0307.test.ts` (default lane, static); `tests/emr-db/duty-rota.test.ts` (PGlite)
 
 **Interfaces:**
+
 - Produces:
 
   `duty_posts` (`dutyPosts`):
 
-  | Column | Type and rule |
-  | --- | --- |
-  | `id` | |
-  | `hospital_id` | |
-  | `department_id` | not null, fk |
-  | `ward_id` | null, fk `hospital_wards` |
-  | `scope_kind` | CHECK `ward`, `department`; CHECK `(scope_kind='ward') = (ward_id IS NOT NULL)` |
-  | `name` | 2–80 characters |
-  | `level` | CHECK `POST_LEVELS` |
-  | `eligible_cadres` | `text[]` not null, cardinality ≥ 1 |
-  | `takes_consults` | boolean default false |
-  | `escalates_to_post_id` | null, self fk |
-  | `capacity` | smallint default 1, CHECK 1–20 |
-  | `created_by`, `created_at` | |
-  | `archived_at`, `archived_by` | |
+  | Column                       | Type and rule                                                                   |
+  | ---------------------------- | ------------------------------------------------------------------------------- |
+  | `id`                         |                                                                                 |
+  | `hospital_id`                |                                                                                 |
+  | `department_id`              | not null, fk                                                                    |
+  | `ward_id`                    | null, fk `hospital_wards`                                                       |
+  | `scope_kind`                 | CHECK `ward`, `department`; CHECK `(scope_kind='ward') = (ward_id IS NOT NULL)` |
+  | `name`                       | 2–80 characters                                                                 |
+  | `level`                      | CHECK `POST_LEVELS`                                                             |
+  | `eligible_cadres`            | `text[]` not null, cardinality ≥ 1                                              |
+  | `takes_consults`             | boolean default false                                                           |
+  | `escalates_to_post_id`       | null, self fk                                                                   |
+  | `capacity`                   | smallint default 1, CHECK 1–20                                                  |
+  | `created_by`, `created_at`   |                                                                                 |
+  | `archived_at`, `archived_by` |                                                                                 |
 
   Updates allowed only to `archived_at`/`archived_by` (a guard like `0265:95-103`).
 
   `duty_assignments` (`dutyAssignments`):
 
-  | Column | Type and rule |
-  | --- | --- |
-  | `id` | |
-  | `hospital_id` | |
-  | `post_id` | fk |
-  | `user_id` | fk `auth.users` |
-  | `starts_at`, `ends_at` | CHECK `ends_at > starts_at` |
-  | `kind` | CHECK `rostered`, `cover`, `swap` |
-  | `covers_assignment_id` | self fk; CHECK `kind='rostered' OR covers_assignment_id IS NOT NULL` |
-  | `created_by`, `created_at` | |
-  | `ended_at`, `ended_by`, `end_reason` | 2–200 characters; all three null or all set |
+  | Column                               | Type and rule                                                        |
+  | ------------------------------------ | -------------------------------------------------------------------- |
+  | `id`                                 |                                                                      |
+  | `hospital_id`                        |                                                                      |
+  | `post_id`                            | fk                                                                   |
+  | `user_id`                            | fk `auth.users`                                                      |
+  | `starts_at`, `ends_at`               | CHECK `ends_at > starts_at`                                          |
+  | `kind`                               | CHECK `rostered`, `cover`, `swap`                                    |
+  | `covers_assignment_id`               | self fk; CHECK `kind='rostered' OR covers_assignment_id IS NOT NULL` |
+  | `created_by`, `created_at`           |                                                                      |
+  | `ended_at`, `ended_by`, `end_reason` | 2–200 characters; all three null or all set                          |
 
   Indexes `(hospital_id, post_id, starts_at)` and `(hospital_id, user_id, starts_at)`.
 
@@ -810,6 +854,7 @@ Each ADR uses the 0531 shape: title, a **Status** line ("Accepted, 24 Nov 2026. 
   `ALTER TABLE care_request_events ADD CONSTRAINT cre_post_fk FOREIGN KEY (post_id) REFERENCES duty_posts(id)`, guarded by `IF NOT EXISTS` through `pg_constraint`.
 
   RLS on both tables: `SELECT` for `medsync_clinical_reader` with `hospital_id = (SELECT private.current_hospital_id())`. No client writes. Audit triggers on both.
+
 - [ ] **Step 1: Failing tests:**
   - Static: `is GATED`, `forces RLS`, `the guard names every hint`. Each of `rota_grade`, `rota_leave`, `rota_double`, `rota_full`, `rota_maker` appears in the SQL.
   - PGlite `tests/emr-db/duty-rota.test.ts`:
@@ -828,10 +873,12 @@ Each ADR uses the 0531 shape: title, a **Status** line ("Accepted, 24 Nov 2026. 
 ### Task 16: Rota writes and reads
 
 **Files:**
+
 - Create: `lib/rota/write.ts`, `lib/rota/read.ts`
 - Test: `tests/emr-db/duty-rota-actions.test.ts` (PGlite)
 
 **Interfaces:**
+
 - Produces:
   - `interface RotaActor { userId: string; hospitalId: string }`
   - `runRotaWrite<I, R>(actor: RotaActor, schema: z.ZodType<I>, raw: unknown, fn: (ctx: { tx: EmrTx; actor: RotaActor; now: Date }, input: I) => Promise<R>, opts?: { database?: EmrDb; now?: Date }): Promise<ActionResult<R>>`. It runs Zod, then `asClinicalWriter`, then `fn`. A Postgres `check_violation` whose `hint` starts with `rota_` maps to `{ ok: false, code: "forbidden", error: DUTY_ROTA_COPY.refusal[hint] }`. Same shape as `runPharmacyWrite`.
@@ -858,6 +905,7 @@ Each ADR uses the 0531 shape: title, a **Status** line ("Accepted, 24 Nov 2026. 
 ### Task 17: The admin week grid, gap report, and the heads' rota page
 
 **Files:**
+
 - Create:
   - `app/hospital-admin/departments/rota/page.tsx`
   - `app/hospital-admin/departments/rota/actions.ts`: actor from `requireHospitalAdminScope()`.
@@ -871,6 +919,7 @@ Each ADR uses the 0531 shape: title, a **Status** line ("Accepted, 24 Nov 2026. 
 - Test: `tests/rota/rota-week.test.ts` (default lane, jsdom)
 
 **Interfaces:**
+
 - Produces:
   - `RotaWeek({ week, departmentName, canEdit, actions }: { week: Awaited<ReturnType<typeof loadRotaWeek>>; …; actions: { createPost; archivePost; assignDuty; endDuty } })`. Rows are posts (the department's, then each ward's); columns are Mon–Sun. A cell lists holders (name, shift word, state `Tag`). An empty cell has "Add", which opens `AssignDialog` with the day fixed.
     - `AssignDialog` (`EditorDialog width="medium"`): the person (eligible list), shift chips (Day, Night, 24 hours, Week), kind (Rostered, Cover for…).
@@ -892,6 +941,7 @@ Each ADR uses the 0531 shape: title, a **Status** line ("Accepted, 24 Nov 2026. 
 ### Task 18: "Who covers this ward now" and the on-duty chip
 
 **Files:**
+
 - Modify:
   - `app/hospital-admin/departments/wards/_lib/model.ts:14-31`: `WardItem.cover?`;
   - `app/hospital-admin/departments/wards/page.tsx:35-48`: load `coverForWard` per ward when `dutyRotaLiveFor`;
@@ -901,6 +951,7 @@ Each ADR uses the 0531 shape: title, a **Status** line ("Accepted, 24 Nov 2026. 
 - Test: `tests/rota/duty-chip.test.ts` (default lane)
 
 **Interfaces:**
+
 - Produces:
   - `WardItem.cover?: Awaited<ReturnType<typeof coverForWard>>`. The panel's section title is "Who covers this ward now"; the lines read "Dr A · SHO on call · until 17:00" plus the fallback step in words, and `DUTY_ROTA_COPY.plannedNotPresent`.
   - `DutyChip({ duties }: { duties: Awaited<ReturnType<typeof myDuties>> })`: "On call: Nephrology SHO until 08:00" (the post's own name). Renders nothing when there are no duties. Links to `/doctor/rota`.
@@ -917,16 +968,19 @@ Each ADR uses the 0531 shape: title, a **Status** line ("Accepted, 24 Nov 2026. 
 ### Task 19: Routing resolves posts to holders
 
 **Files:**
+
 - Modify: `lib/emr/write/requests.ts`, inside `loadRouteCandidates`
 - Test: `tests/emr-db/care-requests-routing-rota.test.ts` (PGlite)
 
 **Interfaces:**
+
 - Consumes: `loadCoverWorld`, `whoCovers` (Tasks 14 and 16).
 - Produces: when `dutyRotaLiveFor(hospitalId)`, `RouteCandidates.post` is filled from `whoCovers(world, { departmentId, wardId, levels, at })`, keeping only the `ward_post` and `department_post` steps.
   - A review uses `levels ["senior","consultant"]` and the request's `wardId`.
   - A consult uses the department's `takesConsults` post, with no `wardId`.
 
   Each candidate carries its `postId`, so the `routed` rows record the post. With the flag off, or nobody in post, Phase 1 routing is unchanged.
+
 - [ ] **Step 1: Failing tests:**
   - `a consult goes to the takes-consults post holder, not the whole team`: one `routed` row, step `post`, `post_id` set;
   - `nobody in post falls back to the team list`;
@@ -940,6 +994,7 @@ Each ADR uses the 0531 shape: title, a **Status** line ("Accepted, 24 Nov 2026. 
 ### Task 20: Phase 2 records and checks
 
 **Files:**
+
 - Create: `docs/adr/0534-duty-rota-posts-and-assignments.md`. It covers:
   - posts and timed assignments, ended never edited;
   - planned, not proven;
@@ -964,10 +1019,12 @@ Each ADR uses the 0531 shape: title, a **Status** line ("Accepted, 24 Nov 2026. 
 ### Task 21: The escalation planner (pure)
 
 **Files:**
+
 - Create: `lib/requests/escalation.ts`
 - Test: `tests/requests/escalation.test.ts` (default lane)
 
 **Interfaces:**
+
 - Consumes: `heartbeatStale` and `HEARTBEAT_STALE_MS`, imported from `lib/lab/criticals/escalation.ts:103-107`. Do not copy them.
 - Produces:
   - `interface RequestTimes { reviewNowAcceptMin: number; review1hAcceptMin: number; consultUrgentAcceptMin: number; routineReplyMin: number }`
@@ -994,18 +1051,22 @@ Each ADR uses the 0531 shape: title, a **Status** line ("Accepted, 24 Nov 2026. 
 ### Task 22: Migration 0308 and the signed response times
 
 **Files:**
+
 - Create: `supabase/migrations/0308_care_request_escalation.sql`, `lib/requests/times.ts`
 - Modify: `db/schema/care-requests.ts`: `careRequestResponseVersions`, `careRequests.dueAt`. `db/schema/lab-safety.ts` needs no change; heartbeats are text.
 - Test: `tests/requests/migration-0308.test.ts` (static); `tests/emr-db/care-request-times.test.ts` (PGlite)
 
 **Interfaces:**
+
 - Produces (SQL):
   - `care_request_response_versions`: `hospital_id`, `version` (unique per hospital), `status` (`draft`, `signed`, `superseded`), `review_now_accept_min`, `review_1h_accept_min`, `consult_urgent_accept_min`, `routine_reply_min` (each 1–2880), `source` (3–500), `authored_by`, `admin_signed_by`/`at`, `cso_signed_by`/`at`, `exception_note`, `created_at`, `superseded_at`.
 
     Constraints copied from `critical_response_versions` (`0102_lab_criticals.sql:24-48`): signed needs two different signers or an exception note; at most one signed row per hospital.
+
   - `ALTER TABLE care_requests ADD COLUMN IF NOT EXISTS due_at timestamptz`: set at insert, null when nothing is signed.
   - `escalation_heartbeats_source_check` widened to `('scheduler','lazy','care_requests')`, DROP IF EXISTS then ADD.
   - RLS and audit as for the lab table.
+
 - Produces (TS, `lib/requests/times.ts`):
   - `signedRequestTimes(tx: EmrTx, hospitalId: string): Promise<RequestTimes|null>`
   - `saveRequestTimesDraft(tx, actor: { userId; hospitalId }, input: RequestTimes & { source: string }): Promise<string>`: mirrors `saveResponseDraft` (`lib/lab/criticals/setup.ts:132`).
@@ -1026,6 +1087,7 @@ Each ADR uses the 0531 shape: title, a **Status** line ("Accepted, 24 Nov 2026. 
 ### Task 23: The runner on the lab tick, the lazy run, the requester told
 
 **Files:**
+
 - Create: `lib/requests/escalation-run.ts`
 - Modify:
   - `app/api/cron/lab-escalations/route.ts:33-40`: one more call after the IPC line, in its own `try`;
@@ -1033,6 +1095,7 @@ Each ADR uses the 0531 shape: title, a **Status** line ("Accepted, 24 Nov 2026. 
 - Test: `tests/emr-db/care-request-escalation.test.ts` (PGlite)
 
 **Interfaces:**
+
 - Produces:
   - `runCareRequestEscalations(db: EmrDb, opts: { now: Date; source: "scheduler"|"lazy"; hospitalId?: string }): Promise<{ escalated: number }>`. In one transaction it:
     - selects open requests with `FOR UPDATE SKIP LOCKED` (as `runEscalations`, `lib/lab/criticals/store.ts:1068`);
@@ -1046,8 +1109,10 @@ Each ADR uses the 0531 shape: title, a **Status** line ("Accepted, 24 Nov 2026. 
     - `notifyRecipients` the new recipients (`care_request`) and the requester (`care_request_update`, body "Not accepted after 60 min; asked the consultant on call." in draft words, built from the step and minutes, never the patient).
 
     Only `source: "scheduler"` inserts a heartbeat, and it inserts `escalation_heartbeats(source 'care_requests', escalated)`. A lazy run writes none, so a stopped scheduler is never hidden (the lab's own rule, `store.ts:1116-1118`).
+
   - `lastRequestHeartbeat(tx: EmrTx): Promise<Date|null>`
   - The cron route returns `careRequestsEscalated` in its JSON. A failure is logged as `cron.lab-escalations.care_requests_failed` and never fails the lab run.
+
 - [ ] **Step 1: Failing tests** (fixed clock):
   - `an unaccepted review now escalates to the head after 15 minutes and the requester is told`;
   - `with a rota, level 1 is the escalates-to post holder`;
@@ -1063,6 +1128,7 @@ Each ADR uses the 0531 shape: title, a **Status** line ("Accepted, 24 Nov 2026. 
 ### Task 24: Setting and signing the response times
 
 **Files:**
+
 - Create:
   - `app/hospital-admin/departments/rota/response-times/page.tsx`
   - `app/hospital-admin/departments/rota/response-times/actions.ts`
@@ -1072,6 +1138,7 @@ Each ADR uses the 0531 shape: title, a **Status** line ("Accepted, 24 Nov 2026. 
 - Test: `tests/requests/response-times-form.test.ts` (default lane)
 
 **Interfaces:**
+
 - Produces:
   - Admin page:
     - shows the signed set, or "No response times are signed: requests do not escalate.";
@@ -1091,6 +1158,7 @@ Each ADR uses the 0531 shape: title, a **Status** line ("Accepted, 24 Nov 2026. 
 ### Task 25: "Escalations may be delayed" banner, due words, and the Phase 3 records
 
 **Files:**
+
 - Create: `components/requests/delayed-banner.tsx`, `docs/adr/0536-escalation-of-unanswered-requests.md`
 - Modify:
   - `app/doctor/requests/page.tsx`, `app/clinician/requests/page.tsx`: the banner;
@@ -1099,6 +1167,7 @@ Each ADR uses the 0531 shape: title, a **Status** line ("Accepted, 24 Nov 2026. 
 - Test: `tests/requests/delayed-banner.test.ts` (default lane)
 
 **Interfaces:**
+
 - Produces:
   - `DelayedBanner({ show }: { show: boolean })`. The text is "Escalations may be delayed. Phone the team for anything urgent." (draft). It is a neutral card with an icon and its word, not red.
   - The pages compute `show = signedRequestTimes(h) !== null && heartbeatStale(await lastRequestHeartbeat(tx), now)`.
@@ -1115,6 +1184,7 @@ Each ADR uses the 0531 shape: title, a **Status** line ("Accepted, 24 Nov 2026. 
   - `EMR_PGLITE=1 npx vitest run tests/emr-db/care-request-times.test.ts tests/emr-db/care-request-escalation.test.ts tests/emr-db/drizzle-parity.test.ts`.
 
   Expected: all pass, or report "skipped".
+
 - [ ] **Step 5: Commit** `components/requests/delayed-banner.tsx app/doctor/requests/page.tsx app/clinician/requests/page.tsx lib/emr/read/requests.ts docs/adr/0536-escalation-of-unanswered-requests.md CHANGELOG.md tests/requests/delayed-banner.test.ts`. Message: `feat(requests): delayed banner and due words; ADR 0536`.
 
 ---
@@ -1124,10 +1194,12 @@ Each ADR uses the 0531 shape: title, a **Status** line ("Accepted, 24 Nov 2026. 
 ### Task 26: Templates and week state (pure)
 
 **Files:**
+
 - Create: `lib/rota/templates.ts`
 - Test: `tests/rota/templates.test.ts` (default lane)
 
 **Interfaces:**
+
 - Produces:
   - `interface TemplateLine { id; postId; weekdays: number[] /* 1=Mon … 7=Sun */; shift: Shift; userId: string|null }`
   - `fillWeek(lines: TemplateLine[], weekStart: string, existing: Assignment[]): { postId; userId; day: string; shift: Shift }[]`: one draft per weekday per line with a named user. It skips any window already held by that user on that post. Lines with no user produce nothing; they stay gaps.
@@ -1147,11 +1219,13 @@ Each ADR uses the 0531 shape: title, a **Status** line ("Accepted, 24 Nov 2026. 
 ### Task 27: Migration 0309 (templates, publish and unlock, cover and swap, delegate)
 
 **Files:**
+
 - Create: `supabase/migrations/0309_duty_rota_upkeep.sql`
 - Modify: `db/schema/duty-rota.ts`
 - Test: `tests/rota/migration-0309.test.ts` (static); `tests/emr-db/duty-rota-upkeep.test.ts` (PGlite)
 
 **Interfaces:**
+
 - Produces (SQL; each table with RLS as in 0307, audit, and append-only where stated):
   - `duty_rota_templates`: `id`, `hospital_id`, `department_id`, `post_id`, `weekdays smallint[]` (each 1–7, cardinality 1–7), `shift`, `user_id` null, `created_by`/`at`, `ended_at`/`ended_by`. Ended, never edited, with the 0265 guard pattern.
   - `duty_rota_week_events`: `id`, `hospital_id`, `department_id`, `week_start date` (CHECK ISO Monday: `extract(isodow from week_start) = 1`), `kind` (`publish`, `unlock`), `reason` (required for `unlock`, 2–300), `actor_id`, `at`. Append-only. The insert guard: the actor is a rota maker with publish rights.
@@ -1163,9 +1237,11 @@ Each ADR uses the 0531 shape: title, a **Status** line ("Accepted, 24 Nov 2026. 
     - `withdrawn` only by `asked_by`.
 
     On `approved` the trigger sets `set_config('duty.rota_via','request',true)`, ends the asked assignment (`end_reason 'covered'`), and inserts the colleague's assignment (`kind cover|swap`, `covers_assignment_id`). For a swap it also does the mirror pair.
+
   - `private.duty_rota_maker(p_hospital, p_user, p_department, p_publish boolean DEFAULT false)`, `CREATE OR REPLACE`. It adds an active delegate (not revoked, `until` null or ≥ the Kampala day, and `can_publish` when `p_publish`). The 0307 three-argument callers keep working through the default.
   - `private.duty_week_published(p_hospital uuid, p_department uuid, p_at timestamptz) RETURNS boolean`
   - `private.duty_assignment_guard()`, `CREATE OR REPLACE`: everything from 0307, plus inserting into or ending in a published week is refused with HINT `rota_locked` unless `current_setting('duty.rota_via', true) = 'request'`.
+
 - [ ] **Step 1: Failing tests:**
   - static `is GATED` and `names rota_locked`;
   - PGlite:
@@ -1183,10 +1259,12 @@ Each ADR uses the 0531 shape: title, a **Status** line ("Accepted, 24 Nov 2026. 
 ### Task 28: Upkeep writes
 
 **Files:**
+
 - Modify: `lib/rota/write.ts`, `lib/rota/read.ts`
 - Test: `tests/emr-db/duty-rota-upkeep-actions.test.ts` (PGlite)
 
 **Interfaces:**
+
 - Produces (all through `runRotaWrite`):
   - `saveTemplateLine({ postId, weekdays, shift, userId })` and `endTemplateLine({ lineId })`;
   - `fillWeekFromTemplates({ departmentId, weekStart })`: calls `fillWeek`, then `assignDuty` per draft. Guard refusals are collected as `{ skipped: { line, why }[] }`, not thrown, so one refusal never stops the week;
@@ -1199,6 +1277,7 @@ Each ADR uses the 0531 shape: title, a **Status** line ("Accepted, 24 Nov 2026. 
   - `myDuties` gains `swapsAskedOfMe`.
 
   Swaps send no in-app notice in v1 (no new `sa_notifications` kind). They show on `/doctor/rota` only: "Asked of you" for the colleague, "Swaps to decide" for the makers.
+
 - [ ] **Step 1: Failing tests:**
   - `fill week writes the template's duties and reports refusals in words`;
   - `publish then a direct edit is refused with the locked words`;
@@ -1212,6 +1291,7 @@ Each ADR uses the 0531 shape: title, a **Status** line ("Accepted, 24 Nov 2026. 
 ### Task 29: Upkeep screens
 
 **Files:**
+
 - Modify:
   - `components/rota/rota-week.tsx`: Publish/Unlock, Fill from template, "Swaps to decide", Delegates;
   - `app/hospital-admin/departments/rota/actions.ts`, `app/doctor/rota/actions.ts`, `app/doctor/rota/page.tsx`: "Your duties" with "Ask for cover or a swap", and "Asked of you" swaps with Accept/Decline.
@@ -1219,6 +1299,7 @@ Each ADR uses the 0531 shape: title, a **Status** line ("Accepted, 24 Nov 2026. 
 - Test: `tests/rota/upkeep-screens.test.ts` (default lane)
 
 **Interfaces:**
+
 - Produces:
   - The week header shows a neutral `Tag` ("Draft" or "Published"). Unlock opens a reason dialog. When published, the cells' "Add" is replaced by "Ask for cover" for the holder only.
   - `SwapDialog`: kind chips (Cover, Swap), the colleague (eligible for the post), and for a swap, which of their duties.
@@ -1235,6 +1316,7 @@ Each ADR uses the 0531 shape: title, a **Status** line ("Accepted, 24 Nov 2026. 
 ### Task 30: Phase 4 records and the final checks
 
 **Files:**
+
 - Create: `docs/adr/0538-rota-upkeep.md`: templates, publish and unlock, cover and swap (the colleague accepts, a maker approves), the D8 delegate, and swaps without notices in v1.
 - Modify: `CHANGELOG.md`.
 
@@ -1259,6 +1341,7 @@ Each ADR uses the 0531 shape: title, a **Status** line ("Accepted, 24 Nov 2026. 
 - [ ] **Step 4: Commit** `docs/adr/0538-rota-upkeep.md CHANGELOG.md`. Message: `docs(rota): ADR 0538, changelog and the later list`.
 
 **Owner hand-off (state in the final report; do not run):** in this worktree, `cd /Users/carolinemurizihiwe/Desktop/medsync/.claude/worktrees/admin-clinics-harmonize-efe20d && npm run db:migrate` applies 0306–0309. Then:
+
 - set `CARE_REQUESTS` and `DUTY_ROTA` per hospital;
 - make sure the 0106 scheduler is set up (`private.schedule_lab_escalations`);
 - have each hospital sign its response times.

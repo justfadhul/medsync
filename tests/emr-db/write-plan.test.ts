@@ -7,9 +7,9 @@
  */
 import { randomUUID } from "node:crypto";
 import type { Lane } from "./_pglite";
+import type { PlanRequestLine } from "@/lib/clerking/plan/draft";
 import type { EmrActor } from "@/lib/emr/actor";
 import type { WriteCtx } from "@/lib/emr/write/context";
-import type { PlanRequestLine } from "@/lib/clerking/plan/draft";
 import type { PlanRx } from "@/lib/prescribing/plan-rx";
 import { beforeAll, describe, expect, it } from "vitest";
 

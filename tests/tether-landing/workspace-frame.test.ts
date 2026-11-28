@@ -1,8 +1,13 @@
 import type { LabShellPayload } from "@/app/lab/_components/v2/shell";
 import type { PharmacyShellPayload } from "@/app/pharmacy/_components/shell";
+import type { FunctionComponent } from "react";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
+
+/** The shell without its children prop, so the page goes in as createElement's third argument. */
+const bare = <P extends { children: unknown }>(c: (p: P) => unknown) =>
+  c as unknown as FunctionComponent<Omit<P, "children">>;
 
 let path = "/lab/today";
 vi.mock("next/navigation", () => ({
@@ -29,7 +34,7 @@ describe("lab and pharmacy in the Tether desk frame", () => {
     path = "/lab/today";
     const { LabShellV2 } = await import("@/app/lab/_components/v2/shell");
     const html = renderToStaticMarkup(
-      createElement(LabShellV2, { payload: lab, desk: true, duty: "DUTY" }, "PAGE"),
+      createElement(bare(LabShellV2), { payload: lab, desk: true, duty: "DUTY" }, "PAGE"),
     );
     expect(html).toContain("data-desk");
     for (const place of ["Today", "Bench", "Quality", "Reports", "Set-up"])
@@ -47,7 +52,7 @@ describe("lab and pharmacy in the Tether desk frame", () => {
 
   it("lab off Tether: the shell is unchanged (its own rail and inline Emergency)", async () => {
     const { LabShellV2 } = await import("@/app/lab/_components/v2/shell");
-    const html = renderToStaticMarkup(createElement(LabShellV2, { payload: lab }, "PAGE"));
+    const html = renderToStaticMarkup(createElement(bare(LabShellV2), { payload: lab }, "PAGE"));
     expect(html).not.toContain("data-desk");
     expect(html).toContain("data-emergency-inline");
   });
@@ -70,7 +75,7 @@ describe("lab and pharmacy in the Tether desk frame", () => {
     path = "/pharmacy/setup";
     const { PharmacyShell } = await import("@/app/pharmacy/_components/shell");
     const html = renderToStaticMarkup(
-      createElement(PharmacyShell, { payload: pharmacy, desk: true }, "PAGE"),
+      createElement(bare(PharmacyShell), { payload: pharmacy, desk: true }, "PAGE"),
     );
     expect(html).toContain("data-desk");
     expect(html).toMatch(/<a [^>]*aria-current="page"[^>]*href="\/pharmacy\/setup"/);

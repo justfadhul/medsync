@@ -11,6 +11,7 @@ metadata:
 The owner walked through stocking up in production on 29 Oct 2026, and listed changes #1–#13. They are tracked in the side-session notes `stock-up-changes.md`, under local_86d2ddf2.
 
 **Where the work is:** worktree `~/Desktop/medsync-stockup`, branch `feat/pharmacy-stock-up-polish`, off main c6caef8a.
+
 - Commits up to 71cf667c were pushed (branch only, no PR).
 - 3c2c7e9e (#12), dd5c0036 (#1) and fe6f448c (#13) are local only.
 - The owner said: "dont push yet, wait for everything to get done".
@@ -18,11 +19,13 @@ The owner walked through stocking up in production on 29 Oct 2026, and listed ch
 **Owner rule, 29 Oct:** "hospital stuff [should not] do a lot of typing … everything delivered on a silver plate". MedSync prepares the content and people review and sign it.
 
 **Decisions recorded:**
+
 - ADR 0469: packs open as pre-filled drafts.
 - ADR 0470: the controlled-substance list supersedes D-CAT-18 for catalogue medicines.
 - The owner chose that lorazepam, buprenorphine, ketamine, tramadol and thiopental are controlled by MedSync policy.
 
 **Open:**
+
 - Apply migration 0264.
 - The CSO signs:
   - the substance list;

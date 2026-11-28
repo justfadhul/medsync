@@ -17,6 +17,7 @@ Hosting moved: the fadhulusama Vercel account is paused; a GitHub collaborator f
 **Why:** per-change deploys used up the Vercel usage on the old account.
 
 **How to apply:**
+
 - Verify on the local server (`npx next dev --webpack -p 3109` from the main folder with the pharmacy flags), not on Vercel.
 - Never offer or trigger a deploy mid-task; at the end, say "ready to deploy" once.
 - Pushing branches is fine; it no longer builds.

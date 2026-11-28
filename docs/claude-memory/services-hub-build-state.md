@@ -14,6 +14,7 @@ The main tree (`~/Desktop/medsync`, `feat/booking-app`) was fast-forwarded to it
 Gate record: `docs/hospital-services/STOP-REPORTS.md` (STOP 0–7 and the §12 table). The spec is `docs/hospital-services/gate-a-proposal.md`.
 
 **Deploy state:**
+
 - The first deploy was blocked for Claude: the classifier refused `npm run db:migrate` ("Production Deploy") and read-only production queries ("Production Reads").
 - The owner later reported setting up departments in the hub, which implies 0080 and the app were live. This was not verified by Claude.
 - Fix `816ebb5` (2026-09-26):
@@ -24,6 +25,7 @@ Gate record: `docs/hospital-services/STOP-REPORTS.md` (STOP 0–7 and the §12 t
 - Claude deployed that fix: `ha-services-hub`, then Vercel `medsync-4qr4qqtl1`. Nothing is pushed to GitHub.
 
 **How to apply:**
+
 - Deploy order matters. The app and two changed functions read 0080's columns, so anything deployed first breaks live sign-up and clinic-day saves. The owner runs, from the main tree:
   1. `npm run db:migrate` (0080 only; prod was at 0070).
   2. `npx supabase functions deploy ha-services-hub ha-upsert-session-template ha-set-hospital-emergency-settings --project-ref hrfpdfonjuvsakbjtfop --use-api`.

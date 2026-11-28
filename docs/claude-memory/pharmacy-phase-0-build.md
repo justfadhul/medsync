@@ -15,4 +15,4 @@ Key decisions: carrier role `pharmacy_staff` (title rule); trigger grant (0098);
 Harness ~/Desktop/pharm0-harness (ports 4001/54332; HARNESS_USER selectable; start-prod.sh / start-prod-nobuild.sh; fixtures U4 pharmacist at Inpatient pharmacy, U5 tech at Outpatient pharmacy, U6 hospital admin).
 
 **Why:** owner said "go through all gates" and will provide later pharmacy phase prompts. Related: [[lab-phase-0-build]].
-**How to apply:** later phases build on lib/pharmacy/*, pharmacyChecksState (replace body, not callers), the nav registry and the reserved permission names.
+**How to apply:** later phases build on lib/pharmacy/\*, pharmacyChecksState (replace body, not callers), the nav registry and the reserved permission names.

@@ -17,10 +17,11 @@ Doctor Workspace built 2026-09-24 in the MAIN tree on `feat/doctor-workspace` (c
 built directly with no subagents or workflows.
 
 **How to apply:**
+
 - Dark behind `DOCTOR_WORKSPACE` (`1` or hospital ids; also needs `ENCOUNTER_ENGINE_LIVE=1` + `RESUS_DESK_V2=1`).
   Migration `0069_doctor_workspace.sql` is applied in production (onboarding v2 STOP 0 read-only check, 2026-09-25, found prod at 0069; prod reached 0070 the same day). CSO signature on D2/D3/D4/D9/D11 pending — the flag
   stays unset until it is signed.
-- Harness (scratch, can be wiped): rsync the repo `--delete` minus node_modules/.next/.git/mobile/.env*, clone
+- Harness (scratch, can be wiped): rsync the repo `--delete` minus node_modules/.next/.git/mobile/.env\*, clone
   node_modules with APFS `cp -Rc`, fixture route `app/styleguide/workspace-fixture/page.tsx` (scratch only, never in
   the repo; recoverable from the session transcript), dead-DB env, `next build` + `next start -p 3999`, CDP scripts for
   screenshots / axe / timings, PGlite `verify-0069.mjs` (17/17).

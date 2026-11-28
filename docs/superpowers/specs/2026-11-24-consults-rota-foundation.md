@@ -27,7 +27,7 @@ ADR 0532). Web sources are listed in §9; the full findings with confidence tags
    "Consults for your department", plus a chip showing your duty today. Admins get a rota page under Departments.
 9. The rota is what was **planned**, not proof that someone turned up, and the screens will say so.
 10. You need to decide 12 things (§7) before the build starts. The CSO also needs to sign the wording and the
-   response times. Six ADRs and four gated migrations follow, across five build phases.
+    response times. Six ADRs and four gated migrations follow, across five build phases.
 
 ---
 
@@ -35,55 +35,55 @@ ADR 0532). Web sources are listed in §9; the full findings with confidence tags
 
 ### 1.1 People, departments, wards
 
-| What | Where | What it gives us | Gap for this work |
-| --- | --- | --- | --- |
-| Departments, with sub-departments | `db/schema/hospital-departments.ts:11-43` (`parent_id`, `kind` clinical/diagnostic/support/administrative, `medsync_live_at`) | Internal Medicine with Nephrology, Cardiology and so on as children. Fits Mulago, whose medicine is organised in sub-specialty units (web §4, #51) | No duty, no on-call |
-| Heads of department | `db/schema/services-hub.ts:50` `department_heads` (effective-dated, one substantive plus one acting, written by `ha-services-hub` `ops-structure.ts:466-484`) | Natural last rung of a department's escalation ladder and a natural rota maker | — |
-| Staff affiliations | `db/schema/clinician-profiles.ts:62-118` (user, hospital, department, cadre, grade, role, state) | Who may hold which post (cadre check) | One person can have several departments. `requireDoctorScope` picks one (`lib/doctor/scope.ts:90-125`) |
-| Cadres | `lib/doctor/scope.ts:34-51` (junior: INTERN_DOCTOR, CLINICAL_OFFICER; senior: MO, MO_SG, CONSULTANT, SENIOR_CONSULTANT). PHYSIOTHERAPIST and NUTRITIONIST seeded (`supabase/migrations/0009_reference_data_seed.sql:162-164`) | Post eligibility | **No social-worker cadre**. Dietitian maps to NUTRITIONIST |
-| Wards | `db/schema/hospital-wards.ts:23-55` (`department_id` optional) | The place a cover post is attached to | No doctor is linked to a ward. Only nurses are (below) |
-| Ward in-charge | `db/schema/nurse-workspace.ts:83-113` `ward_in_charge_assignments` (open-ended, `acting`, one open each per ward) | "The nurse in charge is told" has a target today | Not a timed rota (no shifts) |
-| Nursing assignments | `nurse-workspace.ts:41-81` (patient to nurse, primary or cover, `starts_at`/`ends_at`) | Precedent for timed cover | Per patient, not per ward post |
-| Shift handover | `nurse-workspace.ts:379-405` `shift_handovers` (day/evening/night) | Shift labels already used | Nursing only |
-| Supervision | `db/schema/doctor-workspace.ts:23-56` `clinical_supervision` (intern to consultant, primary or backup, dated) | Default target for a junior's senior review when no rota exists | Not used for routing today (the co-sign queue is hospital-wide, `lib/doctor/cosign.ts:33-67`) |
-| Hospital-admin roster | `db/schema/hospital-admin-roster.ts` | Name clash only: this is admin succession, not a duty rota | — |
+| What                              | Where                                                                                                                                                                                                                         | What it gives us                                                                                                                                   | Gap for this work                                                                                      |
+| --------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
+| Departments, with sub-departments | `db/schema/hospital-departments.ts:11-43` (`parent_id`, `kind` clinical/diagnostic/support/administrative, `medsync_live_at`)                                                                                                 | Internal Medicine with Nephrology, Cardiology and so on as children. Fits Mulago, whose medicine is organised in sub-specialty units (web §4, #51) | No duty, no on-call                                                                                    |
+| Heads of department               | `db/schema/services-hub.ts:50` `department_heads` (effective-dated, one substantive plus one acting, written by `ha-services-hub` `ops-structure.ts:466-484`)                                                                 | Natural last rung of a department's escalation ladder and a natural rota maker                                                                     | —                                                                                                      |
+| Staff affiliations                | `db/schema/clinician-profiles.ts:62-118` (user, hospital, department, cadre, grade, role, state)                                                                                                                              | Who may hold which post (cadre check)                                                                                                              | One person can have several departments. `requireDoctorScope` picks one (`lib/doctor/scope.ts:90-125`) |
+| Cadres                            | `lib/doctor/scope.ts:34-51` (junior: INTERN_DOCTOR, CLINICAL_OFFICER; senior: MO, MO_SG, CONSULTANT, SENIOR_CONSULTANT). PHYSIOTHERAPIST and NUTRITIONIST seeded (`supabase/migrations/0009_reference_data_seed.sql:162-164`) | Post eligibility                                                                                                                                   | **No social-worker cadre**. Dietitian maps to NUTRITIONIST                                             |
+| Wards                             | `db/schema/hospital-wards.ts:23-55` (`department_id` optional)                                                                                                                                                                | The place a cover post is attached to                                                                                                              | No doctor is linked to a ward. Only nurses are (below)                                                 |
+| Ward in-charge                    | `db/schema/nurse-workspace.ts:83-113` `ward_in_charge_assignments` (open-ended, `acting`, one open each per ward)                                                                                                             | "The nurse in charge is told" has a target today                                                                                                   | Not a timed rota (no shifts)                                                                           |
+| Nursing assignments               | `nurse-workspace.ts:41-81` (patient to nurse, primary or cover, `starts_at`/`ends_at`)                                                                                                                                        | Precedent for timed cover                                                                                                                          | Per patient, not per ward post                                                                         |
+| Shift handover                    | `nurse-workspace.ts:379-405` `shift_handovers` (day/evening/night)                                                                                                                                                            | Shift labels already used                                                                                                                          | Nursing only                                                                                           |
+| Supervision                       | `db/schema/doctor-workspace.ts:23-56` `clinical_supervision` (intern to consultant, primary or backup, dated)                                                                                                                 | Default target for a junior's senior review when no rota exists                                                                                    | Not used for routing today (the co-sign queue is hospital-wide, `lib/doctor/cosign.ts:33-67`)          |
+| Hospital-admin roster             | `db/schema/hospital-admin-roster.ts`                                                                                                                                                                                          | Name clash only: this is admin succession, not a duty rota                                                                                         | —                                                                                                      |
 
 ### 1.2 Anything shaped like a rota, timetable or leave
 
-| What | Where | Lesson |
-| --- | --- | --- |
-| **Pharmacy duty roster**, the only real rota | `supabase/migrations/0265_pharmacy_rework_foundations.sql:72-90` (`pharmacy_duty_roster`: user, place, role, shift day/night/call, dates, ended not edited) and `0273_pharmacy_roster.sql` (people, licences, delegation, week publish/unlock events, leave that frees shifts, swap and cover requests that a colleague accepts and the roster maker then approves, attendance, reminders, public holidays). Guard trigger at `0273:381-441`. Server actions `lib/pharmacy/actions/roster.ts`. PGlite tests `tests/emr-db/pharmacy-roster*.test.ts` | **Copy the pattern, not the table.** Its guard only accepts pharmacy places (`0273:397-400`), but its role list already includes `doctor_on_duty` and `nurse_in_charge` (`0265:78-79`), a sign that a hospital-wide rota was always going to be needed. Per the memory notes, 0273 may still be unapplied; check |
-| Doctors' leave | `db/schema/scheduling.ts:46-105` `availability_blocks` (kinds include `leave`, `ward_round`, `teaching`). ADR 0506 added `requested` and `declined` states, plus cover and approval (`0296_clinics_schedule.sql:117-120`) | **Doctors' leave already has a home.** The rota should read it, not add a third leave table (pharmacy has its own, `pharmacy_staff_leave`) |
-| Outpatient timetable | `db/schema/clinic-sessions.ts:38-118` `session_templates` (weekday rules with `clinician_user_ids`). Draft, publish and versions in `db/schema/clinics-schedule.ts` (ADRs 0501-0508). Clash engine (ADR 0504) | Shows when a consultant is in clinic (busy, still on call). The draft-then-publish and clash-check ideas carry over |
-| "No on-shift model exists yet" | `lib/resus/mobilise.ts:21-23,33-60`: resus calls go to every active clinical member of the department plus every ward in-charge | First consumer to switch to the rota later |
-| Lab critical-results ladder "in the absence of a roster" | ADR 0243 (`docs/adr/0243-the-recipient-ladder.md`): level 0 orderer, level 1 the department's `critical_contacts`, level 2 hospital contacts (`db/schema/lab-safety.ts:68-77`) | Second consumer. Level 1 could become "the department's on-call post" |
+| What                                                     | Where                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               | Lesson                                                                                                                                                                                                                                                                                                           |
+| -------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Pharmacy duty roster**, the only real rota             | `supabase/migrations/0265_pharmacy_rework_foundations.sql:72-90` (`pharmacy_duty_roster`: user, place, role, shift day/night/call, dates, ended not edited) and `0273_pharmacy_roster.sql` (people, licences, delegation, week publish/unlock events, leave that frees shifts, swap and cover requests that a colleague accepts and the roster maker then approves, attendance, reminders, public holidays). Guard trigger at `0273:381-441`. Server actions `lib/pharmacy/actions/roster.ts`. PGlite tests `tests/emr-db/pharmacy-roster*.test.ts` | **Copy the pattern, not the table.** Its guard only accepts pharmacy places (`0273:397-400`), but its role list already includes `doctor_on_duty` and `nurse_in_charge` (`0265:78-79`), a sign that a hospital-wide rota was always going to be needed. Per the memory notes, 0273 may still be unapplied; check |
+| Doctors' leave                                           | `db/schema/scheduling.ts:46-105` `availability_blocks` (kinds include `leave`, `ward_round`, `teaching`). ADR 0506 added `requested` and `declined` states, plus cover and approval (`0296_clinics_schedule.sql:117-120`)                                                                                                                                                                                                                                                                                                                           | **Doctors' leave already has a home.** The rota should read it, not add a third leave table (pharmacy has its own, `pharmacy_staff_leave`)                                                                                                                                                                       |
+| Outpatient timetable                                     | `db/schema/clinic-sessions.ts:38-118` `session_templates` (weekday rules with `clinician_user_ids`). Draft, publish and versions in `db/schema/clinics-schedule.ts` (ADRs 0501-0508). Clash engine (ADR 0504)                                                                                                                                                                                                                                                                                                                                       | Shows when a consultant is in clinic (busy, still on call). The draft-then-publish and clash-check ideas carry over                                                                                                                                                                                              |
+| "No on-shift model exists yet"                           | `lib/resus/mobilise.ts:21-23,33-60`: resus calls go to every active clinical member of the department plus every ward in-charge                                                                                                                                                                                                                                                                                                                                                                                                                     | First consumer to switch to the rota later                                                                                                                                                                                                                                                                       |
+| Lab critical-results ladder "in the absence of a roster" | ADR 0243 (`docs/adr/0243-the-recipient-ladder.md`): level 0 orderer, level 1 the department's `critical_contacts`, level 2 hospital contacts (`db/schema/lab-safety.ts:68-77`)                                                                                                                                                                                                                                                                                                                                                                      | Second consumer. Level 1 could become "the department's on-call post"                                                                                                                                                                                                                                            |
 
 ### 1.3 Requests, orders, notes, the Plan
 
-| What | Where | Relevance |
-| --- | --- | --- |
-| Plan draft | `lib/clerking/plan/draft.ts:20-21,65` (`SENIOR_REVIEW = now / within_1h / routine`), `:81-86` (basket: orders and prescriptions only) | Requests become a third basket line |
-| Senior review today | `lib/clerking/plan/compose.ts:111` (words in the note), `lib/clerking/plan/checklist.ts:94-99` (checklist item ticked by choosing a time) | **Nobody is notified.** This is the gap the owner's prototype fills |
-| Place | `lib/emr/write/plan.ts:662-834` `placePlan` (one transaction: orders, prescriptions, charts; refuses an empty basket at `:668`) | Requests are inserted here, in the same transaction |
-| Orders engine | `lib/emr/orders.ts:13-21`: status **derived from events, never stored**; invariant "nothing ordered disappears" | The request engine should work the same way |
-| `encounter_orders.kind = 'referral'` | `db/schema/encounter.ts:255,272,284` (kind and performer `referral` allowed; unused in `lib/`) | **Don't use it for inpatient consults** (§3.3). Keep it for referral out to another facility (Plan's "Refer", HMIS 032, `docs/emr/emr-clinical-reference.md:116-119`) |
-| Note types | `db/schema/emr.ts:422` (`referral` exists, `consult` does not) | The consult reply needs a `consult` note type |
-| Co-sign requests | `doctor-workspace.ts:100-150`, raised at admission in `lib/emr/write/encounter.ts:241-313` (`afterClose`, ADR 0201) | Precedent for a request object with states, and for "warn, don't block" |
-| Admission | `db/schema/admissions.ts:44-92` (one open per patient, ward, leading condition); ADRs 0198-0201; `supabase/functions/ha-complete-encounter/index.ts:227-263` | The ward a review is routed to. Admission sends nothing to the nurse in charge today (only the board's live topic) |
-| Bed board privacy | ADR 0199 §7; `lib/wards/board.ts:100,204-207` (`patients: "none"` for doctors) | Same rule for the cover panel: staff names only, never other patients |
+| What                                 | Where                                                                                                                                                        | Relevance                                                                                                                                                             |
+| ------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Plan draft                           | `lib/clerking/plan/draft.ts:20-21,65` (`SENIOR_REVIEW = now / within_1h / routine`), `:81-86` (basket: orders and prescriptions only)                        | Requests become a third basket line                                                                                                                                   |
+| Senior review today                  | `lib/clerking/plan/compose.ts:111` (words in the note), `lib/clerking/plan/checklist.ts:94-99` (checklist item ticked by choosing a time)                    | **Nobody is notified.** This is the gap the owner's prototype fills                                                                                                   |
+| Place                                | `lib/emr/write/plan.ts:662-834` `placePlan` (one transaction: orders, prescriptions, charts; refuses an empty basket at `:668`)                              | Requests are inserted here, in the same transaction                                                                                                                   |
+| Orders engine                        | `lib/emr/orders.ts:13-21`: status **derived from events, never stored**; invariant "nothing ordered disappears"                                              | The request engine should work the same way                                                                                                                           |
+| `encounter_orders.kind = 'referral'` | `db/schema/encounter.ts:255,272,284` (kind and performer `referral` allowed; unused in `lib/`)                                                               | **Don't use it for inpatient consults** (§3.3). Keep it for referral out to another facility (Plan's "Refer", HMIS 032, `docs/emr/emr-clinical-reference.md:116-119`) |
+| Note types                           | `db/schema/emr.ts:422` (`referral` exists, `consult` does not)                                                                                               | The consult reply needs a `consult` note type                                                                                                                         |
+| Co-sign requests                     | `doctor-workspace.ts:100-150`, raised at admission in `lib/emr/write/encounter.ts:241-313` (`afterClose`, ADR 0201)                                          | Precedent for a request object with states, and for "warn, don't block"                                                                                               |
+| Admission                            | `db/schema/admissions.ts:44-92` (one open per patient, ward, leading condition); ADRs 0198-0201; `supabase/functions/ha-complete-encounter/index.ts:227-263` | The ward a review is routed to. Admission sends nothing to the nurse in charge today (only the board's live topic)                                                    |
+| Bed board privacy                    | ADR 0199 §7; `lib/wards/board.ts:100,204-207` (`patients: "none"` for doctors)                                                                               | Same rule for the cover panel: staff names only, never other patients                                                                                                 |
 
 ### 1.4 Notifications, inboxes, workspaces
 
-| What | Where | Relevance |
-| --- | --- | --- |
-| In-app staff notifications | `db/schema/sa-notifications.ts:18-41` (own-row RLS; kinds widened in `0037` and `0068`, used by `lib/triage/notify.ts`, `lib/resus/mobilise.ts`) | Request alerts reuse it, with new kinds |
-| Per-user live topic | `supabase/migrations/0106_lab_realtime_scheduler.sql:15-44` (`private.notify_user`, topic `user:<id>`, PHI-free payload) | Live badge on a new request |
-| Escalation runner | `0106:46-78` (pg_cron every minute, then `/api/cron/...`), ADR 0244 (pure planner, one idempotent executor, three callers, heartbeat in `escalation_heartbeats`, `lab-safety.ts:139-143`) | **Reuse as it is** for unanswered requests |
-| Outbound queue | `db/schema/notifications.ts:66-142` `notification_dispatches` (patient-facing; `related_kind` limited) | SMS to staff later. Not phase 1 |
-| Doctor workspace lanes | `lib/workspace/lanes.ts:1-10` ("A future engine … plugs in here without touching the page"), lane ids `:12-23`, `to_cosign` at `:121` | New lanes: "Asked of you", "Consults for your department" |
-| Scopes | `requireDoctorScope` (`lib/doctor/scope.ts:90`), `requireNurseScope` with in-charge wards (`lib/nurse/scope.ts:118-155`), `requireClinicianScope` (`lib/clinician/scope.ts`) | Department-shaped behaviour comes from scope plus today's duties |
-| Admin Departments | `app/hospital-admin/departments/*` (wards, hours, availability, …) | Home for the rota editor |
-| Vercel crons are daily only | `vercel.json` | Minute-level escalation must use pg_cron, as the lab does |
+| What                        | Where                                                                                                                                                                                     | Relevance                                                        |
+| --------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------- |
+| In-app staff notifications  | `db/schema/sa-notifications.ts:18-41` (own-row RLS; kinds widened in `0037` and `0068`, used by `lib/triage/notify.ts`, `lib/resus/mobilise.ts`)                                          | Request alerts reuse it, with new kinds                          |
+| Per-user live topic         | `supabase/migrations/0106_lab_realtime_scheduler.sql:15-44` (`private.notify_user`, topic `user:<id>`, PHI-free payload)                                                                  | Live badge on a new request                                      |
+| Escalation runner           | `0106:46-78` (pg_cron every minute, then `/api/cron/...`), ADR 0244 (pure planner, one idempotent executor, three callers, heartbeat in `escalation_heartbeats`, `lab-safety.ts:139-143`) | **Reuse as it is** for unanswered requests                       |
+| Outbound queue              | `db/schema/notifications.ts:66-142` `notification_dispatches` (patient-facing; `related_kind` limited)                                                                                    | SMS to staff later. Not phase 1                                  |
+| Doctor workspace lanes      | `lib/workspace/lanes.ts:1-10` ("A future engine … plugs in here without touching the page"), lane ids `:12-23`, `to_cosign` at `:121`                                                     | New lanes: "Asked of you", "Consults for your department"        |
+| Scopes                      | `requireDoctorScope` (`lib/doctor/scope.ts:90`), `requireNurseScope` with in-charge wards (`lib/nurse/scope.ts:118-155`), `requireClinicianScope` (`lib/clinician/scope.ts`)              | Department-shaped behaviour comes from scope plus today's duties |
+| Admin Departments           | `app/hospital-admin/departments/*` (wards, hours, availability, …)                                                                                                                        | Home for the rota editor                                         |
+| Vercel crons are daily only | `vercel.json`                                                                                                                                                                             | Minute-level escalation must use pg_cron, as the lab does        |
 
 ### 1.5 Access and privacy
 
@@ -147,31 +147,32 @@ the team-pager lesson.
 
 **`duty_posts`** (set up once per hospital by the admin or head of department)
 
-| Column | Notes |
-| --- | --- |
-| `id, hospital_id` | |
-| `name` | The hospital's own words ("SHO on call", "Registrar"). MedSync shows them as they are |
-| `scope_kind` | `ward`, `department` |
-| `ward_id` / `department_id` | One of them, matching `scope_kind`. A ward post also names its department |
-| `level` | `junior`, `senior`, `consultant`, `nurse_in_charge`, `allied` (neutral codes for rules; the name carries the words) |
-| `eligible_cadres text[]` | Checked against the person's active affiliation (for example a consultant post takes CONSULTANT or SENIOR_CONSULTANT) |
-| `takes_consults boolean` | This post receives the department's consults |
-| `escalates_to_post_id` | Next rung (junior, then senior, then consultant). Null means the department head, then hospital contacts |
-| `capacity smallint` | Usually 1. More than 1 for "the SHOs on Ward 4B" |
-| `archived_at` | Archived, never deleted |
+| Column                      | Notes                                                                                                                 |
+| --------------------------- | --------------------------------------------------------------------------------------------------------------------- |
+| `id, hospital_id`           |                                                                                                                       |
+| `name`                      | The hospital's own words ("SHO on call", "Registrar"). MedSync shows them as they are                                 |
+| `scope_kind`                | `ward`, `department`                                                                                                  |
+| `ward_id` / `department_id` | One of them, matching `scope_kind`. A ward post also names its department                                             |
+| `level`                     | `junior`, `senior`, `consultant`, `nurse_in_charge`, `allied` (neutral codes for rules; the name carries the words)   |
+| `eligible_cadres text[]`    | Checked against the person's active affiliation (for example a consultant post takes CONSULTANT or SENIOR_CONSULTANT) |
+| `takes_consults boolean`    | This post receives the department's consults                                                                          |
+| `escalates_to_post_id`      | Next rung (junior, then senior, then consultant). Null means the department head, then hospital contacts              |
+| `capacity smallint`         | Usually 1. More than 1 for "the SHOs on Ward 4B"                                                                      |
+| `archived_at`               | Archived, never deleted                                                                                               |
 
 **`duty_assignments`** (the rota itself)
 
-| Column | Notes |
-| --- | --- |
-| `id, hospital_id, post_id, user_id` | |
-| `starts_at, ends_at timestamptz` | Real windows, so a night shift crosses midnight cleanly (Kampala, no DST) |
-| `kind` | `rostered`, `cover` (fills a gap or a person on leave), `swap` |
-| `covers_assignment_id` | For cover and swap |
-| `created_by, created_at` | |
-| `ended_at, ended_by, end_reason` | **Ended, never edited or deleted** (the pharmacy roster rule) |
+| Column                              | Notes                                                                     |
+| ----------------------------------- | ------------------------------------------------------------------------- |
+| `id, hospital_id, post_id, user_id` |                                                                           |
+| `starts_at, ends_at timestamptz`    | Real windows, so a night shift crosses midnight cleanly (Kampala, no DST) |
+| `kind`                              | `rostered`, `cover` (fills a gap or a person on leave), `swap`            |
+| `covers_assignment_id`              | For cover and swap                                                        |
+| `created_by, created_at`            |                                                                           |
+| `ended_at, ended_by, end_reason`    | **Ended, never edited or deleted** (the pharmacy roster rule)             |
 
 Guard trigger, copied from `pharmacy_duty_guard`:
+
 - the person has an active affiliation at the hospital with an eligible cadre;
 - no overlap beyond `capacity`;
 - the person is not on approved leave (`availability_blocks` kind `leave`, state `active`);
@@ -188,6 +189,7 @@ on-call duty is a hidden gap. Nurses' leave stays out of scope until nursing rot
 **Resolver** (one pure TS function plus one SQL twin, both tested for the same answers):
 `whoCovers({ wardId | departmentId, level?, at })` returns the people in post at `at`. When nobody is, it walks this
 fallback order and says which step it used:
+
 1. the ward post;
 2. the department's `takes_consults` post;
 3. the department head (substantive, then acting);
@@ -210,38 +212,38 @@ not two systems.
 
 **`care_requests`** (the ask; written once at Place, never updated: FHIR ServiceRequest)
 
-| Column | Notes |
-| --- | --- |
-| `id, hospital_id, patient_user_id` | |
-| `encounter_id` | The encounter it was asked from |
-| `admission_id` | When the patient is or is being admitted |
-| `kind` | `review` or `consult` |
-| `target_kind` | `post`, `department`, `person` |
-| `target_post_id`, `target_department_id` | The department covers named services too (dietetics, physiotherapy, clinical pharmacy) as `support`-kind departments, so there is no new "service" table |
-| `named_user_ids uuid[]` | The people the doctor ticked. Empty means "whoever is on call" |
-| `urgency` | Review: `now`, `within_1h`, `routine` (today's `SENIOR_REVIEW` words). Consult: `urgent_today`, `routine`. The CSO signs the words |
-| `help_wanted` | Consult only: `advice` or `see_patient` (the RCEM "advice or admission" idea; see decision D5) |
-| `reason_condition_ids uuid[]` | The problem, as condition version ids (as orders take them; superseded problems are refused) |
-| `question_ciphertext` | The question, encrypted like `reason_text_ciphertext` |
-| `phoned` | Optional `{ user_id, at }`: "already discussed by phone with Dr X at 14:10" (phone first for urgent, recorded after) |
-| `requester_user_id, requester_cadre, requested_at` | |
-| `placement_id, client_key` | Same basket placement as orders; idempotent retry |
-| `due_at` | Computed at Place from the hospital's signed response times; null when none are signed |
-| `sensitivity` | As on orders |
+| Column                                             | Notes                                                                                                                                                    |
+| -------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `id, hospital_id, patient_user_id`                 |                                                                                                                                                          |
+| `encounter_id`                                     | The encounter it was asked from                                                                                                                          |
+| `admission_id`                                     | When the patient is or is being admitted                                                                                                                 |
+| `kind`                                             | `review` or `consult`                                                                                                                                    |
+| `target_kind`                                      | `post`, `department`, `person`                                                                                                                           |
+| `target_post_id`, `target_department_id`           | The department covers named services too (dietetics, physiotherapy, clinical pharmacy) as `support`-kind departments, so there is no new "service" table |
+| `named_user_ids uuid[]`                            | The people the doctor ticked. Empty means "whoever is on call"                                                                                           |
+| `urgency`                                          | Review: `now`, `within_1h`, `routine` (today's `SENIOR_REVIEW` words). Consult: `urgent_today`, `routine`. The CSO signs the words                       |
+| `help_wanted`                                      | Consult only: `advice` or `see_patient` (the RCEM "advice or admission" idea; see decision D5)                                                           |
+| `reason_condition_ids uuid[]`                      | The problem, as condition version ids (as orders take them; superseded problems are refused)                                                             |
+| `question_ciphertext`                              | The question, encrypted like `reason_text_ciphertext`                                                                                                    |
+| `phoned`                                           | Optional `{ user_id, at }`: "already discussed by phone with Dr X at 14:10" (phone first for urgent, recorded after)                                     |
+| `requester_user_id, requester_cadre, requested_at` |                                                                                                                                                          |
+| `placement_id, client_key`                         | Same basket placement as orders; idempotent retry                                                                                                        |
+| `due_at`                                           | Computed at Place from the hospital's signed response times; null when none are signed                                                                   |
+| `sensitivity`                                      | As on orders                                                                                                                                             |
 
 **`care_request_events`** (append-only: the Task side). Kinds:
 
-| Kind | Who records it | What it means |
-| --- | --- | --- |
-| `routed` | Automatic | One row per recipient, with level 0, 1 or 2, why (named, on call, team, fallback step) and the post. The snapshot of who was asked |
-| `seen` | Automatic | Once per person, when they open it. **Never shown as acknowledged** (ADR 0242's rule) |
-| `accepted` | One tap | "I'll see the patient", optional time to expect them. This is the acknowledgement and is required for review `now` / `within_1h` |
-| `declined` | Recipient | Reason code required. Returns to the requester; **the primary team stays responsible** |
-| `redirected` | Recipient | To another post or person, with a reason. Routing runs again |
-| `replied` | Automatic | Written when a linked note is signed: `consult` note for a consult; `ward_round`/`progress` for a review |
-| `closed` | Requester, or reply marked "no follow-up" | |
-| `cancelled` | Requester | Reason required |
-| `escalated` | The runner | New level, new recipients (written with `routed` rows) |
+| Kind         | Who records it                            | What it means                                                                                                                      |
+| ------------ | ----------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| `routed`     | Automatic                                 | One row per recipient, with level 0, 1 or 2, why (named, on call, team, fallback step) and the post. The snapshot of who was asked |
+| `seen`       | Automatic                                 | Once per person, when they open it. **Never shown as acknowledged** (ADR 0242's rule)                                              |
+| `accepted`   | One tap                                   | "I'll see the patient", optional time to expect them. This is the acknowledgement and is required for review `now` / `within_1h`   |
+| `declined`   | Recipient                                 | Reason code required. Returns to the requester; **the primary team stays responsible**                                             |
+| `redirected` | Recipient                                 | To another post or person, with a reason. Routing runs again                                                                       |
+| `replied`    | Automatic                                 | Written when a linked note is signed: `consult` note for a consult; `ward_round`/`progress` for a review                           |
+| `closed`     | Requester, or reply marked "no follow-up" |                                                                                                                                    |
+| `cancelled`  | Requester                                 | Reason required                                                                                                                    |
+| `escalated`  | The runner                                | New level, new recipients (written with `routed` rows)                                                                             |
 
 The **status is derived** by a pure engine (`lib/requests/engine.ts`, the orders-engine style). The order is:
 cancelled → closed → replied → declined (back with the requester) → accepted → seen → sent, with "overdue" when past
@@ -256,6 +258,7 @@ note). Signing writes `replied` in the same transaction. That gives a structural
 ### 3.3 Why not reuse `encounter_orders` kind `referral`
 
 It looks tempting (the kind exists and the FHIR projection exists). But:
+
 - the orders engine derives specimen and report states;
 - lab worklists and the `lab_work` access arm read that table;
 - a consult needs a routing target, recipients, decline, redirect and a reply note, which orders don't have.
@@ -286,6 +289,7 @@ requests are allowed) is needed only if a department wants consults to land some
 ### 3.5 Escalation when unanswered
 
 Reuse ADR 0244 as it stands:
+
 - a pure planner over signed times;
 - one idempotent runner, called every minute by pg_cron (the owner schedules it once, as in 0106), lazily on every
   inbox read, and by tests;
@@ -340,8 +344,9 @@ Reuse ADR 0244 as it stands:
   - members of the target department while the request is open (the department list; see decision D6);
   - anyone with an access basis for the patient (the primary team sees requests about their patient);
   - the department head.
-  
+
   Never reception, patients or superadmins (0289 keeps superadmins off PHI).
+
 - **Chart access for the consultant:** implement the reserved `care_team` arm of `private.patient_access_basis` and
   its set form, `private.accessible_patient_ids()`, **in both bodies**, so the equivalence probe still holds. The arm
   matches when the user is a routed recipient or accepter of a request for the patient at that hospital that is open,
@@ -353,12 +358,12 @@ Reuse ADR 0244 as it stands:
 
 ### 3.9 Where the writes go, and audit
 
-| Write | Path | Why |
-| --- | --- | --- |
-| Requests (place, accept, decline, redirect, reply, close, cancel) | EMR writer: `lib/emr/write/requests.ts` under `asClinicalWriter` after `resolveEmrAccess`; server actions in `lib/emr/actions/requests.ts` | Clinical record, same path as orders and notes (ADR 0131). `audit_log_changes()` stamps the real author |
-| Rota (posts, assignments, ends, later swaps and publish) | Server actions on the server connection with the SQL guard trigger (pharmacy 0273 pattern) | Testable on the PGlite lane, unlike Edge Functions. Audited by row-audit triggers and listed in the admin activity feed (`lib/hospital-admin/activity.ts`) |
-| Escalation runner | `/api/cron/care-request-escalations` (bearer secret), called by pg_cron | As the lab does |
-| Nurse in-charge notice | `afterClose` (clinician transaction) | The admission is final there |
+| Write                                                             | Path                                                                                                                                       | Why                                                                                                                                                        |
+| ----------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Requests (place, accept, decline, redirect, reply, close, cancel) | EMR writer: `lib/emr/write/requests.ts` under `asClinicalWriter` after `resolveEmrAccess`; server actions in `lib/emr/actions/requests.ts` | Clinical record, same path as orders and notes (ADR 0131). `audit_log_changes()` stamps the real author                                                    |
+| Rota (posts, assignments, ends, later swaps and publish)          | Server actions on the server connection with the SQL guard trigger (pharmacy 0273 pattern)                                                 | Testable on the PGlite lane, unlike Edge Functions. Audited by row-audit triggers and listed in the admin activity feed (`lib/hospital-admin/activity.ts`) |
+| Escalation runner                                                 | `/api/cron/care-request-escalations` (bearer secret), called by pg_cron                                                                    | As the lab does                                                                                                                                            |
+| Nurse in-charge notice                                            | `afterClose` (clinician transaction)                                                                                                       | The admission is final there                                                                                                                               |
 
 A note on AGENTS.md's "privileged writes via Edge Functions": the EMR (ADR 0131) and pharmacy (0273) already write on
 the server connection under SQL guards. This proposal follows those two, the closest precedents.
@@ -371,14 +376,14 @@ the server connection under SQL guards. This proposal follows those two, the clo
 - **Its fulfilment:** a Task with `focus` set to the ServiceRequest, `owner` the accepter (or else the post), and status
   derived from the event kinds:
 
-  | Event | Task status |
-  | --- | --- |
-  | sent | requested |
-  | seen | received |
-  | accepted | accepted |
-  | declined | rejected |
-  | replied | completed |
-  | cancelled | cancelled |
+  | Event     | Task status |
+  | --------- | ----------- |
+  | sent      | requested   |
+  | seen      | received    |
+  | accepted  | accepted    |
+  | declined  | rejected    |
+  | replied   | completed   |
+  | cancelled | cancelled   |
 
 - **The reply note:** a DocumentReference with `basedOn` set to the ServiceRequest.
 
@@ -394,9 +399,10 @@ today:
     urgency. Each row reads: patient and ward, from whom, the question's first line, its age, the state word and one
     action (Accept, Reply, Redirect).
   - "Consults for your department" (scope `department`): the team list, unclaimed first.
-  
+
   A duty chip in the header reads, for example, "On call: Nephrology SHO until 08:00". A department page,
   `/doctor/consults`, holds the full list with filters (open, overdue, replied this week) for consultants.
+
 - **Clinician workspace** (dietitians, physiotherapists, clinical pharmacists): one "Requests" page, the same component.
 - **Nurse workspace:** the in-charge sees "Coming to your ward", built from the existing admissions `awaiting_bed` and
   Arriving beds plus `ward_incoming`. There is no new nurse request type in v1.
@@ -432,20 +438,21 @@ basket (draft only) --Place--> sent --open--> seen --Accept--> accepted --signed
 
 Each phase runs gated: discovery, GATE A, signatures, build, STOP report, as the owner's other builds do.
 
-| Phase | What | Useful on its own because | Migration (number provisional) | Flag |
-| --- | --- | --- | --- | --- |
-| **0** | GATE A document; owner answers §7; CSO signs the request wording and the urgency, decline and redirect reason codes | Nothing gets built on a guess | none | — |
+| Phase                         | What                                                                                                                                                                                                                                                                                                                                            | Useful on its own because                                                                                | Migration (number provisional)                                                                                                       | Flag                                                                             |
+| ----------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------- |
+| **0**                         | GATE A document; owner answers §7; CSO signs the request wording and the urgency, decline and redirect reason codes                                                                                                                                                                                                                             | Nothing gets built on a guess                                                                            | none                                                                                                                                 | —                                                                                |
 | **1. Requests on team lists** | `care_requests`, events, the engine, `consult` note type, `care_team` access arm, Plan basket line and Place, the "Asked of you" and "Consults for your department" lanes, reply by signed note, in-app notices, nurse in-charge notice at admission. Routing = named people, else the department team list, else supervisor or department head | Requests reach real people from the first day, with no rota needed. Senior review stops being only words | `0306_care_requests.sql` **GATED** (clinical tables, FORCED RLS, access-rule change, `clinical_notes` and `sa_notifications` CHECKs) | `CARE_REQUESTS` (1 or hospital ids; the Plan part also needs `CLERKING_PLAN_V2`) |
-| **2. Duty rota core** | `duty_posts`, `duty_assignments`, the guard, `whoCovers` (TS and SQL), the admin week grid, "Who covers this ward", the gap report, the duty chip. Routing switches to post first, with the team list as fallback | The Plan dialog's cover panel becomes real. Resus and lab ladders can switch later | `0307_duty_rota.sql` **GATED** (RLS) | `DUTY_ROTA` (hospital ids) |
-| **3. Escalation** | Response-time versions (CSO-signed), planner, runner, pg_cron, heartbeat, requester told, turnaround report | Unanswered requests climb the ladder | `0308_care_request_escalation.sql` **GATED** (signed values, scheduler function) | none: no signed times means no escalation |
-| **4. Rota upkeep** | Week templates, publish and unlock, cover and swap requests (colleague accepts, rota maker approves), leave marks "needs cover", delegation to a head-of-department delegate | Rotas stay current without the admin doing everything | `0309_duty_rota_upkeep.sql` GATED | under `DUTY_ROTA` |
-| **5. Later** | FHIR projection; staff SMS; switch resus mobilisation and the lab level-1 ladder to the rota; optional sign-on; per-patient first-contact clinician (decision D12) | — | as needed | — |
+| **2. Duty rota core**         | `duty_posts`, `duty_assignments`, the guard, `whoCovers` (TS and SQL), the admin week grid, "Who covers this ward", the gap report, the duty chip. Routing switches to post first, with the team list as fallback                                                                                                                               | The Plan dialog's cover panel becomes real. Resus and lab ladders can switch later                       | `0307_duty_rota.sql` **GATED** (RLS)                                                                                                 | `DUTY_ROTA` (hospital ids)                                                       |
+| **3. Escalation**             | Response-time versions (CSO-signed), planner, runner, pg_cron, heartbeat, requester told, turnaround report                                                                                                                                                                                                                                     | Unanswered requests climb the ladder                                                                     | `0308_care_request_escalation.sql` **GATED** (signed values, scheduler function)                                                     | none: no signed times means no escalation                                        |
+| **4. Rota upkeep**            | Week templates, publish and unlock, cover and swap requests (colleague accepts, rota maker approves), leave marks "needs cover", delegation to a head-of-department delegate                                                                                                                                                                    | Rotas stay current without the admin doing everything                                                    | `0309_duty_rota_upkeep.sql` GATED                                                                                                    | under `DUTY_ROTA`                                                                |
+| **5. Later**                  | FHIR projection; staff SMS; switch resus mobilisation and the lab level-1 ladder to the rota; optional sign-on; per-patient first-contact clinician (decision D12)                                                                                                                                                                              | —                                                                                                        | as needed                                                                                                                            | —                                                                                |
 
 Phase 1 before phase 2 is deliberate. Requests on team lists are useful at once and need no admin set-up. The rota
 then sharpens routing without changing the request model. If the owner wants the cover panel first, swap 1 and 2;
 nothing in the design depends on the order.
 
 **ADRs to write** (numbers from 0533, check at build time):
+
 1. Requests: one record for review and consult, with events and derived status.
 2. Routing: named people, then the post, then the team list, resolved and stored at send.
 3. The `care_team` access basis for request recipients, and inbox privacy (extends ADR 0131, keeps ADR 0199).
@@ -456,6 +463,7 @@ nothing in the design depends on the order.
 (The workspace change can be a section of ADR 4; the nurse in-charge notice a section of ADR 1.)
 
 **Tests:**
+
 - **Pure:**
   - the request engine (every event order, anomalies listed, property test "nothing asked disappears");
   - `whoCovers` with a fixed clock (nights over midnight, capacity, fallback order, leave);
@@ -545,6 +553,7 @@ nothing in the design depends on the order.
   named first contact is strong (18% to 88% correctly routed critical results), and it would also feed the lab ladder.
 
 Smaller points the GATE A can settle with the CSO:
+
 - **Interns sending consults:** allowed by default, the requester's cadre shown, and a co-sign policy kind
   `request_consult` available if a hospital wants one.
 - **Social workers:** not a cadre today. Defer them, or add one as non-clinical with no chart access, so a request
@@ -555,19 +564,19 @@ Smaller points the GATE A can settle with the CSO:
 
 ## 8. Risks
 
-| Risk | Why it matters | Mitigation in the design |
-| --- | --- | --- |
-| The rota is wrong or stale | Requests reach someone off duty (14% of pages in one study) | Address posts not people; team-list fallback; escalation; gap report; "rostered, not confirmed present" wording |
-| "Sent" read as "they know" | False reassurance on a sick patient | Seen ≠ acknowledged; requester sees state words and elapsed time; escalation; heartbeat banner |
-| Wider chart access through the `care_team` arm | Privacy | Only routed or accepting people; 30-day window; every open logged; RLS probes; GATED migration the owner applies |
-| The escalation job stops quietly | Overdue requests sit unseen | Heartbeat older than 3 min shows a banner; lazy escalation on every read |
-| Alert fatigue | People stop reading notices | One notice per request per person; updates only to the requester; no SMS in v1 |
-| Plan placed before admission, then the ward changes or admission is cancelled | Review sits with the wrong ward cover | The request names its ward; on admission cancel or ward change the requester is prompted to redirect; nothing silently moves |
-| Three leave stores (pharmacy, clinicians, none for nurses) | Drift | Doctors use `availability_blocks` only; note in the ADR that pharmacy keeps its own until unified |
-| Responsibility confusion | A consultant thinks the request made the patient theirs, or the ward thinks the reverse | Every request screen says who is responsible (the primary team) until a take-over is agreed and recorded as a note |
-| Uganda specifics unverified (take days, Kiruddu's role, MoH referral guideline text) | Model fits the brochure, not the ward | Posts and fallback are generic; confirm on site before seeding Mulago defaults |
-| Migration and ADR numbers collide with other branches | Build friction | Numbers are provisional; take the next free ones at build time |
-| Scope creep into HR rostering | Slows the clinical value | Explicit non-goals (§6) |
+| Risk                                                                                 | Why it matters                                                                          | Mitigation in the design                                                                                                     |
+| ------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| The rota is wrong or stale                                                           | Requests reach someone off duty (14% of pages in one study)                             | Address posts not people; team-list fallback; escalation; gap report; "rostered, not confirmed present" wording              |
+| "Sent" read as "they know"                                                           | False reassurance on a sick patient                                                     | Seen ≠ acknowledged; requester sees state words and elapsed time; escalation; heartbeat banner                               |
+| Wider chart access through the `care_team` arm                                       | Privacy                                                                                 | Only routed or accepting people; 30-day window; every open logged; RLS probes; GATED migration the owner applies             |
+| The escalation job stops quietly                                                     | Overdue requests sit unseen                                                             | Heartbeat older than 3 min shows a banner; lazy escalation on every read                                                     |
+| Alert fatigue                                                                        | People stop reading notices                                                             | One notice per request per person; updates only to the requester; no SMS in v1                                               |
+| Plan placed before admission, then the ward changes or admission is cancelled        | Review sits with the wrong ward cover                                                   | The request names its ward; on admission cancel or ward change the requester is prompted to redirect; nothing silently moves |
+| Three leave stores (pharmacy, clinicians, none for nurses)                           | Drift                                                                                   | Doctors use `availability_blocks` only; note in the ADR that pharmacy keeps its own until unified                            |
+| Responsibility confusion                                                             | A consultant thinks the request made the patient theirs, or the ward thinks the reverse | Every request screen says who is responsible (the primary team) until a take-over is agreed and recorded as a note           |
+| Uganda specifics unverified (take days, Kiruddu's role, MoH referral guideline text) | Model fits the brochure, not the ward                                                   | Posts and fallback are generic; confirm on site before seeding Mulago defaults                                               |
+| Migration and ADR numbers collide with other branches                                | Build friction                                                                          | Numbers are provisional; take the next free ones at build time                                                               |
+| Scope creep into HR rostering                                                        | Slows the clinical value                                                                | Explicit non-goals (§6)                                                                                                      |
 
 ---
 
@@ -576,6 +585,7 @@ Smaller points the GATE A can settle with the CSO:
 **Repository:** cited inline with paths and line numbers.
 
 **FHIR and IHE:**
+
 - ServiceRequest: https://hl7.org/fhir/R4/servicerequest.html
 - Request pattern: https://hl7.org/fhir/R4/request.html
 - Workflow: https://hl7.org/fhir/R4/workflow.html
@@ -591,6 +601,7 @@ Smaller points the GATE A can settle with the CSO:
 - IHE 360X: https://www.ihe.net/uploadedFiles/Documents/PCC/IHE_PCC_Suppl_360X.pdf
 
 **EHR practice and evidence:**
+
 - UCLA consult paging (Epic): https://pmc.ncbi.nlm.nih.gov/articles/PMC9259201
 - Salem Health (Epic): https://salemhealth.org/common-ground-home/common-ground-post/new-inpatient-consult-workflow-starts-april-30-in-epic
 - Alberta Connect Care: https://manual.connect-care.ca/workflows/ReferralConsultation/consultation-workflows
@@ -603,6 +614,7 @@ Smaller points the GATE A can settle with the CSO:
 - NHS seven-day standards: https://www.england.nhs.uk/wp-content/uploads/2022/02/B1230-seven-day-services-clinical-standards-08-feb-2022.pdf
 
 **Uganda:**
+
 - Kalyesubula 2019 (Mulago medicine organised by sub-specialty units): https://pmc.ncbi.nlm.nih.gov/articles/PMC6516645
 - Kazibwe 2022 (Mulago and Kiruddu admissions): https://pmc.ncbi.nlm.nih.gov/articles/PMC9458845/
 - Absenteeism and rota adherence: https://www.ncbi.nlm.nih.gov/pmc/articles/PMC8378719/

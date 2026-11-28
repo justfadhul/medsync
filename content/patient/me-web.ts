@@ -26,7 +26,10 @@ export const ME_WEB_COPY = {
   stats: { conditions: "Conditions", allergies: "Allergies", people: "People", records: "Records" },
   sections: {
     card: { title: "Card and plan", sub: "Your health card, and the plan you are on" },
-    health: { title: "My health", sub: "Your care team sees this. It stays unconfirmed until a clinician checks it." },
+    health: {
+      title: "My health",
+      sub: "Your care team sees this. It stays unconfirmed until a clinician checks it.",
+    },
     mycare: { title: "My care", sub: "Your care team, and the checks your plan asks for" },
     records: { title: "Visit records", sub: "Notes from your visits, newest first" },
     people: { title: "People I book for", sub: "Adults in your household you book visits for" },

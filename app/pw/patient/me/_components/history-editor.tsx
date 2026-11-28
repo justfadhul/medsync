@@ -114,15 +114,26 @@ export function HistoryEditorView({
 
   if (compact)
     return (
-      <section aria-label={words.title} className="rounded-pw-card bg-pw-surface-2 flex flex-col gap-2.5 p-3.5">
+      <section
+        aria-label={words.title}
+        className="rounded-pw-card bg-pw-surface-2 flex flex-col gap-2.5 p-3.5"
+      >
         <div className="flex items-center gap-3">
-          <span className="bg-pw-surface grid size-9 shrink-0 place-items-center rounded-xl">{compact.icon}</span>
+          <span className="bg-pw-surface grid size-9 shrink-0 place-items-center rounded-xl">
+            {compact.icon}
+          </span>
           <span className="flex min-w-0 flex-1 flex-col">
             <h3 className="text-[16px] leading-5 font-semibold">{words.title}</h3>
             <span className="text-pw-ink-3 text-[12px]">{compact.hint}</span>
           </span>
           {!off ? (
-            <Button tone="soft" size="s" onClick={() => setEditing("new")} aria-label={words.add} className="bg-pw-surface">
+            <Button
+              tone="soft"
+              size="s"
+              onClick={() => setEditing("new")}
+              aria-label={words.add}
+              className="bg-pw-surface"
+            >
               <PlusIcon className="size-4" {...ICON} />
               {M.addShort}
             </Button>
@@ -131,7 +142,9 @@ export function HistoryEditorView({
         {off ? <p className="text-pw-ink-3 text-[13px]">{C.historyOff}</p> : null}
         {status === "error" ? <p className="text-pw-ink-3 text-[13px]">{C.historyFailed}</p> : null}
         {note ? <p className="text-pw-ink-2 text-[13px] font-semibold">{note}</p> : null}
-        {legacy.length ? <p className="text-pw-ink-2 text-[13px]">{C.legacy(legacy.join(", "))}</p> : null}
+        {legacy.length ? (
+          <p className="text-pw-ink-2 text-[13px]">{C.legacy(legacy.join(", "))}</p>
+        ) : null}
         {items.length ? (
           <ul className="flex flex-col gap-1.5">
             {items.map((i) => (
@@ -147,7 +160,9 @@ export function HistoryEditorView({
                     <span className="text-pw-ink-3 text-[13px] min-[521px]:truncate">{sub(i)}</span>
                   </span>
                   <span className="flex shrink-0 flex-wrap justify-end gap-1 max-[520px]:order-last max-[520px]:w-full max-[520px]:justify-start">
-                    {isSensitive(i) ? <span className={TAG}>{C.privateTag.replace(" · ", "")}</span> : null}
+                    {isSensitive(i) ? (
+                      <span className={TAG}>{C.privateTag.replace(" · ", "")}</span>
+                    ) : null}
                     <span className={TAG}>{M.unconfirmedShort}</span>
                   </span>
                   <ChevronRightIcon className="text-pw-ink-3 size-4 shrink-0" {...ICON} />
@@ -157,8 +172,15 @@ export function HistoryEditorView({
           </ul>
         ) : section === "allergies" && !off ? (
           <div className="rounded-pw-row bg-pw-surface flex flex-wrap items-center justify-between gap-2 px-3.5 py-2.5">
-            <span className="text-pw-ink-2 text-[13px]">{noKnownAllergies ? C.nkaOn : words.empty}</span>
-            <Chip selected={noKnownAllergies} onClick={onNka} disabled={nkaBusy} aria-busy={nkaBusy || undefined}>
+            <span className="text-pw-ink-2 text-[13px]">
+              {noKnownAllergies ? C.nkaOn : words.empty}
+            </span>
+            <Chip
+              selected={noKnownAllergies}
+              onClick={onNka}
+              disabled={nkaBusy}
+              aria-busy={nkaBusy || undefined}
+            >
               {nkaBusy ? C.saving : C.nkaChip}
             </Chip>
           </div>

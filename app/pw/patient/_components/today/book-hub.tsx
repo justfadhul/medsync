@@ -1,10 +1,14 @@
 "use client";
 
+import type { PatientReasonCode } from "@/supabase/functions/_shared/sessions-sql";
 import type { DayOption, Part, SessionOption } from "@patient-core/book-days";
 import type { DoctorCard } from "@patient-core/doctors";
-import type { ReactNode } from "react";
-import { feeText } from "@patient-core/fees";
 import type { LucideIcon } from "lucide-react";
+import type { ReactNode } from "react";
+import Link from "next/link";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { Suspense, use, useEffect, useMemo, useRef, useState, useTransition } from "react";
+import { feeText } from "@patient-core/fees";
 import {
   AlertCircleIcon,
   BabyIcon,
@@ -24,12 +28,9 @@ import {
   UserRoundIcon,
   UsersRoundIcon,
 } from "lucide-react";
-import Link from "next/link";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { Suspense, use, useEffect, useMemo, useRef, useState, useTransition } from "react";
 
-import { Button, buttonClass, ICON } from "@/components/tide/kit";
 import { Dialog } from "@/components/tide/controls";
+import { Button, buttonClass, ICON } from "@/components/tide/kit";
 import { HelpButton } from "@/components/tide/shell";
 import { TicketV2 } from "@/components/tide/v2-ticket";
 import { BOOK_COPY as B, DAY_COPY as D, WRONG_COPY as W } from "@/content/patient/book";
@@ -37,8 +38,8 @@ import { TODAY_WEB_COPY as T } from "@/content/patient/today-web";
 import { requestDayAction } from "@/lib/patient-web/book-actions";
 import { toSlot } from "@/lib/patient-web/opaque";
 import { cn } from "@/lib/utils";
+import { PATIENT_REASON_CODES } from "@/supabase/functions/_shared/sessions-sql";
 import { shownName } from "../../_lib/names";
-import { PATIENT_REASON_CODES, type PatientReasonCode } from "@/supabase/functions/_shared/sessions-sql";
 
 export interface HubWho {
   /** null = the patient; else a household member's provisional id. */
@@ -109,7 +110,9 @@ export function BookHub(p: {
   const days = useMemo(() => (p.days ?? []).slice(0, 5), [p.days]);
   const [dayKey, setDayKey] = useState<string | null>(days[0]?.key ?? null);
   const day = days.find((d) => d.key === dayKey) ?? days[0] ?? null;
-  const partsOpen = PARTS.filter((pt) => day?.sessions.some((s) => s.part === pt && s.placesLeft > 0));
+  const partsOpen = PARTS.filter((pt) =>
+    day?.sessions.some((s) => s.part === pt && s.placesLeft > 0),
+  );
   const [part, setPart] = useState<Part | null>(null);
   const shownPart = part && partsOpen.includes(part) ? part : (partsOpen[0] ?? null);
   const inPart = (day?.sessions ?? []).filter((s) => s.part === shownPart);
@@ -130,7 +133,9 @@ export function BookHub(p: {
   useEffect(() => {
     const el = stepsRef.current;
     if (!el) return;
-    const io = new IntersectionObserver(([e]) => setInView(!!e?.isIntersecting), { rootMargin: "0px 0px -160px 0px" });
+    const io = new IntersectionObserver(([e]) => setInView(!!e?.isIntersecting), {
+      rootMargin: "0px 0px -160px 0px",
+    });
     io.observe(el);
     return () => io.disconnect();
   }, []);
@@ -179,7 +184,6 @@ export function BookHub(p: {
     />
   );
 
-
   return (
     <section
       id="book"
@@ -196,7 +200,11 @@ export function BookHub(p: {
         <Way
           icon={<CalendarDaysIcon className="size-5" {...ICON} />}
           title={B.askDayTitle}
-          line={days[0] ? `${T.nextOpen} ${WD.format(at(days[0].key))} ${DAY.format(at(days[0].key))} ${MON.format(at(days[0].key))} · ${T.clinicConfirms}` : B.askDayLine}
+          line={
+            days[0]
+              ? `${T.nextOpen} ${WD.format(at(days[0].key))} ${DAY.format(at(days[0].key))} ${MON.format(at(days[0].key))} · ${T.clinicConfirms}`
+              : B.askDayLine
+          }
           on
         />
         <Way
@@ -219,7 +227,10 @@ export function BookHub(p: {
         </div>
       </div>
 
-      <div ref={stepsRef} className="flex min-w-0 flex-col gap-6 p-6 max-[760px]:gap-5 max-[760px]:p-4">
+      <div
+        ref={stepsRef}
+        className="flex min-w-0 flex-col gap-6 p-6 max-[760px]:gap-5 max-[760px]:p-4"
+      >
         <div className="min-[761px]:hidden">
           <h2 className="text-[22px] leading-7 font-semibold">{B.askDayTitle}</h2>
           <p className="text-pw-ink-3 text-[13px]">{B.honest}</p>
@@ -227,7 +238,12 @@ export function BookHub(p: {
         <Step n={1} title={B.whoTitle}>
           <div className={cn("flex flex-wrap gap-2", ROW)}>
             {p.who.map((w) => (
-              <Tile key={w.id ?? "me"} on={w.id === member} onClick={() => setMember(w.id)} className="max-[760px]:shrink-0">
+              <Tile
+                key={w.id ?? "me"}
+                on={w.id === member}
+                onClick={() => setMember(w.id)}
+                className="max-[760px]:shrink-0"
+              >
                 <span className="bg-pw-accent-tint text-pw-accent-text grid size-9 shrink-0 place-items-center rounded-full text-[13px] font-bold">
                   {initials(w.label)}
                 </span>
@@ -317,8 +333,12 @@ export function BookHub(p: {
                           on ? "bg-pw-band text-pw-on-band" : "bg-pw-surface-2",
                         )}
                       >
-                        <span className="text-[11px] font-bold uppercase">{WD.format(at(d.key))}</span>
-                        <span className="text-[22px] leading-[26px] font-bold">{DAY.format(at(d.key))}</span>
+                        <span className="text-[11px] font-bold uppercase">
+                          {WD.format(at(d.key))}
+                        </span>
+                        <span className="text-[22px] leading-[26px] font-bold">
+                          {DAY.format(at(d.key))}
+                        </span>
                         <span className="text-[11px]">{MON.format(at(d.key))}</span>
                       </button>
                     );
@@ -329,7 +349,12 @@ export function BookHub(p: {
                     const open = partsOpen.includes(pt);
                     const s = day?.sessions.find((x) => x.part === pt);
                     return (
-                      <Tile key={pt} on={pt === shownPart} disabled={!open} onClick={() => setPart(pt)}>
+                      <Tile
+                        key={pt}
+                        on={pt === shownPart}
+                        disabled={!open}
+                        onClick={() => setPart(pt)}
+                      >
                         <span className="flex flex-col text-left">
                           <span className="text-[15px] font-semibold">{D.partWords[pt]}</span>
                           <span className="text-pw-ink-3 text-[13px]">
@@ -355,7 +380,7 @@ export function BookHub(p: {
 
             <Step n={5} title={D.whoTitle}>
               {/* One row; past the section's width it scrolls sideways (padding keeps the shadow unclipped). */}
-              <div className="-mx-2 flex snap-x gap-3 overflow-x-auto px-2 pt-1 pb-3 [scrollbar-width:thin]">
+              <div className="-mx-2 flex snap-x [scrollbar-width:thin] gap-3 overflow-x-auto px-2 pt-1 pb-3">
                 {sessions.map((s) => (
                   <button
                     key={s.id}
@@ -363,7 +388,7 @@ export function BookHub(p: {
                     aria-pressed={s.id === session?.id}
                     onClick={() => setSessionId(s.id)}
                     className={cn(
-                      "rounded-pw-row relative flex min-h-[84px] w-[300px] shrink-0 snap-start max-[760px]:w-[264px] items-center gap-3 p-3 pr-10 text-left",
+                      "rounded-pw-row relative flex min-h-[84px] w-[300px] shrink-0 snap-start items-center gap-3 p-3 pr-10 text-left max-[760px]:w-[264px]",
                       "transition-[background-color,box-shadow,scale] duration-150 ease-[cubic-bezier(0.16,1,0.3,1)] active:scale-[0.98] motion-reduce:active:scale-100",
                       s.id === session?.id
                         ? "bg-pw-surface shadow-pw-card"
@@ -371,8 +396,16 @@ export function BookHub(p: {
                     )}
                   >
                     {s.clinicianName ? (
-                      <Suspense fallback={<Clinician name={s.clinicianName} fee={s.feeLabel ?? feeText(s.fee)} />}>
-                        <Doctor name={s.clinicianName} fee={s.feeLabel ?? feeText(s.fee)} doctors={p.doctors} />
+                      <Suspense
+                        fallback={
+                          <Clinician name={s.clinicianName} fee={s.feeLabel ?? feeText(s.fee)} />
+                        }
+                      >
+                        <Doctor
+                          name={s.clinicianName}
+                          fee={s.feeLabel ?? feeText(s.fee)}
+                          doctors={p.doctors}
+                        />
                       </Suspense>
                     ) : (
                       <>
@@ -400,7 +433,10 @@ export function BookHub(p: {
             <p className="text-pw-ink-3 text-[13px] min-[761px]:hidden">{B.footnote}</p>
             <div className="border-pw-line flex flex-wrap items-center justify-between gap-3 border-t pt-4 max-[760px]:hidden">
               <p className="text-[15px]">
-                {who?.label}, {reasonTitle}, {day ? `${WD.format(at(day.key))} ${DAY.format(at(day.key))} ${MON.format(at(day.key))}` : ""}
+                {who?.label}, {reasonTitle},{" "}
+                {day
+                  ? `${WD.format(at(day.key))} ${DAY.format(at(day.key))} ${MON.format(at(day.key))}`
+                  : ""}
                 {shownClinic ? ` · ${shownClinic}` : ""}
               </p>
               <div className="flex items-center gap-2">
@@ -430,13 +466,15 @@ export function BookHub(p: {
         <div
           aria-hidden={!inView}
           className={cn(
-            "bg-pw-band text-pw-on-band fixed inset-x-3 bottom-[calc(92px+env(safe-area-inset-bottom))] z-20 flex items-center gap-3 rounded-[24px] py-2.5 pr-2.5 pl-4 shadow-pw-float min-[761px]:hidden",
+            "bg-pw-band text-pw-on-band shadow-pw-float fixed inset-x-3 bottom-[calc(92px+env(safe-area-inset-bottom))] z-20 flex items-center gap-3 rounded-[24px] py-2.5 pr-2.5 pl-4 min-[761px]:hidden",
             "transition-[translate,opacity] duration-250 ease-[cubic-bezier(0.16,1,0.3,1)] motion-reduce:transition-none",
             inView ? "" : "pointer-events-none translate-y-4 opacity-0",
           )}
         >
           <div className="text-pw-on-band-2 min-w-0 flex-1 text-[11px] leading-[15px]">
-            <b className="text-pw-on-band block text-[16px] leading-5">{session.feeLabel ?? feeText(session.fee)}</b>
+            <b className="text-pw-on-band block text-[16px] leading-5">
+              {session.feeLabel ?? feeText(session.fee)}
+            </b>
             {`${WD.format(at(day.key))} ${DAY.format(at(day.key))} ${MON.format(at(day.key))} · ${session.clinicName}`}
             {" · "}
             <button
@@ -464,7 +502,11 @@ export function BookHub(p: {
         {ticket}
       </Dialog>
 
-      <Dialog open={!!booked} onOpenChange={(o) => !o && setBooked(null)} title={T.bookedTitle} width="medium"
+      <Dialog
+        open={!!booked}
+        onOpenChange={(o) => !o && setBooked(null)}
+        title={T.bookedTitle}
+        width="medium"
         footer={
           <Link href="/patient/visits" className={buttonClass("primary", "m")}>
             {T.seeInVisits}
@@ -503,7 +545,6 @@ function Doctor(p: { name: string; fee: string; doctors: Promise<DoctorCard[] | 
   const d = use(p.doctors)?.find((x) => x.name === p.name);
   return <Clinician name={p.name} fee={p.fee} doctor={d} />;
 }
-
 
 function Clinician(p: { name: string; fee: string; doctor?: DoctorCard }) {
   return (

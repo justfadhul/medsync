@@ -6,6 +6,7 @@ metadata:
 ---
 
 Found 2026-09-25 (plan doc "MedSync — Commit & Merge Plan": https://claude.ai/code/artifact/613f2cdf-2884-4b3a-b071-4fe668c0134f):
+
 - The main folder's working tree (branch feat/doctor-workspace @ c555aaf + 448 uncommitted files) is byte-identical to
   `feat/onboarding-v2` tip `af174d0` except `.env.example` (checked with a scratch GIT_INDEX_FILE + `git add -A`).
   `a7b784a` = one lumped baseline snapshot (324 files, ~8 features: plum 0097, landing 0099, 0100, 0101, 0112, doctor

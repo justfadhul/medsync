@@ -90,10 +90,12 @@ export function TicketV2(p: TicketV2Props) {
 
       <div aria-hidden className="pw-ticket-tear bg-pw-ticket-stub relative shrink-0" />
 
-      <div className={cn(
+      <div
+        className={cn(
           "pw-ticket-stub bg-pw-ticket-stub text-pw-ticket-on-stub flex min-w-0 flex-col gap-3 p-5",
           !p.stacked && "min-[761px]:w-[300px]",
-        )}>
+        )}
+      >
         <dl className="grid grid-cols-2 gap-x-4 gap-y-2">
           {(
             [

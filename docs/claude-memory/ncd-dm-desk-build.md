@@ -8,6 +8,7 @@ metadata:
 Owner (2026-10-06/08): the diabetes pack must be embedded in the encounter, not a separate form — as one clerks, it auto-profiles a diabetic and suggests the diagnosis. My PR #201 (module button + wide dialog on the v2 desk) was the wrong shape; it is merged and stays only until this replaces it.
 
 Signed decisions 2026-10-08 (all my recommendations):
+
 - Impression: one diabetes suggestion, worded by the pack (criteria met vs "possible: one result, repeat"); desk's own dx rules still find the case.
 - Missing pack questions: important ones added to the clerking steps (CSO-signed catalogue additions); the rest in a short "More diabetes questions" pop-up from the profile card listing only gaps; the full-module button goes.
 - New flag NCD_DM_DESK, off; owner to add CLERKING_V2 to Preview env to try it.

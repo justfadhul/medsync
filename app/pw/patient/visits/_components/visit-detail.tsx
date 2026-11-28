@@ -64,7 +64,9 @@ export async function VisitDetail({ visit, userId }: { visit: VisitRow; userId: 
         </span>
       </div>
       {status ? (
-        <span className="bg-pw-surface-2 text-pw-ink-2 shrink-0 rounded-[4px] px-2 py-1 text-[12px] font-bold">{status}</span>
+        <span className="bg-pw-surface-2 text-pw-ink-2 shrink-0 rounded-[4px] px-2 py-1 text-[12px] font-bold">
+          {status}
+        </span>
       ) : null}
     </div>
   );

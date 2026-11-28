@@ -1,9 +1,9 @@
 "use client";
 
 import type { DayMood, Mood } from "@patient-core/log";
-import { countMoods } from "@patient-core/log";
 import Link from "next/link";
 import { useId, useState, useTransition } from "react";
+import { countMoods } from "@patient-core/log";
 
 import { Toast } from "@/components/tide/controls";
 import { MoodFace } from "@/components/tide/mood-face";
@@ -65,7 +65,11 @@ export function MoodCard(p: {
   };
 
   const seg = (
-    <div role="group" aria-label={M.viewsLabel} className="bg-pw-band-glass flex rounded-full p-0.5">
+    <div
+      role="group"
+      aria-label={M.viewsLabel}
+      className="bg-pw-band-glass flex rounded-full p-0.5"
+    >
       {VIEWS.map((v) => (
         <button
           key={v}
@@ -88,16 +92,20 @@ export function MoodCard(p: {
     <section
       aria-labelledby={id}
       className={cn(
-        "text-pw-on-band flex min-w-0 flex-col gap-3 [&_.pw-mood-none]:stroke-pw-on-band/40",
+        "text-pw-on-band [&_.pw-mood-none]:stroke-pw-on-band/40 flex min-w-0 flex-col gap-3",
         page
-          ? "[--pw-band:var(--pw-surface)] [--pw-band-glass:var(--pw-surface-2)] [--pw-on-band:var(--pw-ink)] [--pw-on-band-2:var(--pw-ink-3)] [--pw-on-band-accent:var(--pw-accent-text)]"
+          ? "[--pw-band-glass:var(--pw-surface-2)] [--pw-band:var(--pw-surface)] [--pw-on-band-2:var(--pw-ink-3)] [--pw-on-band-accent:var(--pw-accent-text)] [--pw-on-band:var(--pw-ink)]"
           : "rounded-pw-card bg-pw-band-glass p-4",
       )}
     >
       <div className="flex items-center justify-between gap-2">
         <h2
           id={id}
-          className={page ? "text-[30px] leading-[34px] font-semibold tracking-[-0.03em]" : "text-[17px] leading-[22px] font-semibold"}
+          className={
+            page
+              ? "text-[30px] leading-[34px] font-semibold tracking-[-0.03em]"
+              : "text-[17px] leading-[22px] font-semibold"
+          }
         >
           {C.moodTitle}
         </h2>
@@ -139,7 +147,9 @@ export function MoodCard(p: {
       <div
         className={cn(
           "flex flex-col justify-between gap-2",
-          page ? "rounded-pw-card bg-pw-surface shadow-pw-card h-[184px] p-3" : "border-pw-on-band/15 h-[140px] border-t pt-3",
+          page
+            ? "rounded-pw-card bg-pw-surface shadow-pw-card h-[184px] p-3"
+            : "border-pw-on-band/15 h-[140px] border-t pt-3",
         )}
       >
         {page ? (
@@ -194,7 +204,11 @@ export function MoodCard(p: {
               return (
                 <li key={name} className="flex flex-col items-center gap-1">
                   <span className="sr-only">
-                    {i >= p.year.length ? name : mix ? M.monthMix(name, mix[0], mix[1], mix[2]) : M.monthNone(name)}
+                    {i >= p.year.length
+                      ? name
+                      : mix
+                        ? M.monthMix(name, mix[0], mix[1], mix[2])
+                        : M.monthNone(name)}
                   </span>
                   <span
                     aria-hidden
@@ -204,7 +218,9 @@ export function MoodCard(p: {
                       i >= p.year.length && "opacity-40",
                     )}
                   >
-                    {mix?.map((pct, k) => <span key={k} className={MIX[k]} style={{ flexGrow: pct }} />)}
+                    {mix?.map((pct, k) => (
+                      <span key={k} className={MIX[k]} style={{ flexGrow: pct }} />
+                    ))}
                   </span>
                   <span aria-hidden className="text-pw-on-band-2 text-[10px] font-semibold">
                     {name[0]}
@@ -219,7 +235,10 @@ export function MoodCard(p: {
           {view === "year" ? (
             <span className="flex flex-wrap gap-3">
               {MOODS.map((k) => (
-                <span key={k} className="text-pw-on-band-2 flex items-center gap-1 text-[12px] font-semibold">
+                <span
+                  key={k}
+                  className="text-pw-on-band-2 flex items-center gap-1 text-[12px] font-semibold"
+                >
                   <MoodFace mood={k} size={14} decorative />
                   {M.faces[k]}
                 </span>
@@ -235,7 +254,10 @@ export function MoodCard(p: {
           {shown === "low" ? (
             <Link
               href={p.chat ? "/patient/care/messages" : "#book"}
-              className={cn("text-pw-on-band-accent shrink-0 rounded-full text-[13px] font-semibold", FOCUS)}
+              className={cn(
+                "text-pw-on-band-accent shrink-0 rounded-full text-[13px] font-semibold",
+                FOCUS,
+              )}
             >
               {p.chat ? C.tellTeam : C.bookVisit}
             </Link>

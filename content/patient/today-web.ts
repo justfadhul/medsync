@@ -20,7 +20,8 @@ export const TODAY_WEB_COPY = {
   me: "Your own visit",
   nextOpen: "Next open:",
   clinicConfirms: "the clinic confirms",
-  walkInsOpen: (n: number) => (n === 1 ? "Open now · 1 clinic takes walk-ins" : `Open now · ${n} clinics take walk-ins`),
+  walkInsOpen: (n: number) =>
+    n === 1 ? "Open now · 1 clinic takes walk-ins" : `Open now · ${n} clinics take walk-ins`,
   help: "Help",
   when: "When?",
   whichClinic: "Which clinic?",
@@ -45,8 +46,7 @@ export const TODAY_WEB_COPY = {
     noVisit: "No visit booked",
     bookOne: "Book one below",
     labs: "Lab tests",
-    labsLine: (ready: number, waiting: number) =>
-      `${ready} ready · ${waiting} waiting`,
+    labsLine: (ready: number, waiting: number) => `${ready} ready · ${waiting} waiting`,
     bloodPressure: "Blood pressure",
     noReading: "No reading yet",
   },

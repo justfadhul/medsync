@@ -1,264 +1,1056 @@
 <title>MedSync Readiness Review</title>
-<meta name="claude:viewport-fit-sides" content="cover">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@75..100,500..800&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<meta name="claude:viewport-fit-sides" content="cover" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link
+  rel="stylesheet"
+  href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@75..100,500..800&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap"
+/>
 <style>
-/* Layout: a triage chart for a codebase. Severity uses the SATS triage scale the product itself uses
+  /* Layout: a triage chart for a codebase. Severity uses the SATS triage scale the product itself uses
    (Red, Orange, Yellow, Green), always paired with a word. One reading column, wide figures break out. */
-:root {
-  --bg: #f2f4f6;
-  --surface: #ffffff;
-  --sunk: #e7ebef;
-  --fg: #15202a;
-  --muted: #56636f;
-  --line: #d3dae1;
-  --accent: #0f766e;
-  --accent-soft: #d6efec;
-  --red: #b42318;   --red-bg: #fde8e6;
-  --orange: #c4560f; --orange-bg: #fdeedf;
-  --yellow: #8a6a00; --yellow-bg: #fbf3cf;
-  --green: #23704a; --green-bg: #e1f3e8;
-  --bar: #2c3e4f;
-  --font-display: "Archivo", "Helvetica Neue", Arial, sans-serif;
-  --font-body: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
-  --font-mono: "IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace;
-}
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) {
-    --bg: #0d1419; --surface: #141e26; --sunk: #1b2731; --fg: #e3e9ee; --muted: #9aa8b4; --line: #2a3843;
-    --accent: #3cc2b4; --accent-soft: #123532;
-    --red: #ff7b6e; --red-bg: #3a1714; --orange: #f39a55; --orange-bg: #3a2210;
-    --yellow: #e6c449; --yellow-bg: #332b0c; --green: #5fcf93; --green-bg: #12301f; --bar: #8fb3cc;
+  :root {
+    --bg: #f2f4f6;
+    --surface: #ffffff;
+    --sunk: #e7ebef;
+    --fg: #15202a;
+    --muted: #56636f;
+    --line: #d3dae1;
+    --accent: #0f766e;
+    --accent-soft: #d6efec;
+    --red: #b42318;
+    --red-bg: #fde8e6;
+    --orange: #c4560f;
+    --orange-bg: #fdeedf;
+    --yellow: #8a6a00;
+    --yellow-bg: #fbf3cf;
+    --green: #23704a;
+    --green-bg: #e1f3e8;
+    --bar: #2c3e4f;
+    --font-display: "Archivo", "Helvetica Neue", Arial, sans-serif;
+    --font-body: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+    --font-mono: "IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #0d1419;
+      --surface: #141e26;
+      --sunk: #1b2731;
+      --fg: #e3e9ee;
+      --muted: #9aa8b4;
+      --line: #2a3843;
+      --accent: #3cc2b4;
+      --accent-soft: #123532;
+      --red: #ff7b6e;
+      --red-bg: #3a1714;
+      --orange: #f39a55;
+      --orange-bg: #3a2210;
+      --yellow: #e6c449;
+      --yellow-bg: #332b0c;
+      --green: #5fcf93;
+      --green-bg: #12301f;
+      --bar: #8fb3cc;
+      color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #0d1419;
+    --surface: #141e26;
+    --sunk: #1b2731;
+    --fg: #e3e9ee;
+    --muted: #9aa8b4;
+    --line: #2a3843;
+    --accent: #3cc2b4;
+    --accent-soft: #123532;
+    --red: #ff7b6e;
+    --red-bg: #3a1714;
+    --orange: #f39a55;
+    --orange-bg: #3a2210;
+    --yellow: #e6c449;
+    --yellow-bg: #332b0c;
+    --green: #5fcf93;
+    --green-bg: #12301f;
+    --bar: #8fb3cc;
     color-scheme: dark;
   }
-}
-:root[data-theme="dark"] {
-  --bg: #0d1419; --surface: #141e26; --sunk: #1b2731; --fg: #e3e9ee; --muted: #9aa8b4; --line: #2a3843;
-  --accent: #3cc2b4; --accent-soft: #123532;
-  --red: #ff7b6e; --red-bg: #3a1714; --orange: #f39a55; --orange-bg: #3a2210;
-  --yellow: #e6c449; --yellow-bg: #332b0c; --green: #5fcf93; --green-bg: #12301f; --bar: #8fb3cc;
-  color-scheme: dark;
-}
-* { box-sizing: border-box; }
-body {
-  background: var(--bg); color: var(--fg);
-  font-family: var(--font-body); font-size: 15.5px; line-height: 1.55;
-  padding-left: max(16px, env(safe-area-inset-left, 0px));
-  padding-right: max(16px, env(safe-area-inset-right, 0px));
-  padding-block: 0 64px;
-}
-.wrap { max-width: 1080px; margin: 0 auto; display: grid; gap: 56px; }
-h1, h2, h3 { font-family: var(--font-display); font-weight: 700; text-wrap: balance; margin: 0; letter-spacing: -0.01em; }
-h2 { font-size: 1.65rem; font-stretch: 85%; }
-h3 { font-size: 1.06rem; font-weight: 650; }
-p { margin: 0; }
-code, .mono { font-family: var(--font-mono); font-size: 0.86em; }
-code { background: var(--sunk); padding: 1px 5px; border-radius: 4px; overflow-wrap: anywhere; }
-.eyebrow { font-family: var(--font-mono); font-size: 0.74rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
-.section { display: grid; gap: 20px; min-width: 0; }
-.section > header { display: grid; gap: 6px; max-width: 70ch; }
-.section > header p { color: var(--muted); }
-.lede { max-width: 68ch; }
-:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  * {
+    box-sizing: border-box;
+  }
+  body {
+    background: var(--bg);
+    color: var(--fg);
+    font-family: var(--font-body);
+    font-size: 15.5px;
+    line-height: 1.55;
+    padding-left: max(16px, env(safe-area-inset-left, 0px));
+    padding-right: max(16px, env(safe-area-inset-right, 0px));
+    padding-block: 0 64px;
+  }
+  .wrap {
+    max-width: 1080px;
+    margin: 0 auto;
+    display: grid;
+    gap: 56px;
+  }
+  h1,
+  h2,
+  h3 {
+    font-family: var(--font-display);
+    font-weight: 700;
+    text-wrap: balance;
+    margin: 0;
+    letter-spacing: -0.01em;
+  }
+  h2 {
+    font-size: 1.65rem;
+    font-stretch: 85%;
+  }
+  h3 {
+    font-size: 1.06rem;
+    font-weight: 650;
+  }
+  p {
+    margin: 0;
+  }
+  code,
+  .mono {
+    font-family: var(--font-mono);
+    font-size: 0.86em;
+  }
+  code {
+    background: var(--sunk);
+    padding: 1px 5px;
+    border-radius: 4px;
+    overflow-wrap: anywhere;
+  }
+  .eyebrow {
+    font-family: var(--font-mono);
+    font-size: 0.74rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .section {
+    display: grid;
+    gap: 20px;
+    min-width: 0;
+  }
+  .section > header {
+    display: grid;
+    gap: 6px;
+    max-width: 70ch;
+  }
+  .section > header p {
+    color: var(--muted);
+  }
+  .lede {
+    max-width: 68ch;
+  }
+  :focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
 
-/* Severity tags: colour + word, never colour alone */
-.sev { display: inline-flex; align-items: center; gap: 6px; font-family: var(--font-mono); font-size: 0.72rem; font-weight: 500;
-  letter-spacing: 0.06em; text-transform: uppercase; padding: 2px 8px; border-radius: 3px; white-space: nowrap; }
-.sev::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: currentColor; }
-.sev.crit { color: var(--red); background: var(--red-bg); }
-.sev.high { color: var(--orange); background: var(--orange-bg); }
-.sev.med { color: var(--yellow); background: var(--yellow-bg); }
-.sev.low { color: var(--green); background: var(--green-bg); }
+  /* Severity tags: colour + word, never colour alone */
+  .sev {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    font-weight: 500;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    padding: 2px 8px;
+    border-radius: 3px;
+    white-space: nowrap;
+  }
+  .sev::before {
+    content: "";
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: currentColor;
+  }
+  .sev.crit {
+    color: var(--red);
+    background: var(--red-bg);
+  }
+  .sev.high {
+    color: var(--orange);
+    background: var(--orange-bg);
+  }
+  .sev.med {
+    color: var(--yellow);
+    background: var(--yellow-bg);
+  }
+  .sev.low {
+    color: var(--green);
+    background: var(--green-bg);
+  }
 
-/* Hero */
-.hero { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr); gap: 32px; align-items: end; padding-top: 48px; }
-.hero h1 { font-size: clamp(2.2rem, 5.5vw, 3.6rem); font-stretch: 80%; line-height: 1.02; font-weight: 800; }
-.hero .meta { display: flex; flex-wrap: wrap; gap: 6px 16px; margin-top: 14px; color: var(--muted); font-size: 0.86rem; }
-.hero .lede { margin-top: 18px; font-size: 1.04rem; }
-.verdict { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 22px; display: grid; gap: 12px; }
-.verdict .stamp { display: inline-flex; align-items: baseline; gap: 12px; }
-.verdict .stamp b { font-family: var(--font-display); font-stretch: 75%; font-weight: 800; font-size: 3.4rem; line-height: 1; color: var(--red);
-  border: 3px solid var(--red); padding: 2px 14px 4px; border-radius: 6px; transform: rotate(-2deg); display: inline-block; }
-.verdict .stamp span { color: var(--muted); font-size: 0.9rem; }
-.counts { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
-.counts div { background: var(--sunk); border-radius: 6px; padding: 8px 10px; display: grid; gap: 2px; }
-.counts strong { font-family: var(--font-display); font-size: 1.6rem; font-weight: 700; font-variant-numeric: tabular-nums; line-height: 1.1; }
-.counts .c strong { color: var(--red); } .counts .h strong { color: var(--orange); } .counts .m strong { color: var(--yellow); } .counts .l strong { color: var(--green); }
-.counts small { font-size: 0.72rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; font-family: var(--font-mono); }
+  /* Hero */
+  .hero {
+    display: grid;
+    grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr);
+    gap: 32px;
+    align-items: end;
+    padding-top: 48px;
+  }
+  .hero h1 {
+    font-size: clamp(2.2rem, 5.5vw, 3.6rem);
+    font-stretch: 80%;
+    line-height: 1.02;
+    font-weight: 800;
+  }
+  .hero .meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 16px;
+    margin-top: 14px;
+    color: var(--muted);
+    font-size: 0.86rem;
+  }
+  .hero .lede {
+    margin-top: 18px;
+    font-size: 1.04rem;
+  }
+  .verdict {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 22px;
+    display: grid;
+    gap: 12px;
+  }
+  .verdict .stamp {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 12px;
+  }
+  .verdict .stamp b {
+    font-family: var(--font-display);
+    font-stretch: 75%;
+    font-weight: 800;
+    font-size: 3.4rem;
+    line-height: 1;
+    color: var(--red);
+    border: 3px solid var(--red);
+    padding: 2px 14px 4px;
+    border-radius: 6px;
+    transform: rotate(-2deg);
+    display: inline-block;
+  }
+  .verdict .stamp span {
+    color: var(--muted);
+    font-size: 0.9rem;
+  }
+  .counts {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 8px;
+  }
+  .counts div {
+    background: var(--sunk);
+    border-radius: 6px;
+    padding: 8px 10px;
+    display: grid;
+    gap: 2px;
+  }
+  .counts strong {
+    font-family: var(--font-display);
+    font-size: 1.6rem;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    line-height: 1.1;
+  }
+  .counts .c strong {
+    color: var(--red);
+  }
+  .counts .h strong {
+    color: var(--orange);
+  }
+  .counts .m strong {
+    color: var(--yellow);
+  }
+  .counts .l strong {
+    color: var(--green);
+  }
+  .counts small {
+    font-size: 0.72rem;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    font-family: var(--font-mono);
+  }
 
-/* Scorecard */
-.score { display: grid; grid-template-columns: minmax(0, 1fr); gap: 2px; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 8px 18px; }
-.score-row { display: grid; grid-template-columns: 190px 1fr 44px; gap: 14px; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--line); }
-.score-row:last-child { border-bottom: 0; }
-.score-row .name { font-weight: 600; font-size: 0.95rem; }
-.score-row .why { grid-column: 2 / 4; color: var(--muted); font-size: 0.86rem; margin-top: -6px; }
-.track { position: relative; height: 12px; background: var(--sunk); border-radius: 2px;
-  background-image: repeating-linear-gradient(90deg, transparent 0 calc(10% - 1px), var(--line) calc(10% - 1px) 10%); }
-.fill { position: absolute; inset: 0 auto 0 0; border-radius: 2px; background: var(--bar); }
-.fill.lo { background: var(--red); } .fill.mid { background: var(--orange); } .fill.ok { background: var(--yellow); }
-.num { font-family: var(--font-display); font-weight: 700; font-size: 1.25rem; font-variant-numeric: tabular-nums; text-align: right; }
-.num small { font-size: 0.7rem; color: var(--muted); font-weight: 500; }
+  /* Scorecard */
+  .score {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 2px;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 8px 18px;
+  }
+  .score-row {
+    display: grid;
+    grid-template-columns: 190px 1fr 44px;
+    gap: 14px;
+    align-items: center;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--line);
+  }
+  .score-row:last-child {
+    border-bottom: 0;
+  }
+  .score-row .name {
+    font-weight: 600;
+    font-size: 0.95rem;
+  }
+  .score-row .why {
+    grid-column: 2 / 4;
+    color: var(--muted);
+    font-size: 0.86rem;
+    margin-top: -6px;
+  }
+  .track {
+    position: relative;
+    height: 12px;
+    background: var(--sunk);
+    border-radius: 2px;
+    background-image: repeating-linear-gradient(
+      90deg,
+      transparent 0 calc(10% - 1px),
+      var(--line) calc(10% - 1px) 10%
+    );
+  }
+  .fill {
+    position: absolute;
+    inset: 0 auto 0 0;
+    border-radius: 2px;
+    background: var(--bar);
+  }
+  .fill.lo {
+    background: var(--red);
+  }
+  .fill.mid {
+    background: var(--orange);
+  }
+  .fill.ok {
+    background: var(--yellow);
+  }
+  .num {
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 1.25rem;
+    font-variant-numeric: tabular-nums;
+    text-align: right;
+  }
+  .num small {
+    font-size: 0.7rem;
+    color: var(--muted);
+    font-weight: 500;
+  }
 
-/* Perimeter diagram */
-.perimeter { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 20px; display: grid; gap: 14px; overflow-x: auto; }
-.lane { display: grid; grid-template-columns: 170px 28px minmax(170px, 1.1fr) 28px minmax(170px, 1fr) 28px minmax(150px, 0.9fr); align-items: stretch; min-width: 820px; }
-.node { border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; background: var(--bg); display: grid; gap: 4px; align-content: start; }
-.node b { font-size: 0.9rem; }
-.node span { font-size: 0.8rem; color: var(--muted); }
-.node.who { background: var(--sunk); }
-.node.bad { border-color: var(--red); background: var(--red-bg); }
-.node.bad b { color: var(--red); }
-.node.warn { border-color: var(--orange); background: var(--orange-bg); }
-.node.warn b { color: var(--orange); }
-.node.good { border-color: var(--green); background: var(--green-bg); }
-.node.good b { color: var(--green); }
-.arrow { display: grid; place-items: center; color: var(--muted); font-family: var(--font-mono); }
-.mfa-row { display: flex; flex-wrap: wrap; gap: 8px 18px; font-size: 0.85rem; color: var(--muted); padding-top: 4px; border-top: 1px dashed var(--line); }
-.mfa-row b { color: var(--fg); }
+  /* Perimeter diagram */
+  .perimeter {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 20px;
+    display: grid;
+    gap: 14px;
+    overflow-x: auto;
+  }
+  .lane {
+    display: grid;
+    grid-template-columns: 170px 28px minmax(170px, 1.1fr) 28px minmax(170px, 1fr) 28px minmax(
+        150px,
+        0.9fr
+      );
+    align-items: stretch;
+    min-width: 820px;
+  }
+  .node {
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 10px 12px;
+    background: var(--bg);
+    display: grid;
+    gap: 4px;
+    align-content: start;
+  }
+  .node b {
+    font-size: 0.9rem;
+  }
+  .node span {
+    font-size: 0.8rem;
+    color: var(--muted);
+  }
+  .node.who {
+    background: var(--sunk);
+  }
+  .node.bad {
+    border-color: var(--red);
+    background: var(--red-bg);
+  }
+  .node.bad b {
+    color: var(--red);
+  }
+  .node.warn {
+    border-color: var(--orange);
+    background: var(--orange-bg);
+  }
+  .node.warn b {
+    color: var(--orange);
+  }
+  .node.good {
+    border-color: var(--green);
+    background: var(--green-bg);
+  }
+  .node.good b {
+    color: var(--green);
+  }
+  .arrow {
+    display: grid;
+    place-items: center;
+    color: var(--muted);
+    font-family: var(--font-mono);
+  }
+  .mfa-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 18px;
+    font-size: 0.85rem;
+    color: var(--muted);
+    padding-top: 4px;
+    border-top: 1px dashed var(--line);
+  }
+  .mfa-row b {
+    color: var(--fg);
+  }
 
-/* Critical attack paths */
-.crit-list { display: grid; gap: 16px; }
-.crit { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 20px; display: grid; gap: 14px; }
-.crit-head { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
-.crit-head .id { font-family: var(--font-mono); font-weight: 500; color: var(--red); }
-.steps { list-style: none; padding: 0; margin: 0; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 0; counter-reset: s; }
-.steps li { position: relative; padding: 12px 18px 12px 12px; background: var(--sunk); font-size: 0.85rem; line-height: 1.4; counter-increment: s;
-  clip-path: polygon(0 0, calc(100% - 12px) 0, 100% 50%, calc(100% - 12px) 100%, 0 100%, 12px 50%); padding-left: 22px; }
-.steps li:first-child { clip-path: polygon(0 0, calc(100% - 12px) 0, 100% 50%, calc(100% - 12px) 100%, 0 100%); padding-left: 12px; }
-.steps li::before { content: counter(s); display: block; font-family: var(--font-mono); font-size: 0.7rem; color: var(--muted); }
-.steps li:last-child { background: var(--red-bg); color: var(--fg); }
-.steps li:last-child::before { color: var(--red); }
-.crit .grid2 { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 16px; font-size: 0.9rem; }
-.crit .grid2 div { display: grid; gap: 4px; min-width: 0; }
-.label { font-family: var(--font-mono); font-size: 0.7rem; letter-spacing: 0.07em; text-transform: uppercase; color: var(--muted); }
+  /* Critical attack paths */
+  .crit-list {
+    display: grid;
+    gap: 16px;
+  }
+  .crit {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 20px;
+    display: grid;
+    gap: 14px;
+  }
+  .crit-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+  }
+  .crit-head .id {
+    font-family: var(--font-mono);
+    font-weight: 500;
+    color: var(--red);
+  }
+  .steps {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 0;
+    counter-reset: s;
+  }
+  .steps li {
+    position: relative;
+    padding: 12px 18px 12px 12px;
+    background: var(--sunk);
+    font-size: 0.85rem;
+    line-height: 1.4;
+    counter-increment: s;
+    clip-path: polygon(
+      0 0,
+      calc(100% - 12px) 0,
+      100% 50%,
+      calc(100% - 12px) 100%,
+      0 100%,
+      12px 50%
+    );
+    padding-left: 22px;
+  }
+  .steps li:first-child {
+    clip-path: polygon(0 0, calc(100% - 12px) 0, 100% 50%, calc(100% - 12px) 100%, 0 100%);
+    padding-left: 12px;
+  }
+  .steps li::before {
+    content: counter(s);
+    display: block;
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    color: var(--muted);
+  }
+  .steps li:last-child {
+    background: var(--red-bg);
+    color: var(--fg);
+  }
+  .steps li:last-child::before {
+    color: var(--red);
+  }
+  .crit .grid2 {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 16px;
+    font-size: 0.9rem;
+  }
+  .crit .grid2 div {
+    display: grid;
+    gap: 4px;
+    min-width: 0;
+  }
+  .label {
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
 
-/* Checks */
-.checks { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 10px; }
-.check { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 12px 14px; display: grid; gap: 4px; align-content: start; }
-.check .top { display: flex; justify-content: space-between; gap: 8px; align-items: baseline; }
-.check .top b { font-size: 0.9rem; }
-.st { font-family: var(--font-mono); font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.05em; white-space: nowrap; }
-.st.pass { color: var(--green); } .st.warn { color: var(--orange); } .st.fail { color: var(--red); } .st.none { color: var(--muted); }
-.check p { font-size: 0.82rem; color: var(--muted); }
-.check .big { font-family: var(--font-display); font-size: 1.35rem; font-weight: 700; font-variant-numeric: tabular-nums; color: var(--fg); }
+  /* Checks */
+  .checks {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+    gap: 10px;
+  }
+  .check {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 12px 14px;
+    display: grid;
+    gap: 4px;
+    align-content: start;
+  }
+  .check .top {
+    display: flex;
+    justify-content: space-between;
+    gap: 8px;
+    align-items: baseline;
+  }
+  .check .top b {
+    font-size: 0.9rem;
+  }
+  .st {
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    white-space: nowrap;
+  }
+  .st.pass {
+    color: var(--green);
+  }
+  .st.warn {
+    color: var(--orange);
+  }
+  .st.fail {
+    color: var(--red);
+  }
+  .st.none {
+    color: var(--muted);
+  }
+  .check p {
+    font-size: 0.82rem;
+    color: var(--muted);
+  }
+  .check .big {
+    font-family: var(--font-display);
+    font-size: 1.35rem;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    color: var(--fg);
+  }
 
-.figs { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 16px; }
-.fig { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 18px; display: grid; gap: 12px; align-content: start; min-width: 0; }
-.fig figcaption { font-size: 0.82rem; color: var(--muted); }
-.hbar { display: grid; grid-template-columns: 150px 1fr 48px; gap: 10px; align-items: center; font-size: 0.84rem; }
-.hbar .t { height: 14px; background: var(--sunk); border-radius: 2px; position: relative; }
-.hbar .t i { position: absolute; inset: 0 auto 0 0; background: var(--bar); border-radius: 2px; }
-.hbar .t i.hot { background: var(--orange); }
-.hbar .t i.cold { background: var(--red); }
-.hbar .v { text-align: right; font-variant-numeric: tabular-nums; font-family: var(--font-mono); font-size: 0.8rem; }
-.bars { display: grid; gap: 6px; }
+  .figs {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 16px;
+  }
+  .fig {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 18px;
+    display: grid;
+    gap: 12px;
+    align-content: start;
+    min-width: 0;
+  }
+  .fig figcaption {
+    font-size: 0.82rem;
+    color: var(--muted);
+  }
+  .hbar {
+    display: grid;
+    grid-template-columns: 150px 1fr 48px;
+    gap: 10px;
+    align-items: center;
+    font-size: 0.84rem;
+  }
+  .hbar .t {
+    height: 14px;
+    background: var(--sunk);
+    border-radius: 2px;
+    position: relative;
+  }
+  .hbar .t i {
+    position: absolute;
+    inset: 0 auto 0 0;
+    background: var(--bar);
+    border-radius: 2px;
+  }
+  .hbar .t i.hot {
+    background: var(--orange);
+  }
+  .hbar .t i.cold {
+    background: var(--red);
+  }
+  .hbar .v {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+    font-family: var(--font-mono);
+    font-size: 0.8rem;
+  }
+  .bars {
+    display: grid;
+    gap: 6px;
+  }
 
-.donut-wrap { display: flex; gap: 18px; align-items: center; flex-wrap: wrap; }
-.legend { display: grid; gap: 6px; font-size: 0.84rem; }
-.legend span { display: inline-flex; gap: 8px; align-items: center; }
-.legend i { width: 10px; height: 10px; border-radius: 2px; display: inline-block; }
+  .donut-wrap {
+    display: flex;
+    gap: 18px;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+  .legend {
+    display: grid;
+    gap: 6px;
+    font-size: 0.84rem;
+  }
+  .legend span {
+    display: inline-flex;
+    gap: 8px;
+    align-items: center;
+  }
+  .legend i {
+    width: 10px;
+    height: 10px;
+    border-radius: 2px;
+    display: inline-block;
+  }
 
-.counts-table { width: 100%; border-collapse: collapse; font-size: 0.86rem; }
-.counts-table td, .counts-table th { padding: 6px 4px; border-bottom: 1px solid var(--line); text-align: left; }
-.counts-table td:last-child, .counts-table th:last-child { text-align: right; font-variant-numeric: tabular-nums; font-family: var(--font-mono); }
-.counts-table th { font-weight: 500; color: var(--muted); font-size: 0.78rem; }
+  .counts-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.86rem;
+  }
+  .counts-table td,
+  .counts-table th {
+    padding: 6px 4px;
+    border-bottom: 1px solid var(--line);
+    text-align: left;
+  }
+  .counts-table td:last-child,
+  .counts-table th:last-child {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+    font-family: var(--font-mono);
+  }
+  .counts-table th {
+    font-weight: 500;
+    color: var(--muted);
+    font-size: 0.78rem;
+  }
 
-/* High findings */
-.filters { display: flex; flex-wrap: wrap; gap: 6px; }
-.filters button { font: inherit; font-size: 0.84rem; padding: 5px 12px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface); color: var(--fg); cursor: pointer; }
-.filters button[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--surface); }
-.highs { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 12px; }
-.hi { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 14px 16px; display: grid; gap: 8px; align-content: start; }
-.hi .row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
-.hi .id { font-family: var(--font-mono); font-size: 0.78rem; color: var(--orange); }
-.hi .area { font-family: var(--font-mono); font-size: 0.7rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; margin-left: auto; }
-.hi h3 { font-size: 0.98rem; }
-.hi p { font-size: 0.85rem; color: var(--muted); }
-.hi p.fix { color: var(--fg); }
-.hi p.fix::before { content: "Fix  "; font-family: var(--font-mono); font-size: 0.7rem; letter-spacing: 0.06em; color: var(--accent); }
-.effort { font-family: var(--font-mono); font-size: 0.7rem; color: var(--muted); border: 1px solid var(--line); border-radius: 3px; padding: 0 5px; }
+  /* High findings */
+  .filters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  .filters button {
+    font: inherit;
+    font-size: 0.84rem;
+    padding: 5px 12px;
+    border-radius: 999px;
+    border: 1px solid var(--line);
+    background: var(--surface);
+    color: var(--fg);
+    cursor: pointer;
+  }
+  .filters button[aria-pressed="true"] {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: var(--surface);
+  }
+  .highs {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 12px;
+  }
+  .hi {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 14px 16px;
+    display: grid;
+    gap: 8px;
+    align-content: start;
+  }
+  .hi .row {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+  .hi .id {
+    font-family: var(--font-mono);
+    font-size: 0.78rem;
+    color: var(--orange);
+  }
+  .hi .area {
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin-left: auto;
+  }
+  .hi h3 {
+    font-size: 0.98rem;
+  }
+  .hi p {
+    font-size: 0.85rem;
+    color: var(--muted);
+  }
+  .hi p.fix {
+    color: var(--fg);
+  }
+  .hi p.fix::before {
+    content: "Fix  ";
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    letter-spacing: 0.06em;
+    color: var(--accent);
+  }
+  .effort {
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    color: var(--muted);
+    border: 1px solid var(--line);
+    border-radius: 3px;
+    padding: 0 5px;
+  }
 
-details.block { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; }
-details.block summary { cursor: pointer; padding: 14px 18px; font-weight: 600; display: flex; gap: 10px; align-items: center; list-style: none; }
-details.block summary::-webkit-details-marker { display: none; }
-details.block summary::after { content: "+"; margin-left: auto; font-family: var(--font-mono); color: var(--muted); }
-details.block[open] summary::after { content: "−"; }
-.tbl-wrap { overflow-x: auto; padding: 0 18px 16px; }
-.tbl { width: 100%; border-collapse: collapse; font-size: 0.85rem; min-width: 640px; }
-.tbl th, .tbl td { text-align: left; vertical-align: top; padding: 8px 8px 8px 0; border-top: 1px solid var(--line); }
-.tbl th { font-weight: 500; color: var(--muted); font-size: 0.76rem; text-transform: uppercase; letter-spacing: 0.05em; }
-.tbl td:first-child { font-family: var(--font-mono); white-space: nowrap; color: var(--muted); }
+  details.block {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+  }
+  details.block summary {
+    cursor: pointer;
+    padding: 14px 18px;
+    font-weight: 600;
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    list-style: none;
+  }
+  details.block summary::-webkit-details-marker {
+    display: none;
+  }
+  details.block summary::after {
+    content: "+";
+    margin-left: auto;
+    font-family: var(--font-mono);
+    color: var(--muted);
+  }
+  details.block[open] summary::after {
+    content: "−";
+  }
+  .tbl-wrap {
+    overflow-x: auto;
+    padding: 0 18px 16px;
+  }
+  .tbl {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.85rem;
+    min-width: 640px;
+  }
+  .tbl th,
+  .tbl td {
+    text-align: left;
+    vertical-align: top;
+    padding: 8px 8px 8px 0;
+    border-top: 1px solid var(--line);
+  }
+  .tbl th {
+    font-weight: 500;
+    color: var(--muted);
+    font-size: 0.76rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+  .tbl td:first-child {
+    font-family: var(--font-mono);
+    white-space: nowrap;
+    color: var(--muted);
+  }
 
-/* Docs vs reality */
-.claims { display: grid; gap: 10px; }
-.claim { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); background: var(--surface); border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
-.claim > div { padding: 12px 16px; display: grid; gap: 4px; min-width: 0; }
-.claim .said { border-right: 1px solid var(--line); }
-.claim .said q { font-style: normal; font-weight: 500; }
-.claim .said q::before { content: "“"; } .claim .said q::after { content: "”"; }
-.claim .is { background: var(--sunk); font-size: 0.9rem; }
+  /* Docs vs reality */
+  .claims {
+    display: grid;
+    gap: 10px;
+  }
+  .claim {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    overflow: hidden;
+  }
+  .claim > div {
+    padding: 12px 16px;
+    display: grid;
+    gap: 4px;
+    min-width: 0;
+  }
+  .claim .said {
+    border-right: 1px solid var(--line);
+  }
+  .claim .said q {
+    font-style: normal;
+    font-weight: 500;
+  }
+  .claim .said q::before {
+    content: "“";
+  }
+  .claim .said q::after {
+    content: "”";
+  }
+  .claim .is {
+    background: var(--sunk);
+    font-size: 0.9rem;
+  }
 
-/* Truths, good */
-.two { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); gap: 16px; }
-.truths, .good { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
-.truths li { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 12px 16px; font-size: 0.9rem; }
-.truths li b { display: block; margin-bottom: 2px; }
-.good li { padding: 10px 14px; border-radius: 8px; background: var(--green-bg); font-size: 0.88rem; }
-.good li b { color: var(--green); }
+  /* Truths, good */
+  .two {
+    display: grid;
+    grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
+    gap: 16px;
+  }
+  .truths,
+  .good {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    gap: 10px;
+  }
+  .truths li {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 12px 16px;
+    font-size: 0.9rem;
+  }
+  .truths li b {
+    display: block;
+    margin-bottom: 2px;
+  }
+  .good li {
+    padding: 10px 14px;
+    border-radius: 8px;
+    background: var(--green-bg);
+    font-size: 0.88rem;
+  }
+  .good li b {
+    color: var(--green);
+  }
 
-/* Fix order timeline */
-.plan { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 16px; }
-.phase { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 18px; display: grid; gap: 4px; align-content: start; }
-.phase h3 { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; margin-bottom: 8px; }
-.phase h3 span { font-family: var(--font-mono); font-size: 0.74rem; font-weight: 400; color: var(--muted); }
-.phase ol { margin: 0; padding: 0; list-style: none; display: grid; gap: 0; }
-.phase li { display: grid; grid-template-columns: 34px 1fr auto; gap: 10px; padding: 10px 0; border-top: 1px solid var(--line); font-size: 0.88rem; align-items: start; }
-.phase li .n { font-family: var(--font-display); font-weight: 700; font-size: 1.2rem; color: var(--accent); line-height: 1.1; }
-.phase li .refs { display: block; font-family: var(--font-mono); font-size: 0.72rem; color: var(--muted); margin-top: 2px; }
+  /* Fix order timeline */
+  .plan {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 16px;
+  }
+  .phase {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 18px;
+    display: grid;
+    gap: 4px;
+    align-content: start;
+  }
+  .phase h3 {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 8px;
+    margin-bottom: 8px;
+  }
+  .phase h3 span {
+    font-family: var(--font-mono);
+    font-size: 0.74rem;
+    font-weight: 400;
+    color: var(--muted);
+  }
+  .phase ol {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    display: grid;
+    gap: 0;
+  }
+  .phase li {
+    display: grid;
+    grid-template-columns: 34px 1fr auto;
+    gap: 10px;
+    padding: 10px 0;
+    border-top: 1px solid var(--line);
+    font-size: 0.88rem;
+    align-items: start;
+  }
+  .phase li .n {
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 1.2rem;
+    color: var(--accent);
+    line-height: 1.1;
+  }
+  .phase li .refs {
+    display: block;
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    color: var(--muted);
+    margin-top: 2px;
+  }
 
-.susp { columns: 2 320px; column-gap: 16px; }
-.susp div { break-inside: avoid; margin-bottom: 10px; background: var(--surface); border: 1px dashed var(--line); border-radius: 8px; padding: 10px 14px; font-size: 0.86rem; display: grid; gap: 4px; }
-.susp div span { color: var(--muted); font-size: 0.8rem; }
+  .susp {
+    columns: 2 320px;
+    column-gap: 16px;
+  }
+  .susp div {
+    break-inside: avoid;
+    margin-bottom: 10px;
+    background: var(--surface);
+    border: 1px dashed var(--line);
+    border-radius: 8px;
+    padding: 10px 14px;
+    font-size: 0.86rem;
+    display: grid;
+    gap: 4px;
+  }
+  .susp div span {
+    color: var(--muted);
+    font-size: 0.8rem;
+  }
 
-footer { color: var(--muted); font-size: 0.82rem; border-top: 1px solid var(--line); padding-top: 18px; display: grid; gap: 6px; }
+  footer {
+    color: var(--muted);
+    font-size: 0.82rem;
+    border-top: 1px solid var(--line);
+    padding-top: 18px;
+    display: grid;
+    gap: 6px;
+  }
 
-@media (max-width: 860px) {
-  .hero, .figs, .two, .plan { grid-template-columns: minmax(0, 1fr); }
-  .steps { grid-template-columns: minmax(0, 1fr); gap: 4px; }
-  .steps li, .steps li:first-child { clip-path: none; padding: 10px 12px; border-radius: 6px; }
-  .crit .grid2 { grid-template-columns: minmax(0, 1fr); }
-  .claim { grid-template-columns: minmax(0, 1fr); }
-  .claim .said { border-right: 0; border-bottom: 1px solid var(--line); }
-}
-@media (max-width: 560px) {
-  .score-row { grid-template-columns: 1fr 40px; }
-  .score-row .track { grid-column: 1 / 3; grid-row: 2; }
-  .score-row .why { grid-column: 1 / 3; margin-top: 0; }
-  .counts { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .hbar { grid-template-columns: 110px 1fr 40px; }
-  .highs { grid-template-columns: minmax(0, 1fr); }
-}
-@media (prefers-reduced-motion: no-preference) {
-  .fill, .hbar .t i { transition: width 400ms cubic-bezier(0.16, 1, 0.3, 1); }
-}
+  @media (max-width: 860px) {
+    .hero,
+    .figs,
+    .two,
+    .plan {
+      grid-template-columns: minmax(0, 1fr);
+    }
+    .steps {
+      grid-template-columns: minmax(0, 1fr);
+      gap: 4px;
+    }
+    .steps li,
+    .steps li:first-child {
+      clip-path: none;
+      padding: 10px 12px;
+      border-radius: 6px;
+    }
+    .crit .grid2 {
+      grid-template-columns: minmax(0, 1fr);
+    }
+    .claim {
+      grid-template-columns: minmax(0, 1fr);
+    }
+    .claim .said {
+      border-right: 0;
+      border-bottom: 1px solid var(--line);
+    }
+  }
+  @media (max-width: 560px) {
+    .score-row {
+      grid-template-columns: 1fr 40px;
+    }
+    .score-row .track {
+      grid-column: 1 / 3;
+      grid-row: 2;
+    }
+    .score-row .why {
+      grid-column: 1 / 3;
+      margin-top: 0;
+    }
+    .counts {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+    .hbar {
+      grid-template-columns: 110px 1fr 40px;
+    }
+    .highs {
+      grid-template-columns: minmax(0, 1fr);
+    }
+  }
+  @media (prefers-reduced-motion: no-preference) {
+    .fill,
+    .hbar .t i {
+      transition: width 400ms cubic-bezier(0.16, 1, 0.3, 1);
+    }
+  }
 </style>
 
 <div class="wrap">
-
   <!-- Verdict -->
   <section class="hero" aria-labelledby="t">
     <div>
       <div class="eyebrow">Pre-production engineering review</div>
       <h1 id="t">Could MedSync hold real patient records today?</h1>
       <div class="meta mono">
-        <span>origin/main @ 2de1cb3f</span><span>11 Nov 2026</span><span>read-only, no source changed</span>
+        <span>origin/main @ 2de1cb3f</span><span>11 Nov 2026</span
+        ><span>read-only, no source changed</span>
       </div>
-      <p class="lede">The engines are often good. The fence around them is not. Four independent gaps let a stranger, a stolen password, a superadmin or a suspended employee reach patient data, and none of the tests that would catch them run in CI.</p>
+      <p class="lede">
+        The engines are often good. The fence around them is not. Four independent gaps let a
+        stranger, a stolen password, a superadmin or a suspended employee reach patient data, and
+        none of the tests that would catch them run in CI.
+      </p>
     </div>
     <div class="verdict" role="note" aria-label="Verdict">
       <div class="stamp"><b>NO</b><span>not with real patient data</span></div>
-      <p>The perimeter that keeps one person's records away from everyone else fails open in four places.</p>
+      <p>
+        The perimeter that keeps one person's records away from everyone else fails open in four
+        places.
+      </p>
       <div class="counts">
         <div class="c"><strong>4</strong><small>Critical</small></div>
         <div class="h"><strong>21</strong><small>High</small></div>
@@ -273,7 +1065,10 @@ footer { color: var(--muted); font-size: 0.82rem; border-top: 1px solid var(--li
     <header>
       <div class="eyebrow">Scorecard</div>
       <h2 id="sc">Ten areas, scored out of 10</h2>
-      <p>Bar colour follows the score: red below 4, orange at 4 to 5, yellow at 6 and above. Nothing reached 7.</p>
+      <p>
+        Bar colour follows the score: red below 4, orange at 4 to 5, yellow at 6 and above. Nothing
+        reached 7.
+      </p>
     </header>
     <div class="score" id="score"></div>
   </section>
@@ -283,31 +1078,53 @@ footer { color: var(--muted); font-size: 0.82rem; border-top: 1px solid var(--li
     <header>
       <div class="eyebrow">Where authorization actually lives</div>
       <h2 id="pm">One identity, three ways in, and only one of them asks for the second factor</h2>
-      <p>Everyone signs in through Supabase Auth. After that, each route to the database has its own guard. RLS only protects the paths that do not use an owner or service-role connection.</p>
+      <p>
+        Everyone signs in through Supabase Auth. After that, each route to the database has its own
+        guard. RLS only protects the paths that do not use an owner or service-role connection.
+      </p>
     </header>
-    <div class="perimeter" role="img" aria-label="Diagram of the three authorization paths and where MFA is enforced">
+    <div
+      class="perimeter"
+      role="img"
+      aria-label="Diagram of the three authorization paths and where MFA is enforced"
+    >
       <div class="lane">
         <div class="node who"><b>Web app</b><span>273 pages, 165 server-action files</span></div>
         <div class="arrow">→</div>
-        <div class="node good"><b>11 require*Scope helpers</b><span>getUser() plus AAL2 checked here</span></div>
+        <div class="node good">
+          <b>11 require*Scope helpers</b><span>getUser() plus AAL2 checked here</span>
+        </div>
         <div class="arrow">→</div>
-        <div class="node warn"><b>Drizzle as <code>postgres</code></b><span>owner role, 279 files</span></div>
+        <div class="node warn">
+          <b>Drizzle as <code>postgres</code></b
+          ><span>owner role, 279 files</span>
+        </div>
         <div class="arrow">→</div>
-        <div class="node bad"><b>RLS bypassed</b><span>except asClinicalReader (32 files) and NCD</span></div>
+        <div class="node bad">
+          <b>RLS bypassed</b><span>except asClinicalReader (32 files) and NCD</span>
+        </div>
       </div>
       <div class="lane">
         <div class="node who"><b>Edge Functions</b><span>76 functions</span></div>
         <div class="arrow">→</div>
         <div class="node warn"><b>getCaller()</b><span>getUser() only, no AAL check</span></div>
         <div class="arrow">→</div>
-        <div class="node warn"><b>Service-role client</b><span>role checks in each function</span></div>
+        <div class="node warn">
+          <b>Service-role client</b><span>role checks in each function</span>
+        </div>
         <div class="arrow">→</div>
-        <div class="node bad"><b>RLS bypassed</b><span>access is whatever the function checks</span></div>
+        <div class="node bad">
+          <b>RLS bypassed</b><span>access is whatever the function checks</span>
+        </div>
       </div>
       <div class="lane">
-        <div class="node who"><b>Patient app and any token</b><span>Expo app, or anyone with a JWT</span></div>
+        <div class="node who">
+          <b>Patient app and any token</b><span>Expo app, or anyone with a JWT</span>
+        </div>
         <div class="arrow">→</div>
-        <div class="node warn"><b>PostgREST</b><span>anon key plus JWT, 27 tables direct</span></div>
+        <div class="node warn">
+          <b>PostgREST</b><span>anon key plus JWT, 27 tables direct</span>
+        </div>
         <div class="arrow">→</div>
         <div class="node good"><b>RLS policies</b><span>FORCE RLS on every PHI table</span></div>
         <div class="arrow">→</div>
@@ -326,7 +1143,10 @@ footer { color: var(--muted); font-size: 0.82rem; border-top: 1px solid var(--li
     <header>
       <div class="eyebrow">Critical findings</div>
       <h2 id="cr">Four ways in, step by step</h2>
-      <p>Each path below was traced through the code and re-verified. The last step of each is what the person gets.</p>
+      <p>
+        Each path below was traced through the code and re-verified. The last step of each is what
+        the person gets.
+      </p>
     </header>
     <div class="crit-list" id="crits"></div>
   </section>
@@ -336,47 +1156,139 @@ footer { color: var(--muted); font-size: 0.82rem; border-top: 1px solid var(--li
     <header>
       <div class="eyebrow">Phase 1: the checks, run</div>
       <h2 id="ck">Green where it is measured, silent where it matters</h2>
-      <p>Run in a clean clone with Node 24 and npm, no database credentials. Every number is from the run itself.</p>
+      <p>
+        Run in a clean clone with Node 24 and npm, no database credentials. Every number is from the
+        run itself.
+      </p>
     </header>
     <div class="checks" id="checks"></div>
     <div class="figs">
-      <figure class="fig" style="margin:0">
+      <figure class="fig" style="margin: 0">
         <h3>What the test run actually covered</h3>
         <div class="donut-wrap">
-          <svg width="150" height="150" viewBox="0 0 150 150" role="img" aria-label="12,002 tests passed, 2,338 skipped">
-            <circle cx="75" cy="75" r="58" fill="none" stroke="var(--sunk)" stroke-width="20"></circle>
-            <circle cx="75" cy="75" r="58" fill="none" stroke="var(--green)" stroke-width="20"
-              stroke-dasharray="305.1 364.4" transform="rotate(-90 75 75)"></circle>
-            <circle cx="75" cy="75" r="58" fill="none" stroke="var(--orange)" stroke-width="20"
-              stroke-dasharray="59.4 364.4" stroke-dashoffset="-305.1" transform="rotate(-90 75 75)"></circle>
-            <text x="75" y="72" text-anchor="middle" fill="var(--fg)" font-family="Archivo, sans-serif" font-weight="700" font-size="22">14,340</text>
-            <text x="75" y="92" text-anchor="middle" fill="var(--muted)" font-family="IBM Plex Mono, monospace" font-size="10">tests</text>
+          <svg
+            width="150"
+            height="150"
+            viewBox="0 0 150 150"
+            role="img"
+            aria-label="12,002 tests passed, 2,338 skipped"
+          >
+            <circle
+              cx="75"
+              cy="75"
+              r="58"
+              fill="none"
+              stroke="var(--sunk)"
+              stroke-width="20"
+            ></circle>
+            <circle
+              cx="75"
+              cy="75"
+              r="58"
+              fill="none"
+              stroke="var(--green)"
+              stroke-width="20"
+              stroke-dasharray="305.1 364.4"
+              transform="rotate(-90 75 75)"
+            ></circle>
+            <circle
+              cx="75"
+              cy="75"
+              r="58"
+              fill="none"
+              stroke="var(--orange)"
+              stroke-width="20"
+              stroke-dasharray="59.4 364.4"
+              stroke-dashoffset="-305.1"
+              transform="rotate(-90 75 75)"
+            ></circle>
+            <text
+              x="75"
+              y="72"
+              text-anchor="middle"
+              fill="var(--fg)"
+              font-family="Archivo, sans-serif"
+              font-weight="700"
+              font-size="22"
+            >
+              14,340
+            </text>
+            <text
+              x="75"
+              y="92"
+              text-anchor="middle"
+              fill="var(--muted)"
+              font-family="IBM Plex Mono, monospace"
+              font-size="10"
+            >
+              tests
+            </text>
           </svg>
           <div class="legend">
-            <span><i style="background:var(--green)"></i>12,002 passed</span>
-            <span><i style="background:var(--orange)"></i>2,338 skipped (16%): the DB, RLS, audit and auth suites</span>
-            <span><i style="background:var(--sunk)"></i>0 failed</span>
-            <span class="mono" style="color:var(--muted)">Line coverage 32.8% of 100,741 lines</span>
+            <span><i style="background: var(--green)"></i>12,002 passed</span>
+            <span
+              ><i style="background: var(--orange)"></i>2,338 skipped (16%): the DB, RLS, audit and
+              auth suites</span
+            >
+            <span><i style="background: var(--sunk)"></i>0 failed</span>
+            <span class="mono" style="color: var(--muted)"
+              >Line coverage 32.8% of 100,741 lines</span
+            >
           </div>
         </div>
-        <figcaption>The skipped suites need a symlink into a folder on the founder's Mac, or database secrets CI does not have.</figcaption>
+        <figcaption>
+          The skipped suites need a symlink into a folder on the founder's Mac, or database secrets
+          CI does not have.
+        </figcaption>
       </figure>
-      <figure class="fig" style="margin:0">
+      <figure class="fig" style="margin: 0">
         <h3>Source counts</h3>
         <table class="counts-table">
-          <thead><tr><th>Web: 2,815 files, 621,140 lines</th><th>Count</th></tr></thead>
+          <thead>
+            <tr>
+              <th>Web: 2,815 files, 621,140 lines</th>
+              <th>Count</th>
+            </tr>
+          </thead>
           <tbody>
-            <tr><td><code>any</code></td><td>35</td></tr>
-            <tr><td><code>as unknown as</code></td><td>223</td></tr>
-            <tr><td><code>@ts-ignore</code> / <code>@ts-expect-error</code></td><td>0 / 1</td></tr>
-            <tr><td><code>eslint-disable</code></td><td>37</td></tr>
-            <tr><td>TODO, FIXME, HACK</td><td>0</td></tr>
-            <tr><td><code>console.log</code></td><td>5</td></tr>
-            <tr><td>Raw hex colours outside tokens</td><td>78</td></tr>
-            <tr><td>Files over 400 / over 1,000 lines</td><td>377 / 61</td></tr>
+            <tr>
+              <td><code>any</code></td>
+              <td>35</td>
+            </tr>
+            <tr>
+              <td><code>as unknown as</code></td>
+              <td>223</td>
+            </tr>
+            <tr>
+              <td><code>@ts-ignore</code> / <code>@ts-expect-error</code></td>
+              <td>0 / 1</td>
+            </tr>
+            <tr>
+              <td><code>eslint-disable</code></td>
+              <td>37</td>
+            </tr>
+            <tr>
+              <td>TODO, FIXME, HACK</td>
+              <td>0</td>
+            </tr>
+            <tr>
+              <td><code>console.log</code></td>
+              <td>5</td>
+            </tr>
+            <tr>
+              <td>Raw hex colours outside tokens</td>
+              <td>78</td>
+            </tr>
+            <tr>
+              <td>Files over 400 / over 1,000 lines</td>
+              <td>377 / 61</td>
+            </tr>
           </tbody>
         </table>
-        <figcaption>Type discipline is good. Size is the problem: a 1,648-line client component holds 17 pieces of state.</figcaption>
+        <figcaption>
+          Type discipline is good. Size is the problem: a 1,648-line client component holds 17
+          pieces of state.
+        </figcaption>
       </figure>
     </div>
   </section>
@@ -400,11 +1312,32 @@ footer { color: var(--muted); font-size: 0.82rem; border-top: 1px solid var(--li
     </header>
     <details class="block">
       <summary><span class="sev med">Medium</span> 26 findings</summary>
-      <div class="tbl-wrap"><table class="tbl"><thead><tr><th>ID</th><th>Finding</th><th>Fix</th></tr></thead><tbody id="meds"></tbody></table></div>
+      <div class="tbl-wrap">
+        <table class="tbl">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Finding</th>
+              <th>Fix</th>
+            </tr>
+          </thead>
+          <tbody id="meds"></tbody>
+        </table>
+      </div>
     </details>
     <details class="block">
       <summary><span class="sev low">Low</span> 12 findings</summary>
-      <div class="tbl-wrap"><table class="tbl"><thead><tr><th>ID</th><th>Finding</th></tr></thead><tbody id="lows"></tbody></table></div>
+      <div class="tbl-wrap">
+        <table class="tbl">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Finding</th>
+            </tr>
+          </thead>
+          <tbody id="lows"></tbody>
+        </table>
+      </div>
     </details>
   </section>
 
@@ -416,15 +1349,21 @@ footer { color: var(--muted); font-size: 0.82rem; border-top: 1px solid var(--li
       <p>Where the tables are, and where the tests are. Both measured from the repository.</p>
     </header>
     <div class="figs">
-      <figure class="fig" style="margin:0">
+      <figure class="fig" style="margin: 0">
         <h3>Database tables by domain</h3>
         <div class="bars" id="tables"></div>
-        <figcaption>About 446 Drizzle tables. Pharmacy holds 39% of them. Triage escalation, the part that pages a doctor for a Red patient, has a stubbed out-of-band sink.</figcaption>
+        <figcaption>
+          About 446 Drizzle tables. Pharmacy holds 39% of them. Triage escalation, the part that
+          pages a doctor for a Red patient, has a stubbed out-of-band sink.
+        </figcaption>
       </figure>
-      <figure class="fig" style="margin:0">
+      <figure class="fig" style="margin: 0">
         <h3>Test files per source file</h3>
         <div class="bars" id="ratios"></div>
-        <figcaption>Nurse and onboarding have no tests of their own. Edge Functions: 112 source files, 2 test files, both static text searches.</figcaption>
+        <figcaption>
+          Nurse and onboarding have no tests of their own. Edge Functions: 112 source files, 2 test
+          files, both static text searches.
+        </figcaption>
       </figure>
     </div>
   </section>
@@ -434,7 +1373,10 @@ footer { color: var(--muted); font-size: 0.82rem; border-top: 1px solid var(--li
     <header>
       <div class="eyebrow">Docs versus reality</div>
       <h2 id="dv">What patients are told, and what the code does</h2>
-      <p>Four of these come from the public privacy notice in <code>content/legal.ts</code>. Under DPPA 2019 a false promise to a data subject is a legal problem, not a backlog item.</p>
+      <p>
+        Four of these come from the public privacy notice in <code>content/legal.ts</code>. Under
+        DPPA 2019 a false promise to a data subject is a legal problem, not a backlog item.
+      </p>
     </header>
     <div class="claims" id="claims"></div>
   </section>
@@ -459,8 +1401,14 @@ footer { color: var(--muted); font-size: 0.82rem; border-top: 1px solid var(--li
       <p>The first six close every Critical. Item 1 starts with a one-line change.</p>
     </header>
     <div class="plan">
-      <div class="phase"><h3>Next two weeks <span>items 1 to 6</span></h3><ol id="p1"></ol></div>
-      <div class="phase"><h3>Next quarter <span>items 7 to 10</span></h3><ol id="p2"></ol></div>
+      <div class="phase">
+        <h3>Next two weeks <span>items 1 to 6</span></h3>
+        <ol id="p1"></ol>
+      </div>
+      <div class="phase">
+        <h3>Next quarter <span>items 7 to 10</span></h3>
+        <ol id="p2"></ol>
+      </div>
     </div>
   </section>
 
@@ -474,242 +1422,732 @@ footer { color: var(--muted); font-size: 0.82rem; border-top: 1px solid var(--li
   </section>
 
   <footer>
-    <span>Full written report with every file and line reference: <code>REVIEW/senior-review-2026-11-11.md</code>. System map: <code>REVIEW/phase-0-map.md</code>.</span>
-    <span>Method: six parallel review lenses, then every Critical and High re-read in the code before inclusion. Checks ran in a scratch clone with no database credentials and no calls to Supabase, Vercel, Sentry or Africa's Talking.</span>
+    <span
+      >Full written report with every file and line reference:
+      <code>REVIEW/senior-review-2026-11-11.md</code>. System map:
+      <code>REVIEW/phase-0-map.md</code>.</span
+    >
+    <span
+      >Method: six parallel review lenses, then every Critical and High re-read in the code before
+      inclusion. Checks ran in a scratch clone with no database credentials and no calls to
+      Supabase, Vercel, Sentry or Africa's Talking.</span
+    >
   </footer>
 </div>
 
 <script>
-const $ = (id) => document.getElementById(id);
-const esc = (s) => s.replace(/[&<>]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" })[c]);
-const code = (s) => esc(s).replace(/`([^`]+)`/g, "<code>$1</code>");
+  const $ = (id) => document.getElementById(id);
+  const esc = (s) => s.replace(/[&<>]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" })[c]);
+  const code = (s) => esc(s).replace(/`([^`]+)`/g, "<code>$1</code>");
 
-const scores = [
-  ["Patient safety", 4, "Good engines; triage alerts can reach nobody, doses run on UTC, glucose has no unit check."],
-  ["Security & privacy", 2, "MFA only in pages, open reception gate, superadmin PHI access, self-editable user rows."],
-  ["Architecture", 5, "Three authorization paths, two bypassing RLS; about 60 flags with parallel writers."],
-  ["Data model", 6, "About 1,700 FKs and real CHECKs; 53 cascade deletes and overwritable lab results."],
-  ["Code quality", 5, "Few type escapes; 621k lines, two patient webs and two resus desks live."],
-  ["Testing", 4, "14,340 green tests; the 16% that test authorization never run in CI."],
-  ["Frontend engineering", 6, "Sound server/client split; no error boundary on any clinician workspace."],
-  ["Mobile", 5, "Clean tsc and lint; PHI and tokens unencrypted on device, no crash reporting."],
-  ["Developer experience", 3, "Cold typecheck needs 6 GB and 13 minutes; README is stale."],
-  ["Production readiness", 2, "41 prod advisories incl. Next 16.2.6; schema not provably equal to main."],
-];
-$("score").innerHTML = scores.map(([n, s, w]) => {
-  const cls = s < 4 ? "lo" : s < 6 ? "mid" : "ok";
-  return `<div class="score-row"><div class="name">${n}</div>
+  const scores = [
+    [
+      "Patient safety",
+      4,
+      "Good engines; triage alerts can reach nobody, doses run on UTC, glucose has no unit check.",
+    ],
+    [
+      "Security & privacy",
+      2,
+      "MFA only in pages, open reception gate, superadmin PHI access, self-editable user rows.",
+    ],
+    [
+      "Architecture",
+      5,
+      "Three authorization paths, two bypassing RLS; about 60 flags with parallel writers.",
+    ],
+    [
+      "Data model",
+      6,
+      "About 1,700 FKs and real CHECKs; 53 cascade deletes and overwritable lab results.",
+    ],
+    ["Code quality", 5, "Few type escapes; 621k lines, two patient webs and two resus desks live."],
+    ["Testing", 4, "14,340 green tests; the 16% that test authorization never run in CI."],
+    [
+      "Frontend engineering",
+      6,
+      "Sound server/client split; no error boundary on any clinician workspace.",
+    ],
+    ["Mobile", 5, "Clean tsc and lint; PHI and tokens unencrypted on device, no crash reporting."],
+    ["Developer experience", 3, "Cold typecheck needs 6 GB and 13 minutes; README is stale."],
+    [
+      "Production readiness",
+      2,
+      "41 prod advisories incl. Next 16.2.6; schema not provably equal to main.",
+    ],
+  ];
+  $("score").innerHTML = scores
+    .map(([n, s, w]) => {
+      const cls = s < 4 ? "lo" : s < 6 ? "mid" : "ok";
+      return `<div class="score-row"><div class="name">${n}</div>
     <div class="track" role="img" aria-label="${n}: ${s} out of 10"><div class="fill ${cls}" style="width:${s * 10}%"></div></div>
     <div class="num">${s}<small>/10</small></div><div class="why">${esc(w)}</div></div>`;
-}).join("");
+    })
+    .join("");
 
-const crits = [
-  {
-    id: "C-1", title: "Any internet user can become a receptionist at a live hospital",
-    steps: ["Sign up publicly as reception at any hospital that is live", "Affiliation is saved as `pending_approval`", "Enrol their own authenticator; that page needs only a sign-in", "`requireReceptionScope` has no state filter, so it passes", "`/reception/find` decrypts patient names as the database owner"],
-    ev: "`lib/reception/scope.ts:76` filters on user and cadre only. `app/signup/non-clinical/actions.ts:77` inserts `pending_approval`. `lib/legal.ts:28` keeps signups open.",
-    fix: "Add `state IN ('active','approved')` today. Then one shared `activeAffiliation()` for all 11 scopes, with a test. Effort S.",
-  },
-  {
-    id: "C-2", title: "A stolen password skips MFA everywhere below the web pages",
-    steps: ["Phish or reuse a staff or superadmin password", "Password sign-in returns an aal1 token", "Call an Edge Function or PostgREST directly", "`getCaller` checks `getUser()` only; no policy reads `aal`", "`sa-create-superadmin`, `sa-open-break-glass`, every `ha-*`, patient tables"],
-    ev: "`supabase/functions/_shared/auth.ts:42`. No migration references `aal`. The privacy notice says staff need a second sign-in step.",
-    fix: "A RESTRICTIVE policy requiring `aal2` on staff and superadmin arms; `requireAal2` in `getCaller`. Effort M.",
-  },
-  {
-    id: "C-3", title: "The superadmin reads every patient's history with no break-glass",
-    steps: ["Sign in as superadmin, or use C-2", "`GET /rest/v1/audit_log`", "Rows hold `to_jsonb(OLD)` and `to_jsonb(NEW)` of every audited table", "Names, phones, vitals, diagnoses, home coordinates", "No grant, no log entry, nobody notified"],
-    ev: "`0002_rls.sql:149` superadmin SELECT on `audit_log`; `0003_audit.sql:68-69`; superadmin arm on `patient_profiles` (`0011:135`) and EMR tables.",
-    fix: "Drop superadmin arms on PHI tables and the audit log, route through break-glass, store hashes not whole rows. Effort M.",
-  },
-  {
-    id: "C-4", title: "Suspending someone does not take their access away",
-    steps: ["Superadmin suspends a staff member", "`sa-suspend-user` only sets `users.state`", "No staff scope reads `users.state`", "Sessions and affiliations untouched", "Access continues; a patient can PATCH their own row back to active"],
-    ev: "`0002_rls.sql:13,53-56` lets users update every column of their own row. Email is self-editable too, and four-eyes trusts it.",
-    fix: "Column-level grants on `users`, ban and sign out on suspend, check `users.state` in the shared affiliation query. Effort S to M.",
-  },
-];
-$("crits").innerHTML = crits.map((c) => `
+  const crits = [
+    {
+      id: "C-1",
+      title: "Any internet user can become a receptionist at a live hospital",
+      steps: [
+        "Sign up publicly as reception at any hospital that is live",
+        "Affiliation is saved as `pending_approval`",
+        "Enrol their own authenticator; that page needs only a sign-in",
+        "`requireReceptionScope` has no state filter, so it passes",
+        "`/reception/find` decrypts patient names as the database owner",
+      ],
+      ev: "`lib/reception/scope.ts:76` filters on user and cadre only. `app/signup/non-clinical/actions.ts:77` inserts `pending_approval`. `lib/legal.ts:28` keeps signups open.",
+      fix: "Add `state IN ('active','approved')` today. Then one shared `activeAffiliation()` for all 11 scopes, with a test. Effort S.",
+    },
+    {
+      id: "C-2",
+      title: "A stolen password skips MFA everywhere below the web pages",
+      steps: [
+        "Phish or reuse a staff or superadmin password",
+        "Password sign-in returns an aal1 token",
+        "Call an Edge Function or PostgREST directly",
+        "`getCaller` checks `getUser()` only; no policy reads `aal`",
+        "`sa-create-superadmin`, `sa-open-break-glass`, every `ha-*`, patient tables",
+      ],
+      ev: "`supabase/functions/_shared/auth.ts:42`. No migration references `aal`. The privacy notice says staff need a second sign-in step.",
+      fix: "A RESTRICTIVE policy requiring `aal2` on staff and superadmin arms; `requireAal2` in `getCaller`. Effort M.",
+    },
+    {
+      id: "C-3",
+      title: "The superadmin reads every patient's history with no break-glass",
+      steps: [
+        "Sign in as superadmin, or use C-2",
+        "`GET /rest/v1/audit_log`",
+        "Rows hold `to_jsonb(OLD)` and `to_jsonb(NEW)` of every audited table",
+        "Names, phones, vitals, diagnoses, home coordinates",
+        "No grant, no log entry, nobody notified",
+      ],
+      ev: "`0002_rls.sql:149` superadmin SELECT on `audit_log`; `0003_audit.sql:68-69`; superadmin arm on `patient_profiles` (`0011:135`) and EMR tables.",
+      fix: "Drop superadmin arms on PHI tables and the audit log, route through break-glass, store hashes not whole rows. Effort M.",
+    },
+    {
+      id: "C-4",
+      title: "Suspending someone does not take their access away",
+      steps: [
+        "Superadmin suspends a staff member",
+        "`sa-suspend-user` only sets `users.state`",
+        "No staff scope reads `users.state`",
+        "Sessions and affiliations untouched",
+        "Access continues; a patient can PATCH their own row back to active",
+      ],
+      ev: "`0002_rls.sql:13,53-56` lets users update every column of their own row. Email is self-editable too, and four-eyes trusts it.",
+      fix: "Column-level grants on `users`, ban and sign out on suspend, check `users.state` in the shared affiliation query. Effort S to M.",
+    },
+  ];
+  $("crits").innerHTML = crits
+    .map(
+      (c) => `
   <article class="crit">
     <div class="crit-head"><span class="sev crit">Critical</span><span class="id">${c.id}</span><h3>${esc(c.title)}</h3></div>
     <ol class="steps">${c.steps.map((s) => `<li>${code(s)}</li>`).join("")}</ol>
     <div class="grid2"><div><span class="label">Evidence</span><p>${code(c.ev)}</p></div><div><span class="label">Fix</span><p>${code(c.fix)}</p></div></div>
-  </article>`).join("");
+  </article>`,
+    )
+    .join("");
 
-const checks = [
-  ["Clean install", "pass", "1,205 pkgs", "18 s. npm 12 blocked install scripts for 12 packages, including sharp and esbuild."],
-  ["Typecheck, web", "warn", "0 errors", "Only at a 6 GB heap, 13 min. At 4 GB it thrashed for 27 min on an 8 GB Mac."],
-  ["Typecheck, Edge Functions", "pass", "0 errors", "5 s."],
-  ["Lint", "pass", "0 errors", "12 warnings. No --max-warnings=0, so warnings never fail."],
-  ["Format", "pass", "clean", "All files match Prettier."],
-  ["Clerking sign-off hash", "pass", "ok", "Hashes match. 44 suggested-care items still draft."],
-  ["Production build", "pass", "195 s", "60 static pages."],
-  ["Web tests", "warn", "12,002 / 14,340", "0 failed. 2,338 skipped: DB, RLS, audit, auth."],
-  ["Coverage", "warn", "32.8%", "Lines, across all source files. Not configured in CI."],
-  ["Bundle budget", "pass", "21 routes", "All /patient routes under 370 kB. /pw and clinician routes not budgeted."],
-  ["End-to-end tests", "none", "none", "No Playwright or Cypress."],
-  ["Mobile tsc and eslint", "pass", "0 errors", "Clean with --max-warnings=0."],
-  ["Mobile jest", "warn", "581 / 584", "3 timeouts under load; 15/15 pass alone. Not run in CI."],
-  ["expo-doctor", "fail", "19 / 21", "13 packages off the SDK 57 pins; missing peer dependencies."],
-  ["npm audit, root (prod)", "fail", "41", "3 critical, 14 high. Next 16.2.6 has 20+ advisories; fixed in 16.4.6."],
-  ["npm audit, mobile (prod)", "fail", "25", "1 critical, 8 high. Mostly build tooling."],
-  ["Outdated by a major or more", "warn", "12 · 33", "Root 12 (5 by two or more). Mobile 33, all Expo SDK 57 to 58."],
-];
-const stWord = { pass: "Pass", warn: "Caution", fail: "Fail", none: "Missing" };
-$("checks").innerHTML = checks.map(([n, s, big, d]) => `
+  const checks = [
+    [
+      "Clean install",
+      "pass",
+      "1,205 pkgs",
+      "18 s. npm 12 blocked install scripts for 12 packages, including sharp and esbuild.",
+    ],
+    [
+      "Typecheck, web",
+      "warn",
+      "0 errors",
+      "Only at a 6 GB heap, 13 min. At 4 GB it thrashed for 27 min on an 8 GB Mac.",
+    ],
+    ["Typecheck, Edge Functions", "pass", "0 errors", "5 s."],
+    ["Lint", "pass", "0 errors", "12 warnings. No --max-warnings=0, so warnings never fail."],
+    ["Format", "pass", "clean", "All files match Prettier."],
+    ["Clerking sign-off hash", "pass", "ok", "Hashes match. 44 suggested-care items still draft."],
+    ["Production build", "pass", "195 s", "60 static pages."],
+    ["Web tests", "warn", "12,002 / 14,340", "0 failed. 2,338 skipped: DB, RLS, audit, auth."],
+    ["Coverage", "warn", "32.8%", "Lines, across all source files. Not configured in CI."],
+    [
+      "Bundle budget",
+      "pass",
+      "21 routes",
+      "All /patient routes under 370 kB. /pw and clinician routes not budgeted.",
+    ],
+    ["End-to-end tests", "none", "none", "No Playwright or Cypress."],
+    ["Mobile tsc and eslint", "pass", "0 errors", "Clean with --max-warnings=0."],
+    ["Mobile jest", "warn", "581 / 584", "3 timeouts under load; 15/15 pass alone. Not run in CI."],
+    [
+      "expo-doctor",
+      "fail",
+      "19 / 21",
+      "13 packages off the SDK 57 pins; missing peer dependencies.",
+    ],
+    [
+      "npm audit, root (prod)",
+      "fail",
+      "41",
+      "3 critical, 14 high. Next 16.2.6 has 20+ advisories; fixed in 16.4.6.",
+    ],
+    ["npm audit, mobile (prod)", "fail", "25", "1 critical, 8 high. Mostly build tooling."],
+    [
+      "Outdated by a major or more",
+      "warn",
+      "12 · 33",
+      "Root 12 (5 by two or more). Mobile 33, all Expo SDK 57 to 58.",
+    ],
+  ];
+  const stWord = { pass: "Pass", warn: "Caution", fail: "Fail", none: "Missing" };
+  $("checks").innerHTML = checks
+    .map(
+      ([n, s, big, d]) => `
   <div class="check"><div class="top"><b>${n}</b><span class="st ${s}">${stWord[s]}</span></div>
-  <div class="big">${big}</div><p>${esc(d)}</p></div>`).join("");
+  <div class="big">${big}</div><p>${esc(d)}</p></div>`,
+    )
+    .join("");
 
-const highs = [
-  ["H-1", "Platform", "Next.js 16.2.6 and Sentry carry critical advisories", "20+ Next advisories incl. a proxy bypass and RCE classes; Sentry tunnel-route proxy bypass with `tunnelRoute: \"/monitoring\"`.", "Upgrade to next 16.4.6+, @sentry/nextjs 10.75.2+, zod 4.6.6+; audit step in CI.", "S"],
-  ["H-2", "Clinical", "Medication record trusts a hidden form field for high-alert", "`is_high_alert` comes from a hidden input; any cadre at the hospital can write MAR rows for any patient id.", "Derive high-alert from the prescription on the server; require a clinical cadre; check patient and encounter.", "M"],
-  ["H-3", "Clinical", "Red and Orange triage alerts can reach nobody, silently", "`lib/triage/notify.ts` returns `notified: 0` on no recipients or error; the action discards it. Out-of-band sink is a stub.", "Show 'No one was alerted. Call for help now'; fall back to the in-charge; wire SMS.", "M"],
-  ["H-4", "Clinical", "Patient dose times run on UTC, not Kampala", "`lib/patient/doses.ts` uses server `setHours`; Vercel runs UTC. An 08:00 dose opens at 11:00.", "Build slots in Africa/Kampala with Intl, as the booking slots already do.", "S"],
-  ["H-5", "Clinical", "Glucose has no unit or plausibility guard", "54 mg/dL typed as mmol/L reads as 'screen for DKA'. The guard exists in `lib/units/prompts.ts` and is unused.", "Ask above about 35 mmol/L; store the unit with each reading.", "S"],
-  ["H-6", "Clinical", "CSO sign-off gate fails open and misses most content", "Blocks only when `VERCEL_ENV === \"production\"`. About 37 of 48 draft `SignedCopy` constants are wired to no gate.", "Invert the gate; a test that every SignedCopy is gated; gate patient thresholds.", "M"],
-  ["H-7", "Privacy", "Health data goes abroad to processors nobody was told about", "Meter photos to Anthropic; Vercel Analytics sees `/reception/find?q=<name>`; Sentry keeps URLs; Maps gets GPS.", "Name processors, add AI consent, scrub analytics and Sentry, make search a POST.", "S–M"],
-  ["H-8", "Privacy", "Patient names stored in plaintext beside the encrypted copy", "Signup writes the full name to `users.full_name` and auth metadata while `patient_profiles` holds it encrypted.", "Use a display alias for patients; encrypt clinical free text and the EPI register.", "M–L"],
-  ["H-9", "Privacy", "Reads of patient data logged in only some modules", "Pharmacy, lab, emergency and USSD reads decrypt without logging. The notice says every access is recorded.", "Log in the shared read helpers.", "M"],
-  ["H-10", "Privacy", "The audit trail can be switched off and most writes have no author", "No TRUNCATE guard; app runs as the owner; demo removal disables triggers at runtime; `actor_id` is null outside EMR and NCD.", "Actor claim on every transaction, TRUNCATE trigger, audit schema the app cannot own.", "M–L"],
-  ["H-11", "Security", "Every photo readable by any signed-in account", "Avatars bucket policy: `USING (bucket_id = 'avatars')` for all authenticated users. Keys are user ids.", "Owner, clinicians' own photos, and staff with a clinical relationship only.", "S"],
-  ["H-12", "Security", "Anyone can flood emergency pre-alert boards and SMS", "Rate limit keyed on a client-supplied `device_hash`; signed-in callers have no limit.", "Limit by server-observed IP, cap per facility, OTP above a threshold.", "M"],
-  ["H-13", "Security", "Four-eyes is not enforced", "A superadmin can insert a superadmin role directly; auto-approval while fewer than two 'real' superadmins; no approve path exists.", "Service-role-only superadmin roles, immutable count, build the confirm step.", "M"],
-  ["H-14", "Security", "Offboarded hospitals keep working", "Only 2 of 11 staff scopes check the hospital's state.", "Part of the shared affiliation query in C-1.", "S"],
-  ["H-15", "Data", "Deleting a patient's login deletes their clinical history", "53 `ON DELETE CASCADE` FKs from encounters, prescriptions, diagnoses, orders, admissions and MAR to `auth.users`.", "One migration switching clinical FKs to RESTRICT.", "M"],
-  ["H-16", "Data", "Closing an encounter is eight writes that may half-fail", "Failures logged as 'non-fatal'; also ends every nursing assignment for the patient at that hospital.", "One SQL function, as admissions already do; scope the assignment close.", "M"],
-  ["H-17", "Data", "Released lab results can be overwritten", "Legacy path checks 'released' then updates without a status predicate, transaction or trigger.", "Status predicate on every UPDATE plus a freeze trigger.", "S"],
-  ["H-18", "Process", "The tests that check authorization never run in CI", "2,338 tests skip: PGlite lane needs a laptop symlink, RLS suites need secrets. Mobile jest not run. No test calls a server action.", "PGlite as a devDependency, a disposable test project, mobile jest, branch protection.", "M"],
-  ["H-19", "Process", "Nobody can prove production's schema equals main", "Migrations applied from feature branches, out of order, with no checksum; 85 number gaps on main.", "Refuse out-of-order runs, store sha256 per file, nightly schema diff.", "M"],
-  ["H-20", "Frontend", "No error boundary on any clinician workspace", "7 `error.tsx` files total (patient, pharmacy). None for doctor, nurse, lab, reception, admin; no `global-error.tsx`.", "One per workspace layout that keeps the shell and the Emergency pill.", "S"],
-  ["H-21", "Clinical", "Prescribing checks use old weights and glucose (flag off today)", "Newest value of any age, shown with a clock time only. An 8-month-old child weight drives mg/kg.", "Show the date; maximum age per check. Fix before turning the flags on.", "S"],
-];
-const areas = ["All", ...new Set(highs.map((h) => h[1]))];
-let active = "All";
-function renderHighs() {
-  $("highs").innerHTML = highs.filter((h) => active === "All" || h[1] === active).map(([id, area, t, ev, fix, eff]) => `
+  const highs = [
+    [
+      "H-1",
+      "Platform",
+      "Next.js 16.2.6 and Sentry carry critical advisories",
+      '20+ Next advisories incl. a proxy bypass and RCE classes; Sentry tunnel-route proxy bypass with `tunnelRoute: "/monitoring"`.',
+      "Upgrade to next 16.4.6+, @sentry/nextjs 10.75.2+, zod 4.6.6+; audit step in CI.",
+      "S",
+    ],
+    [
+      "H-2",
+      "Clinical",
+      "Medication record trusts a hidden form field for high-alert",
+      "`is_high_alert` comes from a hidden input; any cadre at the hospital can write MAR rows for any patient id.",
+      "Derive high-alert from the prescription on the server; require a clinical cadre; check patient and encounter.",
+      "M",
+    ],
+    [
+      "H-3",
+      "Clinical",
+      "Red and Orange triage alerts can reach nobody, silently",
+      "`lib/triage/notify.ts` returns `notified: 0` on no recipients or error; the action discards it. Out-of-band sink is a stub.",
+      "Show 'No one was alerted. Call for help now'; fall back to the in-charge; wire SMS.",
+      "M",
+    ],
+    [
+      "H-4",
+      "Clinical",
+      "Patient dose times run on UTC, not Kampala",
+      "`lib/patient/doses.ts` uses server `setHours`; Vercel runs UTC. An 08:00 dose opens at 11:00.",
+      "Build slots in Africa/Kampala with Intl, as the booking slots already do.",
+      "S",
+    ],
+    [
+      "H-5",
+      "Clinical",
+      "Glucose has no unit or plausibility guard",
+      "54 mg/dL typed as mmol/L reads as 'screen for DKA'. The guard exists in `lib/units/prompts.ts` and is unused.",
+      "Ask above about 35 mmol/L; store the unit with each reading.",
+      "S",
+    ],
+    [
+      "H-6",
+      "Clinical",
+      "CSO sign-off gate fails open and misses most content",
+      'Blocks only when `VERCEL_ENV === "production"`. About 37 of 48 draft `SignedCopy` constants are wired to no gate.',
+      "Invert the gate; a test that every SignedCopy is gated; gate patient thresholds.",
+      "M",
+    ],
+    [
+      "H-7",
+      "Privacy",
+      "Health data goes abroad to processors nobody was told about",
+      "Meter photos to Anthropic; Vercel Analytics sees `/reception/find?q=<name>`; Sentry keeps URLs; Maps gets GPS.",
+      "Name processors, add AI consent, scrub analytics and Sentry, make search a POST.",
+      "S–M",
+    ],
+    [
+      "H-8",
+      "Privacy",
+      "Patient names stored in plaintext beside the encrypted copy",
+      "Signup writes the full name to `users.full_name` and auth metadata while `patient_profiles` holds it encrypted.",
+      "Use a display alias for patients; encrypt clinical free text and the EPI register.",
+      "M–L",
+    ],
+    [
+      "H-9",
+      "Privacy",
+      "Reads of patient data logged in only some modules",
+      "Pharmacy, lab, emergency and USSD reads decrypt without logging. The notice says every access is recorded.",
+      "Log in the shared read helpers.",
+      "M",
+    ],
+    [
+      "H-10",
+      "Privacy",
+      "The audit trail can be switched off and most writes have no author",
+      "No TRUNCATE guard; app runs as the owner; demo removal disables triggers at runtime; `actor_id` is null outside EMR and NCD.",
+      "Actor claim on every transaction, TRUNCATE trigger, audit schema the app cannot own.",
+      "M–L",
+    ],
+    [
+      "H-11",
+      "Security",
+      "Every photo readable by any signed-in account",
+      "Avatars bucket policy: `USING (bucket_id = 'avatars')` for all authenticated users. Keys are user ids.",
+      "Owner, clinicians' own photos, and staff with a clinical relationship only.",
+      "S",
+    ],
+    [
+      "H-12",
+      "Security",
+      "Anyone can flood emergency pre-alert boards and SMS",
+      "Rate limit keyed on a client-supplied `device_hash`; signed-in callers have no limit.",
+      "Limit by server-observed IP, cap per facility, OTP above a threshold.",
+      "M",
+    ],
+    [
+      "H-13",
+      "Security",
+      "Four-eyes is not enforced",
+      "A superadmin can insert a superadmin role directly; auto-approval while fewer than two 'real' superadmins; no approve path exists.",
+      "Service-role-only superadmin roles, immutable count, build the confirm step.",
+      "M",
+    ],
+    [
+      "H-14",
+      "Security",
+      "Offboarded hospitals keep working",
+      "Only 2 of 11 staff scopes check the hospital's state.",
+      "Part of the shared affiliation query in C-1.",
+      "S",
+    ],
+    [
+      "H-15",
+      "Data",
+      "Deleting a patient's login deletes their clinical history",
+      "53 `ON DELETE CASCADE` FKs from encounters, prescriptions, diagnoses, orders, admissions and MAR to `auth.users`.",
+      "One migration switching clinical FKs to RESTRICT.",
+      "M",
+    ],
+    [
+      "H-16",
+      "Data",
+      "Closing an encounter is eight writes that may half-fail",
+      "Failures logged as 'non-fatal'; also ends every nursing assignment for the patient at that hospital.",
+      "One SQL function, as admissions already do; scope the assignment close.",
+      "M",
+    ],
+    [
+      "H-17",
+      "Data",
+      "Released lab results can be overwritten",
+      "Legacy path checks 'released' then updates without a status predicate, transaction or trigger.",
+      "Status predicate on every UPDATE plus a freeze trigger.",
+      "S",
+    ],
+    [
+      "H-18",
+      "Process",
+      "The tests that check authorization never run in CI",
+      "2,338 tests skip: PGlite lane needs a laptop symlink, RLS suites need secrets. Mobile jest not run. No test calls a server action.",
+      "PGlite as a devDependency, a disposable test project, mobile jest, branch protection.",
+      "M",
+    ],
+    [
+      "H-19",
+      "Process",
+      "Nobody can prove production's schema equals main",
+      "Migrations applied from feature branches, out of order, with no checksum; 85 number gaps on main.",
+      "Refuse out-of-order runs, store sha256 per file, nightly schema diff.",
+      "M",
+    ],
+    [
+      "H-20",
+      "Frontend",
+      "No error boundary on any clinician workspace",
+      "7 `error.tsx` files total (patient, pharmacy). None for doctor, nurse, lab, reception, admin; no `global-error.tsx`.",
+      "One per workspace layout that keeps the shell and the Emergency pill.",
+      "S",
+    ],
+    [
+      "H-21",
+      "Clinical",
+      "Prescribing checks use old weights and glucose (flag off today)",
+      "Newest value of any age, shown with a clock time only. An 8-month-old child weight drives mg/kg.",
+      "Show the date; maximum age per check. Fix before turning the flags on.",
+      "S",
+    ],
+  ];
+  const areas = ["All", ...new Set(highs.map((h) => h[1]))];
+  let active = "All";
+  function renderHighs() {
+    $("highs").innerHTML = highs
+      .filter((h) => active === "All" || h[1] === active)
+      .map(
+        ([id, area, t, ev, fix, eff]) => `
     <article class="hi"><div class="row"><span class="sev high">High</span><span class="id">${id}</span><span class="effort" title="Effort">${eff}</span><span class="area">${area}</span></div>
-    <h3>${esc(t)}</h3><p>${code(ev)}</p><p class="fix">${code(fix)}</p></article>`).join("");
-  $("filters").querySelectorAll("button").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.a === active)));
-}
-$("filters").innerHTML = areas.map((a) => {
-  const n = a === "All" ? highs.length : highs.filter((h) => h[1] === a).length;
-  return `<button type="button" data-a="${a}" aria-pressed="false">${a} · ${n}</button>`;
-}).join("");
-$("filters").addEventListener("click", (e) => { const b = e.target.closest("button"); if (b) { active = b.dataset.a; renderHighs(); } });
-renderHighs();
+    <h3>${esc(t)}</h3><p>${code(ev)}</p><p class="fix">${code(fix)}</p></article>`,
+      )
+      .join("");
+    $("filters")
+      .querySelectorAll("button")
+      .forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.a === active)));
+  }
+  $("filters").innerHTML = areas
+    .map((a) => {
+      const n = a === "All" ? highs.length : highs.filter((h) => h[1] === a).length;
+      return `<button type="button" data-a="${a}" aria-pressed="false">${a} · ${n}</button>`;
+    })
+    .join("");
+  $("filters").addEventListener("click", (e) => {
+    const b = e.target.closest("button");
+    if (b) {
+      active = b.dataset.a;
+      renderHighs();
+    }
+  });
+  renderHighs();
 
-const meds = [
-  ["M-1", "Column-level REVOKEs are no-ops under table grants; clinicians can self-set `verified_at`.", "Revoke table, grant columns"],
-  ["M-2", "Patients can rewrite sex, date of birth, patient code and known conditions.", "Column allow-list"],
-  ["M-3", "Hospital admins write `user_roles` directly over PostgREST.", "Service-role only"],
-  ["M-4", "Booking any patient creates a 'clinical relationship' to read their other data.", "Require attendance, cap window"],
-  ["M-5", "NEWS2 bands have gaps; SBP 90.5 or SpO2 91.5 scores 0.", "Half-open bands"],
-  ["M-6", "Red marks stock-outs and rota gaps; red-reserved test skips pharmacy, lab, NCD.", "Neutral tags, widen test"],
-  ["M-7", "Regulator stored as 'PSU' in a DB CHECK; should be Pharmacy Board of Uganda.", "Migration plus copy"],
-  ["M-8", "Lab demo writes to production as the first real doctor; no production freeze.", "Reuse pharmacy freeze"],
-  ["M-9", "SMS sent inside DB transactions; rollback means a re-send.", "Outbox"],
-  ["M-10", "Two clinicians can create duplicate encounters from one triage.", "Partial unique index"],
-  ["M-11", "Other multi-step writes non-transactional; 10 of 77 writing functions use an RPC.", "SQL functions"],
-  ["M-12", "Hand-rolled `begin()` can mask errors and release a broken connection.", "Keep original error, destroy"],
-  ["M-13", "About 60 flags create parallel writers; no test of flag combinations.", "Sunset dates"],
-  ["M-14", "`DEV_SKIP_MFA` and about 15 gates open whenever `VERCEL_ENV` is not production.", "Explicit MEDSYNC_ENV"],
-  ["M-15", "Catalogue review action: no AAL2 check, no runtime validation.", "Check aal2, Zod"],
-  ["M-16", "Scan attach downloads storage objects before authenticating.", "Authenticate first"],
-  ["M-17", "Rate limiter is in-memory; sign-in and MFA verify have none.", "Shared limiter"],
-  ["M-18", "No key id or rotation; PHI key reused as HMAC secret with empty fallback.", "Versioned keyring"],
-  ["M-19", "Mobile caches diagnoses and medicines unencrypted; they survive sign-out.", "Encrypt, wipe on sign-out"],
-  ["M-20", "Axe covers 8 public pages; resus prescribe dialog has no focus trap.", "Axe the styleguide fixtures"],
-  ["M-21", "`/pw` escapes the size budget and strict accessibility lint.", "Add /pw"],
-  ["M-22", "Three design systems; AGENTS.md and DESIGN-medsync.md contradict each other.", "Fix docs, finish Tide"],
-  ["M-23", "Form limits duplicated by hand between client and server.", "Shared schemas"],
-  ["M-24", "Components up to 2,110 lines with 17 pieces of state.", "Split into hooks"],
-  ["M-25", "README describes Phase 0; real onboarding doc is addressed to Claude; docs/ is 113 MB.", "Rewrite README"],
-  ["M-26", "Cold typecheck needs 6 GB; the pre-commit hook runs it.", "Split tsconfig"],
-];
-$("meds").innerHTML = meds.map(([id, f, fx]) => `<tr><td>${id}</td><td>${code(f)}</td><td>${esc(fx)}</td></tr>`).join("");
-const lows = [
-  ["L-1", "Cron secrets compared with `!==`; webhook secrets in URLs reach logs."],
-  ["L-2", "`patient_code_seq` is the only table without RLS (no PHI)."],
-  ["L-3", "CORS allows any `*.vercel.app` origin (bearer auth, low impact)."],
-  ["L-4", "Nurse assignment close has no hospital filter."],
-  ["L-5", "`lab_referrals.patient_user_id` has no foreign key."],
-  ["L-6", "`shadcn` CLI in production dependencies; `framer-motion` used only by a bench app."],
-  ["L-7", "Root clutter: prompt files, empty folders, 2.6 MB PNG."],
-  ["L-8", "Naming: notify/notifications, ncd/ncdreg/registry, schema files named after migrations."],
-  ["L-9", "Sequential awaits in the older encounter page and the desk loader."],
-  ["L-10", "Mobile splash waits on 12 font files; long lists in ScrollView."],
-  ["L-11", "Mobile emergency call fails silently if the device cannot dial."],
-  ["L-12", "npm 12 blocks install scripts for sharp, esbuild and Sentry CLI."],
-];
-$("lows").innerHTML = lows.map(([id, f]) => `<tr><td>${id}</td><td>${code(f)}</td></tr>`).join("");
+  const meds = [
+    [
+      "M-1",
+      "Column-level REVOKEs are no-ops under table grants; clinicians can self-set `verified_at`.",
+      "Revoke table, grant columns",
+    ],
+    [
+      "M-2",
+      "Patients can rewrite sex, date of birth, patient code and known conditions.",
+      "Column allow-list",
+    ],
+    ["M-3", "Hospital admins write `user_roles` directly over PostgREST.", "Service-role only"],
+    [
+      "M-4",
+      "Booking any patient creates a 'clinical relationship' to read their other data.",
+      "Require attendance, cap window",
+    ],
+    ["M-5", "NEWS2 bands have gaps; SBP 90.5 or SpO2 91.5 scores 0.", "Half-open bands"],
+    [
+      "M-6",
+      "Red marks stock-outs and rota gaps; red-reserved test skips pharmacy, lab, NCD.",
+      "Neutral tags, widen test",
+    ],
+    [
+      "M-7",
+      "Regulator stored as 'PSU' in a DB CHECK; should be Pharmacy Board of Uganda.",
+      "Migration plus copy",
+    ],
+    [
+      "M-8",
+      "Lab demo writes to production as the first real doctor; no production freeze.",
+      "Reuse pharmacy freeze",
+    ],
+    ["M-9", "SMS sent inside DB transactions; rollback means a re-send.", "Outbox"],
+    [
+      "M-10",
+      "Two clinicians can create duplicate encounters from one triage.",
+      "Partial unique index",
+    ],
+    [
+      "M-11",
+      "Other multi-step writes non-transactional; 10 of 77 writing functions use an RPC.",
+      "SQL functions",
+    ],
+    [
+      "M-12",
+      "Hand-rolled `begin()` can mask errors and release a broken connection.",
+      "Keep original error, destroy",
+    ],
+    [
+      "M-13",
+      "About 60 flags create parallel writers; no test of flag combinations.",
+      "Sunset dates",
+    ],
+    [
+      "M-14",
+      "`DEV_SKIP_MFA` and about 15 gates open whenever `VERCEL_ENV` is not production.",
+      "Explicit MEDSYNC_ENV",
+    ],
+    ["M-15", "Catalogue review action: no AAL2 check, no runtime validation.", "Check aal2, Zod"],
+    ["M-16", "Scan attach downloads storage objects before authenticating.", "Authenticate first"],
+    ["M-17", "Rate limiter is in-memory; sign-in and MFA verify have none.", "Shared limiter"],
+    [
+      "M-18",
+      "No key id or rotation; PHI key reused as HMAC secret with empty fallback.",
+      "Versioned keyring",
+    ],
+    [
+      "M-19",
+      "Mobile caches diagnoses and medicines unencrypted; they survive sign-out.",
+      "Encrypt, wipe on sign-out",
+    ],
+    [
+      "M-20",
+      "Axe covers 8 public pages; resus prescribe dialog has no focus trap.",
+      "Axe the styleguide fixtures",
+    ],
+    ["M-21", "`/pw` escapes the size budget and strict accessibility lint.", "Add /pw"],
+    [
+      "M-22",
+      "Three design systems; AGENTS.md and DESIGN-medsync.md contradict each other.",
+      "Fix docs, finish Tide",
+    ],
+    ["M-23", "Form limits duplicated by hand between client and server.", "Shared schemas"],
+    ["M-24", "Components up to 2,110 lines with 17 pieces of state.", "Split into hooks"],
+    [
+      "M-25",
+      "README describes Phase 0; real onboarding doc is addressed to Claude; docs/ is 113 MB.",
+      "Rewrite README",
+    ],
+    ["M-26", "Cold typecheck needs 6 GB; the pre-commit hook runs it.", "Split tsconfig"],
+  ];
+  $("meds").innerHTML = meds
+    .map(([id, f, fx]) => `<tr><td>${id}</td><td>${code(f)}</td><td>${esc(fx)}</td></tr>`)
+    .join("");
+  const lows = [
+    ["L-1", "Cron secrets compared with `!==`; webhook secrets in URLs reach logs."],
+    ["L-2", "`patient_code_seq` is the only table without RLS (no PHI)."],
+    ["L-3", "CORS allows any `*.vercel.app` origin (bearer auth, low impact)."],
+    ["L-4", "Nurse assignment close has no hospital filter."],
+    ["L-5", "`lab_referrals.patient_user_id` has no foreign key."],
+    ["L-6", "`shadcn` CLI in production dependencies; `framer-motion` used only by a bench app."],
+    ["L-7", "Root clutter: prompt files, empty folders, 2.6 MB PNG."],
+    [
+      "L-8",
+      "Naming: notify/notifications, ncd/ncdreg/registry, schema files named after migrations.",
+    ],
+    ["L-9", "Sequential awaits in the older encounter page and the desk loader."],
+    ["L-10", "Mobile splash waits on 12 font files; long lists in ScrollView."],
+    ["L-11", "Mobile emergency call fails silently if the device cannot dial."],
+    ["L-12", "npm 12 blocks install scripts for sharp, esbuild and Sentry CLI."],
+  ];
+  $("lows").innerHTML = lows
+    .map(([id, f]) => `<tr><td>${id}</td><td>${code(f)}</td></tr>`)
+    .join("");
 
-function bars(el, rows, max, fmt) {
-  $(el).innerHTML = rows.map(([n, v, tone]) => `
-    <div class="hbar"><span>${n}</span><div class="t" role="img" aria-label="${n}: ${fmt(v)}"><i class="${tone || ""}" style="width:${Math.max((v / max) * 100, v ? 1.5 : 0)}%"></i></div><span class="v">${fmt(v)}</span></div>`).join("");
-}
-bars("tables", [["Pharmacy", 172, "hot"], ["Lab", 88], ["EMR and clerking", 41], ["NCD", 28], ["Hospital and org", 22], ["Patient", 14], ["Resus", 10], ["Scheduling", 7], ["Emergency", 6], ["Triage", 3, "cold"], ["Monitoring", 2, "cold"]], 172, (v) => String(v));
-bars("ratios", [["Resus", 1.21], ["Triage", 0.75], ["Scheduling", 0.69], ["Prescribing", 0.58], ["Emergency", 0.47], ["Clerking", 0.42], ["EMR", 0.23], ["Pharmacy", 0.18], ["Patient", 0.08, "cold"], ["Hospital admin", 0.05, "cold"], ["Doctor", 0.01, "cold"], ["Nurse", 0, "cold"], ["Onboarding", 0, "cold"]], 1.25, (v) => v.toFixed(2));
+  function bars(el, rows, max, fmt) {
+    $(el).innerHTML = rows
+      .map(
+        ([n, v, tone]) => `
+    <div class="hbar"><span>${n}</span><div class="t" role="img" aria-label="${n}: ${fmt(v)}"><i class="${tone || ""}" style="width:${Math.max((v / max) * 100, v ? 1.5 : 0)}%"></i></div><span class="v">${fmt(v)}</span></div>`,
+      )
+      .join("");
+  }
+  bars(
+    "tables",
+    [
+      ["Pharmacy", 172, "hot"],
+      ["Lab", 88],
+      ["EMR and clerking", 41],
+      ["NCD", 28],
+      ["Hospital and org", 22],
+      ["Patient", 14],
+      ["Resus", 10],
+      ["Scheduling", 7],
+      ["Emergency", 6],
+      ["Triage", 3, "cold"],
+      ["Monitoring", 2, "cold"],
+    ],
+    172,
+    (v) => String(v),
+  );
+  bars(
+    "ratios",
+    [
+      ["Resus", 1.21],
+      ["Triage", 0.75],
+      ["Scheduling", 0.69],
+      ["Prescribing", 0.58],
+      ["Emergency", 0.47],
+      ["Clerking", 0.42],
+      ["EMR", 0.23],
+      ["Pharmacy", 0.18],
+      ["Patient", 0.08, "cold"],
+      ["Hospital admin", 0.05, "cold"],
+      ["Doctor", 0.01, "cold"],
+      ["Nurse", 0, "cold"],
+      ["Onboarding", 0, "cold"],
+    ],
+    1.25,
+    (v) => v.toFixed(2),
+  );
 
-const claims = [
-  ["Staff accounts need a second sign-in step.", "Privacy notice", "Enforced only in the web pages. Edge Functions and PostgREST accept a password alone (C-2)."],
-  ["Information is encrypted when it travels and when it is stored.", "Privacy notice", "Patient names, phones and emails sit in plaintext in `users` and auth metadata; clinical free text too (H-8)."],
-  ["Every time they are shown it is recorded.", "Privacy notice and trust claims ('built')", "Pharmacy, lab, emergency and USSD reads are not logged; most writes have no author (H-9, H-10)."],
-  ["Hosting and database services, an SMS and USSD provider, and phone notification services.", "Privacy notice, processor list", "Also Anthropic, Vercel Analytics, Sentry, Google Maps, OpenStreetMap, Open Food Facts, Expo push (H-7)."],
-  ["The only legitimate path to surface decrypted PHI.", "Break-glass function", "The audit log and superadmin policies are a second path with no grant and no log (C-3)."],
-  ["Most-recent active/approved affiliation.", "Reception scope comment", "No state filter at all (C-1)."],
-  ["Drizzle schema is the source of truth; RLS-first.", "AGENTS.md", "Migrations are hand-written SQL; the web runs as the owner and bypasses RLS."],
-];
-$("claims").innerHTML = claims.map(([q, src, real]) => `
+  const claims = [
+    [
+      "Staff accounts need a second sign-in step.",
+      "Privacy notice",
+      "Enforced only in the web pages. Edge Functions and PostgREST accept a password alone (C-2).",
+    ],
+    [
+      "Information is encrypted when it travels and when it is stored.",
+      "Privacy notice",
+      "Patient names, phones and emails sit in plaintext in `users` and auth metadata; clinical free text too (H-8).",
+    ],
+    [
+      "Every time they are shown it is recorded.",
+      "Privacy notice and trust claims ('built')",
+      "Pharmacy, lab, emergency and USSD reads are not logged; most writes have no author (H-9, H-10).",
+    ],
+    [
+      "Hosting and database services, an SMS and USSD provider, and phone notification services.",
+      "Privacy notice, processor list",
+      "Also Anthropic, Vercel Analytics, Sentry, Google Maps, OpenStreetMap, Open Food Facts, Expo push (H-7).",
+    ],
+    [
+      "The only legitimate path to surface decrypted PHI.",
+      "Break-glass function",
+      "The audit log and superadmin policies are a second path with no grant and no log (C-3).",
+    ],
+    [
+      "Most-recent active/approved affiliation.",
+      "Reception scope comment",
+      "No state filter at all (C-1).",
+    ],
+    [
+      "Drizzle schema is the source of truth; RLS-first.",
+      "AGENTS.md",
+      "Migrations are hand-written SQL; the web runs as the owner and bypasses RLS.",
+    ],
+  ];
+  $("claims").innerHTML = claims
+    .map(
+      ([q, src, real]) => `
   <div class="claim"><div class="said"><span class="label">${esc(src)}</span><q>${esc(q)}</q></div>
-  <div class="is"><span class="label">In the code</span><p>${code(real)}</p></div></div>`).join("");
+  <div class="is"><span class="label">In the code</span><p>${code(real)}</p></div></div>`,
+    )
+    .join("");
 
-const truths = [
-  ["Surfaces are ahead of the engines.", "Pharmacy has 172 tables. Triage has 3 and its Red escalation is an in-app row. Monitoring has 2."],
-  ["Too many workstreams for one person to keep safe.", "116 local branches, about 60 flags, two live patient webs, two live resus desks, about 100k lines in the last 60 commits."],
-  ["The tests that matter run on one laptop.", "2,338 authorization and audit tests need a local symlink or secrets CI lacks."],
-  ["One person is superadmin, CSO and audit reader.", "Sign-off is a string in a content file. Four-eyes auto-approves. The superadmin reads the audit log of their own actions."],
-  ["Demo data lives in the production database.", "Removing it needed three emergency migrations in two days, and its removal disables audit triggers."],
-  ["The privacy notice was written ahead of the code.", "Four of its promises are false today."],
-];
-$("truths").innerHTML = truths.map(([b, t]) => `<li><b>${b}</b>${esc(t)}</li>`).join("");
-const good = [
-  ["EMR write path:", "Zod, scope, one transaction, access re-checked inside it, optimistic revisions, idempotent client keys."],
-  ["Pharmacy ledger:", "append-only, balance guard and idempotency enforced in the database, not in JavaScript."],
-  ["Encryption:", "AES-256-GCM done right: random IV, verified tag, no plaintext fallback, same code on Node and Deno."],
-  ["Edge Functions:", "76 of 76 validate input with Zod and authorise against the target row's own hospital."],
-  ["Safety in data:", "NCD demo guards in SQL, the clerking catalogue hash checked in CI, SMS bodies free of PHI by construction."],
-];
-$("good").innerHTML = good.map(([b, t]) => `<li><b>${b}</b> ${esc(t)}</li>`).join("");
+  const truths = [
+    [
+      "Surfaces are ahead of the engines.",
+      "Pharmacy has 172 tables. Triage has 3 and its Red escalation is an in-app row. Monitoring has 2.",
+    ],
+    [
+      "Too many workstreams for one person to keep safe.",
+      "116 local branches, about 60 flags, two live patient webs, two live resus desks, about 100k lines in the last 60 commits.",
+    ],
+    [
+      "The tests that matter run on one laptop.",
+      "2,338 authorization and audit tests need a local symlink or secrets CI lacks.",
+    ],
+    [
+      "One person is superadmin, CSO and audit reader.",
+      "Sign-off is a string in a content file. Four-eyes auto-approves. The superadmin reads the audit log of their own actions.",
+    ],
+    [
+      "Demo data lives in the production database.",
+      "Removing it needed three emergency migrations in two days, and its removal disables audit triggers.",
+    ],
+    ["The privacy notice was written ahead of the code.", "Four of its promises are false today."],
+  ];
+  $("truths").innerHTML = truths.map(([b, t]) => `<li><b>${b}</b>${esc(t)}</li>`).join("");
+  const good = [
+    [
+      "EMR write path:",
+      "Zod, scope, one transaction, access re-checked inside it, optimistic revisions, idempotent client keys.",
+    ],
+    [
+      "Pharmacy ledger:",
+      "append-only, balance guard and idempotency enforced in the database, not in JavaScript.",
+    ],
+    [
+      "Encryption:",
+      "AES-256-GCM done right: random IV, verified tag, no plaintext fallback, same code on Node and Deno.",
+    ],
+    [
+      "Edge Functions:",
+      "76 of 76 validate input with Zod and authorise against the target row's own hospital.",
+    ],
+    [
+      "Safety in data:",
+      "NCD demo guards in SQL, the clerking catalogue hash checked in CI, SMS bodies free of PHI by construction.",
+    ],
+  ];
+  $("good").innerHTML = good.map(([b, t]) => `<li><b>${b}</b> ${esc(t)}</li>`).join("");
 
-const p1 = [
-  ["One shared affiliation check for all 11 scopes", "C-1 · H-14 · C-4", "S"],
-  ["Column grants on users and profiles; revoke client role writes; ban on suspend", "C-4 · M-1 · M-3", "S"],
-  ["Upgrade Next, Sentry and Zod; audit step in CI", "H-1", "S"],
-  ["AAL2 in RLS and in every Edge Function", "C-2", "M"],
-  ["Remove superadmin PHI access; lock the avatars bucket", "C-3 · H-11", "M"],
-  ["Server-side high-alert, triage 'no one alerted', Kampala doses, glucose guard", "H-2 · H-3 · H-4 · H-5", "S each"],
-];
-const p2 = [
-  ["Database and RLS tests in CI; migration checksums and schema diff", "H-18 · H-19", "M"],
-  ["Real audit trail: actor on every write, TRUNCATE guard, read logging, four-eyes, demo out of prod", "H-9 · H-10 · H-13", "M–L"],
-  ["Privacy: processor disclosure, AI consent, scrubbing, plaintext names, mobile caches", "H-7 · H-8 · M-19", "M–L"],
-  ["RESTRICT FKs, atomic encounter close, frozen results, pre-alert limits, error boundaries, CSO gate", "H-15 · H-16 · H-17 · H-12 · H-20 · H-6", "M"],
-];
-const plan = (el, rows, start) => $(el).innerHTML = rows.map(([t, r, e], i) => `
-  <li><span class="n">${start + i}</span><span>${esc(t)}<span class="refs">${r}</span></span><span class="effort">${e}</span></li>`).join("");
-plan("p1", p1, 1); plan("p2", p2, 7);
+  const p1 = [
+    ["One shared affiliation check for all 11 scopes", "C-1 · H-14 · C-4", "S"],
+    [
+      "Column grants on users and profiles; revoke client role writes; ban on suspend",
+      "C-4 · M-1 · M-3",
+      "S",
+    ],
+    ["Upgrade Next, Sentry and Zod; audit step in CI", "H-1", "S"],
+    ["AAL2 in RLS and in every Edge Function", "C-2", "M"],
+    ["Remove superadmin PHI access; lock the avatars bucket", "C-3 · H-11", "M"],
+    [
+      "Server-side high-alert, triage 'no one alerted', Kampala doses, glucose guard",
+      "H-2 · H-3 · H-4 · H-5",
+      "S each",
+    ],
+  ];
+  const p2 = [
+    ["Database and RLS tests in CI; migration checksums and schema diff", "H-18 · H-19", "M"],
+    [
+      "Real audit trail: actor on every write, TRUNCATE guard, read logging, four-eyes, demo out of prod",
+      "H-9 · H-10 · H-13",
+      "M–L",
+    ],
+    [
+      "Privacy: processor disclosure, AI consent, scrubbing, plaintext names, mobile caches",
+      "H-7 · H-8 · M-19",
+      "M–L",
+    ],
+    [
+      "RESTRICT FKs, atomic encounter close, frozen results, pre-alert limits, error boundaries, CSO gate",
+      "H-15 · H-16 · H-17 · H-12 · H-20 · H-6",
+      "M",
+    ],
+  ];
+  const plan = (el, rows, start) =>
+    ($(el).innerHTML = rows
+      .map(
+        ([t, r, e], i) => `
+  <li><span class="n">${start + i}</span><span>${esc(t)}<span class="refs">${r}</span></span><span class="effort">${e}</span></li>`,
+      )
+      .join(""));
+  plan("p1", p1, 1);
+  plan("p2", p2, 7);
 
-const susp = [
-  ["Supabase default grants are live on new tables", "Run `has_table_privilege('authenticated','public.patient_places','INSERT')` on production."],
-  ["Some Edge Function has `verify_jwt` off", "Check function settings in the dashboard; there is no config.toml in the repo."],
-  ["Preview deployments share the production database", "Vercel environment variables by scope."],
-  ["Vercel Analytics records patient names from search", "Analytics dashboard, filter /reception/find."],
-  ["The 30 s statement timeout never reaches the server", "`SELECT current_setting('statement_timeout')` through the app pool."],
-  ["CI was red while PRs merged; main is unprotected", "Branch protection API and the last 50 runs on main."],
-  ["Closed encounters and resus episodes are still editable", "Find every update to those tables and look for a state predicate."],
-  ["Mobile and web emergency numbers disagree", "Compare the mobile safety config with the web E1 sheet; CSO decision."],
-  ["Switching accounts in one tab makes another tab act as the new account", "Two accounts, open a note, switch elsewhere, submit."],
-  ["Android backs up AsyncStorage health data to Google", "Check allowBackup in the built AndroidManifest."],
-];
-$("susp").innerHTML = susp.map(([t, h]) => `<div><b>${esc(t)}</b><span>${code(h)}</span></div>`).join("");
+  const susp = [
+    [
+      "Supabase default grants are live on new tables",
+      "Run `has_table_privilege('authenticated','public.patient_places','INSERT')` on production.",
+    ],
+    [
+      "Some Edge Function has `verify_jwt` off",
+      "Check function settings in the dashboard; there is no config.toml in the repo.",
+    ],
+    ["Preview deployments share the production database", "Vercel environment variables by scope."],
+    [
+      "Vercel Analytics records patient names from search",
+      "Analytics dashboard, filter /reception/find.",
+    ],
+    [
+      "The 30 s statement timeout never reaches the server",
+      "`SELECT current_setting('statement_timeout')` through the app pool.",
+    ],
+    [
+      "CI was red while PRs merged; main is unprotected",
+      "Branch protection API and the last 50 runs on main.",
+    ],
+    [
+      "Closed encounters and resus episodes are still editable",
+      "Find every update to those tables and look for a state predicate.",
+    ],
+    [
+      "Mobile and web emergency numbers disagree",
+      "Compare the mobile safety config with the web E1 sheet; CSO decision.",
+    ],
+    [
+      "Switching accounts in one tab makes another tab act as the new account",
+      "Two accounts, open a note, switch elsewhere, submit.",
+    ],
+    [
+      "Android backs up AsyncStorage health data to Google",
+      "Check allowBackup in the built AndroidManifest.",
+    ],
+  ];
+  $("susp").innerHTML = susp
+    .map(([t, h]) => `<div><b>${esc(t)}</b><span>${code(h)}</span></div>`)
+    .join("");
 </script>

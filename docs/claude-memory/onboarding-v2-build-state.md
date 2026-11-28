@@ -9,6 +9,7 @@ metadata:
 ---
 
 Onboarding v2 is built and committed in a SEPARATE worktree, `/Users/airm1/Desktop/medsync-onboarding-v2`, on branch `feat/onboarding-v2`:
+
 - `a7b784a` is the baseline snapshot of the main tree's uncommitted state (tag `onboarding-v2-baseline`).
 - `bbb0135` is the build; `6fca936` is the STOP record.
 - Gate record: `docs/onboarding-v2/STOP-REPORTS.md` (§12 numbers + owner actions). Proposal: `gate-a-proposal.md`.
@@ -18,6 +19,7 @@ Onboarding v2 is built and committed in a SEPARATE worktree, `/Users/airm1/Deskt
 **LIVE (2026-09-25 afternoon):** the owner asked for v2 to REPLACE the old forms (ADR 0129, commit `8e8f2aa`). The flag and `/signup/preview` are gone and the old forms are deleted. The v2 diff was `git apply`'d into the MAIN tree as uncommitted changes (clean, byte-identical). From the main tree: 0070 applied (the classifier allowed it this time), the 3 functions deployed, and web `medsync-il0fkn1xa` deployed (rollback `medsync-3kzwqfje1`). The owner's earlier attempt had run in the main tree before it had v2, so nothing changed then. Everything below "How to apply" is history.
 
 **How to apply:**
+
 - **Not deployed.** The auto-mode classifier refused `npm run db:migrate` (production deploy). The web and the three edge functions both need 0070 first. The owner runs, from the worktree:
   1. `npm run db:migrate` (0070 only);
   2. `npx supabase functions deploy approve-hospital-application reject-hospital-application approve-staff-affiliation --project-ref hrfpdfonjuvsakbjtfop --use-api`;
