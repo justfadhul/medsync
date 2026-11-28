@@ -164,9 +164,97 @@ function SurfaceDemo() {
   );
 }
 
+/**
+ * One patient screen in miniature, for comparing colour options: every role a palette has to serve (the ticket
+ * band and its accent word, the main and accent actions, edges, a disabled action, tags, health states, the
+ * cascade and a nav mark). The cascade and the nav row are drawn here only; they become kit parts in Set 8.
+ */
+function SceneDemo() {
+  return (
+    <KitRoot className="flex min-w-0 flex-col gap-3 p-4">
+      <Band>
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex flex-col gap-1">
+            <span className="text-pw-on-band-2 text-xs font-semibold tracking-[0.06em] uppercase">
+              Your visit · Example clinic
+            </span>
+            <span className="font-mono text-2xl font-semibold tracking-[0.08em]">K7M-42Q</span>
+            <span className="text-pw-on-band-accent text-sm font-semibold">
+              You are next in line
+            </span>
+          </div>
+          <Button size="s" tone="soft">
+            Show at desk
+          </Button>
+        </div>
+      </Band>
+      <Card>
+        <div className="flex flex-col gap-3">
+          <div className="flex flex-wrap gap-1.5">
+            <Tag area="readings">Readings</Tag>
+            <StatusTag tone="caution">Above your target</StatusTag>
+          </div>
+          <span className="text-[17px] font-semibold">138/86 mmHg · 07:40</span>
+          <div className="flex flex-wrap gap-2">
+            <Button tone="accent" size="m">
+              Book a visit
+            </Button>
+            <Button size="m">Save reading</Button>
+            <Button tone="outline" size="m">
+              Keep draft
+            </Button>
+          </div>
+          <Button size="s" disabledReason="Add today's reading first.">
+            Share with your doctor
+          </Button>
+        </div>
+      </Card>
+      <div className="flex flex-col">
+        {(
+          [
+            ["bg-pw-cascade-1", "08:00 · Morning medicine", "Done"],
+            ["bg-pw-cascade-2", "10:00 · Blood pressure", "Done"],
+            ["bg-pw-cascade-3", "12:00 · Walk", "Done"],
+            ["bg-pw-cascade-4", "13:00 · Midday medicine", "Done"],
+          ] as const
+        ).map(([bg, what, state], i) => (
+          <div
+            key={what}
+            className={`${bg} text-pw-on-band rounded-pw-cascade flex justify-between px-5 pt-3 pb-10 text-sm font-semibold ${i ? "-mt-8" : ""}`}
+          >
+            <span>{what}</span>
+            <span className="text-pw-on-band-2 font-medium">{state}</span>
+          </div>
+        ))}
+        <div className="bg-pw-accent text-pw-on-accent rounded-pw-cascade -mt-8 flex justify-between px-5 py-3 text-sm font-semibold">
+          <span>14:00 · Check your feet</span>
+          <span>Now</span>
+        </div>
+      </div>
+      <nav
+        aria-label="Example navigation"
+        className="bg-pw-raised shadow-pw-float flex justify-around rounded-full px-2 py-2"
+      >
+        {["Home", "Visits", "Care", "Me"].map((n, i) => (
+          <span
+            key={n}
+            className={`flex flex-col items-center gap-1 px-3 text-xs font-semibold ${i ? "text-pw-ink-3" : "text-pw-ink"}`}
+          >
+            {n}
+            <span
+              className={`size-1.5 rounded-full ${i ? "bg-transparent" : "bg-pw-accent-text"}`}
+            />
+          </span>
+        ))}
+      </nav>
+    </KitRoot>
+  );
+}
+
 export const demos = {
   Button: ButtonDemo,
   IconButton: IconButtonDemo,
   Tag: TagDemo,
   Card: SurfaceDemo,
+  Scene: SceneDemo,
 };
