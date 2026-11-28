@@ -16,6 +16,7 @@ shipped list, the standing design decisions, the open items and the working rule
 **Why:** the handoff doc is the source of truth; this memory only says where to pick up.
 
 **How to apply:**
+
 - 2026-09-21 round DONE and DEPLOYED (ADR 0095; commits `a7628c7`, `5ec3e5b`, `a6a92e3`, `dd8c64e`): symptom selector
   at booking (descriptive only — owner overrode PRD §5.4/§7.2 rule 1; firewall test rewritten to enforce the
   amended rule), staff patient card (audited name+photo reveal, fail-closed; hospital admin stays code-only),
@@ -71,6 +72,7 @@ section-head/provider-card/nav-rail/layout, `lib/patient/appointments.ts` (canAr
 fetchLiveIntakeToday), `emergency-pill.tsx` (dark red only), `mobile-tab-bar.tsx` (data-place, opaque), budget cap
 /patient 267 kB. Review board: https://claude.ai/artifact/2Xc9XFSDtzFrGUk4xZsrrH. ADR 0100 § Open items lists the
 owner's rulings pending (pill offset on phones, §9 lines in content/auth.ts:98 + content/landing.ts:107, etc.).
+
 - **Deployed to production 2026-09-23 ~15:10** (`medsync-cpbsnn875`, aliased medsync-six) from the whole working tree
   at the owner's explicit choice — it also shipped the other session's uncommitted sign-in/MFA/landing edits made
   after the 11:17 prod build (`medsync-5fumfw98u` = rollback target). Owner kept the catalog gate: prod shows the
@@ -93,5 +95,6 @@ rows, desk routes arrivals Send to triage (default) / Send to clinic (`patient_i
 theme + emergency variant solid red in dark. All uncommitted. Owner ran it all 2026-09-23: 0067 applied (verified by an anon REST schema probe), the five
 functions deployed 16:39, web `medsync-8f1n1zbdi` 16:53 (rollback target `medsync-cpbsnn875`). A five-lens review
 (wf_c66c6091-7f4) was still running at deploy time — act on its findings with a follow-up deploy.
+
 - Someone ran `expo install` at the repo ROOT at 15:39 (expo 46 in the web deps, next/react/typescript/vercel/drizzle-kit
   moved); restored package.json to HEAD + the other session's prebuild line and the lock to HEAD. Watch for it again.

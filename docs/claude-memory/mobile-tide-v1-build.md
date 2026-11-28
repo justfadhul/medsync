@@ -13,6 +13,7 @@ Tide v1 rebuild of the patient app (`mobile/`), built 2026-10-17 in worktree `~/
 **Why:** owner approved plan artifact https://claude.ai/artifact/WnHrPsD1zsTp3Zw4Gy1Nrx (D1–D10) then said "get through all gates". Tide DS artifact https://claude.ai/artifact/5vvCpkVoYk8G11PtLaSRuk dark column synced to PRD palette (v7).
 
 **How to apply:**
+
 - Never run on a device yet (no Xcode/Android SDK); verified on Expo web :8091 via `/dev/screen?name=home|add|care|…` (dev-only, renders signed-in screens outside the gate).
 - Prettier in the worktree: scratchpad `pt.sh` used main checkout's prettier with absolute plugin paths; worktree has no root node_modules — symlink `node_modules -> ~/Desktop/medsync/node_modules` temporarily for web tsc / pre-commit hook, then remove.
 - Since round 2 health screens use the patient's own log (ADR 0342); wording says only the patient sees it — clinicians cannot read 0029 tables. `savedWords()` removed.

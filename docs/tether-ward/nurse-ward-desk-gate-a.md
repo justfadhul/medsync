@@ -10,22 +10,22 @@ report `CSyoZq386KueATVR1qnzcH`.
 
 ## What exists and what each phase adds
 
-| Area | On main today | Phase | Adds |
-| --- | --- | --- | --- |
-| Nurse home | `app/nurse/page.tsx`, a page of links | 1 | Ward overview for the in-charge: occupancy, today's flow, staffing ratio, vitals on time, doses not given |
-| Patient list | `app/nurse/patients`, `listNursePatientPanel`, sorted by assignment | 1 | Latest NEWS2 (`lib/triage/scoring/news2.ts`), sickest first, vitals due or late from `monitoring_charts.frequency`, table or cards |
-| Tasks | `app/nurse/tasks`, `nurse_tasks` (0281), one-way | 1, 2 | To do board over vitals, doses, samples, tasks and the doctor's non-drug orders; untick as a reversal entry (2) |
-| Tether | `TETHER_OPEN` has `/nurse/incoming` only | 1 | `/nurse` open behind the flag; ward nurses land on the desk |
-| Care plan | none (`care_plan` is the clinician's) | 2 | Nursing care plan: problem, related to, as shown by, goal, items ticked, shift evaluation |
-| Observations | `app/nurse/observations`, `clinical_observations`, fluid balance | 2 | NEWS2 table and graphs, blood sugar view |
-| Lab samples | per patient `_orders` | 2 | Ward list of samples to take and send, results to pass on |
-| Medicines | `app/nurse/mar`, `medication_administration_records` | 3 | Round across patients, coded not-given reasons, re-offer, as-needed, infusion times, co-sign queue using `lib/nurse/capabilities.ts` |
-| Self-doses | `dose_events` (patient app, no stay link) | 3 | Link to the prescription after CSO rules |
-| Beds, incoming, assignments | `app/nurse/beds`, `incoming`, `assignments`, `lib/wards` | 4 | Into the desk; admit from incoming |
-| Rota | `lib/rota` (any cadre), doctor and admin screens | 4 | Nurse Duty rota and My shifts; leave requests for all staff |
-| Handover | `shift_handovers`, free text per ward | 4 | SBAR per patient, tasks carried, received at the bedside |
-| Calendar | none | 4 | One department calendar, who is told, who goes, ask to go |
-| Incidents | none | 4 | Falls and pressure sores log |
+| Area                        | On main today                                                       | Phase | Adds                                                                                                                                 |
+| --------------------------- | ------------------------------------------------------------------- | ----- | ------------------------------------------------------------------------------------------------------------------------------------ |
+| Nurse home                  | `app/nurse/page.tsx`, a page of links                               | 1     | Ward overview for the in-charge: occupancy, today's flow, staffing ratio, vitals on time, doses not given                            |
+| Patient list                | `app/nurse/patients`, `listNursePatientPanel`, sorted by assignment | 1     | Latest NEWS2 (`lib/triage/scoring/news2.ts`), sickest first, vitals due or late from `monitoring_charts.frequency`, table or cards   |
+| Tasks                       | `app/nurse/tasks`, `nurse_tasks` (0281), one-way                    | 1, 2  | To do board over vitals, doses, samples, tasks and the doctor's non-drug orders; untick as a reversal entry (2)                      |
+| Tether                      | `TETHER_OPEN` has `/nurse/incoming` only                            | 1     | `/nurse` open behind the flag; ward nurses land on the desk                                                                          |
+| Care plan                   | none (`care_plan` is the clinician's)                               | 2     | Nursing care plan: problem, related to, as shown by, goal, items ticked, shift evaluation                                            |
+| Observations                | `app/nurse/observations`, `clinical_observations`, fluid balance    | 2     | NEWS2 table and graphs, blood sugar view                                                                                             |
+| Lab samples                 | per patient `_orders`                                               | 2     | Ward list of samples to take and send, results to pass on                                                                            |
+| Medicines                   | `app/nurse/mar`, `medication_administration_records`                | 3     | Round across patients, coded not-given reasons, re-offer, as-needed, infusion times, co-sign queue using `lib/nurse/capabilities.ts` |
+| Self-doses                  | `dose_events` (patient app, no stay link)                           | 3     | Link to the prescription after CSO rules                                                                                             |
+| Beds, incoming, assignments | `app/nurse/beds`, `incoming`, `assignments`, `lib/wards`            | 4     | Into the desk; admit from incoming                                                                                                   |
+| Rota                        | `lib/rota` (any cadre), doctor and admin screens                    | 4     | Nurse Duty rota and My shifts; leave requests for all staff                                                                          |
+| Handover                    | `shift_handovers`, free text per ward                               | 4     | SBAR per patient, tasks carried, received at the bedside                                                                             |
+| Calendar                    | none                                                                | 4     | One department calendar, who is told, who goes, ask to go                                                                            |
+| Incidents                   | none                                                                | 4     | Falls and pressure sores log                                                                                                         |
 
 ## Data (GATED migrations, from 0314, applied by the owner)
 

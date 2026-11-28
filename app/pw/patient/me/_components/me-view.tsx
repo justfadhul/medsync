@@ -1,23 +1,24 @@
 "use client";
 
 import type { HealthCardData } from "@/components/tide/me-health-card";
+import type { Tier } from "@/components/tide/v2-membership";
 import type { ReactNode } from "react";
 import { useState, useTransition } from "react";
 import {
   BellIcon,
   CreditCardIcon,
   EyeIcon,
+  FileTextIcon,
   GlobeIcon,
+  HeartPulseIcon,
+  MapPinIcon,
   MessageSquareIcon,
   MoonIcon,
   RefreshCwIcon,
-  SunIcon,
-  TypeIcon,
-  FileTextIcon,
-  HeartPulseIcon,
-  MapPinIcon,
   SettingsIcon,
   StethoscopeIcon,
+  SunIcon,
+  TypeIcon,
   UserIcon,
   UsersIcon,
 } from "lucide-react";
@@ -25,10 +26,9 @@ import { useTheme } from "next-themes";
 
 import { Segments } from "@/components/tide/controls";
 import { Button, ICON } from "@/components/tide/kit";
-import type { Tier } from "@/components/tide/v2-membership";
 import { MeHealthCard } from "@/components/tide/me-health-card";
-import { TIER_SURFACE } from "@/components/tide/v2-membership";
 import { HelpButton } from "@/components/tide/shell";
+import { TIER_SURFACE } from "@/components/tide/v2-membership";
 import { MEMBERSHIP_COPY } from "@/content/patient-app/membership";
 import { ME_COPY as C } from "@/content/patient/me";
 import { ME_WEB_COPY as M } from "@/content/patient/me-web";
@@ -37,7 +37,15 @@ import { setSmsConsentAction } from "@/lib/patient-web/me-actions";
 import { cn } from "@/lib/utils";
 import { Group, Row, Switch } from "./rows";
 
-export type MeSection = "card" | "health" | "mycare" | "records" | "people" | "places" | "details" | "settings";
+export type MeSection =
+  | "card"
+  | "health"
+  | "mycare"
+  | "records"
+  | "people"
+  | "places"
+  | "details"
+  | "settings";
 
 export interface MeViewProps {
   /** The card with its conditions line already filtered (S18); shown only while the toggle is on. */
@@ -130,93 +138,93 @@ export function MeView(p: MeViewProps) {
 
   const settings = (
     <div className="flex flex-col gap-5">
-        <Group label={C.privacy}>
-          <Row
-            icon={CreditCardIcon}
-            title={C.showOnCard}
-            sub={
-              <>
-                {show ? C.showOnCardOn : C.showOnCardOff}
-                <span className="text-pw-ink-3 block">{C.showOnCardWeb}</span>
-              </>
-            }
-            right={<Switch label={C.showOnCard} checked={show} onChange={setShow} />}
-          />
-          <Row
-            icon={EyeIcon}
-            iconClass="text-pw-accent-text"
-            title={C.whoSees}
-            sub={
-              <dl className="mt-1 flex flex-col gap-1">
-                {[
-                  [C.whoSeesLogLabel, W.whoSeesLog],
-                  [C.whoSeesHistoryLabel, W.whoSeesHistory],
-                  [C.whoSeesRecordsLabel, W.whoSeesRecords],
-                ].map(([k, v]) => (
-                  <div key={k}>
-                    <dt className="text-pw-ink font-semibold">{k}</dt>
-                    <dd>{v}</dd>
-                  </div>
-                ))}
-              </dl>
-            }
-          />
-        </Group>
+      <Group label={C.privacy}>
+        <Row
+          icon={CreditCardIcon}
+          title={C.showOnCard}
+          sub={
+            <>
+              {show ? C.showOnCardOn : C.showOnCardOff}
+              <span className="text-pw-ink-3 block">{C.showOnCardWeb}</span>
+            </>
+          }
+          right={<Switch label={C.showOnCard} checked={show} onChange={setShow} />}
+        />
+        <Row
+          icon={EyeIcon}
+          iconClass="text-pw-accent-text"
+          title={C.whoSees}
+          sub={
+            <dl className="mt-1 flex flex-col gap-1">
+              {[
+                [C.whoSeesLogLabel, W.whoSeesLog],
+                [C.whoSeesHistoryLabel, W.whoSeesHistory],
+                [C.whoSeesRecordsLabel, W.whoSeesRecords],
+              ].map(([k, v]) => (
+                <div key={k}>
+                  <dt className="text-pw-ink font-semibold">{k}</dt>
+                  <dd>{v}</dd>
+                </div>
+              ))}
+            </dl>
+          }
+        />
+      </Group>
 
-        <Group label={C.app}>
+      <Group label={C.app}>
+        <Row
+          icon={BellIcon}
+          iconClass="text-pw-accent-text"
+          title={C.notifications}
+          sub={C.notificationsSub}
+          href="/patient/notifications"
+        />
+        {smsOn !== null ? (
           <Row
-            icon={BellIcon}
-            iconClass="text-pw-accent-text"
-            title={C.notifications}
-            sub={C.notificationsSub}
-            href="/patient/notifications"
-          />
-          {smsOn !== null ? (
-            <Row
-              icon={MessageSquareIcon}
-              title={C.smsTitle(smsOn)}
-              sub={C.smsSub(smsOn)}
-              note={smsError}
-              right={
-                <Switch label={C.sms.label} checked={smsOn} busy={smsBusy} onChange={toggleSms} />
-              }
-            />
-          ) : null}
-          <Row
-            icon={GlobeIcon}
-            iconClass="text-pw-area-readings"
-            title={C.language}
-            sub={p.language}
-            href="/patient/me/profile"
-          />
-          <Row icon={TypeIcon} title={C.textSize} sub={C.textSizeSub} />
-          <Row
-            icon={resolvedTheme === "dark" ? MoonIcon : SunIcon}
-            title={C.theme}
-            sub={C.themeWords[pref]}
+            icon={MessageSquareIcon}
+            title={C.smsTitle(smsOn)}
+            sub={C.smsSub(smsOn)}
+            note={smsError}
             right={
-              <Segments
-                label={C.theme}
-                value={pref}
-                onChange={setTheme}
-                className="max-[420px]:w-full"
-                options={(["system", "light", "dark"] as const).map((v) => ({
-                  value: v,
-                  label: C.themeOptions[v],
-                }))}
-              />
+              <Switch label={C.sms.label} checked={smsOn} busy={smsBusy} onChange={toggleSms} />
             }
           />
-        </Group>
+        ) : null}
+        <Row
+          icon={GlobeIcon}
+          iconClass="text-pw-area-readings"
+          title={C.language}
+          sub={p.language}
+          href="/patient/me/profile"
+        />
+        <Row icon={TypeIcon} title={C.textSize} sub={C.textSizeSub} />
+        <Row
+          icon={resolvedTheme === "dark" ? MoonIcon : SunIcon}
+          title={C.theme}
+          sub={C.themeWords[pref]}
+          right={
+            <Segments
+              label={C.theme}
+              value={pref}
+              onChange={setTheme}
+              className="max-[420px]:w-full"
+              options={(["system", "light", "dark"] as const).map((v) => ({
+                value: v,
+                label: C.themeOptions[v],
+              }))}
+            />
+          }
+        />
+      </Group>
 
-        <form action="/sign-out" method="post" className="flex flex-col">
-          <Button type="submit" tone="outline">
-            {C.signOut}
-          </Button>
-        </form>
+      <form action="/sign-out" method="post" className="flex flex-col">
+        <Button type="submit" tone="outline">
+          {C.signOut}
+        </Button>
+      </form>
       <p className="text-pw-ink-3 text-center text-[13px] font-medium">
-          {p.v2 ? MEMBERSHIP_COPY.appVersion.replace("{version}", p.version) : C.version(p.version)}
-        </p>
+        {p.v2 ? MEMBERSHIP_COPY.appVersion.replace("{version}", p.version) : C.version(p.version)}
+      </p>
     </div>
   );
 
@@ -234,13 +242,16 @@ export function MeView(p: MeViewProps) {
             {p.hero.initials}
           </span>
           <div className="flex min-w-0 flex-1 flex-col gap-1">
-            <h1 id="me-h" className="font-display text-[32px] leading-[38px] font-semibold tracking-[-0.03em] max-[760px]:text-[24px] max-[760px]:leading-[30px]">
+            <h1
+              id="me-h"
+              className="font-display text-[32px] leading-[38px] font-semibold tracking-[-0.03em] max-[760px]:text-[24px] max-[760px]:leading-[30px]"
+            >
               {p.hero.name}
             </h1>
             <p className="text-[14px] opacity-85">{p.hero.line}</p>
           </div>
           {/* A phone has no top bar: Help sits in the header here (S6). */}
-          <span className="flex w-full justify-end min-[761px]:hidden max-[760px]:order-first">
+          <span className="flex w-full justify-end max-[760px]:order-first min-[761px]:hidden">
             <HelpButton />
           </span>
         </div>
@@ -262,7 +273,7 @@ export function MeView(p: MeViewProps) {
       <div className="grid items-start gap-5 min-[761px]:grid-cols-[250px_minmax(0,1fr)] min-[1101px]:grid-cols-[290px_minmax(0,1fr)]">
         <nav
           aria-label={M.sectionsLabel}
-          className="rounded-pw-card bg-pw-surface shadow-pw-card flex flex-col gap-1 p-2 max-[760px]:-mx-4 max-[760px]:flex-row max-[760px]:overflow-x-auto max-[760px]:rounded-none max-[760px]:bg-transparent max-[760px]:px-4 max-[760px]:shadow-none max-[760px]:[scrollbar-width:none]"
+          className="rounded-pw-card bg-pw-surface shadow-pw-card flex flex-col gap-1 p-2 max-[760px]:-mx-4 max-[760px]:[scrollbar-width:none] max-[760px]:flex-row max-[760px]:overflow-x-auto max-[760px]:rounded-none max-[760px]:bg-transparent max-[760px]:px-4 max-[760px]:shadow-none"
         >
           {sections.map((k) => {
             const Icon = ICONS[k];
@@ -277,7 +288,7 @@ export function MeView(p: MeViewProps) {
                   "rounded-pw-row flex min-w-0 items-center gap-3 p-2.5 text-left transition-colors duration-150",
                   "max-[760px]:shrink-0 max-[760px]:rounded-full max-[760px]:px-4 max-[760px]:py-2",
                   on
-                    ? "bg-pw-surface-2 ring-pw-ink ring-2 ring-inset max-[760px]:bg-pw-ink max-[760px]:text-pw-surface max-[760px]:ring-0"
+                    ? "bg-pw-surface-2 ring-pw-ink max-[760px]:bg-pw-ink max-[760px]:text-pw-surface ring-2 ring-inset max-[760px]:ring-0"
                     : "hover:bg-pw-surface-2 max-[760px]:bg-pw-surface max-[760px]:shadow-pw-card",
                 )}
               >
@@ -285,9 +296,13 @@ export function MeView(p: MeViewProps) {
                   <Icon className="size-[18px]" {...ICON} />
                 </span>
                 <span className="flex min-w-0 flex-col">
-                  <span className="text-[14px] font-semibold max-[760px]:whitespace-nowrap">{M.sections[k].title}</span>
+                  <span className="text-[14px] font-semibold max-[760px]:whitespace-nowrap">
+                    {M.sections[k].title}
+                  </span>
                   {p.subs[k] ? (
-                    <span className="text-pw-ink-3 truncate text-[12px] max-[760px]:hidden">{p.subs[k]}</span>
+                    <span className="text-pw-ink-3 truncate text-[12px] max-[760px]:hidden">
+                      {p.subs[k]}
+                    </span>
                   ) : null}
                 </span>
               </button>

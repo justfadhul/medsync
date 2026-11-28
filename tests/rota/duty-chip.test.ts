@@ -21,6 +21,18 @@ describe("on-duty chip and ward cover", () => {
     expect(html).toContain('href="/doctor/rota"');
   });
 
+  it("draws without a link where there is no rota page (the lab on Tether, ADR 0545)", () => {
+    const html = renderToStaticMarkup(
+      createElement(DutyChip, {
+        duties: [{ postName: "Bench", until: new Date("2026-11-25T14:00:00Z"), state: "in_post" }],
+        href: null,
+      }),
+    );
+    expect(html.replace(/<[^>]+>/g, "")).toBe("On call: Bench until 17:00");
+    expect(html).not.toContain("href=");
+    expect(html).toContain('title="Rostered, not confirmed present."');
+  });
+
   it("no duty, no chip", () => {
     expect(renderToStaticMarkup(createElement(DutyChip, { duties: [] }))).toBe("");
   });

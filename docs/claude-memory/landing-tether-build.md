@@ -11,6 +11,7 @@ metadata:
 13 Nov 2026: the Tether landing page (`/` via proxy when `LANDING_TETHER=1`) is built on `feat/landing-tether` in worktree `.claude/worktrees/landing-tether-09c47a`. Commits 3671685b (Steps 3–6), cdcd680d (fixes), 3a2c5db9 (reports). Pushed to origin 13 Nov (no PR); not deployed.
 
 The result is in `docs/landing/REPORT.md`:
+
 - LCP 2.41 s, INP 80 ms;
 - axe 0 at every width;
 - 24 of 24 scenarios pass.
@@ -18,6 +19,7 @@ The result is in `docs/landing/REPORT.md`:
 **Why:** the owner said "go through all gates", so the STOPs were recorded, not held.
 
 **How to apply:** the open items are the owner's:
+
 - apply 0293 (`clinic_leads`);
 - sign the parity file `tests/parity/landing/renames.json` (4 OPEN questions, including the Book a visit target);
 - decide two hardening design calls (the cascade-4 blend, red text on the emergency question);
@@ -26,6 +28,7 @@ The result is in `docs/landing/REPORT.md`:
 The reception-desk session may merge this branch to share `ExampleTicket`, which is driven by props.
 
 LCP lessons:
+
 - text under a CSS `filter` is measured as the whole box;
 - an opacity-0 entrance at first paint is not a candidate;
 - a positioned span splits the text record.

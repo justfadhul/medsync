@@ -25,10 +25,9 @@ Builds on [ADR 0191](0191-ward-layout-document-and-versioning.md) and the ward b
    - changing a ward to or from an EU while patients are in its beds (409, "Move the patients out before changing whether this
      ward is an emergency unit.");
    - turning a ward into an EU while unarchived EUs are attached to it (409, "Detach its emergency units before making it one.").
-   When it passes, it says what to write: the parent for an EU, `null` for any other type (so a ward that stops being an EU
-   loses its parent), and, when the form sends no parent, the stored value is left alone.
-4. **The database backs the rule for the race (R55).** `hospital_wards_parent_guard` (BEFORE INSERT OR UPDATE, re-runnable in
-   0310) raises `check_violation` with HINT `ward_parent_not_ordinary` or `ward_has_units` for the same cases, and locks the
+     When it passes, it says what to write: the parent for an EU, `null` for any other type (so a ward that stops being an EU
+     loses its parent), and, when the form sends no parent, the stored value is left alone.
+4. **The database backs the rule for the race (R55).** `hospital_wards_parent_guard` (BEFORE INSERT OR UPDATE, re-runnable in 0310) raises `check_violation` with HINT `ward_parent_not_ordinary` or `ward_has_units` for the same cases, and locks the
    parent `FOR SHARE` (or the ward's own row `FOR UPDATE` when it becomes an EU), so two concurrent saves cannot leave an EU
    under an EU. `ops-structure.ts` turns the two hints into the app's own words (409); a raw database message does not reach
    the admin. 0310 had not shipped on this branch, so the guard is in 0310 itself.
@@ -57,7 +56,7 @@ Builds on [ADR 0191](0191-ward-layout-document-and-versioning.md) and the ward b
 - **Deploy order:** apply migration 0310 (`cd <worktree> && npm run db:migrate`, run in the folder that holds it), deploy
   `ha-services-hub`, then set `EU_OBSERVATION`. The function names the new column, so deploying it first fails on a database
   without 0310.
-- The server refuses an admission *into* an EU whatever the flag (0312 and 0313, `AD409`), and the close dialog never offers
+- The server refuses an admission _into_ an EU whatever the flag (0312 and 0313, `AD409`), and the close dialog never offers
   one (R71). Applying 0312 ends admissions into any existing ward of type Emergency observation.
 - Archiving a ward does not clear the EUs attached to it: the ward form then shows "Not attached" for the stale id and a save
   is refused until the admin picks another or none. (Deferred.)

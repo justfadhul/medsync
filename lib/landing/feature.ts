@@ -72,16 +72,52 @@ const TETHER_OPEN = [
 ];
 
 /**
- * True when the Tether domain does not serve `pathname`. Files (`/sw.js`, `/robots.txt`) always serve. ADR 0547: with
- * `NURSE_WARD_V2` set for any hospital, the nurse ward desk (`/nurse` and its pages) opens too; the page decides who sees it.
+ * ADR 0545: `TETHER_LAB` and `TETHER_PHARMACY` ("1" or a comma list of hospital ids) open the lab and the pharmacy
+ * on the Tether domain. Any value opens the address; the workspace's layout then sends a hospital the flag does
+ * not name to MedSync (`tetherWorkspaceLiveFor`, `tetherDesk`). ADR 0547: `NURSE_WARD_V2` opens the nurse ward desk the
+ * same way; `/nurse` itself decides who sees it.
  */
+const TETHER_WORKSPACES = {
+  "/lab": () => process.env.TETHER_LAB,
+  "/pharmacy": () => process.env.TETHER_PHARMACY,
+  "/nurse": () => process.env.NURSE_WARD_V2,
+} as const;
+export type TetherWorkspace = keyof typeof TETHER_WORKSPACES;
+
+export function tetherWorkspaceLiveFor(
+  workspace: TetherWorkspace,
+  hospitalId: string,
+  env: string | undefined = TETHER_WORKSPACES[workspace](),
+): boolean {
+  const value = env?.trim();
+  if (!value) return false;
+  return value === "1" || value.split(",").some((id) => id.trim() === hospitalId);
+}
+
+/** The workspaces whose Tether flag holds any value. */
+export function tetherWorkspacesOpen(): TetherWorkspace[] {
+  return (Object.keys(TETHER_WORKSPACES) as TetherWorkspace[]).filter(
+    (p) => !!TETHER_WORKSPACES[p]()?.trim(),
+  );
+}
+
+/** True when the Tether domain does not serve `pathname`. Files (`/sw.js`, `/robots.txt`) always serve. */
 export function tetherClosed(
   pathname: string,
-  nurseWard: string | undefined = process.env.NURSE_WARD_V2,
+  open: readonly string[] = [...TETHER_OPEN, ...tetherWorkspacesOpen()],
 ): boolean {
   if (pathname === "/" || /\.[a-z0-9]+$/i.test(pathname)) return false;
-  if (nurseWard?.trim() && (pathname === "/nurse" || pathname.startsWith("/nurse/"))) return false;
-  return !TETHER_OPEN.some((p) => pathname === p || pathname.startsWith(`${p}/`));
+  return !open.some((p) => pathname === p || pathname.startsWith(`${p}/`));
+}
+
+/** The same path and query on MedSync's domain (`MEDSYNC_URL`, ADR 0499), or null when it is not set. */
+export function medsyncAddress(
+  pathAndSearch: string,
+  env: string | undefined = process.env.MEDSYNC_URL,
+): string | null {
+  const medsync = (env ?? "").trim().replace(/\/+$/, "");
+  if (!medsync) return null;
+  return `${/^https?:\/\//.test(medsync) ? medsync : `https://${medsync}`}${pathAndSearch}`;
 }
 
 /**

@@ -1,6 +1,6 @@
 ---
 name: pharmacy-rework-kit-build
-description: "3 Nov 2026 kit \"pharmacy-rework 5\" (Downloads) — Roster + Set-up tabs done (both pushed, no PR); Main store next"
+description: '3 Nov 2026 kit "pharmacy-rework 5" (Downloads) — Roster + Set-up tabs done (both pushed, no PR); Main store next'
 metadata:
   node_type: memory
   type: project

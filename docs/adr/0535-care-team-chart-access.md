@@ -21,6 +21,7 @@ Makes real the `care_team` access basis that [ADR 0131](0131-rls-identity-propag
    Each also needs a live clinical affiliation at the hospital. A cancel ends access at once. Earlier-round recipients and decliners lose chart access but **still read the request**
    (`private.care_request_visible`): D3 says a decline hands the patient back, and acting is limited to the current round.
    A decliner who must reopen the chart has to be routed again.
+
 3. **Request visibility follows the current department (R26).** After a redirect, a clinical member of the new
    department reads the request and unrouted members of the old one stop. Old recipients keep reading through the
    event arm. The current department is the last `redirected` event's department, else the target. The department arm

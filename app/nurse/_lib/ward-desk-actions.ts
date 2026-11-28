@@ -123,32 +123,28 @@ export async function cancelCalendarEvent(f: FormData) {
         ),
       );
     if (!e || e.state !== "active") fail("That activity is not on the calendar.");
-    await tx
-      .insert(wardCalendarEvents)
-      .values({
-        ...e!,
-        id: undefined,
-        state: "cancelled",
-        replacesId: e!.id,
-        createdByUserId: scope.userId,
-        createdAt: new Date(),
-        clientKey: null,
-      });
+    await tx.insert(wardCalendarEvents).values({
+      ...e!,
+      id: undefined,
+      state: "cancelled",
+      replacesId: e!.id,
+      createdByUserId: scope.userId,
+      createdAt: new Date(),
+      clientKey: null,
+    });
     return `Cancelled: ${e!.title}.`;
   });
 }
 
 export async function askToGo(f: FormData) {
   await run("/nurse/calendar", async (scope, tx) => {
-    await tx
-      .insert(wardCalendarAttendance)
-      .values({
-        hospitalId: scope.hospitalId,
-        eventId: str(f, "eventId"),
-        userId: scope.userId,
-        kind: "asked",
-        recordedByUserId: scope.userId,
-      });
+    await tx.insert(wardCalendarAttendance).values({
+      hospitalId: scope.hospitalId,
+      eventId: str(f, "eventId"),
+      userId: scope.userId,
+      kind: "asked",
+      recordedByUserId: scope.userId,
+    });
     return "Asked. The in-charge decides, so the ward stays covered.";
   });
 }
@@ -158,15 +154,13 @@ export async function decideAttendance(f: FormData) {
     if (!scope.isInCharge) fail("Only the in-charge decides who goes.");
     const kind = str(f, "kind");
     if (kind !== "going" && kind !== "declined") fail("Choose going or not.");
-    await tx
-      .insert(wardCalendarAttendance)
-      .values({
-        hospitalId: scope.hospitalId,
-        eventId: str(f, "eventId"),
-        userId: str(f, "userId"),
-        kind,
-        recordedByUserId: scope.userId,
-      });
+    await tx.insert(wardCalendarAttendance).values({
+      hospitalId: scope.hospitalId,
+      eventId: str(f, "eventId"),
+      userId: str(f, "userId"),
+      kind,
+      recordedByUserId: scope.userId,
+    });
     return kind === "going" ? "On the list the department sees." : "Marked as not going.";
   });
 }
@@ -181,18 +175,16 @@ export async function requestLeave(f: FormData) {
     const to = str(f, "to");
     if (!/^\d{4}-\d{2}-\d{2}$/.test(from) || !/^\d{4}-\d{2}-\d{2}$/.test(to) || to < from)
       fail("Choose the first and last day.");
-    await tx
-      .insert(staffLeaveRequests)
-      .values({
-        hospitalId: scope.hospitalId,
-        departmentId: scope.departmentId,
-        userId: scope.userId,
-        kind,
-        startsOn: from,
-        endsOn: to,
-        note: str(f, "note").slice(0, 300) || null,
-        recordedByUserId: scope.userId,
-      });
+    await tx.insert(staffLeaveRequests).values({
+      hospitalId: scope.hospitalId,
+      departmentId: scope.departmentId,
+      userId: scope.userId,
+      kind,
+      startsOn: from,
+      endsOn: to,
+      note: str(f, "note").slice(0, 300) || null,
+      recordedByUserId: scope.userId,
+    });
     return "Leave asked. The in-charge sees it.";
   });
 }
@@ -222,17 +214,15 @@ export async function decideLeave(f: FormData) {
           : "Only the in-charge of the department decides, and not on their own leave.",
       );
     if (!["approved", "declined", "withdrawn"].includes(state)) fail("Choose a decision.");
-    await tx
-      .insert(staffLeaveRequests)
-      .values({
-        ...r!,
-        id: undefined,
-        state,
-        replacesId: r!.id,
-        recordedByUserId: scope.userId,
-        recordedAt: new Date(),
-        clientKey: null,
-      });
+    await tx.insert(staffLeaveRequests).values({
+      ...r!,
+      id: undefined,
+      state,
+      replacesId: r!.id,
+      recordedByUserId: scope.userId,
+      recordedAt: new Date(),
+      clientKey: null,
+    });
     return state === "approved"
       ? "Leave approved."
       : state === "declined"
@@ -253,17 +243,15 @@ export async function reportIncident(f: FormData) {
     const at = new Date(`${str(f, "date")}T${str(f, "time") || "00:00"}:00+03:00`);
     if (Number.isNaN(at.getTime()) || at.getTime() > Date.now() + 300_000)
       fail("Choose when it happened.");
-    await tx
-      .insert(safetyIncidents)
-      .values({
-        hospitalId: scope.hospitalId,
-        wardId: await myWard(scope, tx),
-        kind,
-        harm,
-        occurredAt: at,
-        description,
-        reportedByUserId: scope.userId,
-      });
+    await tx.insert(safetyIncidents).values({
+      hospitalId: scope.hospitalId,
+      wardId: await myWard(scope, tx),
+      kind,
+      harm,
+      occurredAt: at,
+      description,
+      reportedByUserId: scope.userId,
+    });
     return "Reported. The in-charge sees it in the month's figures.";
   });
 }
@@ -316,14 +304,12 @@ export async function receiveSbar(f: FormData) {
     if (!n) fail("That handover is not here.");
     if (n!.writtenByUserId === scope.userId)
       fail("The next nurse receives the patient, not the one handing over.");
-    await tx
-      .insert(handoverReceipts)
-      .values({
-        hospitalId: scope.hospitalId,
-        noteId: n!.id,
-        patientUserId: n!.patientUserId,
-        receivedByUserId: scope.userId,
-      });
+    await tx.insert(handoverReceipts).values({
+      hospitalId: scope.hospitalId,
+      noteId: n!.id,
+      patientUserId: n!.patientUserId,
+      receivedByUserId: scope.userId,
+    });
     return "Received at the bedside.";
   });
 }

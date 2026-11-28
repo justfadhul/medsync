@@ -16,7 +16,7 @@ previews then shares/holds the patient copy, D4 scope stops at arrival (ward rou
 - Migration **0091** (GATED, unapplied): admissions, bed_assignments arrival cols, 4 SQL functions, patient_visit_summaries (column `copy_ciphertext`, renamed so tests/clerking/si-patient-facing's `contentCiphertext` guard holds), self_medications.source_prescription_id. Next migration 0092, next ADR 0204.
 - Flags: `ENCOUNTER_CLOSE_V2`, `PATIENT_VISIT_SUMMARY` (lib/emr/feature.ts). Admissions only where `WARD_BUILDER` is on (else ward on the visit, no admission row) — owner-visible rule in ADR 0198.
 - Edge Functions changed: ha-complete-encounter, ha-services-hub (ops-wards), ha-book-on-behalf (origin clinician).
-- Fixture screens `/styleguide/encounter-closure/[screen]` + screenshots in docs/emr/closure/screenshots (CDP harness ~/Desktop/schedule-reskin-harness/cdp.mjs; dev with dummy NEXT_PUBLIC_SUPABASE_* values, never the prod .env.local).
+- Fixture screens `/styleguide/encounter-closure/[screen]` + screenshots in docs/emr/closure/screenshots (CDP harness ~/Desktop/schedule-reskin-harness/cdp.mjs; dev with dummy NEXT*PUBLIC_SUPABASE*\* values, never the prod .env.local).
 - Known gaps: bed picker not live-subscribed (server refuses a taken bed in words); "Admitted · ward" label reads disposition_detail (stale "waiting" after a bed is given); board shows "Other" without the encrypted note; no patient notification (dispatcher is booking-shaped); household proxies; Plan reconciliation stops not in "Medicines to stop".
 - Pre-existing bug spotted: `startEncounter` reads `r.data.encounter_id` but edge responses are `{ok,data}` (should be `r.data.data`).
 

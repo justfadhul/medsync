@@ -77,4 +77,3 @@ npx tsx scripts/prescribing/gen-formulary.ts         # regenerates lib/prescribi
 - The cloud environment sets `SKIP_ENV_VALIDATION=1` and holds **no production keys**. Work that needs a real database (migrations, production counts) stays with the owner.
 - `.nvmrc` pins Node 24; the cloud image defaults to Node 22. If a check behaves differently, say so rather than working around it.
 - Pushing a branch from the cloud is fine; pushes to `main` and deploys are the owner's.
-

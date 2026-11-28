@@ -22,9 +22,11 @@ import {
 import { RestrictedMark } from "@/components/emr/chips";
 import { EmergencyInline } from "@/components/lab/emergency-inline";
 import { LabLive } from "@/components/lab/lab-live";
+import { TetherWorkspaceFrame } from "@/components/tether/workspace-frame";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { fill, LABWS2 } from "@/content/lab-workspace-v2";
+import { TETHER_PL } from "@/content/tether-pharmacy-lab";
 import { PLACE_HREF, PLACE_KEY, placeOf } from "@/lib/lab/places";
 import { classify, goEntries, scannedOpens } from "@/lib/lab/search";
 import { labSearchAction } from "@/lib/lab/search-actions";
@@ -90,9 +92,15 @@ const tabWord = (t: ShellTab) =>
  */
 export function LabShellV2({
   payload,
+  desk = false,
+  duty = null,
   children,
 }: {
   payload: LabShellPayload;
+  /** On Tether: draw in the desk frame (ADR 0545). */
+  desk?: boolean;
+  /** The read-only rota chip, in the desk frame only. */
+  duty?: ReactNode;
   children: ReactNode;
 }) {
   const pathname = usePathname();
@@ -140,6 +148,105 @@ export function LabShellV2({
     return () => window.removeEventListener("keydown", onKey);
   }, [payload.places, router]);
 
+  const heading = (
+    <div className="flex min-w-[12rem] flex-col gap-0.5">
+      <span className="text-overline text-tide-ink-3 inline-flex items-center gap-1.5 uppercase">
+        <span aria-hidden className="bg-tide-area-lab size-[7px] rounded-full" />
+        {fill(S.overline, { hospital: payload.hospitalName })}
+      </span>
+      <h1 className="text-foreground text-[24px] leading-[28px] font-medium tracking-[-0.02em]">
+        {title}
+      </h1>
+    </div>
+  );
+  const tools = (
+    <>
+      <button
+        type="button"
+        onClick={() => setSearchOpen(true)}
+        className="bg-card text-tide-ink-3 shadow-tide-card focus-visible:shadow-focus flex h-10 max-w-[560px] min-w-[14rem] flex-[1_1_320px] items-center gap-2.5 rounded-full pr-2 pl-4 text-left outline-none"
+        aria-keyshortcuts="Control+K Meta+K"
+      >
+        <SearchIcon aria-hidden className="size-4 shrink-0" />
+        <span className="text-body-s min-w-0 flex-1 truncate">{S.searchPlaceholder}</span>
+        <kbd className="bg-background text-kbd text-ink-600 rounded-md px-1.5 py-1 font-mono shadow-[inset_0_0_0_1px_var(--color-ink-300)]">
+          {S.searchKey}
+        </kbd>
+      </button>
+      <span className="flex-1" />
+      <span className="text-caption text-ink-600 inline-flex items-center gap-1.5">
+        <LabLive
+          hospitalId={payload.hospitalId}
+          variant="topbar"
+          labels={{ on: S.live, paused: S.livePaused }}
+        />
+      </span>
+      <Link
+        href="/lab/needs-you"
+        aria-label={
+          payload.needsYou > 0 ? fill(S.needsYouCount, { n: payload.needsYou }) : S.needsYou
+        }
+        className={cn(
+          "focus-visible:shadow-focus inline-flex h-9 items-center gap-2 rounded-full pr-3.5 pl-3 text-[13.5px] font-semibold whitespace-nowrap outline-none",
+          payload.needsYou > 0
+            ? "bg-status-caution-bg text-amber-800 shadow-[inset_0_0_0_1px_var(--tide-caution-edge)]"
+            : "bg-card text-ink-700 shadow-tide-card",
+        )}
+      >
+        <InboxIcon aria-hidden className="size-4" />
+        {S.needsYou}
+        <span className="tabular-nums">{payload.needsYou}</span>
+      </Link>
+    </>
+  );
+  const palette = (
+    <SearchPalette
+      key={searchOpen ? "open" : "shut"}
+      open={searchOpen}
+      onOpenChange={setSearchOpen}
+      payload={payload}
+    />
+  );
+
+  if (desk)
+    return (
+      <TetherWorkspaceFrame
+        label={S.placesLabel}
+        hospitalName={payload.hospitalName}
+        userName={payload.userName}
+        place={TETHER_PL.lab.role}
+        nav={payload.places.map((p) => {
+          const n = payload.counts[p];
+          const countWords = n && COUNT_WORDS[p] ? fill(COUNT_WORDS[p]!, { n }) : null;
+          return {
+            key: p,
+            href: PLACE_HREF[p],
+            label: PLACE_WORD[p],
+            icon: ICON[p],
+            on: here === p,
+            count: n,
+            ariaLabel: countWords ? `${PLACE_WORD[p]}, ${countWords}` : undefined,
+          };
+        })}
+        top={
+          <>
+            {tools}
+            {duty}
+          </>
+        }
+        keys={TETHER_PL.keys.lab}
+        after={palette}
+      >
+        <div data-lab-tide className="flex min-w-0 flex-1 flex-col gap-4 font-sans">
+          <header className="flex flex-wrap items-center gap-x-4 gap-y-2 print:hidden">
+            {heading}
+          </header>
+          {payload.showWhere ? <WhereNote /> : null}
+          <main className="min-w-0 flex-1">{children}</main>
+        </div>
+      </TetherWorkspaceFrame>
+    );
+
   return (
     <div
       data-lab-tide
@@ -148,62 +255,14 @@ export function LabShellV2({
       <Rail payload={payload} here={here} />
       <div className="flex min-w-0 flex-1 flex-col gap-4">
         <header className="flex flex-wrap items-center gap-x-4 gap-y-2 print:hidden">
-          <div className="flex min-w-[12rem] flex-col gap-0.5">
-            <span className="text-overline text-tide-ink-3 inline-flex items-center gap-1.5 uppercase">
-              <span aria-hidden className="bg-tide-area-lab size-[7px] rounded-full" />
-              {fill(S.overline, { hospital: payload.hospitalName })}
-            </span>
-            <h1 className="text-foreground text-[24px] leading-[28px] font-medium tracking-[-0.02em]">
-              {title}
-            </h1>
-          </div>
-          <button
-            type="button"
-            onClick={() => setSearchOpen(true)}
-            className="bg-card text-tide-ink-3 shadow-tide-card focus-visible:shadow-focus flex h-10 max-w-[560px] min-w-[14rem] flex-[1_1_320px] items-center gap-2.5 rounded-full pr-2 pl-4 text-left outline-none"
-            aria-keyshortcuts="Control+K Meta+K"
-          >
-            <SearchIcon aria-hidden className="size-4 shrink-0" />
-            <span className="text-body-s min-w-0 flex-1 truncate">{S.searchPlaceholder}</span>
-            <kbd className="bg-background text-kbd text-ink-600 rounded-md px-1.5 py-1 font-mono shadow-[inset_0_0_0_1px_var(--color-ink-300)]">
-              {S.searchKey}
-            </kbd>
-          </button>
-          <span className="flex-1" />
-          <span className="text-caption text-ink-600 inline-flex items-center gap-1.5">
-            <LabLive
-              hospitalId={payload.hospitalId}
-              variant="topbar"
-              labels={{ on: S.live, paused: S.livePaused }}
-            />
-          </span>
-          <Link
-            href="/lab/needs-you"
-            aria-label={
-              payload.needsYou > 0 ? fill(S.needsYouCount, { n: payload.needsYou }) : S.needsYou
-            }
-            className={cn(
-              "focus-visible:shadow-focus inline-flex h-9 items-center gap-2 rounded-full pr-3.5 pl-3 text-[13.5px] font-semibold whitespace-nowrap outline-none",
-              payload.needsYou > 0
-                ? "bg-status-caution-bg text-amber-800 shadow-[inset_0_0_0_1px_var(--tide-caution-edge)]"
-                : "bg-card text-ink-700 shadow-tide-card",
-            )}
-          >
-            <InboxIcon aria-hidden className="size-4" />
-            {S.needsYou}
-            <span className="tabular-nums">{payload.needsYou}</span>
-          </Link>
+          {heading}
+          {tools}
           <EmergencyInline label={S.emergency} />
         </header>
         {payload.showWhere ? <WhereNote /> : null}
         <main className="min-w-0 flex-1">{children}</main>
       </div>
-      <SearchPalette
-        key={searchOpen ? "open" : "shut"}
-        open={searchOpen}
-        onOpenChange={setSearchOpen}
-        payload={payload}
-      />
+      {palette}
     </div>
   );
 }

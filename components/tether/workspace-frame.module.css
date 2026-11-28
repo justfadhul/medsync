@@ -1,0 +1,21 @@
+/* The lab and pharmacy in the Tether desk (ADR 0545): the desk body clips, so the workspace's page scrolls inside it. */
+.page {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px;
+  font-size: 14px;
+  line-height: 1.45;
+}
+.tools {
+  display: flex;
+  flex: 1;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}

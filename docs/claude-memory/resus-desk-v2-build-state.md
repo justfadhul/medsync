@@ -17,6 +17,7 @@ UI contract: `docs/resus-v2/UI-BUILD-SPEC.md`; catalogs `docs/clinical/resus-{al
 isolation; HEAD of feat/booking-app did not build (globals.css brace) — fixed on the v2 branch (`43a754c`).
 
 **How to apply:**
+
 - Migration `0068_resus_desk_v2.sql` is NOT applied (owner action, after 0067). Web must not ship before it (v1
   reads `select *` from resus_episodes). v2 is behind `RESUS_DESK_V2=1` (lib/resus/feature.ts); .env.example untouched.
 - Local harness lives OUTSIDE the repo: `/Users/airm1/Desktop/resus-v2-harness` (cdp.mjs Chrome driver; pg/ PGlite

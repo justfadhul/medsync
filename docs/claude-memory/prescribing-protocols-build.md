@@ -13,6 +13,7 @@ The owner's prescribing-and-protocols kit (`docs/prescribing/kit/`, from ~/Downl
 **Why:** the owner asked to connect pharmacy to encounters and every prescribing place, building from the kit, with "go through all gates". The prototype is [[prescribing-tool-prototype]].
 
 **How to apply:**
+
 - Read `docs/prescribing/HANDOFF.md` first; its owner checklist is the live state. `FIT-MAP.md` gives each feature's single home.
 - Migrations 0279–0286 are GATED and unapplied: `cd ~/Desktop/medsync-rx && npm run db:migrate`.
 - Flags: `PRESCRIBE_V2`; `protocolsLiveFor` and `nurseTasksLiveFor` stay off in production until all their copy is signed.

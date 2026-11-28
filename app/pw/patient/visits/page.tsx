@@ -93,7 +93,10 @@ export default async function VisitsPage({
         <div className="flex min-w-0 flex-col gap-6 max-[1100px]:contents">
           <section
             aria-label={V.yourVisit}
-            className={cn(CARD, "order-3 gap-5 p-6 max-[760px]:p-4 min-[761px]:max-[1100px]:col-span-2")}
+            className={cn(
+              CARD,
+              "order-3 gap-5 p-6 max-[760px]:p-4 min-[761px]:max-[1100px]:col-span-2",
+            )}
           >
             {selected ? (
               <VisitDetail visit={selected} userId={scope.userId} />
@@ -107,7 +110,6 @@ export default async function VisitsPage({
               </div>
             )}
           </section>
-
         </div>
 
         <aside className="flex min-w-0 flex-col gap-4 max-[1100px]:contents">
@@ -139,7 +141,10 @@ export default async function VisitsPage({
             </div>
           ) : null}
 
-          <section aria-labelledby="up-h" className={cn(CARD, "order-2 gap-1 p-3 min-[761px]:max-[1100px]:self-stretch")}>
+          <section
+            aria-labelledby="up-h"
+            className={cn(CARD, "order-2 gap-1 p-3 min-[761px]:max-[1100px]:self-stretch")}
+          >
             <div className="flex items-center justify-between px-1 pb-1">
               <h2 id="up-h" className="text-[17px] font-semibold">
                 {V.comingUp}
@@ -147,7 +152,9 @@ export default async function VisitsPage({
               <span className="text-pw-ink-3 text-[13px]">{upcoming.length}</span>
             </div>
             {upcoming.length ? (
-              upcoming.map((v) => <Row key={v.id} v={v} href={href(v.id)} on={v.id === selected?.id} />)
+              upcoming.map((v) => (
+                <Row key={v.id} v={v} href={href(v.id)} on={v.id === selected?.id} />
+              ))
             ) : (
               <p className="text-pw-ink-3 px-1 text-[14px]">{C.nothingPlanned}</p>
             )}
@@ -171,7 +178,7 @@ export default async function VisitsPage({
                 {V.past}
               </h2>
               {/* Six visits in view (rows are 66 px, gaps 10); the rest scroll inside. The padding keeps the shadows. */}
-              <div className="-m-1 grid max-h-[454px] gap-2.5 overflow-y-auto overscroll-contain p-1 [scrollbar-width:thin] min-[761px]:max-[1100px]:max-h-[226px] min-[761px]:max-[1100px]:grid-cols-2">
+              <div className="-m-1 grid max-h-[454px] [scrollbar-width:thin] gap-2.5 overflow-y-auto overscroll-contain p-1 min-[761px]:max-[1100px]:max-h-[226px] min-[761px]:max-[1100px]:grid-cols-2">
                 {past.map((v) => (
                   <Row key={v.id} v={v} href={href(v.id)} on={v.id === selected?.id} past />
                 ))}
@@ -205,7 +212,12 @@ function Row(p: { v: VisitRow; href: string; on: boolean; past?: boolean }) {
         )}
       >
         <b className="text-[19px]">{dayNumberOf(key)}</b>
-        <span className={cn("text-[10px] font-bold uppercase", p.past ? "text-pw-ink-3" : "text-pw-ticket-day")}>
+        <span
+          className={cn(
+            "text-[10px] font-bold uppercase",
+            p.past ? "text-pw-ink-3" : "text-pw-ticket-day",
+          )}
+        >
           {weekdayOf(key)}
         </span>
       </span>
@@ -232,15 +244,28 @@ function Calendar(p: {
   const mine = new Map(p.visits.map((v) => [dayKeyOf(v.startsAtIso), v.id]));
   const open = new Set(p.openDays);
   return (
-    <section aria-labelledby="cal-h" className={cn(CARD, "order-2 gap-2.5 p-4 max-[760px]:order-4")}>
+    <section
+      aria-labelledby="cal-h"
+      className={cn(CARD, "order-2 gap-2.5 p-4 max-[760px]:order-4")}
+    >
       <div className="flex items-center justify-between">
-        <Link href={p.href(null, shiftMonth(p.month, -1))} scroll={false} aria-label={V.prevMonth} className="grid size-9 place-items-center rounded-full hover:bg-pw-surface-2">
+        <Link
+          href={p.href(null, shiftMonth(p.month, -1))}
+          scroll={false}
+          aria-label={V.prevMonth}
+          className="hover:bg-pw-surface-2 grid size-9 place-items-center rounded-full"
+        >
           <ChevronLeftIcon className="size-[18px]" {...ICON} />
         </Link>
         <h2 id="cal-h" className="text-[17px] font-semibold">
           {monthTitleOf(p.month)}
         </h2>
-        <Link href={p.href(null, shiftMonth(p.month, 1))} scroll={false} aria-label={V.nextMonth} className="grid size-9 place-items-center rounded-full hover:bg-pw-surface-2">
+        <Link
+          href={p.href(null, shiftMonth(p.month, 1))}
+          scroll={false}
+          aria-label={V.nextMonth}
+          className="hover:bg-pw-surface-2 grid size-9 place-items-center rounded-full"
+        >
           <ChevronRightIcon className="size-[18px]" {...ICON} />
         </Link>
       </div>

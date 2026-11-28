@@ -11,6 +11,7 @@ metadata:
 Owner chose to launch booking first, sold to private clinics (business model + launch plan artifacts: https://claude.ai/artifact/3XoLq9yMowfN83ZJwC7WmA, https://claude.ai/artifact/65W5peeezjoavdt1jpEHMW). Owner asked for Tide design on new UI.
 
 Branches (each its own worktree, node_modules/.env.local symlinked to the main checkout), all committed, NOT pushed:
+
 - `feat/legal-pages` (~/Desktop/medsync-launch-web, off feat/patient-web-tide): /privacy + /terms in Tide, Draft + noindex until `lib/legal.ts` flags flip; lawyer points in docs/legal/REVIEW.md. c5deb874.
 - `fix/arrival-routing-review` (~/Desktop/medsync-launch-fix, off main): 8 fixes from a fresh ADR 0101 review (the Sept review's findings were never saved). f20bc099. Edge Functions need redeploy by owner.
 - `feat/phone-tide-legacy` (~/Desktop/medsync-launch-phone, off feat/mobile-tide-v1): household/today/ticket/consent/emergency sheet in Tide. d3a07f13.

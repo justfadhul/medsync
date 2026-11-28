@@ -1,12 +1,19 @@
-import type { Section } from "@patient-core/me-health";
 import type { Loaded, loadOnFile, loadRecords } from "@/lib/patient-web/me-data";
-import type { Place } from "@patient-core/me-places";
 import type { ReportedItem } from "@/lib/patient/reported-history";
+import type { Section } from "@patient-core/me-health";
+import type { Place } from "@patient-core/me-places";
 import Link from "next/link";
 import { initials, SECTION_WORDS, splitHistory } from "@patient-core/me-health";
 import { OFF_WORDS } from "@patient-core/me-places";
 import { HOUSEHOLD_RELATIONSHIPS } from "@patient-core/me-profile";
-import { ChevronRightIcon, HeartPulseIcon, LockIcon, PillIcon, TriangleAlertIcon, UsersIcon } from "lucide-react";
+import {
+  ChevronRightIcon,
+  HeartPulseIcon,
+  LockIcon,
+  PillIcon,
+  TriangleAlertIcon,
+  UsersIcon,
+} from "lucide-react";
 
 import { Avatar, EmptyState, ICON, Note, Pill, TextLink } from "@/components/tide/kit";
 import { ME_COPY as C } from "@/content/patient/me";
@@ -14,9 +21,9 @@ import { ME_WEB_COPY as M } from "@/content/patient/me-web";
 import { PATIENT_WEB_COPY as W } from "@/content/patient/web";
 import { formatFullDate } from "@/lib/patient/booking-format";
 import { RetryButton } from "../../_components/home-bits";
-import { DetailsForm } from "../profile/_components/details-form";
 import { HouseholdForm } from "../household/_components/household-form";
 import { PlacesView } from "../places/_components/places-view";
+import { DetailsForm } from "../profile/_components/details-form";
 import { HistoryEditorView } from "./history-editor";
 
 /*
@@ -40,20 +47,39 @@ export function HealthSection(p: {
     p.history.status === "ready"
       ? (p.history.value.find((i) => i.kind === "no_known_allergies")?.id ?? null)
       : null;
-  const groups: { section: Section; Icon: typeof HeartPulseIcon; cls: string; items: typeof h.conditions }[] = [
-    { section: "conditions", Icon: HeartPulseIcon, cls: "text-pw-area-readings", items: h.conditions },
-    { section: "allergies", Icon: TriangleAlertIcon, cls: "text-pw-area-medicines", items: h.allergies },
+  const groups: {
+    section: Section;
+    Icon: typeof HeartPulseIcon;
+    cls: string;
+    items: typeof h.conditions;
+  }[] = [
+    {
+      section: "conditions",
+      Icon: HeartPulseIcon,
+      cls: "text-pw-area-readings",
+      items: h.conditions,
+    },
+    {
+      section: "allergies",
+      Icon: TriangleAlertIcon,
+      cls: "text-pw-area-medicines",
+      items: h.allergies,
+    },
     { section: "family", Icon: UsersIcon, cls: "text-pw-area-team", items: h.family },
   ];
   return (
     <div className="grid items-start gap-5 min-[1101px]:grid-cols-[230px_minmax(0,1fr)]">
       <aside className="flex flex-col gap-3 max-[1100px]:order-2">
         <div className="rounded-pw-card bg-pw-surface-2 flex flex-col gap-1 p-2">
-          <span className="text-pw-ink-3 px-2 pt-1 text-[12px] font-semibold">{M.inYourHealth}</span>
+          <span className="text-pw-ink-3 px-2 pt-1 text-[12px] font-semibold">
+            {M.inYourHealth}
+          </span>
           {groups.map(({ section, Icon, cls, items }) => (
             <div key={section} className="flex items-center gap-2.5 rounded-xl px-2 py-1.5">
               <Icon className={`size-4 shrink-0 ${cls}`} {...ICON} />
-              <span className="flex-1 text-[14px] font-semibold">{SECTION_WORDS[section].title}</span>
+              <span className="flex-1 text-[14px] font-semibold">
+                {SECTION_WORDS[section].title}
+              </span>
               <span className="text-[14px] font-bold tabular-nums">{items.length}</span>
             </div>
           ))}
@@ -87,7 +113,10 @@ export function HealthSection(p: {
             legacy={section === "conditions" ? p.legacyConditions : []}
             sex={p.sex}
             whoSees={W.whoSeesHistory}
-            compact={{ icon: <Icon className={`size-[18px] ${cls}`} {...ICON} />, hint: M.hints[section] }}
+            compact={{
+              icon: <Icon className={`size-[18px] ${cls}`} {...ICON} />,
+              hint: M.hints[section],
+            }}
           />
         ))}
       </div>
@@ -96,9 +125,7 @@ export function HealthSection(p: {
 }
 
 /** Visit records (ADR 0342 §2): the summaries a clinician shared, newest first. */
-export function RecordsSection(p: {
-  records: Awaited<ReturnType<typeof loadRecords>> | null;
-}) {
+export function RecordsSection(p: { records: Awaited<ReturnType<typeof loadRecords>> | null }) {
   return (
     <div className="flex flex-col gap-3">
       {!p.records ? (
@@ -141,7 +168,9 @@ export function PeopleSection(p: {
   members: { bookingAgentId: string; memberLabel: string; relationship: string }[] | null;
 }) {
   if (p.members === null)
-    return <EmptyState title={C.householdFailed} body={C.householdFailedHint} action={<RetryButton />} />;
+    return (
+      <EmptyState title={C.householdFailed} body={C.householdFailedHint} action={<RetryButton />} />
+    );
   return (
     <div className="flex flex-col gap-4">
       {p.members.length === 0 ? (
@@ -149,7 +178,10 @@ export function PeopleSection(p: {
       ) : (
         <ul className="flex flex-col gap-2">
           {p.members.map((m) => (
-            <li key={m.bookingAgentId} className="rounded-pw-row bg-pw-surface-2 flex items-center gap-3 p-3">
+            <li
+              key={m.bookingAgentId}
+              className="rounded-pw-row bg-pw-surface-2 flex items-center gap-3 p-3"
+            >
               <Avatar
                 initials={initials(m.memberLabel)}
                 label={m.memberLabel}
@@ -158,7 +190,8 @@ export function PeopleSection(p: {
               <span className="flex min-w-0 flex-col">
                 <span className="truncate text-[16px] font-semibold">{m.memberLabel}</span>
                 <span className="text-pw-ink-2 text-[14px]">
-                  {HOUSEHOLD_RELATIONSHIPS.find((r) => r.value === m.relationship)?.label ?? m.relationship}
+                  {HOUSEHOLD_RELATIONSHIPS.find((r) => r.value === m.relationship)?.label ??
+                    m.relationship}
                 </span>
               </span>
             </li>
@@ -194,7 +227,9 @@ export function DetailsSection(p: {
     <section className="rounded-pw-row bg-pw-surface-2 flex flex-col gap-2 p-4">
       <div className="flex items-center justify-between gap-2">
         <h3 className="text-[16px] font-semibold">{C.hospitalPart}</h3>
-        {p.hospitalName ? <span className="text-pw-accent-text text-[13px] font-semibold">{C.added}</span> : null}
+        {p.hospitalName ? (
+          <span className="text-pw-accent-text text-[13px] font-semibold">{C.added}</span>
+        ) : null}
       </div>
       <div className="flex flex-wrap items-center gap-3">
         <p className="flex-1 text-[16px]">{p.hospitalName ?? C.notChosen}</p>
