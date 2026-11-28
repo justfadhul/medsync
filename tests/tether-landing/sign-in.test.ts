@@ -68,7 +68,7 @@ describe("the Tether domain", () => {
 });
 
 /** ADR 0509: a nurse's or doctor's MedSync home is the clinic floor on Tether. */
-describe("the nurse ward desk on Tether (ADR 0546)", () => {
+describe("the nurse ward desk on Tether (ADR 0547)", () => {
   it("opens /nurse and its pages only when NURSE_WARD_V2 is set", () => {
     expect(tetherClosed("/nurse", undefined)).toBe(true);
     expect(tetherClosed("/nurse/mar", "")).toBe(true);

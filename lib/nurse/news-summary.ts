@@ -1,7 +1,7 @@
 import type { MonitoringPayload } from "@/lib/emr/charts/payload";
 
 /**
- * The nurse list's line for one patient (ADR 0545, Phase 1): the latest NEWS2 with its signed band label, and when the
+ * The nurse list's line for one patient (ADR 0546, Phase 1): the latest NEWS2 with its signed band label, and when the
  * next set is due from the observations chart's own frequency. No new thresholds: the band comes from the payload
  * (the signed CO-NEWS entry) and the interval from the plan; with no frequency there is no due time.
  */

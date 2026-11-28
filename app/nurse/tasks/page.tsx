@@ -66,7 +66,7 @@ const hoursSince = (at: Date) => dur(Date.now() - at.getTime());
 /** Nurse tasks (prescribing kit P2 (b), F5): what the prescriptions asked the nurses to do. */
 export default async function NurseTasksPage() {
   const scope = await requireNurseScope();
-  // ADR 0545 Phase 1: with the ward desk on, the page opens on the To do board even before nurse tasks are live.
+  // ADR 0546 Phase 1: with the ward desk on, the page opens on the To do board even before nurse tasks are live.
   const desk = nurseWardV2LiveFor(scope.hospitalId);
   if (!nurseTasksLiveFor(scope.hospitalId) && !desk) notFound();
   const board = desk ? bucketTodo(await loadTodo(scope), new Date()) : null;

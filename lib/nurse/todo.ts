@@ -1,5 +1,5 @@
 /**
- * The To do board's columns (ADR 0545, Phase 1): everything open sorted into Overdue, Next hour and Later (no time
+ * The To do board's columns (ADR 0546, Phase 1): everything open sorted into Overdue, Next hour and Later (no time
  * last), and what was done today. Pure, so the page and the tests share it.
  */
 export interface TodoItem {

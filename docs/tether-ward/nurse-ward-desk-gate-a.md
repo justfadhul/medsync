@@ -1,8 +1,8 @@
 # Nurse ward desk: Gate A
 
 **Signed:** 28 Nov 2026. Fadhul (owner) approved the plan "as picked", added the five gaps ("Yes, add them") and said
-"get through all gates". Decisions: [ADR 0545](../adr/0545-the-nurse-ward-desk.md),
-[ADR 0546](../adr/0546-ward-pages-open-on-tether.md). Every clinical threshold and wording below stays a draft for the
+"get through all gates". Decisions: [ADR 0546](../adr/0546-the-nurse-ward-desk.md),
+[ADR 0547](../adr/0547-ward-pages-open-on-tether.md). Every clinical threshold and wording below stays a draft for the
 CSO; nothing switches on until `NURSE_WARD_V2` is set by the owner.
 
 Reference prototype: nurse desk v82 (artifact `97w1DBRGp3Phzq7uQK153d`). Visual plan `5XHBac4WEUM7FovhPuoZJp`, readiness

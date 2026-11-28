@@ -9,7 +9,7 @@ import { EmrWriteError, stampActivity } from "./context";
 import { NURSE_CADRES, openEncounter, replayed, requireCadre } from "./orders";
 
 /**
- * The nursing care plan (ADR 0545 Phase 2, migration 0314). Append-only: a problem is added once with its items;
+ * The nursing care plan (ADR 0546 Phase 2, migration 0314). Append-only: a problem is added once with its items;
  * resolving or withdrawing it is a new row naming it; ticks, unticks and evaluations are new events.
  */
 export const EVALUATIONS = ["met", "progressing", "not_met"] as const;

@@ -30,7 +30,7 @@ const e = (o: Partial<EventRow>): EventRow => ({
   ...o,
 });
 
-describe("the nursing care plan as it stands (ADR 0545)", () => {
+describe("the nursing care plan as it stands (ADR 0546)", () => {
   it("keeps open problems only: a resolving row ends the one it names", () => {
     const plan = foldPlan(
       [p("p1"), p("p2"), p("r", { state: "resolved", replacesId: "p2", recordedAt: t(5) })],

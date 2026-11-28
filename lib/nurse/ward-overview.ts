@@ -15,7 +15,7 @@ import { nurseWardV2LiveFor } from "./feature";
 import { loadWardNews } from "./ward-news";
 
 /**
- * The in-charge's ward figures (ADR 0545, Phase 1), counted from the ward's own records today. A figure the build
+ * The in-charge's ward figures (ADR 0546, Phase 1), counted from the ward's own records today. A figure the build
  * cannot count yet is null and the page says so; nothing is estimated.
  */
 export interface WardFigures {

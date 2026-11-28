@@ -238,7 +238,7 @@ export async function recordDose(
     scheduledFor: Date;
     given: boolean;
     reason?: string;
-    /** ADR 0545 Phase 3: a standard reason; "other" and "clinical" also need the note. */
+    /** ADR 0546 Phase 3: a standard reason; "other" and "clinical" also need the note. */
     code?: NotGivenCode;
     clientKey: string;
   },

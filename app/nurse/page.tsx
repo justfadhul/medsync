@@ -40,7 +40,7 @@ export const dynamic = "force-dynamic";
  */
 export default async function NurseOverviewPage() {
   const scope = await requireNurseScope();
-  // ADR 0546: on Tether only a ward nurse of a hospital with the ward desk on stays; the rest work the clinic floor.
+  // ADR 0547: on Tether only a ward nurse of a hospital with the ward desk on stays; the rest work the clinic floor.
   if (
     isTetherHost((await headers()).get("host")) &&
     !(nurseWardV2LiveFor(scope.hospitalId) && (await isWardNurse(scope)))
@@ -55,7 +55,7 @@ export default async function NurseOverviewPage() {
   });
   // Pharmacy Phase 2 (5.7): recall notices for the nurse's wards; staff-facing, never a patient.
   const notices = await nurseWardNotices(scope);
-  // ADR 0545 Phase 1: the in-charge's ward figures, with the ward desk on.
+  // ADR 0546 Phase 1: the in-charge's ward figures, with the ward desk on.
   const wardFigures = await loadWardOverview(scope);
   // Care requests (ADR 0533): the nurse in charge's admission notices; flag off, none are read.
   const incomingNotices = careRequestsLiveFor(scope.hospitalId)

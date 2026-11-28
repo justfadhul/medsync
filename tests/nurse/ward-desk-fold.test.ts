@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { attendance, incidentCounts, standing } from "@/lib/ward-desk/fold";
 
-describe("running the ward: standing state of append-only rows (ADR 0545)", () => {
+describe("running the ward: standing state of append-only rows (ADR 0546)", () => {
   it("keeps rows no later row names", () => {
     expect(
       standing([

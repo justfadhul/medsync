@@ -1,5 +1,5 @@
 /**
- * The nursing care-plan library (ADR 0545 Phase 2). Signed as written by Fadhul (owner) on 28 Nov 2026; any change to
+ * The nursing care-plan library (ADR 0546 Phase 2). Signed as written by Fadhul (owner) on 28 Nov 2026; any change to
  * a problem, goal or care item needs a new sign-off. No doses.
  */
 export interface CareLibraryEntry {

@@ -4,7 +4,7 @@ import Link from "next/link";
 import { formatClock } from "@/lib/emr/charts/scale";
 
 /**
- * The To do board (ADR 0545, Phase 1): what is open, by when, and what was done today. Each card opens the patient,
+ * The To do board (ADR 0546, Phase 1): what is open, by when, and what was done today. Each card opens the patient,
  * where the record is made; ticking straight from the board comes with the care plan (Phase 2).
  */
 export function TodoBoard({ cols }: { cols: TodoColumns }) {

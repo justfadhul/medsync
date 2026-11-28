@@ -22,7 +22,7 @@ import { requireNurseScope } from "@/lib/nurse/scope";
 import { CAL_KINDS, HARM, INCIDENT_KINDS, LEAVE_KINDS } from "@/lib/ward-desk/fold";
 
 /**
- * Running the ward (ADR 0545 Phase 4, migration 0315). Each action: the nurse's scope → NURSE_WARD_V2 → its own rule
+ * Running the ward (ADR 0546 Phase 4, migration 0315). Each action: the nurse's scope → NURSE_WARD_V2 → its own rule
  * (in-charge, own request, patient access) → one insert as the owner under the clinical writer (the audit row names
  * the author). Append-only: a decision or a withdrawal is a new row. On a refusal the page shows why.
  */

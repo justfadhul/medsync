@@ -1,5 +1,5 @@
 /**
- * Running the ward (ADR 0545 Phase 4, migration 0315): the ward and department calendar with attendance, staff leave
+ * Running the ward (ADR 0546 Phase 4, migration 0315): the ward and department calendar with attendance, staff leave
  * requests, safety incidents, and SBAR handover notes with bedside receipts. All append-only; the server writes as
  * the owner. Checks and indexes live in the migration.
  */

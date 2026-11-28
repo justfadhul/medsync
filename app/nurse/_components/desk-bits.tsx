@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 
-/** Small shared pieces of the ward desk pages (ADR 0545 Phase 4). */
+/** Small shared pieces of the ward desk pages (ADR 0546 Phase 4). */
 export function DeskPage({
   kicker,
   title,

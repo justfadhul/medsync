@@ -15,7 +15,7 @@ const item = (key: string, at: string | null, done = false): TodoItem => ({
   done,
 });
 
-describe("the To do board's columns (ADR 0545)", () => {
+describe("the To do board's columns (ADR 0546)", () => {
   it("sorts open work into overdue, next hour and later, and keeps done apart", () => {
     const now = new Date("2026-11-30T09:00:00Z");
     const c = bucketTodo(

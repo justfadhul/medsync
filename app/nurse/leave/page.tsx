@@ -30,7 +30,7 @@ const STATE: Record<string, string> = {
   withdrawn: "Withdrawn",
 };
 
-/** Leave requests (ADR 0545 Phase 4): ask, withdraw, and for the in-charge, decide the department's. */
+/** Leave requests (ADR 0546 Phase 4): ask, withdraw, and for the in-charge, decide the department's. */
 export default async function NurseLeavePage({
   searchParams,
 }: {

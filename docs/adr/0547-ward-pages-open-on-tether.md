@@ -1,4 +1,4 @@
-# ADR 0546: The nurse ward desk opens on the Tether domain
+# ADR 0547: The nurse ward desk opens on the Tether domain
 
 **Status:** Accepted, 28 Nov 2026. Fadhul chose "same code, open it on Tether too" in the nurse ward desk plan
 ("Approve as picked"). Partly supersedes [ADR 0499](0499-tether-is-this-app-on-its-own-domain.md) (wards went to
@@ -7,7 +7,7 @@
 ## Context
 
 ADR 0499 keeps the wards off the Tether domain: a ward nurse who signs in on Tether is sent to MedSync and signs in again
-(cookies are per domain). The nurse ward desk ([ADR 0545](0545-the-nurse-ward-desk.md)) is built for Tether as well, and
+(cookies are per domain). The nurse ward desk ([ADR 0546](0546-the-nurse-ward-desk.md)) is built for Tether as well, and
 one build should serve both domains.
 
 ## Decision

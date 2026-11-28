@@ -6,7 +6,7 @@ import { and, eq, gt, isNull, or } from "drizzle-orm";
 import { db } from "@/db";
 import { nursingAssignments } from "@/db/schema/nurse-workspace";
 
-/** ADR 0546: a ward nurse is in charge of a ward or holds a current patient assignment; others work the clinic floor. */
+/** ADR 0547: a ward nurse is in charge of a ward or holds a current patient assignment; others work the clinic floor. */
 export async function isWardNurse(scope: NurseScope): Promise<boolean> {
   if (scope.isInCharge) return true;
   const [row] = await db

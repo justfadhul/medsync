@@ -19,7 +19,7 @@ export const metadata: Metadata = { title: "Round and co-sign · Nurse · MedSyn
 export const dynamic = "force-dynamic";
 
 /**
- * Today's medicines round across the nurse's patients, and the doses waiting for a co-sign (ADR 0545 Phase 3). Reads
+ * Today's medicines round across the nurse's patients, and the doses waiting for a co-sign (ADR 0546 Phase 3). Reads
  * only: each dose is given, withheld or co-signed on the patient's own chart. The co-sign rules come from
  * `resolveNursingCapabilities` (the hospital's policy with the grade overlay), shown so the nurse knows what is theirs.
  */

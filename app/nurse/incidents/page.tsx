@@ -22,7 +22,7 @@ import { reportIncident } from "../_lib/ward-desk-actions";
 export const metadata: Metadata = { title: "Incidents · Nurse · MedSync" };
 export const dynamic = "force-dynamic";
 
-/** Safety incidents (ADR 0545 Phase 4): report a fall, pressure injury or other harm; the in-charge sees the ward's month. */
+/** Safety incidents (ADR 0546 Phase 4): report a fall, pressure injury or other harm; the in-charge sees the ward's month. */
 export default async function NurseIncidentsPage({
   searchParams,
 }: {

@@ -1,5 +1,5 @@
 /**
- * Standard reasons a dose was not given (ADR 0545 Phase 3; the prototype's codes, a draft for the CSO). Stored as the
+ * Standard reasons a dose was not given (ADR 0546 Phase 3; the prototype's codes, a draft for the CSO). Stored as the
  * reason's opening words, so every reader of `withheld_reason` keeps working and reports can group by them.
  */
 export const NOT_GIVEN = {

@@ -20,7 +20,7 @@ const payload = (frequency: string | null, news2: { at: string; total: number }[
     ],
   }) as unknown as MonitoringPayload;
 
-describe("the nurse list's NEWS2 line (ADR 0545)", () => {
+describe("the nurse list's NEWS2 line (ADR 0546)", () => {
   it("reads the plan's frequency words", () => {
     expect(hoursFromWord("Hourly")).toBe(1);
     expect(hoursFromWord("4-hourly")).toBe(4);

@@ -14,7 +14,7 @@ const isMissingTable = (e: unknown): boolean =>
   (("code" in e && e.code === "42P01") || ("cause" in e && isMissingTable(e.cause)));
 
 /**
- * The nursing care plan on the nurse's chart (ADR 0545 Phase 2). Behind NURSE_WARD_V2; before migration 0314 is
+ * The nursing care plan on the nurse's chart (ADR 0546 Phase 2). Behind NURSE_WARD_V2; before migration 0314 is
  * applied it says so instead of failing.
  */
 export async function NurseCarePlan({

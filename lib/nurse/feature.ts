@@ -1,5 +1,5 @@
 /**
- * The nurse ward desk (ADR 0545): `NURSE_WARD_V2=1` turns it on everywhere; a comma-separated list of hospital ids,
+ * The nurse ward desk (ADR 0546): `NURSE_WARD_V2=1` turns it on everywhere; a comma-separated list of hospital ids,
  * for those only. Off, every `/nurse` page is unchanged.
  */
 export function nurseWardV2LiveFor(hospitalId: string): boolean {

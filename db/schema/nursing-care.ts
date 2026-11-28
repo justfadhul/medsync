@@ -1,5 +1,5 @@
 /**
- * The nursing care plan (ADR 0545 Phase 2, migration 0314). Both tables are append-only: resolving or withdrawing a
+ * The nursing care plan (ADR 0546 Phase 2, migration 0314). Both tables are append-only: resolving or withdrawing a
  * problem is a new row naming the one it replaces; an untick is a new event after the tick. Reads go through the
  * clinical reader (RLS); the server writes as the owner.
  */

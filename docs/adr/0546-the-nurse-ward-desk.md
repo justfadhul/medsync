@@ -1,4 +1,4 @@
-# ADR 0545: The nurse ward desk
+# ADR 0546: The nurse ward desk
 
 **Status:** Accepted, 28 Nov 2026; Gate A signed ("get through all gates"). Fadhul approved the build plan "as picked" in chat, after shaping the clickable
 prototype through comments (nurse desk v82). All clinical wording and every threshold are drafts for the CSO. Behind
@@ -60,4 +60,4 @@ is due, in what order, for whom, and lets them do it from where they are. The ro
 - Each phase stops for the owner before the next. Migrations are applied by the owner with `npm run db:migrate` in the
   worktree that holds them.
 - The CSO signs the list in the Gate A document before the flag is turned on anywhere.
-- Where the desk opens on the Tether domain is [ADR 0546](0546-ward-pages-open-on-tether.md).
+- Where the desk opens on the Tether domain is [ADR 0547](0547-ward-pages-open-on-tether.md).

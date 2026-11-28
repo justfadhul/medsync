@@ -33,7 +33,7 @@ export default async function NursePatientsPage({
     inChargeWardIds: scope.inChargeWardIds,
     limit: 200,
   });
-  // ADR 0545 Phase 1: with the ward desk on, the latest NEWS2 and next vitals, sickest first.
+  // ADR 0546 Phase 1: with the ward desk on, the latest NEWS2 and next vitals, sickest first.
   const newsBy = await loadWardNews(
     { userId: scope.userId, hospitalId: scope.hospitalId },
     rows.map((r) => r.patientUserId),
@@ -91,7 +91,7 @@ export default async function NursePatientsPage({
         <EmptyPanel departmentName={scope.departmentName} isInCharge={scope.isInCharge} />
       ) : (
         <>
-          {/* Cards: always at phone width, by choice on a wider screen (ADR 0545). */}
+          {/* Cards: always at phone width, by choice on a wider screen (ADR 0546). */}
           <ul className={`grid gap-3 sm:grid-cols-2 lg:grid-cols-3 ${cards ? "" : "md:hidden"}`}>
             {list.map((r) => (
               <li key={r.patientUserId}>

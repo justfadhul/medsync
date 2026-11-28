@@ -1,4 +1,4 @@
--- 0315 — Running the ward (ADR 0545, Phase 4).
+-- 0315 — Running the ward (ADR 0546, Phase 4).
 --
 -- ADDITIVE. Six new tables, no row changed. Every table is append-only: a change of state is a new row naming the
 -- one it ends (replaces_id), or a decision row against the request.

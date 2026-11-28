@@ -1,5 +1,5 @@
 /**
- * Running the ward (ADR 0545 Phase 4): the standing state of append-only rows. Pure, shared by pages and tests.
+ * Running the ward (ADR 0546 Phase 4): the standing state of append-only rows. Pure, shared by pages and tests.
  */
 interface Replaceable {
   id: string;

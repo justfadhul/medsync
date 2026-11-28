@@ -1,6 +1,6 @@
 import type { WardFigures } from "@/lib/nurse/ward-overview";
 
-/** The in-charge's ward at a glance (ADR 0545, Phase 1). Counts only; a figure the build cannot count says so. */
+/** The in-charge's ward at a glance (ADR 0546, Phase 1). Counts only; a figure the build cannot count says so. */
 export function WardFiguresPanel({ wards }: { wards: WardFigures[] }) {
   if (!wards.length) return null;
   return (

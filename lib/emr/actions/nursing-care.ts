@@ -8,7 +8,7 @@ import { runEmrWrite } from "@/lib/emr/write/orders";
 import { nurseWardV2LiveFor } from "@/lib/nurse/feature";
 
 /**
- * The nursing care plan from the nurse's chart (ADR 0545 Phase 2). Zod → requireEmrActor("nurse") → EMR_V1 and
+ * The nursing care plan from the nurse's chart (ADR 0546 Phase 2). Zod → requireEmrActor("nurse") → EMR_V1 and
  * NURSE_WARD_V2 for the hospital → one transaction with the access check → lib/emr/write/nursing-care.ts.
  * Idempotent on the client key; append-only and audited by the 0314 triggers.
  */

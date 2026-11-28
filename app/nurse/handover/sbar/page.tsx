@@ -24,7 +24,7 @@ export const metadata: Metadata = { title: "SBAR handover · Nurse · MedSync" }
 export const dynamic = "force-dynamic";
 
 /**
- * SBAR handover per patient (ADR 0545 Phase 4): the nurse handing over writes situation, background, assessment,
+ * SBAR handover per patient (ADR 0546 Phase 4): the nurse handing over writes situation, background, assessment,
  * recommendation and the tasks carried on; the next nurse receives the patient at the bedside. Only patients on the
  * nurse's own list are shown.
  */

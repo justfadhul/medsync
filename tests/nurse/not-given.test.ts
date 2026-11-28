@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { notGivenReason } from "@/lib/nurse/not-given";
 
-describe("standard reasons a dose was not given (ADR 0545)", () => {
+describe("standard reasons a dose was not given (ADR 0546)", () => {
   it("stores the code's words, with the note after them", () => {
     expect(notGivenReason("fasting", undefined)).toBe("Nil by mouth");
     expect(notGivenReason("refused", "says it makes her sick")).toBe(

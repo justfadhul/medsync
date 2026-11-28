@@ -30,7 +30,7 @@ export const metadata: Metadata = { title: "Calendar · Nurse · MedSync" };
 export const dynamic = "force-dynamic";
 
 /**
- * The ward and department calendar (ADR 0545 Phase 4). Everyone sees what tells them; the in-charge adds, cancels and
+ * The ward and department calendar (ADR 0546 Phase 4). Everyone sees what tells them; the in-charge adds, cancels and
  * decides who goes; a nurse asks to go. Activities shared with the department show on the doctors' side too.
  */
 export default async function NurseCalendarPage({
