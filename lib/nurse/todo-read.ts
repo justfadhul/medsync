@@ -2,13 +2,17 @@ import "server-only";
 
 import type { NurseScope } from "./scope";
 import type { TodoItem } from "./todo";
-import { inArray } from "drizzle-orm";
+import { and, desc, eq, inArray, isNull } from "drizzle-orm";
 
 import { db } from "@/db";
 import { patientProfiles } from "@/db/schema/patient-profiles";
+import { encounters } from "@/db/schema/scheduling";
+import { requireEmrActor } from "@/lib/emr/actor";
 import { asClinicalReader } from "@/lib/emr/db";
 import { nurseTasksLiveFor } from "@/lib/emr/feature";
 import { loadNurseMar, loadNurseTasks } from "@/lib/emr/read/nursing";
+import { loadEncounterOrders } from "@/lib/emr/read/orders";
+import { nurseWardV2LiveFor } from "./feature";
 import { listNursePatientPanel } from "./patient-access";
 import { loadWardNews } from "./ward-news";
 
@@ -69,6 +73,42 @@ export async function loadTodo(scope: NurseScope, now = new Date()): Promise<Tod
           done: c.state === "given",
         });
       }
+
+  // Phase 2: lab samples to take, from each open visit's orders. Urgent ones count from when they were asked.
+  if (nurseWardV2LiveFor(scope.hospitalId) && ids.length) {
+    const open = await asClinicalReader(actor, (tx) =>
+      tx
+        .select({ id: encounters.id, patientUserId: encounters.patientUserId })
+        .from(encounters)
+        .where(
+          and(
+            eq(encounters.hospitalId, scope.hospitalId),
+            inArray(encounters.patientUserId, ids),
+            isNull(encounters.endedAt),
+          ),
+        )
+        .orderBy(desc(encounters.startedAt)),
+    );
+    const latest = new Map<string, string>();
+    for (const e of open) if (!latest.has(e.patientUserId)) latest.set(e.patientUserId, e.id);
+    const emrActor = await requireEmrActor("nurse");
+    for (const [id, encounterId] of latest) {
+      const load = await loadEncounterOrders(emrActor, encounterId);
+      for (const o of load?.orders ?? [])
+        if (o.collect)
+          items.push({
+            key: `s:${o.id}`,
+            kind: "Sample",
+            title: `Take ${o.display}`,
+            detail: [o.collect.container, o.collect.rejection].filter(Boolean).join(" · ") || null,
+            patientUserId: id,
+            patient: code.get(id) ?? "",
+            at: o.priority === "routine" ? null : o.orderedAtIso,
+            href: `/nurse/patients/${id}`,
+            done: false,
+          });
+    }
+  }
 
   if (tasks) {
     const taskIds = [...new Set([...tasks.open, ...tasks.done].map((t) => t.patientUserId))].filter(

@@ -4,7 +4,7 @@
  */
 export interface TodoItem {
   key: string;
-  kind: "Vitals" | "Dose" | "Task";
+  kind: "Vitals" | "Dose" | "Task" | "Sample";
   title: string;
   detail: string | null;
   patientUserId: string;

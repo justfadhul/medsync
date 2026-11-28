@@ -2,6 +2,7 @@
 
 import type { MarCell } from "@/lib/emr/charts/payload";
 import type { NurseMarLine } from "@/lib/emr/read/nursing";
+import type { NotGivenCode } from "@/lib/nurse/not-given";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
@@ -11,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { NURSE_TASKS_COPY as C } from "@/content/nurse-tasks";
 import { recordChartDose, undoChartDose } from "@/lib/emr/actions/nursing";
 import { formatClock } from "@/lib/emr/charts/scale";
+import { NOT_GIVEN, NOT_GIVEN_CODES, notGivenReason } from "@/lib/nurse/not-given";
 
 type Ask =
   | { kind: "withhold"; prescriptionId: string; at: string }
@@ -32,6 +34,7 @@ export function ChartDoses({
   const router = useRouter();
   const [ask, setAsk] = useState<Ask | null>(null);
   const [reason, setReason] = useState("");
+  const [code, setCode] = useState<NotGivenCode | undefined>(undefined);
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
   // Kept across retries of the same act: a lost reply never records twice.
@@ -82,6 +85,7 @@ export function ChartDoses({
               scheduledFor: ask.at,
               given: false,
               reason,
+              code,
             }),
           )
         : await run(`undo:${ask.marId}`, (clientKey) =>
@@ -90,6 +94,7 @@ export function ChartDoses({
     if (ok) {
       setAsk(null);
       setReason("");
+      setCode(undefined);
     }
   };
 
@@ -188,12 +193,41 @@ export function ChartDoses({
             <Button variant="secondary" onClick={() => setAsk(null)}>
               {C.cancel}
             </Button>
-            <Button disabled={busy || reason.trim().length < 3} onClick={confirm}>
+            <Button
+              disabled={
+                busy ||
+                (ask?.kind === "withhold"
+                  ? !notGivenReason(code, reason)
+                  : reason.trim().length < 3)
+              }
+              onClick={confirm}
+            >
               {C.save}
             </Button>
           </>
         }
       >
+        {ask?.kind === "withhold" ? (
+          <div
+            role="radiogroup"
+            aria-label="Why it was not given"
+            className="mb-3 flex flex-wrap gap-1.5"
+          >
+            {NOT_GIVEN_CODES.map((c) => (
+              <Button
+                key={c}
+                type="button"
+                size="sm"
+                role="radio"
+                aria-checked={code === c}
+                variant={code === c ? "default" : "secondary"}
+                onClick={() => setCode(code === c ? undefined : c)}
+              >
+                {NOT_GIVEN[c]}
+              </Button>
+            ))}
+          </div>
+        ) : null}
         <label className="flex flex-col gap-1.5">
           <span className="text-caption text-muted-foreground">
             {ask?.kind === "undo" ? C.wrongEntryReason : C.withholdReason}
