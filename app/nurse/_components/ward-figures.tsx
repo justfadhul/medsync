@@ -39,6 +39,13 @@ export function WardFiguresPanel({ wards }: { wards: WardFigures[] }) {
               : "No observation charts with a frequency",
           ],
           ["Not given", String(w.notGivenToday), "doses withheld or refused today"],
+          [
+            "Incidents",
+            w.incidents ? String(w.incidents.falls + w.incidents.pressure) : "—",
+            w.incidents
+              ? `this month · falls ${w.incidents.falls} · pressure injuries ${w.incidents.pressure}`
+              : "Needs the incident log (migration 0315)",
+          ],
         ];
         return (
           <div
@@ -48,7 +55,7 @@ export function WardFiguresPanel({ wards }: { wards: WardFigures[] }) {
             <span className="text-muted-foreground font-mono text-[10.5px] tracking-[0.14em] uppercase">
               {w.wardName}
             </span>
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-7">
               {tiles.map(([label, value, note]) => (
                 <div
                   key={label}
@@ -62,8 +69,7 @@ export function WardFiguresPanel({ wards }: { wards: WardFigures[] }) {
               ))}
             </div>
             <p className="text-muted-foreground text-caption">
-              Counted from the ward&rsquo;s own records. Month figures (length of stay, turnover,
-              falls and pressure sores) arrive with the incident log.
+              Counted from the ward&rsquo;s own records. Incidents are this month&rsquo;s reports.
             </p>
           </div>
         );

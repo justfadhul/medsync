@@ -86,6 +86,26 @@ export default async function NurseOverviewPage() {
       </header>
 
       <WardFiguresPanel wards={wardFigures} />
+      {nurseWardV2LiveFor(scope.hospitalId) ? (
+        <nav aria-label="Ward desk" className="flex flex-wrap gap-2">
+          {[
+            ["/nurse/tasks", "To do"],
+            ["/nurse/cosign-queue", "Round and co-sign"],
+            ["/nurse/handover/sbar", "SBAR handover"],
+            ["/nurse/calendar", "Calendar"],
+            ["/nurse/leave", "Leave"],
+            ["/nurse/incidents", "Report an incident"],
+          ].map(([href, text]) => (
+            <Link
+              key={href}
+              href={href}
+              className="border-border bg-card hover:bg-muted text-body-s text-foreground rounded-full border px-3 py-1.5"
+            >
+              {text}
+            </Link>
+          ))}
+        </nav>
+      ) : null}
 
       {notices.length ? (
         <CautionNotice lead={WARDS.notices.title}>
