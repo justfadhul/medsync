@@ -29,6 +29,7 @@ import { isOperator } from "@/lib/lab/bedside-store";
 import { labBedsideLiveFor } from "@/lib/lab/feature";
 import { fetchNursePatientSummaryAudited } from "@/lib/nurse/patient-access";
 import { requireNurseScope } from "@/lib/nurse/scope";
+import { NurseCarePlan } from "./_components/nurse-care-plan";
 import { NurseMonitoring } from "./_components/nurse-monitoring";
 import { NurseOrders } from "./_orders/nurse-orders";
 
@@ -132,6 +133,13 @@ export default async function NursePatientSummaryPage({ params }: PageProps) {
               </Button>
             </Link>
           </div>
+        ) : null}
+        {chart.openEncounterId ? (
+          <NurseCarePlan
+            patientUserId={chart.patientUserId}
+            encounterId={chart.openEncounterId}
+            actionsAllowed={chart.payload.safetyBar.actionsAllowed}
+          />
         ) : null}
         {chart.openEncounterId ? (
           <NurseMonitoring
