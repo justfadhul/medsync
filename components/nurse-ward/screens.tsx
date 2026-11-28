@@ -379,3 +379,51 @@ export function Kpis({ f }: { f: WardFigures }) {
     </div>
   );
 }
+
+/** Prototype v82's "On today" card: the nurses with patients on the ward now, from the current assignments. */
+export function OnToday({
+  nurses,
+}: {
+  nurses: { id: string; name: string; patients: number; me: boolean }[];
+}) {
+  return (
+    <div className={k("cf-card")}>
+      <div className={k("cf-grp")}>
+        On today<em>nurses with patients on the ward now</em>
+        <span className={k("grow")} />
+        <Link
+          href="/nurse/assignments"
+          prefetch={false}
+          className={k("btn", "sm", "q")}
+          style={{ minHeight: 28 }}
+        >
+          Assign nurses
+        </Link>
+      </div>
+      {nurses.length ? (
+        <div className={k("rogrid")}>
+          {nurses.map((n) => (
+            <div key={n.id} className={k("rorow")}>
+              <span className={k("cf-who")}>
+                <span className={k("pav", "sm")}>{initialsOf(n.name)}</span>
+                <span>
+                  <span className={k("nm")} style={{ fontSize: 14 }}>
+                    {n.name}
+                    {n.me ? " (you)" : ""}
+                  </span>
+                </span>
+              </span>
+              <span className={k("cf-mt")}>
+                {n.patients} patient{n.patients === 1 ? "" : "s"}
+              </span>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div className={k("cf-empty")}>
+          No nurse has patients on the ward yet. Pair them in Assign nurses.
+        </div>
+      )}
+    </div>
+  );
+}

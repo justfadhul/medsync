@@ -8,6 +8,8 @@ import { useState } from "react";
 
 import { EmrDialog } from "@/components/emr/emr-dialog";
 import { Tag } from "@/components/medsync/tag";
+import { k } from "@/components/nurse-ward/ui";
+import { DeskDialog } from "@/components/reception/ui";
 import { Button } from "@/components/ui/button";
 import { NURSE_TASKS_COPY as C } from "@/content/nurse-tasks";
 import { recordChartDose, undoChartDose } from "@/lib/emr/actions/nursing";
@@ -27,9 +29,12 @@ const key = () => `mar-${crypto.randomUUID()}`;
 export function ChartDoses({
   patientUserId,
   lines,
+  desk,
 }: {
   patientUserId: string;
   lines: NurseMarLine[];
+  /** The ward desk's chart (ADR 0546): prototype v82's medicine table and its not-given dialog. */
+  desk?: boolean;
 }) {
   const router = useRouter();
   const [ask, setAsk] = useState<Ask | null>(null);
@@ -139,6 +144,183 @@ export function ChartDoses({
       </li>
     );
   };
+
+  const closeAsk = () => {
+    setAsk(null);
+    setReason("");
+    setCode(undefined);
+    setMsg(null);
+  };
+  const askInvalid =
+    busy || (ask?.kind === "withhold" ? !notGivenReason(code, reason) : reason.trim().length < 3);
+
+  if (desk)
+    return (
+      <>
+        <div className={k("cpx-ch")}>
+          <span className={k("vcap")}>Today&rsquo;s medicines</span>
+          <span className={k("cf-mt")}>{C.marSub}</span>
+        </div>
+        {lines.length ? (
+          <div className={`${k("tw", "tx-wrap")} overflow-x-auto`}>
+            <table className={k("tx")}>
+              <thead>
+                <tr>
+                  <th>Medicine</th>
+                  <th>Time</th>
+                  <th className={k("today")}>Today</th>
+                </tr>
+              </thead>
+              <tbody>
+                {lines.flatMap((l) => {
+                  const cells = l.row.cells.length ? l.row.cells : [null];
+                  return cells.map((c, i) => {
+                    const open = c && (c.state === "due" || c.state === "delayed");
+                    const dose = c && !open ? l.doses.find((d) => d.at === c.at) : undefined;
+                    const late = c && open && new Date(c.at) < new Date();
+                    return (
+                      <tr key={`${l.row.prescriptionId}:${c?.at ?? "none"}`}>
+                        {i === 0 ? (
+                          <td className={k("tx-ord")} rowSpan={cells.length}>
+                            <b>{l.row.label}</b>
+                            <span>{l.row.detail}</span>
+                            {l.row.note || !l.chartable ? (
+                              <span className={k("tx-meta")}>
+                                {!l.chartable ? (
+                                  <span className={k("tx-flag")}>{C.notHere}</span>
+                                ) : null}
+                                {l.row.note}
+                              </span>
+                            ) : null}
+                          </td>
+                        ) : null}
+                        <td className={k("tx-t")}>{c ? formatClock(c.at) : "—"}</td>
+                        {!c ? (
+                          <td className={k("tx-c", "mx-no")} />
+                        ) : open && l.chartable ? (
+                          <td className={k("tx-c", late ? "late" : "due")}>
+                            <button
+                              type="button"
+                              className={k("btn", "k", "xs")}
+                              disabled={busy}
+                              onClick={() => give(l.row.prescriptionId, c.at)}
+                            >
+                              {C.given}
+                            </button>
+                            <button
+                              type="button"
+                              className={k("btn", "xs")}
+                              disabled={busy}
+                              onClick={() =>
+                                setAsk({
+                                  kind: "withhold",
+                                  prescriptionId: l.row.prescriptionId,
+                                  at: c.at,
+                                })
+                              }
+                            >
+                              Not given
+                            </button>
+                          </td>
+                        ) : (
+                          <td
+                            className={k(
+                              "tx-c",
+                              c.state === "given"
+                                ? "given"
+                                : c.state === "omitted"
+                                  ? "code"
+                                  : "due",
+                            )}
+                          >
+                            <small>{c.word}</small>
+                            {c.detail ? <small>{c.detail}</small> : null}
+                            {dose ? (
+                              <button
+                                type="button"
+                                className={k("btn", "xs", "q")}
+                                disabled={busy}
+                                onClick={() => setAsk({ kind: "undo", marId: dose.id })}
+                              >
+                                {C.wrongEntry}
+                              </button>
+                            ) : null}
+                          </td>
+                        )}
+                      </tr>
+                    );
+                  });
+                })}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <div className={k("cf-note")}>{C.marEmpty}</div>
+        )}
+        {msg && !ask ? (
+          <p role="alert" className={k("cf-note")}>
+            {msg}
+          </p>
+        ) : null}
+        <DeskDialog
+          open={ask !== null}
+          onClose={closeAsk}
+          label={ask?.kind === "undo" ? C.wrongEntryTitle : C.withholdTitle}
+          tile="alert"
+          title={ask?.kind === "undo" ? C.wrongEntryTitle : C.withholdTitle}
+          lead={
+            ask?.kind === "undo"
+              ? C.wrongEntryNote
+              : "Pick the reason. It goes on the chart with your note."
+          }
+          cls={k("wd")}
+        >
+          {ask?.kind === "withhold" ? (
+            <div className={k("ng-list")} role="radiogroup" aria-label="Why it was not given">
+              {NOT_GIVEN_CODES.map((x) => (
+                <label key={x} className={k("ng-r")}>
+                  <input
+                    type="radio"
+                    name="code"
+                    checked={code === x}
+                    onChange={() => setCode(x)}
+                  />
+                  <span className={k("tx-code")}>{x.charAt(0).toUpperCase()}</span>
+                  <span>
+                    <b>{NOT_GIVEN[x]}</b>
+                  </span>
+                </label>
+              ))}
+            </div>
+          ) : null}
+          <label style={{ display: "grid", gap: 4, marginTop: 12 }}>
+            <span className={k("sublbl")}>
+              {ask?.kind === "undo" ? C.wrongEntryReason : C.withholdReason}
+            </span>
+            <textarea
+              className={k("fin")}
+              maxLength={500}
+              rows={3}
+              value={reason}
+              onChange={(e) => setReason(e.target.value)}
+            />
+          </label>
+          {msg ? (
+            <p role="alert" className={k("cf-note")}>
+              {msg}
+            </p>
+          ) : null}
+          <div className={k("acts")}>
+            <button type="button" className={k("btn")} onClick={closeAsk}>
+              {C.cancel}
+            </button>
+            <button type="button" className={k("btn", "k")} disabled={askInvalid} onClick={confirm}>
+              {C.save}
+            </button>
+          </div>
+        </DeskDialog>
+      </>
+    );
 
   return (
     <section className="flex flex-col gap-3">

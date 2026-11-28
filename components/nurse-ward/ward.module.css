@@ -4,6 +4,8 @@
 .wd {
   flex: 1;
   min-height: 0;
+  /* Pages not yet redrawn scroll here; redrawn pages scroll in their own list column. */
+  overflow-y: auto;
   display: flex;
   flex-direction: column;
   --okbg: var(--status-stable-bg);
@@ -7655,4 +7657,20 @@ dialog.xwide {
 }
 a.btn {
   text-decoration: none;
+}
+.ctabs > a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 36px;
+  padding: 0 16px;
+  border-radius: 999px;
+  color: var(--ink2);
+  font-weight: 600;
+  font-size: 14px;
+  white-space: nowrap;
+  text-decoration: none;
+}
+.ctabs > a[aria-current="page"] {
+  background: var(--acc);
+  color: var(--accon);
 }

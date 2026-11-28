@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { and, eq, gte, inArray } from "drizzle-orm";
 
+import { k } from "@/components/nurse-ward/ui";
 import { db } from "@/db";
 import { safetyIncidents } from "@/db/schema/ward-desk";
 import { nurseWardV2LiveFor } from "@/lib/nurse/feature";
@@ -10,6 +11,7 @@ import { HARM, INCIDENT_KINDS, standing } from "@/lib/ward-desk/fold";
 import {
   btn,
   Card,
+  DAY_INPUT,
   DeskPage,
   field,
   isMissingTable,
@@ -92,7 +94,7 @@ export default async function NurseIncidentsPage({
               </label>
               <label className={label}>
                 Date
-                <input name="date" type="date" required className={field} />
+                <input name="date" {...DAY_INPUT} required className={field} />
               </label>
               <label className={label}>
                 Time
@@ -118,16 +120,16 @@ export default async function NurseIncidentsPage({
           </Card>
           <Card title={scope.isInCharge ? "This month on your ward" : "Your reports this month"}>
             {list.length === 0 ? (
-              <p className="text-muted-foreground text-body-s">None.</p>
+              <p className={k("cf-mt")}>None.</p>
             ) : (
-              <ul className="divide-border/60 flex flex-col divide-y">
+              <ul className={k("cf-card")}>
                 {list.map((r) => (
                   <li key={r.id} className="flex flex-col gap-0.5 py-2">
                     <span className="text-body-s text-foreground font-medium">
                       {INCIDENT_KINDS[r.kind as keyof typeof INCIDENT_KINDS] ?? r.kind} ·{" "}
                       {HARM[r.harm as keyof typeof HARM] ?? r.harm}
                     </span>
-                    <span className="text-muted-foreground text-caption">
+                    <span className={k("cf-mt")}>
                       {when(r.occurredAt)} · {r.description}
                     </span>
                   </li>

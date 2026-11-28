@@ -16,7 +16,7 @@ import {
 import { IncomingIntakesPanel } from "@/components/intake/incoming-panel";
 import { CautionNotice } from "@/components/medsync/caution-notice";
 import { StaffNotices } from "@/components/medsync/staff-notices";
-import { Kpis, NextUp, PatientRows } from "@/components/nurse-ward/screens";
+import { Kpis, NextUp, OnToday, PatientRows } from "@/components/nurse-ward/screens";
 import { WardPage } from "@/components/nurse-ward/ui";
 import { NURSE_TASKS_COPY } from "@/content/nurse-tasks";
 import { WARDS } from "@/content/pharmacy-stores-wards";
@@ -315,6 +315,7 @@ async function WardOverview() {
       {wards.map((x) => (
         <Kpis key={x.wardId} f={x} />
       ))}
+      <OnToday nurses={f.onShift} />
       <NextUp items={f.todo} now={now} />
       <PatientRows
         now={now}

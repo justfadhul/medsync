@@ -6,9 +6,8 @@ import { useRouter } from "next/navigation";
 import { useMemo, useState, useTransition } from "react";
 
 import { createIntentKeys, UNKNOWN_OUTCOME } from "@/components/emr/desk/flows";
-import { EmrDialog } from "@/components/emr/emr-dialog";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { k, WIcon } from "@/components/nurse-ward/ui";
+import { Chips, DeskDialog } from "@/components/reception/ui";
 import { addCareProblem, endCareProblem, recordCareEvent } from "@/lib/emr/actions/nursing-care";
 import { formatClock } from "@/lib/emr/charts/scale";
 
@@ -17,6 +16,7 @@ const EVAL_WORD: Record<string, string> = {
   progressing: "Progressing",
   not_met: "Not met",
 };
+const EVAL_CLASS: Record<string, string> = { met: "met", not_met: "not" };
 
 /** Problems with their care items to tick, the shift evaluation, and adding a problem from the library. */
 export function CarePlanPanel({
@@ -56,93 +56,196 @@ export function CarePlanPanel({
       router.refresh();
     });
 
+  const [sel, setSel] = useState<string | null>(null);
+  const on = plan.find((p) => p.id === sel) ?? plan[0] ?? null;
+  const idx = on ? plan.indexOf(on) : -1;
+  const ticks = plan.reduce((a, p) => a + p.items.length, 0);
+  const done = plan.reduce((a, p) => a + p.items.filter((i) => i.done).length, 0);
+  const lastEval = plan
+    .flatMap((p) => (p.evaluation ? [p.evaluation] : []))
+    .sort((a, b) => b.at.localeCompare(a.at))[0];
+  const add = actionsAllowed ? (
+    <button type="button" className={k("btn", "k", "sm")} onClick={() => setAdding(true)}>
+      Add problems
+    </button>
+  ) : null;
+
   return (
-    <div className="flex flex-col gap-3">
-      {plan.length === 0 ? (
-        <p className="text-muted-foreground text-body-s">No nursing problems yet for this visit.</p>
+    <>
+      <div className={k("cpx-bar")}>
+        <span className={k("cf-stat")}>
+          <b>{plan.length}</b> active
+        </span>
+        <span className={k("cf-stat")}>
+          <b>
+            {done}/{ticks}
+          </b>{" "}
+          nursing tasks done
+        </span>
+        <span className={k("cf-stat")}>
+          {lastEval ? (
+            <>
+              evaluated <b>{formatClock(new Date(lastEval.at))}</b>
+            </>
+          ) : (
+            "not evaluated yet"
+          )}
+        </span>
+        <span className={k("grow")} />
+        {add}
+      </div>
+      {!on ? (
+        <div className={k("cpx-empty")}>
+          <b>No nursing care plan yet</b>
+          <span>
+            Start from the ward&rsquo;s library: each problem fills its cause, signs, goal and care
+            to tick.
+          </span>
+          {add}
+        </div>
       ) : (
-        <div className="grid gap-3 md:grid-cols-2">
-          {plan.map((p) => (
-            <article
-              key={p.id}
-              className="border-border bg-card flex flex-col gap-3 rounded-lg border p-4"
-            >
-              <header className="flex flex-col gap-0.5">
-                <span className="text-heading-s text-foreground">{p.problem}</span>
-                <span className="text-muted-foreground text-caption">
-                  {[
-                    p.label,
-                    p.relatedTo ? `related to ${p.relatedTo}` : null,
-                    p.asShownBy ? `as shown by ${p.asShownBy}` : null,
-                  ]
-                    .filter(Boolean)
-                    .join(" · ")}
-                </span>
-                <span className="text-foreground text-body-s">
-                  Goal: {p.goal}
-                  {p.goalBy ? ` · ${p.goalBy}` : ""}
-                </span>
-              </header>
-              <ul className="flex flex-col gap-1.5">
-                {p.items.map((i) => (
-                  <li key={i.index}>
-                    <label className="flex cursor-pointer items-start gap-2 text-[13.5px]">
-                      <input
-                        type="checkbox"
-                        className="accent-primary mt-0.5 size-4"
-                        checked={!!i.done}
-                        disabled={!actionsAllowed || pending}
-                        onChange={(e) =>
-                          run(
-                            `${p.id}:${i.index}:${e.target.checked}:${i.done?.at ?? ""}`,
-                            (clientKey) =>
-                              recordCareEvent({
-                                surface: "nurse",
-                                patientUserId,
-                                clientKey,
-                                problemId: p.id,
-                                kind: e.target.checked ? "tick" : "untick",
-                                itemIndex: i.index,
-                              }),
-                          )
-                        }
-                      />
-                      <span className="flex flex-col">
-                        <span className={i.done ? "text-muted-foreground" : "text-foreground"}>
-                          {i.text}
-                        </span>
-                        {i.done ? (
-                          <span className="text-muted-foreground text-caption">
-                            Done {formatClock(new Date(i.done.at))}
-                          </span>
-                        ) : null}
-                      </span>
-                    </label>
-                  </li>
-                ))}
-              </ul>
-              <footer className="border-border flex flex-wrap items-center gap-2 border-t pt-3">
-                <span className="text-muted-foreground text-caption">
-                  {p.evaluation
-                    ? `This shift: ${EVAL_WORD[p.evaluation.value] ?? p.evaluation.value}, ${formatClock(new Date(p.evaluation.at))}`
-                    : "Not evaluated yet"}
-                </span>
-                {actionsAllowed ? (
-                  <span className="ml-auto flex flex-wrap gap-1.5">
-                    {Object.entries(EVAL_WORD).map(([v, w]) => (
-                      <Button
-                        key={v}
-                        type="button"
-                        size="sm"
-                        variant="secondary"
-                        disabled={pending}
-                        onClick={() =>
-                          run(`${p.id}:eval:${v}:${p.evaluation?.at ?? ""}`, (clientKey) =>
+        <div className={k("cpx")}>
+          <div className={k("cpx-list")}>
+            <div className={k("cpx-g")}>Active · {plan.length}</div>
+            {plan.map((p, i) => {
+              const n = p.items.length;
+              const d = p.items.filter((x) => x.done).length;
+              return (
+                <button
+                  key={p.id}
+                  type="button"
+                  className={k("cpx-row", p.id === on.id && "on")}
+                  aria-pressed={p.id === on.id}
+                  onClick={() => setSel(p.id)}
+                >
+                  <span className={k("cp-n")}>{i + 1}</span>
+                  <span className={k("cpx-rt")}>
+                    <b>{p.problem}</b>
+                    {p.label ? <small>{p.label}</small> : null}
+                    <span className={k("cpx-prog")} aria-label={`${d} of ${n} done`}>
+                      <i style={{ width: `${n ? Math.round((d / n) * 100) : 0}%` }} />
+                    </span>
+                  </span>
+                  <span className={k("cpx-rs")}>
+                    <span className={k("cp-ev", p.evaluation && EVAL_CLASS[p.evaluation.value])}>
+                      {p.evaluation
+                        ? (EVAL_WORD[p.evaluation.value] ?? p.evaluation.value)
+                        : "Not evaluated"}
+                    </span>
+                    <small>
+                      {d}/{n} done
+                    </small>
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+          <div className={k("cpx-detail")}>
+            <div className={k("cpx-h")}>
+              <span className={k("cp-n")}>{idx + 1}</span>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <h3>{on.problem}</h3>
+                <p>{on.label ?? "Nursing problem"}</p>
+              </div>
+              {actionsAllowed ? (
+                <button
+                  type="button"
+                  className={k("btn", "sm")}
+                  disabled={pending}
+                  onClick={() =>
+                    run(`${on.id}:resolve`, (clientKey) =>
+                      endCareProblem({
+                        surface: "nurse",
+                        patientUserId,
+                        clientKey,
+                        problemId: on.id,
+                        how: "resolved",
+                      }),
+                    )
+                  }
+                >
+                  Mark resolved
+                </button>
+              ) : null}
+            </div>
+            <div className={k("cpx-pes")}>
+              <span>
+                <small>Related to</small>
+                {on.relatedTo ?? "not written"}
+              </span>
+              <span>
+                <small>As shown by</small>
+                {on.asShownBy ?? "risk only"}
+              </span>
+              <span className={k("cp-goal")}>
+                <small>Goal{on.goalBy ? ` · ${on.goalBy}` : ""}</small>
+                <b>{on.goal}</b>
+              </span>
+            </div>
+            <div className={k("cpx-cols")}>
+              <div className={k("cpx-col")}>
+                <div className={k("cpx-ch")}>
+                  <span className={k("vcap")}>Nursing care · this shift</span>
+                  <span className={k("cf-mt")}>
+                    {on.items.filter((i) => i.done).length} of {on.items.length} done
+                  </span>
+                </div>
+                {on.items.map((i) => (
+                  <label key={i.index} className={k("cp-i", "cp-tick", i.done && "on")}>
+                    <input
+                      type="checkbox"
+                      checked={!!i.done}
+                      disabled={!actionsAllowed || pending}
+                      onChange={(e) =>
+                        run(
+                          `${on.id}:${i.index}:${e.target.checked}:${i.done?.at ?? ""}`,
+                          (clientKey) =>
                             recordCareEvent({
                               surface: "nurse",
                               patientUserId,
                               clientKey,
-                              problemId: p.id,
+                              problemId: on.id,
+                              kind: e.target.checked ? "tick" : "untick",
+                              itemIndex: i.index,
+                            }),
+                        )
+                      }
+                    />
+                    <span className={k("cp-box")} aria-hidden="true">
+                      <WIcon n="tick" size={12} />
+                    </span>
+                    <span className={k("cp-t")}>
+                      <b>{i.text}</b>
+                      {i.done ? <small>Done {formatClock(new Date(i.done.at))}</small> : null}
+                    </span>
+                  </label>
+                ))}
+              </div>
+              <div className={k("cpx-col")}>
+                <div className={k("cpx-ch")}>
+                  <span className={k("vcap")}>Evaluate this shift</span>
+                  <span className={k("cf-mt")}>
+                    {on.evaluation
+                      ? `${EVAL_WORD[on.evaluation.value] ?? on.evaluation.value}, ${formatClock(new Date(on.evaluation.at))}`
+                      : "not yet"}
+                  </span>
+                </div>
+                {actionsAllowed ? (
+                  <div className={k("seg")} role="group" aria-label="Is the goal met?">
+                    {Object.entries(EVAL_WORD).map(([v, w]) => (
+                      <button
+                        key={v}
+                        type="button"
+                        className={k(on.evaluation?.value === v && "on")}
+                        aria-pressed={on.evaluation?.value === v}
+                        disabled={pending}
+                        onClick={() =>
+                          run(`${on.id}:eval:${v}:${on.evaluation?.at ?? ""}`, (clientKey) =>
+                            recordCareEvent({
+                              surface: "nurse",
+                              patientUserId,
+                              clientKey,
+                              problemId: on.id,
                               kind: "evaluation",
                               evaluation: v as "met",
                             }),
@@ -150,45 +253,19 @@ export function CarePlanPanel({
                         }
                       >
                         {w}
-                      </Button>
+                      </button>
                     ))}
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="ghost"
-                      disabled={pending}
-                      onClick={() =>
-                        run(`${p.id}:resolve`, (clientKey) =>
-                          endCareProblem({
-                            surface: "nurse",
-                            patientUserId,
-                            clientKey,
-                            problemId: p.id,
-                            how: "resolved",
-                          }),
-                        )
-                      }
-                    >
-                      Resolve
-                    </Button>
-                  </span>
+                  </div>
                 ) : null}
-              </footer>
-            </article>
-          ))}
+              </div>
+            </div>
+          </div>
         </div>
       )}
       {message ? (
-        <p role="alert" className="text-body-s text-foreground">
+        <p role="alert" className={k("cf-note")}>
           {message}
         </p>
-      ) : null}
-      {actionsAllowed ? (
-        <div>
-          <Button type="button" variant="secondary" onClick={() => setAdding(true)}>
-            Add a nursing problem
-          </Button>
-        </div>
       ) : null}
       <AddProblemDialog
         open={adding}
@@ -204,7 +281,7 @@ export function CarePlanPanel({
           )
         }
       />
-    </div>
+    </>
   );
 }
 
@@ -249,15 +326,70 @@ function AddProblemDialog({
     setItems(l.care.join("\n"));
   };
   return (
-    <EmrDialog
+    <DeskDialog
       open={open}
-      onOpenChange={onOpenChange}
+      onClose={() => onOpenChange(false)}
+      label="Add a nursing problem"
+      size="xw"
+      tile="tick"
       title="Add a nursing problem"
-      description="Start from the ward's library or write your own. The library is a draft until the CSO signs it."
-      width="wide"
-      footer={
-        <Button
+      lead="Start from the ward's signed library or write your own. Edit any line for this patient."
+      cls={k("wd")}
+    >
+      <div className={k("frow")} style={{ alignItems: "start", gap: 20 }}>
+        <div style={{ display: "grid", gap: 10, flex: 1, minWidth: 0 }}>
+          <span className={k("sublbl")}>From the library</span>
+          <Chips
+            label="From the library"
+            items={library.map((l) => [l.key, l.problem] as const)}
+            value={key ?? ""}
+            onPick={(v) => pick(library.find((l) => l.key === v)!)}
+          />
+          {entry ? (
+            <>
+              <span className={k("sublbl")}>Goals to choose from</span>
+              <Chips label="Goal" items={entry.goals} value={goal} onPick={setGoal} />
+            </>
+          ) : null}
+        </div>
+        <div style={{ display: "grid", gap: 10, flex: 1, minWidth: 0 }}>
+          {(
+            [
+              ["Problem", problem, setProblem],
+              ["Related to", related, setRelated],
+              ["As shown by", signs, setSigns],
+              ["Goal", goal, setGoal],
+              ["Goal by when", goalBy, setGoalBy],
+            ] as const
+          ).map(([label, value, set]) => (
+            <label key={label} style={{ display: "grid", gap: 4 }}>
+              <span className={k("sublbl")}>{label}</span>
+              <input
+                className={k("fin")}
+                value={value}
+                onChange={(e) => set(e.target.value)}
+                maxLength={300}
+              />
+            </label>
+          ))}
+          <label style={{ display: "grid", gap: 4 }}>
+            <span className={k("sublbl")}>Care, one per line</span>
+            <textarea
+              className={k("fin")}
+              value={items}
+              onChange={(e) => setItems(e.target.value)}
+              rows={4}
+            />
+          </label>
+        </div>
+      </div>
+      <div className={k("acts")}>
+        <button type="button" className={k("btn")} onClick={() => onOpenChange(false)}>
+          Cancel
+        </button>
+        <button
           type="button"
+          className={k("btn", "k")}
           disabled={pending || !problem.trim() || !goal.trim() || !items.trim()}
           onClick={() =>
             onSave({
@@ -276,72 +408,8 @@ function AddProblemDialog({
           }
         >
           Add to the care plan
-        </Button>
-      }
-    >
-      <div className="grid gap-4 md:grid-cols-2">
-        <div className="flex flex-col gap-2">
-          <span className="text-muted-foreground font-mono text-[10.5px] tracking-[0.12em] uppercase">
-            From the library
-          </span>
-          <div className="flex flex-wrap gap-1.5">
-            {library.map((l) => (
-              <Button
-                key={l.key}
-                type="button"
-                size="sm"
-                variant={key === l.key ? "primary" : "secondary"}
-                onClick={() => pick(l)}
-              >
-                {l.problem}
-              </Button>
-            ))}
-          </div>
-          {entry ? (
-            <div className="flex flex-col gap-1.5">
-              <span className="text-muted-foreground text-caption">Goals to choose from</span>
-              <div className="flex flex-wrap gap-1.5">
-                {entry.goals.map((g) => (
-                  <Button
-                    key={g}
-                    type="button"
-                    size="sm"
-                    variant={goal === g ? "primary" : "secondary"}
-                    onClick={() => setGoal(g)}
-                  >
-                    {g}
-                  </Button>
-                ))}
-              </div>
-            </div>
-          ) : null}
-        </div>
-        <div className="flex flex-col gap-2">
-          {(
-            [
-              ["Problem", problem, setProblem],
-              ["Related to", related, setRelated],
-              ["As shown by", signs, setSigns],
-              ["Goal", goal, setGoal],
-              ["Goal by when", goalBy, setGoalBy],
-            ] as const
-          ).map(([label, value, set]) => (
-            <label key={label} className="flex flex-col gap-1 text-[12.5px] font-medium">
-              {label}
-              <Input value={value} onChange={(e) => set(e.target.value)} maxLength={300} />
-            </label>
-          ))}
-          <label className="flex flex-col gap-1 text-[12.5px] font-medium">
-            Care, one per line
-            <textarea
-              value={items}
-              onChange={(e) => setItems(e.target.value)}
-              rows={4}
-              className="border-input bg-background rounded-md border px-3 py-2 text-[13.5px]"
-            />
-          </label>
-        </div>
+        </button>
       </div>
-    </EmrDialog>
+    </DeskDialog>
   );
 }

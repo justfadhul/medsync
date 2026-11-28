@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { and, desc, eq, inArray } from "drizzle-orm";
 
+import { k } from "@/components/nurse-ward/ui";
 import { db } from "@/db";
 import { handoverPatientNotes, handoverReceipts } from "@/db/schema/ward-desk";
 import { nurseWardV2LiveFor } from "@/lib/nurse/feature";
@@ -87,7 +88,7 @@ export default async function SbarPage({
       {notes === null ? (
         <NotSetUp />
       ) : panel.length === 0 ? (
-        <p className="text-muted-foreground text-body-s">No patients on your list.</p>
+        <p className={k("cf-mt")}>No patients on your list.</p>
       ) : (
         panel.map((p) => {
           const n = latest.get(p.patientUserId);
@@ -95,7 +96,7 @@ export default async function SbarPage({
             <Card key={p.patientUserId} title={p.patientCode}>
               {n ? (
                 <div className="flex flex-col gap-1 text-[13.5px]">
-                  <span className="text-muted-foreground text-caption">
+                  <span className={k("cf-mt")}>
                     Last handover {when(n.writtenAt)} ·{" "}
                     {got.has(n.id) ? "received at the bedside" : "not yet received"}
                   </span>
@@ -112,7 +113,7 @@ export default async function SbarPage({
                     ) : null,
                   )}
                   {n.tasks.length ? (
-                    <span className="text-muted-foreground">Tasks: {n.tasks.join("; ")}</span>
+                    <span className={k("cf-mt")}>Tasks: {n.tasks.join("; ")}</span>
                   ) : null}
                   {!got.has(n.id) && n.writtenByUserId !== scope.userId ? (
                     <form action={receiveSbar}>

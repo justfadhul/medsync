@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { and, eq, inArray, or } from "drizzle-orm";
 
+import { k } from "@/components/nurse-ward/ui";
 import { db } from "@/db";
 import { users } from "@/db/schema/users";
 import { staffLeaveRequests } from "@/db/schema/ward-desk";
@@ -12,6 +13,7 @@ import {
   btn,
   btn2,
   Card,
+  DAY_INPUT,
   DeskPage,
   field,
   isMissingTable,
@@ -100,11 +102,11 @@ export default async function NurseLeavePage({
               </label>
               <label className={label}>
                 First day
-                <input name="from" type="date" required className={field} />
+                <input name="from" {...DAY_INPUT} required className={field} />
               </label>
               <label className={label}>
                 Last day
-                <input name="to" type="date" required className={field} />
+                <input name="to" {...DAY_INPUT} required className={field} />
               </label>
               <label className={label}>
                 Note
@@ -119,15 +121,13 @@ export default async function NurseLeavePage({
           </Card>
           <Card title="Your requests">
             {mine.length === 0 ? (
-              <p className="text-muted-foreground text-body-s">None yet.</p>
+              <p className={k("cf-mt")}>None yet.</p>
             ) : (
               <ul className="flex flex-col gap-2">
                 {mine.map((r) => (
                   <li key={r.id} className="text-body-s flex flex-wrap items-center gap-3">
                     <span className="text-foreground">{line(r)}</span>
-                    <span className="border-border text-muted-foreground rounded-[4px] border px-1.5 font-mono text-[10px] uppercase">
-                      {STATE[r.state] ?? r.state}
-                    </span>
+                    <span className={k("td-k")}>{STATE[r.state] ?? r.state}</span>
                     {r.state === "asked" ? (
                       <form action={decideLeave}>
                         <input type="hidden" name="requestId" value={r.id} />
@@ -145,13 +145,13 @@ export default async function NurseLeavePage({
           {scope.isInCharge ? (
             <Card title="To decide">
               {toDecide.length === 0 ? (
-                <p className="text-muted-foreground text-body-s">Nothing waiting.</p>
+                <p className={k("cf-mt")}>Nothing waiting.</p>
               ) : (
                 <ul className="flex flex-col gap-2">
                   {toDecide.map((r) => (
                     <li key={r.id} className="text-body-s flex flex-wrap items-center gap-3">
                       <span className="text-foreground font-medium">{names.get(r.userId)}</span>
-                      <span className="text-muted-foreground">{line(r)}</span>
+                      <span className={k("cf-mt")}>{line(r)}</span>
                       {(["approved", "declined"] as const).map((s) => (
                         <form key={s} action={decideLeave}>
                           <input type="hidden" name="requestId" value={r.id} />

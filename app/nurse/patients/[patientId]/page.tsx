@@ -11,8 +11,12 @@ import {
   ShieldAlertIcon,
 } from "lucide-react";
 
+import { AdministerForm } from "@/app/nurse/mar/_components/administer-form";
+import { ChartDoses } from "@/app/nurse/mar/_components/chart-doses";
 import { EmrChart } from "@/components/emr/chart/emr-chart";
 import { PatientClinicalRecordPanel } from "@/components/encounter/patient-clinical-record-panel";
+import { chartTab, NurseChartFrame } from "@/components/nurse-ward/chart";
+import { k } from "@/components/nurse-ward/ui";
 import { Button } from "@/components/ui/button";
 import { fill } from "@/content/lab-workspace-v2";
 import { NURSE_TASKS_COPY } from "@/content/nurse-tasks";
@@ -22,11 +26,13 @@ import { clinicalObservations, medicationAdministrationRecords } from "@/db/sche
 import { asClinicalReader } from "@/lib/emr/db";
 import { emrV1Live, emrV1LiveFor, nurseTasksLiveFor, protocolsLiveFor } from "@/lib/emr/feature";
 import { loadChart } from "@/lib/emr/read/chart";
-import { ivLinesFor } from "@/lib/emr/read/nursing";
+import { ivLinesFor, loadNurseMar } from "@/lib/emr/read/nursing";
 import { loadCfcVitals } from "@/lib/emr/read/vitals";
 import { toEncounterScope } from "@/lib/encounter/workspace-scope";
 import { isOperator } from "@/lib/lab/bedside-store";
 import { labBedsideLiveFor } from "@/lib/lab/feature";
+import { loadDeskFrame } from "@/lib/nurse/desk-frame";
+import { nurseWardV2LiveFor } from "@/lib/nurse/feature";
 import { fetchNursePatientSummaryAudited } from "@/lib/nurse/patient-access";
 import { requireNurseScope } from "@/lib/nurse/scope";
 import { NurseCarePlan } from "./_components/nurse-care-plan";
@@ -38,6 +44,7 @@ export const dynamic = "force-dynamic";
 
 interface PageProps {
   params: Promise<{ patientId: string }>;
+  searchParams: Promise<{ tab?: string }>;
 }
 
 const BASIS_LABEL: Record<string, string> = {
@@ -70,7 +77,7 @@ const OBS_LABEL: Record<string, string> = {
   other: "Observation",
 };
 
-export default async function NursePatientSummaryPage({ params }: PageProps) {
+export default async function NursePatientSummaryPage({ params, searchParams }: PageProps) {
   const { patientId } = await params;
   const scope = await requireNurseScope();
 
@@ -94,6 +101,129 @@ export default async function NursePatientSummaryPage({ params }: PageProps) {
           ivLinesFor(tx, chart.patientUserId),
         )
       : null;
+    // ADR 0546: with the ward desk on, prototype v82's chart: header, then one tab at a time.
+    if (nurseWardV2LiveFor(scope.hospitalId)) {
+      const tab = chartTab((await searchParams).tab);
+      const bar = chart.payload.safetyBar;
+      const enc = chart.openEncounterId;
+      const news =
+        (await loadDeskFrame()).list.find((p) => p.patientUserId === chart.patientUserId)?.news ??
+        null;
+      const mar =
+        tab === "meds" && nurseTasksLiveFor(scope.hospitalId)
+          ? await asClinicalReader({ userId: scope.userId, hospitalId: scope.hospitalId }, (tx) =>
+              loadNurseMar(tx, {
+                hospitalId: scope.hospitalId,
+                patientUserId: chart.patientUserId,
+                now: new Date(),
+              }),
+            )
+          : null;
+      const noVisit = (
+        <p className={k("cf-note")}>
+          No open visit on this ward, so there is nothing to chart here.
+        </p>
+      );
+      return (
+        <NurseChartFrame
+          patientUserId={chart.patientUserId}
+          name={bar.name}
+          line={`${bar.ageSex} · ${bar.mrn}`}
+          eyebrow={BASIS_LABEL[chart.basis] ?? String(chart.basis)}
+          news={news}
+          allergy={bar.allergy.text}
+          tab={tab}
+          actionsAllowed={bar.actionsAllowed}
+          now={new Date()}
+        >
+          {tab === "care" ? (
+            enc ? (
+              <NurseCarePlan
+                patientUserId={chart.patientUserId}
+                encounterId={enc}
+                actionsAllowed={bar.actionsAllowed}
+              />
+            ) : (
+              noVisit
+            )
+          ) : tab === "obs" ? (
+            enc ? (
+              <>
+                <NurseMonitoring
+                  patientUserId={chart.patientUserId}
+                  encounterId={enc}
+                  actionsAllowed={bar.actionsAllowed}
+                  only="obs"
+                />
+                <p className={k("cf-mt")}>
+                  Observation charts open from the doctor&rsquo;s plan; vitals are recorded with
+                  Record vitals.
+                </p>
+              </>
+            ) : (
+              noVisit
+            )
+          ) : tab === "meds" ? (
+            <>
+              {lines ? (
+                <p className={k("cf-note")}>
+                  {lines.length
+                    ? fill(NURSE_TASKS_COPY.ivAccess, {
+                        lines: lines.map((l) => `${l.size}, ${l.site}`).join(" · "),
+                      })
+                    : NURSE_TASKS_COPY.noIvAccess}
+                </p>
+              ) : null}
+              {mar ? (
+                <ChartDoses patientUserId={chart.patientUserId} lines={mar} desk />
+              ) : enc ? (
+                <NurseMonitoring
+                  patientUserId={chart.patientUserId}
+                  encounterId={enc}
+                  actionsAllowed={bar.actionsAllowed}
+                  only="mar"
+                />
+              ) : null}
+              {bar.actionsAllowed ? (
+                <details className={k("cf-card")} style={{ padding: 14 }}>
+                  <summary className={k("vcap")} style={{ cursor: "pointer" }}>
+                    {NURSE_TASKS_COPY.freeTextTitle}
+                  </summary>
+                  <AdministerForm
+                    patientUserId={chart.patientUserId}
+                    isEnrolled={scope.isEnrolled}
+                  />
+                </details>
+              ) : null}
+            </>
+          ) : (
+            <>
+              <span style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                {protocolsLiveFor(scope.hospitalId) ? (
+                  <Link
+                    href={`/nurse/patients/${chart.patientUserId}/protocols`}
+                    prefetch={false}
+                    className={k("btn", "sm")}
+                  >
+                    {CHART_COPY.areaTitle}
+                  </Link>
+                ) : null}
+                {bedside ? (
+                  <Link
+                    href={`/nurse/patients/${chart.patientUserId}/bedside`}
+                    prefetch={false}
+                    className={k("btn", "sm")}
+                  >
+                    Bedside test
+                  </Link>
+                ) : null}
+              </span>
+              <EmrChart chart={chart} surface="nurse" orders={orders} />
+            </>
+          )}
+        </NurseChartFrame>
+      );
+    }
     // The open visit's monitoring charts and the fluid balance entry (ADR 0189).
     return (
       <>

@@ -1,12 +1,27 @@
 import type { FrameData } from "./frame";
 import type { WardPatient } from "./screens";
+import type { NurseMarLine } from "@/lib/emr/read/nursing";
 import type { NewsSummary } from "@/lib/nurse/news-summary";
 import type { TodoItem } from "@/lib/nurse/todo";
 import type { WardFigures } from "@/lib/nurse/ward-overview";
 
+import { ChartDoses } from "@/app/nurse/mar/_components/chart-doses";
+import { CarePlanPanel } from "@/app/nurse/patients/[patientId]/_components/care-plan-panel";
+import { CARE_LIBRARY } from "@/content/nursing-care-library";
 import { bucketTodo } from "@/lib/nurse/todo";
+import { NurseChartFrame } from "./chart";
 import { NurseWardFrame } from "./frame";
-import { DueList, Kpis, NeedsYou, NextUp, PatientRows, ShowAs, TodoBoard } from "./screens";
+import { CosignView, RoundView } from "./round";
+import {
+  DueList,
+  Kpis,
+  NeedsYou,
+  NextUp,
+  OnToday,
+  PatientRows,
+  ShowAs,
+  TodoBoard,
+} from "./screens";
 import { k, WardPage } from "./ui";
 
 /** Development fixture for the ward desk (ADR 0546): invented record codes, no names, no database. */
@@ -134,13 +149,139 @@ export function WardFixture({
   const path =
     screen === "todo"
       ? "/nurse/tasks"
-      : screen === "patients"
-        ? "/nurse/patients"
-        : screen === "due"
-          ? "/nurse/tasks?view=due"
-          : "/nurse";
+      : screen === "chart" || screen === "meds"
+        ? "/nurse/patients/p1"
+        : screen === "round"
+          ? "/nurse/mar"
+          : screen === "cosign"
+            ? "/nurse/cosign-queue"
+            : screen === "patients"
+              ? "/nurse/patients"
+              : screen === "due"
+                ? "/nurse/tasks?view=due"
+                : "/nurse";
+  const lib = (key: string) => CARE_LIBRARY.find((l) => l.key === key)!;
+  const plan = ["gas_exchange", "pressure_injury"].map((key, n) => {
+    const l = lib(key);
+    return {
+      id: key,
+      problem: l.problem,
+      label: l.label,
+      relatedTo: l.relatedTo,
+      asShownBy: l.asShownBy.slice(0, 2).join(", "),
+      goal: l.goals[0]!,
+      goalBy: "by discharge",
+      items: l.care.map((text, index) => ({
+        index,
+        text,
+        done: index < 1 + n ? { at: at(-60 * (index + 1)), by: "n1" } : null,
+      })),
+      evaluation: n === 0 ? { value: "progressing", note: null, at: at(-30), by: "n1" } : null,
+      since: at(-600),
+    };
+  });
+  const line = (
+    id: string,
+    label: string,
+    detail: string,
+    cells: [number, NurseMarLine["row"]["cells"][number]["state"], string][],
+  ): NurseMarLine => ({
+    chartable: true,
+    doses: [],
+    row: {
+      prescriptionId: id,
+      label,
+      detail,
+      fluid: false,
+      note: null,
+      cells: cells.map(([m, state, word]) => ({ at: at(m), state, word, detail: null })),
+    },
+  });
+  const MAR = [
+    line("rx1", "Ceftriaxone 2 g", "IV · once daily", [[-20, "delayed", "Due"]]),
+    line("rx2", "Paracetamol 1 g", "By mouth · six-hourly", [
+      [-300, "given", "Given 06:05"],
+      [40, "due", "Due"],
+      [400, "due", "Due"],
+    ]),
+    line("rx3", "Furosemide 40 mg", "IV · morning", [
+      [-170, "omitted", "Omitted (patient refused)"],
+    ]),
+  ];
+  const row = (
+    id: string,
+  ): {
+    patientUserId: string;
+    patientCode: string;
+    basis: "assigned";
+    lastSeenIso: null;
+    recentStatus: null;
+  } => ({
+    patientUserId: id,
+    patientCode: LIST.find((x) => x.patientUserId === id)!.patientCode,
+    basis: "assigned",
+    lastSeenIso: null,
+    recentStatus: null,
+  });
+  const charts = [
+    { p: row("p1"), lines: MAR },
+    {
+      p: row("p2"),
+      lines: [
+        line("rx4", "Insulin (soluble)", "Subcut · before meals", [
+          [-200, "awaiting_cosign", "Awaiting co-sign"],
+          [100, "due", "Due"],
+        ]),
+      ],
+    },
+  ];
+  const waiting = [
+    { p: row("p2"), label: "Insulin (soluble)", c: charts[1]!.lines[0]!.row.cells[0]! },
+  ];
+  const rules = {
+    high_alert_med_administration: "cosign_required",
+    independent_complex_procedure: "allowed",
+  } as const;
   const body =
-    screen === "todo" ? (
+    screen === "round" ? (
+      <RoundView charts={charts} waiting={waiting} now={NOW} />
+    ) : screen === "cosign" ? (
+      <CosignView waiting={waiting} rules={rules} now={NOW} />
+    ) : screen === "meds" ? (
+      <NurseChartFrame
+        patientUserId="p1"
+        name="Example patient"
+        line="54 y · F · MS-0412"
+        eyebrow="Your patient"
+        news={LIST[0]!.news}
+        allergy="No known allergies"
+        tab="meds"
+        actionsAllowed
+        now={NOW}
+      >
+        <ChartDoses patientUserId="p1" lines={MAR} desk />
+      </NurseChartFrame>
+    ) : screen === "chart" ? (
+      <NurseChartFrame
+        patientUserId="p1"
+        name="Example patient"
+        line="54 y · F · MS-0412"
+        eyebrow="Your patient"
+        news={LIST[0]!.news}
+        allergy="No known allergies"
+        tab="care"
+        actionsAllowed
+        now={NOW}
+      >
+        <CarePlanPanel
+          patientUserId="p1"
+          encounterId="e1"
+          plan={plan}
+          library={[...CARE_LIBRARY]}
+          actionsAllowed
+        />
+      </NurseChartFrame>
+    ) : screen === "todo" ? (
       <WardPage
         title="To do"
         now={NOW}
@@ -194,6 +335,7 @@ export function WardFixture({
         ]}
       >
         <Kpis f={FIG} />
+        <OnToday nurses={frame.onShift} />
         <NextUp items={TODO} now={NOW} />
         <PatientRows
           now={NOW}

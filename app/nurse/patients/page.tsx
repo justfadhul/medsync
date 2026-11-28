@@ -26,12 +26,13 @@ const BASIS_LABEL: Record<string, string> = {
 export default async function NursePatientsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ view?: string; q?: string }>;
+  searchParams: Promise<{ view?: string; q?: string; late?: string }>;
 }) {
   const sp = await searchParams;
   const cards = sp.view === "cards";
   const scope = await requireNurseScope();
-  if (nurseWardV2LiveFor(scope.hospitalId)) return <MyPatients cards={cards} q={sp.q ?? ""} />;
+  if (nurseWardV2LiveFor(scope.hospitalId))
+    return <MyPatients cards={cards} q={sp.q ?? ""} lateOnly={sp.late === "1"} />;
   const rows = await listNursePatientPanel({
     nurseUserId: scope.userId,
     hospitalId: scope.hospitalId,
@@ -298,11 +299,31 @@ function formatRelative(iso: string): string {
 }
 
 /** ADR 0546: prototype v82's My patients, sickest first, with the "Needs you" queue beside it. */
-async function MyPatients({ cards, q }: { cards: boolean; q: string }) {
+async function MyPatients({
+  cards,
+  q,
+  lateOnly,
+}: {
+  cards: boolean;
+  q: string;
+  lateOnly: boolean;
+}) {
   const f = await loadDeskFrame();
   const now = new Date();
   const find = q.trim().toLowerCase();
-  const list = find ? f.list.filter((p) => p.patientCode.toLowerCase().includes(find)) : f.list;
+  const list = f.list.filter(
+    (p) => (!find || p.patientCode.toLowerCase().includes(find)) && (!lateOnly || p.news.late),
+  );
+  const keep = (more: Record<string, string>) => {
+    const u = new URLSearchParams({
+      ...(find ? { q } : {}),
+      ...(cards ? { view: "cards" } : {}),
+      ...(lateOnly ? { late: "1" } : {}),
+      ...more,
+    });
+    for (const [key, v] of [...u]) if (!v) u.delete(key);
+    return `/nurse/patients${u.size ? `?${u}` : ""}`;
+  };
   const late = f.list.filter((p) => p.news.late).length;
   return (
     <div className={k(cards && "cards")} style={{ display: "contents" }}>
@@ -315,10 +336,19 @@ async function MyPatients({ cards, q }: { cards: boolean; q: string }) {
           [late, "vitals overdue"],
         ]}
         controls={
-          <ShowAs
-            cards={cards}
-            base={find ? `/nurse/patients?q=${encodeURIComponent(q)}` : "/nurse/patients"}
-          />
+          <>
+            <div className={k("seg", "flt")} role="group" aria-label="Filters">
+              <Link
+                href={keep({ late: lateOnly ? "" : "1" })}
+                prefetch={false}
+                className={k(lateOnly && "on")}
+                aria-current={lateOnly ? "true" : undefined}
+              >
+                Late only
+              </Link>
+            </div>
+            <ShowAs cards={cards} base={keep({ view: "" })} />
+          </>
         }
         side={
           f.inCharge ? undefined : (
@@ -330,8 +360,8 @@ async function MyPatients({ cards, q }: { cards: boolean; q: string }) {
         <PatientRows
           now={now}
           empty={
-            find
-              ? `No patient matches “${q}”.`
+            find || lateOnly
+              ? `No patient matches${find ? ` “${q}”` : ""}${lateOnly ? " with vitals late" : ""}.`
               : "No patients on your list yet. The nurse in charge pairs you with patients for the shift."
           }
           groups={[["Sickest first", `${f.wardName} · today`, list]]}

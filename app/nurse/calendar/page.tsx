@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { and, eq, gte, inArray, or } from "drizzle-orm";
 
+import { k } from "@/components/nurse-ward/ui";
 import { db } from "@/db";
 import { users } from "@/db/schema/users";
 import { wardCalendarAttendance, wardCalendarEvents } from "@/db/schema/ward-desk";
@@ -12,6 +13,7 @@ import {
   btn,
   btn2,
   Card,
+  DAY_INPUT,
   DeskPage,
   field,
   isMissingTable,
@@ -122,7 +124,7 @@ export default async function NurseCalendarPage({
             </label>
             <label className={label}>
               Date
-              <input name="date" type="date" required className={field} />
+              <input name="date" {...DAY_INPUT} required className={field} />
             </label>
             <div className="grid grid-cols-2 gap-3">
               <label className={label}>
@@ -176,9 +178,9 @@ export default async function NurseCalendarPage({
       ) : null}
       <Card title="Coming up">
         {events.length === 0 ? (
-          <p className="text-muted-foreground text-body-s">Nothing planned.</p>
+          <p className={k("cf-mt")}>Nothing planned.</p>
         ) : (
-          <ul className="divide-border/60 flex flex-col divide-y">
+          <ul className={k("cf-card")}>
             {events.map((e) => {
               const a = attendance(att.filter((x) => x.eventId === e.id));
               const mine = a.get(scope.userId);
@@ -188,16 +190,14 @@ export default async function NurseCalendarPage({
                 <li key={e.id} className="flex flex-col gap-1.5 py-3">
                   <span className="flex flex-wrap items-baseline gap-x-3">
                     <span className="text-foreground text-body-s font-medium">{e.title}</span>
-                    <span className="border-border text-muted-foreground rounded-[4px] border px-1.5 font-mono text-[10px] uppercase">
+                    <span className={k("td-k")}>
                       {CAL_KINDS[e.kind as keyof typeof CAL_KINDS] ?? e.kind}
                     </span>
                     {e.sharedWithDepartment ? (
-                      <span className="text-muted-foreground text-caption">
-                        Shared with the department
-                      </span>
+                      <span className={k("cf-mt")}>Shared with the department</span>
                     ) : null}
                   </span>
-                  <span className="text-muted-foreground text-caption">
+                  <span className={k("cf-mt")}>
                     {when(e.startsAt)} · {e.place ?? "Place to be set"} · {e.leadName ?? ""}
                     {going.length ? ` · going: ${going.map(([u]) => names.get(u)).join(", ")}` : ""}
                   </span>
@@ -206,7 +206,7 @@ export default async function NurseCalendarPage({
                       mine === "going" ? (
                         <span className="text-body-s text-foreground">You&rsquo;re going.</span>
                       ) : mine === "asked" ? (
-                        <span className="text-body-s text-muted-foreground">You asked to go.</span>
+                        <span className={k("cf-mt")}>You asked to go.</span>
                       ) : (
                         <form action={askToGo}>
                           <input type="hidden" name="eventId" value={e.id} />

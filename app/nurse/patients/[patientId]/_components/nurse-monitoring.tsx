@@ -25,10 +25,13 @@ export async function NurseMonitoring({
   patientUserId,
   encounterId,
   actionsAllowed,
+  only,
 }: {
   patientUserId: string;
   encounterId: string;
   actionsAllowed: boolean;
+  /** The ward desk's chart tab (ADR 0546): the observation charts, or the medicines chart, without the heading. */
+  only?: "obs" | "mar";
 }) {
   const actor = await requireEmrActor("nurse");
   // Off with the Plan by problem (CLERKING_PLAN_V2): the plan is what opens these charts.
@@ -50,6 +53,26 @@ export async function NurseMonitoring({
   if (!payload || payload.charts.length === 0) return null;
   if (pharmacyDispensingLiveFor(actor.hospitalId)) await withWardChips(actor, payload);
   const fluid = payload.charts.find((c) => c.kind === "fluid_balance" && c.closedAt === null);
+  if (only) {
+    const charts = payload.charts.filter((c) => (only === "mar") === (c.kind === "mar"));
+    if (!charts.length) return null;
+    return (
+      <>
+        {only === "obs" && fluid?.kind === "fluid_balance" && actionsAllowed ? (
+          <FluidBalanceEntry
+            patientUserId={patientUserId}
+            encounterId={encounterId}
+            ivLines={fluid.body.ivLines
+              .filter((l) => l.key !== "other" && l.mlPerHour !== null)
+              .map((l) => ({ key: l.key, label: l.label }))}
+            entries={fluid.body.entries}
+            stepHours={fluid.body.stepHours}
+          />
+        ) : null}
+        <MonitoringChartsView payload={{ ...payload, charts }} />
+      </>
+    );
+  }
 
   return (
     <section

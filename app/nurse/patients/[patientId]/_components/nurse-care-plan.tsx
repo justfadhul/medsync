@@ -1,5 +1,6 @@
 import type { PlanProblem } from "@/lib/nursing-care/fold";
 
+import { k } from "@/components/nurse-ward/ui";
 import { CARE_LIBRARY } from "@/content/nursing-care-library";
 import { requireEmrActor } from "@/lib/emr/actor";
 import { asClinicalReader } from "@/lib/emr/db";
@@ -37,27 +38,18 @@ export async function NurseCarePlan({
     if (!isMissingTable(e)) throw e;
     plan = null;
   }
-  return (
-    <section
-      aria-labelledby="care-plan-heading"
-      className="mx-auto flex w-full max-w-[1200px] flex-col gap-4 px-4 pb-6 md:px-8"
-    >
-      <h2 id="care-plan-heading" className="text-heading-m text-foreground">
-        Nursing care plan
-      </h2>
-      {plan === null ? (
-        <p className="text-muted-foreground text-body-s">
-          The care plan is not set up at this hospital yet (migration 0314).
-        </p>
-      ) : (
-        <CarePlanPanel
-          patientUserId={patientUserId}
-          encounterId={encounterId}
-          plan={plan}
-          library={[...CARE_LIBRARY]}
-          actionsAllowed={actionsAllowed}
-        />
-      )}
-    </section>
+  // Drawn inside the ward desk's chart (ADR 0546), which names the tab.
+  return plan === null ? (
+    <p className={k("cf-note")}>
+      The care plan is not set up at this hospital yet (migration 0314).
+    </p>
+  ) : (
+    <CarePlanPanel
+      patientUserId={patientUserId}
+      encounterId={encounterId}
+      plan={plan}
+      library={[...CARE_LIBRARY]}
+      actionsAllowed={actionsAllowed}
+    />
   );
 }

@@ -1,11 +1,14 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { ArrowLeftIcon } from "lucide-react";
 
+import { MedicinesRound } from "@/components/nurse-ward/round";
 import { NURSE_TASKS_COPY } from "@/content/nurse-tasks";
 import { asClinicalReader } from "@/lib/emr/db";
 import { nurseTasksLiveFor } from "@/lib/emr/feature";
 import { loadNurseMar } from "@/lib/emr/read/nursing";
+import { nurseWardV2LiveFor } from "@/lib/nurse/feature";
 import { fetchNursePatientSummaryAudited } from "@/lib/nurse/patient-access";
 import { requireNurseScope } from "@/lib/nurse/scope";
 import { AdministerForm } from "./_components/administer-form";
@@ -21,6 +24,11 @@ interface PageProps {
 export default async function NurseMarPage({ searchParams }: PageProps) {
   const { patient } = await searchParams;
   const scope = await requireNurseScope();
+  // ADR 0546: with the ward desk on, a patient's doses are the chart's Medicines tab, and this page is the round.
+  if (nurseWardV2LiveFor(scope.hospitalId)) {
+    if (patient) redirect(`/nurse/patients/${patient}?tab=meds`);
+    return <MedicinesRound />;
+  }
 
   if (!patient) {
     return (
