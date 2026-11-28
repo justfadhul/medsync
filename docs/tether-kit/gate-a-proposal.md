@@ -65,7 +65,7 @@ Seven libraries were reviewed as references, from a video whose advice matches t
 
 ## Colour revision (28 Nov 2026, owner to pick)
 
-An audit of the shipped `pw-*` palette found six failing pairs: field edges 1.6:1, the disabled label 1.6:1, white on `cascade-4` 3.4:1, placeholders 3.1:1, the lagoon dot on white 1.9:1, and the navy main button on a navy band 1.0:1. The lagoon is also close to the stablecoin's green-teal and to "in your range" green. Three options pass every pair: **A** Tide tuned, **B** cyan lagoon (recommended), **C** navy leads. Clinical pairs are unchanged in all. Shown live at https://claude.ai/artifact/V2HBa6m95YyoxvDAWGHwAS. The chosen values go into `mobile/src/theme/tide.ts` once, with an ADR.
+An audit of the shipped `pw-*` palette found six failing pairs: field edges 1.6:1, the disabled label 1.6:1, white on `cascade-4` 3.4:1, placeholders 3.1:1, the lagoon dot on white 1.9:1, and the navy main button on a navy band 1.0:1. The lagoon is also close to the stablecoin's green-teal and to "in your range" green. Six options pass every pair: **A** Tide tuned, **B** cyan lagoon, **C** navy leads, **D** lake blue, **E** iris (recommended), **F** sunflower (not advised: it sits beside amber). A review of fifteen health brands found blue and blue-green crowded and purple rare, which is why E is recommended over B. Clinical pairs are unchanged in all. Shown live at https://claude.ai/artifact/V2HBa6m95YyoxvDAWGHwAS. The chosen values go into `mobile/src/theme/tide.ts` once, with an ADR.
 
 ## Inventory, in sets
 
