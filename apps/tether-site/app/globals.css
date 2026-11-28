@@ -6,6 +6,7 @@
 
 @source "../../../components/landing/tether";
 @source "../../../components/tide";
+@source "../../../components/tether-kit";
 
 @custom-variant dark (&:where(.dark, .dark *));
 
