@@ -260,9 +260,10 @@ describe.skipIf(!laneOn)("Pharmacy roster: database invariants (0273)", () => {
         `INSERT INTO public.pharmacy_rule_signatures (proposal_id, role, signed_by) VALUES ($1, $2, $3)`,
         [p, role, by],
       );
-    await expect(sign("second", f.b!)).rejects.toThrow(/proposer cannot be the second signer/);
+    // ADR 0550: no second signer; the head of pharmacy's signature applies the change.
+    await expect(sign("second", f.a!)).rejects.toThrow(/only the head of pharmacy signs/);
+    await expect(sign("in_charge", f.a!)).rejects.toThrow(/only the head of pharmacy signs/);
     await sign("in_charge", f.boss!);
-    await sign("second", f.a!);
     const d = day(20);
     await duty(f.b!, f.opd!, d);
     await expect(duty(f.deleg!, f.opd!, d)).rejects.toThrow(/full/);

@@ -5,6 +5,12 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); version
 
 ## [Unreleased]
 
+### Changed — The head of pharmacy signs rule changes and clinical content alone ([ADR 0550](docs/adr/0550-head-of-pharmacy-signs-alone.md)) — 28 Nov 2026
+
+A rule change (Set-up › Rules, the Medicines rule dialog, roster rules) applies on the head of pharmacy's signature; a pharmacist, technician or dispenser still proposes, and only the head signs it. Rule groups are signed by the head alone. Clinical content goes into force on the head's one signature. Nobody signs as "second signer". Controlled-medicine witnesses and going live are unchanged. Wording is draft.
+
+**Owner steps:** apply migration 0320 (GATED) **before** the app deploys, from this branch's worktree: `cd /Users/carolinemurizihiwe/Desktop/medsync/.claude/worktrees/tether-pharmacy-lab-1f10a7 && npm run db:migrate`.
+
 ### Added — The pharmacy and the laboratory open on Tether, in the desk frame ([ADR 0545](docs/adr/0545-pharmacy-and-lab-open-on-tether.md)) — 28 Nov 2026
 
 Pharmacy and lab staff signing in on the Tether domain stay there: `/pharmacy` and `/lab` open on Tether and draw their own places, counts, Find (or Scan or search), Start, station, offline pill and Needs you inside the Tether desk frame (`components/tether/workspace-frame.tsx`). Every page, permission and rule is the workspace's own and unchanged; on MedSync's domain nothing changes. A read-only chip names the viewer's duty now: the duty rota's post for the lab (where `DUTY_ROTA` is on), the pharmacy roster's line for the pharmacy, both "rostered, not confirmed present". Wording is draft (`content/tether-pharmacy-lab.ts`).

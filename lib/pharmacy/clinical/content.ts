@@ -193,8 +193,11 @@ export function signRefusal(input: {
   alreadySigned: readonly string[];
   otherEligibleSigners: number;
   exception: string | null;
+  /** The signer is the head of pharmacy (`pharmacy.manage`): they sign alone, their own entries too (ADR 0550). */
+  head?: boolean;
 }): string | null {
   if (input.alreadySigned.includes(input.signerUserId)) return "already_signed";
+  if (input.head) return null;
   const others = input.otherEligibleSigners > 0;
   if (input.signerUserId === input.authorUserId && others && input.alreadySigned.length === 0)
     return "author_first";

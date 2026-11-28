@@ -39,7 +39,7 @@ export const RULES_TAB = {
   heading: "Every rule MedSync enforces",
   count: (rules: number, groups: number) => `${rules} rules in ${groups} groups`,
   explain:
-    "The same rules show as badges on Medicines, Places and People. A change applies once the in-charge and a second signer have both signed, and the checks use the new value from then on.",
+    "The same rules show as badges on Medicines, Places and People. A change applies once the head of pharmacy signs it, and the checks use the new value from then on.",
   searchAria: "Search rules",
   searchPlaceholder: "Search rules, e.g. witness",
   summaryAria: "Summary",
@@ -64,10 +64,10 @@ export const RULES_TAB = {
   arrow: "→",
   why: (reason: string) => `Why: ${reason}`,
   meta: (by: string, at: string, applies: string, signed: number) =>
-    `Proposed by ${by} · ${at} · applies to ${applies ? applies.toLowerCase() : "what it says"} · ${signed >= 2 ? "both signed" : `${signed} of 2 signatures`}`,
-  signInCharge: "Sign as in-charge",
+    `Proposed by ${by} · ${at} · applies to ${applies ? applies.toLowerCase() : "what it says"} · ${signed >= 1 ? "signed" : "waiting for the head of pharmacy"}`,
+  signInCharge: "Sign as head of pharmacy",
   signSecond: "Sign as second signer",
-  inChargeSigned: "In-charge signed",
+  inChargeSigned: "Head of pharmacy signed",
   secondSigned: "Second signer signed",
   proposerNotSecond: "The person who proposed it cannot be the second signer",
   alreadySigned: "You have signed this one already",
@@ -79,7 +79,7 @@ export const RULES_TAB = {
   withdraw: "Withdraw",
   signedInCharge: "Signed as in-charge. Waiting for the second signer.",
   signedSecondOnly: "Signed as second signer. Waiting for the in-charge.",
-  bothSigned: "Both signed. The checks use the new value from now.",
+  bothSigned: "Signed. The checks use the new value from now.",
   rejected: (by: string) => `Rejected. ${by} is told why.`,
   withdrawn: "Proposal withdrawn",
 
@@ -90,7 +90,7 @@ export const RULES_TAB = {
   nWaiting: (n: number) => `${n} waiting`,
   showsOn: "Shows on",
   unsignedBanner:
-    "Not signed yet. The checks use these prototype defaults until the in-charge and a second signer sign the group.",
+    "Not signed yet. The checks use these prototype defaults until the head of pharmacy signs the group.",
   groupSigned: (title: string) => `${title} signed. The checks now use these values.`,
   groupSignedOne: "Signed. Waiting for the second signer.",
   groupSignedSecond: "Signed. Waiting for the in-charge.",

@@ -114,7 +114,8 @@ export function permissionsFor(actor: PharmacyActor, manages: boolean): Medicine
     review: manages,
     propose: edit,
     signInCharge: manages,
-    signSecond: has("pharmacy.view"),
+    // ADR 0550: the head of pharmacy signs a rule change alone; nobody signs as a second signer.
+    signSecond: false,
     request: manages || has("pharmacy.stock") || has("pharmacy.store"),
   };
 }

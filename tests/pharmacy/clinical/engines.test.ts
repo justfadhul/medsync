@@ -200,6 +200,27 @@ describe("CC: content", () => {
         exception: "CSO signs alone",
       }),
     ).toBeNull();
+    // ADR 0550: the head of pharmacy signs alone, their own entry too, without writing an exception.
+    expect(
+      signRefusal({
+        authorUserId: "a",
+        signerUserId: "a",
+        alreadySigned: [],
+        otherEligibleSigners: 1,
+        exception: null,
+        head: true,
+      }),
+    ).toBeNull();
+    expect(
+      signRefusal({
+        authorUserId: "b",
+        signerUserId: "a",
+        alreadySigned: ["a"],
+        otherEligibleSigners: 1,
+        exception: null,
+        head: true,
+      }),
+    ).toBe("already_signed");
     expect(statusAfterSigning(1, false)).toBe("reviewer_signed");
     expect(statusAfterSigning(2, false)).toBe("in_force");
   });

@@ -125,17 +125,16 @@ describe.skipIf(!laneOn)("Set-up › Medicines (0270)", () => {
           [L.h],
         )
       )[0]?.text;
+    // ADR 0550: nobody signs as a second signer; the head of pharmacy's signature applies the change.
+    await expect(
+      run(second, M.SignInput, M.signRuleProposal, { id: pr.id, role: "second" }),
+    ).rejects.toThrow();
+    expect(await text()).toBeUndefined();
     const first = await run(chief, M.SignInput, M.signRuleProposal, {
       id: pr.id,
       role: "in_charge",
     });
-    expect(first.applied).toBe(false);
-    expect(await text()).toBeUndefined();
-    await expect(
-      run(chief, M.SignInput, M.signRuleProposal, { id: pr.id, role: "second" }),
-    ).rejects.toThrow(/different person/);
-    const both = await run(second, M.SignInput, M.signRuleProposal, { id: pr.id, role: "second" });
-    expect(both.applied).toBe(true);
+    expect(first.applied).toBe(true);
     expect(await text()).toBe("Check the label twice before it leaves the counter.");
     // Straight to the table, without the signatures, the trigger refuses it.
     await expect(

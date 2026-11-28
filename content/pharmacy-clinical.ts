@@ -321,3 +321,6 @@ export const STEWARDSHIP_UI = {
   },
   none: "None.",
 } as const;
+
+/** Recorded on the signature when the head of pharmacy signs alone (ADR 0550; 10 to 500 characters, migration 0210). */
+export const HEAD_SIGNS_ALONE = "The head of pharmacy signs alone (owner ruling, 28 Nov 2026)";
