@@ -197,8 +197,8 @@ export const NURSE_FEATURE_AREAS: ReadonlyArray<NurseFeatureArea> = [
   },
   {
     slug: "cosign-queue",
-    label: "Review queue",
-    hint: "Junior nurses' flagged actions",
+    label: "Round and co-sign",
+    hint: "Today's doses across your patients; doses waiting for a co-sign",
     iconKey: "cosign_queue",
     placeholder: true,
     visibleTo: "registered+",

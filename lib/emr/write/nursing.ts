@@ -2,6 +2,7 @@ import "server-only";
 
 import type { WriteCtx } from "./context";
 import type { WriteResult } from "./orders";
+import type { NotGivenCode } from "@/lib/nurse/not-given";
 import type { PlanRx } from "@/lib/prescribing/plan-rx";
 import { and, eq, or } from "drizzle-orm";
 
@@ -9,6 +10,7 @@ import { fill } from "@/content/lab-workspace-v2";
 import { NURSE_TASKS_COPY as C } from "@/content/nurse-tasks";
 import { medicationAdministrationRecords, nurseTasks } from "@/db/schema/nurse-workspace";
 import { prescriptions } from "@/db/schema/prescribing";
+import { notGivenReason } from "@/lib/nurse/not-given";
 import { drugById } from "@/lib/prescribing/formulary";
 import { EmrWriteError } from "./context";
 import { recordProcedure } from "./facts";
@@ -236,13 +238,18 @@ export async function recordDose(
     scheduledFor: Date;
     given: boolean;
     reason?: string;
+    /** ADR 0546 Phase 3: a standard reason; "other" and "clinical" also need the note. */
+    code?: NotGivenCode;
     clientKey: string;
   },
 ): Promise<WriteResult> {
   if (!NURSE_CADRES.includes(ctx.actor.cadreCode))
     throw new EmrWriteError("forbidden", "Only nurses record doses.");
-  const reason = input.reason?.trim();
-  if (!input.given && !reason) throw invalid("Say why the dose is withheld.");
+  const reason = notGivenReason(input.code, input.reason);
+  if (!input.given && !reason)
+    throw invalid(
+      input.code ? "Add a short note for this reason." : "Say why the dose is withheld.",
+    );
   const [replay] = await ctx.tx
     .select({ id: medicationAdministrationRecords.id })
     .from(medicationAdministrationRecords)
@@ -309,7 +316,7 @@ export async function recordDose(
       dose: rx.dose,
       route: MAR_ROUTE[rx.route] ?? "other",
       isHighAlert: false,
-      state: input.given ? "administered" : "withheld",
+      state: input.given ? "administered" : input.code === "refused" ? "refused" : "withheld",
       withheldReason: input.given ? null : reason!,
       scheduledFor: input.scheduledFor,
       administeredAt: ctx.now,

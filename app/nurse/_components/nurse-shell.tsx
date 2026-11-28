@@ -49,7 +49,13 @@ export function NurseShell({
 }: {
   scope: NurseScope;
   /** Feature flags for this hospital (the Bed board is behind WARD_BUILDER). */
-  flags?: { wardBuilder: boolean; poctQuality?: boolean; wardStock?: boolean; tasks?: boolean };
+  flags?: {
+    wardBuilder: boolean;
+    poctQuality?: boolean;
+    wardStock?: boolean;
+    tasks?: boolean;
+    desk?: boolean;
+  };
   children: ReactNode;
 }) {
   const navItems = NURSE_FEATURE_AREAS.filter((f) => {
@@ -82,7 +88,11 @@ export function NurseShell({
                     href={nurseFeaturePath(item.slug)}
                     label={item.label}
                     iconKey={item.iconKey}
-                    placeholder={item.placeholder && !(item.slug === "tasks" && flags.tasks)}
+                    placeholder={
+                      item.placeholder &&
+                      !(item.slug === "tasks" && flags.tasks) &&
+                      !(item.slug === "cosign-queue" && flags.desk)
+                    }
                     exact={item.slug === ""}
                   />
                 </li>

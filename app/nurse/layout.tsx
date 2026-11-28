@@ -6,6 +6,7 @@ import { TideScope } from "@/components/medsync/tide-scope";
 import { ArrestAlarm } from "@/components/resus/arrest-alarm";
 import { emrV1LiveFor, nurseTasksLiveFor } from "@/lib/emr/feature";
 import { labPoctQualityLiveFor } from "@/lib/lab/feature";
+import { nurseWardV2LiveFor } from "@/lib/nurse/feature";
 import { requireNurseScope } from "@/lib/nurse/scope";
 import { nurseHoldsWardRight } from "@/lib/nurse/ward-stock";
 import { resusDeskV2 } from "@/lib/resus/feature";
@@ -25,7 +26,8 @@ export default async function NurseLayout({ children }: { children: ReactNode })
         wardBuilder: wardBuilderLiveFor(scope.hospitalId),
         poctQuality: emrV1LiveFor(scope.hospitalId) && labPoctQualityLiveFor(scope.hospitalId),
         wardStock: await nurseHoldsWardRight(scope),
-        tasks: nurseTasksLiveFor(scope.hospitalId),
+        tasks: nurseTasksLiveFor(scope.hospitalId) || nurseWardV2LiveFor(scope.hospitalId),
+        desk: nurseWardV2LiveFor(scope.hospitalId),
       }}
     >
       <TideScope group="nurse">{children}</TideScope>

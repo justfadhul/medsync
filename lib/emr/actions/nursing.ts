@@ -2,6 +2,7 @@
 
 import type { WriteCtx } from "@/lib/emr/write/context";
 import type { WriteResult } from "@/lib/emr/write/orders";
+import type { NotGivenCode } from "@/lib/nurse/not-given";
 import { z } from "zod";
 
 import { NURSE_TASKS_COPY as C } from "@/content/nurse-tasks";
@@ -14,6 +15,7 @@ import {
   reverseDose,
 } from "@/lib/emr/write/nursing";
 import { runEmrWrite } from "@/lib/emr/write/orders";
+import { NOT_GIVEN_CODES } from "@/lib/nurse/not-given";
 
 /**
  * The nurse side of the one Prescribe (kit P2 b, F5). Zod → requireEmrActor("nurse") → EMR_V1 →
@@ -67,8 +69,9 @@ const Dose = z
     scheduledFor: z.iso.datetime(),
     given: z.boolean(),
     reason: z.string().trim().max(500).optional(),
+    code: z.enum(NOT_GIVEN_CODES as [NotGivenCode, ...NotGivenCode[]]).optional(),
   })
-  .refine((d) => d.given || (d.reason?.length ?? 0) >= 3, {
+  .refine((d) => d.given || !!d.code || (d.reason?.length ?? 0) >= 3, {
     message: "Say why the dose is withheld.",
   });
 

@@ -128,6 +128,8 @@ export * from "./clerking";
 
 // ─── Monitoring charts opened by the plan (migration 0089 — GATED, ADR 0189)
 export * from "./monitoring";
+export * from "./nursing-care";
+export * from "./ward-desk";
 
 // ─── The ward builder and the live bed board (migration 0090 — GATED, ADRs 0191–0196)
 export * from "./ward-builder";

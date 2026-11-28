@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
+import { headers } from "next/headers";
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import {
   ActivityIcon,
   CalendarClockIcon,
@@ -18,10 +20,15 @@ import { NURSE_TASKS_COPY } from "@/content/nurse-tasks";
 import { WARDS } from "@/content/pharmacy-stores-wards";
 import { nurseTasksLiveFor } from "@/lib/emr/feature";
 import { fetchHospitalIncomingIntakes } from "@/lib/intake/queries";
+import { isTetherHost } from "@/lib/landing/feature";
 import { myNotices } from "@/lib/notices/read";
+import { nurseWardV2LiveFor } from "@/lib/nurse/feature";
 import { requireNurseScope } from "@/lib/nurse/scope";
+import { isWardNurse } from "@/lib/nurse/ward-desk";
+import { loadWardOverview } from "@/lib/nurse/ward-overview";
 import { nurseWardNotices } from "@/lib/nurse/ward-stock";
 import { careRequestsLiveFor } from "@/lib/requests/feature";
+import { WardFiguresPanel } from "./_components/ward-figures";
 
 export const metadata: Metadata = { title: "Overview · Nurse · MedSync" };
 export const dynamic = "force-dynamic";
@@ -33,6 +40,12 @@ export const dynamic = "force-dynamic";
  */
 export default async function NurseOverviewPage() {
   const scope = await requireNurseScope();
+  // ADR 0547: on Tether only a ward nurse of a hospital with the ward desk on stays; the rest work the clinic floor.
+  if (
+    isTetherHost((await headers()).get("host")) &&
+    !(nurseWardV2LiveFor(scope.hospitalId) && (await isWardNurse(scope)))
+  )
+    redirect("/clinic");
   const firstName = scope.fullName?.split(" ")[0];
 
   const incoming = await fetchHospitalIncomingIntakes({
@@ -42,6 +55,8 @@ export default async function NurseOverviewPage() {
   });
   // Pharmacy Phase 2 (5.7): recall notices for the nurse's wards; staff-facing, never a patient.
   const notices = await nurseWardNotices(scope);
+  // ADR 0546 Phase 1: the in-charge's ward figures, with the ward desk on.
+  const wardFigures = await loadWardOverview(scope);
   // Care requests (ADR 0533): the nurse in charge's admission notices; flag off, none are read.
   const incomingNotices = careRequestsLiveFor(scope.hospitalId)
     ? await myNotices(scope.userId, ["ward_incoming"])
@@ -69,6 +84,30 @@ export default async function NurseOverviewPage() {
           care-team, prescribing) ship.
         </p>
       </header>
+
+      <WardFiguresPanel wards={wardFigures} />
+      {nurseWardV2LiveFor(scope.hospitalId) ? (
+        <nav aria-label="Ward desk" className="flex flex-wrap gap-2">
+          {(
+            [
+              ["/nurse/tasks", "To do"],
+              ["/nurse/cosign-queue", "Round and co-sign"],
+              ["/nurse/handover/sbar", "SBAR handover"],
+              ["/nurse/calendar", "Calendar"],
+              ["/nurse/leave", "Leave"],
+              ["/nurse/incidents", "Report an incident"],
+            ] as const
+          ).map(([href, text]) => (
+            <Link
+              key={href}
+              href={href}
+              className="border-border bg-card hover:bg-muted text-body-s text-foreground rounded-full border px-3 py-1.5"
+            >
+              {text}
+            </Link>
+          ))}
+        </nav>
+      ) : null}
 
       {notices.length ? (
         <CautionNotice lead={WARDS.notices.title}>
