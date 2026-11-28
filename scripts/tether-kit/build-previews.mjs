@@ -4,7 +4,8 @@
 //   bundle.css  Tailwind compiled for the kit and the demos; every --pw-* token reads the design system's own
 //               token of the same name, so a token edited on the page reaches the previews
 //   <Name>/preview.html and <Name>/README.md  one card per demo, guidance from docs/tether-kit/components/
-// Run from the repo root:  node scripts/tether-kit/build-previews.mjs <out>
+// With --page it also writes <out>/tether-kit.html, the Tether Kit prototype page in the prototype palette.
+// Run from the repo root:  node scripts/tether-kit/build-previews.mjs <out> [--page]
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { compile } from "@tailwindcss/node";
@@ -121,6 +122,26 @@ for (const [name, { set, height }] of Object.entries(CARDS)) {
   const doc = join(ROOT, "docs/tether-kit/components", `${name}.md`);
   if (existsSync(doc)) writeFileSync(join(dir, "README.md"), readFileSync(doc, "utf8"));
 }
+// ─── the Tether Kit page (with --page) ───────────────────────────────────────────────────────────────
+// The prototype's own page, dressed in the prototype palette (docs/tether-kit/palettes/jacaranda.json),
+// light and dark, following the viewer's theme or the page's own toggle. The product's tokens are untouched.
+if (process.argv.includes("--page")) {
+  const palette = JSON.parse(readFileSync("docs/tether-kit/palettes/jacaranda.json", "utf8"));
+  const vars = (theme) =>
+    Object.entries(palette[theme])
+      .map(([k, v]) => `--${k}: ${v};`)
+      .join(" ");
+  const tokens = [
+    `:root { ${vars("light")} }`,
+    `@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { ${vars("dark")} color-scheme: dark; } }`,
+    `:root[data-theme="dark"] { ${vars("dark")} color-scheme: dark; }`,
+  ].join("\n");
+  const page = readFileSync(join(ROOT, "scripts/tether-kit/kit-page.html"), "utf8").replace(
+    "/*TOKENS*/",
+    tokens,
+  );
+  writeFileSync(join(OUT, "tether-kit.html"), page);
+}
 process.stdout.write(
-  `bundle.js ${(bundle.length / 1024).toFixed(0)} KB · bundle.css ${(css.length / 1024).toFixed(0)} KB · ${Object.keys(CARDS).length} cards → ${OUT}\n`,
+  `bundle.js ${(bundle.length / 1024).toFixed(0)} KB · bundle.css ${(css.length / 1024).toFixed(0)} KB · ${Object.keys(CARDS).length} cards${process.argv.includes("--page") ? " · page" : ""} → ${OUT}\n`,
 );

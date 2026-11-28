@@ -1,0 +1,371 @@
+<title>Tether Kit</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&family=Geist+Mono:wght@500;600&display=swap">
+<link rel="stylesheet" href="components/bundle.css">
+<style>
+/* Layout: the kit dressed in itself. A sticky set rail on the left, one section per part: live demo at both
+   densities, then how to use it, then the code. Tide's own tokens drive the page and the live parts alike. */
+/*TOKENS*/
+:root {
+  --font-sans: "Figtree", ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --font-mono: "Geist Mono", ui-monospace, Menlo, monospace;
+  --ease: cubic-bezier(0.16, 1, 0.3, 1);
+}
+*, *::before, *::after { box-sizing: border-box; }
+html { scroll-padding-top: calc(env(safe-area-inset-top, 0px) + 72px); }
+body { background: var(--bg); color: var(--ink); font-family: var(--font-sans); font-size: 15px; line-height: 1.55; -webkit-font-smoothing: antialiased; }
+h1, h2, h3 { margin: 0; text-wrap: balance; font-weight: 600; }
+p { margin: 0; }
+a { color: var(--accent-text); text-underline-offset: 3px; }
+:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+code, .mono { font-family: var(--font-mono); font-size: 0.92em; }
+
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 30; background: var(--bg); }
+.bar { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 20; background: color-mix(in srgb, var(--bg) 88%, transparent); backdrop-filter: blur(18px) saturate(160%);
+  border-bottom: 1px solid var(--line);
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 12px; }
+.bar-in { max-width: 1240px; margin: 0 auto; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.word { font-weight: 700; font-size: 21px; letter-spacing: -0.03em; color: var(--ink); }
+.word span { color: var(--ink-3); font-weight: 500; letter-spacing: -0.01em; }
+.bar-in .grow { flex: 1; }
+.theme { display: inline-flex; gap: 2px; padding: 3px; border-radius: 999px; background: var(--surface-3); }
+.theme button { font: 600 13px var(--font-sans); color: var(--ink-2); background: transparent; border: 0; border-radius: 999px; height: 30px; padding: 0 12px; cursor: pointer;
+  display: inline-flex; align-items: center; gap: 6px; transition: background-color 150ms var(--ease), color 150ms var(--ease), box-shadow 150ms var(--ease); }
+.theme button:hover { color: var(--ink); }
+.theme button[aria-pressed="true"] { background: var(--raised); color: var(--ink); box-shadow: var(--shadow-card); }
+.theme svg { width: 14px; height: 14px; }
+.chip.palette { background: var(--surface); color: var(--ink-2); border: 1px solid var(--line); }
+.chip.palette i { background: var(--accent); width: 10px; height: 10px; }
+.bar a.ds { font-weight: 600; font-size: 14px; text-decoration: none; padding: 6px 12px; border-radius: 999px; }
+.bar a.ds:hover { background: var(--accent-tint); }
+
+.chip { display: inline-flex; align-items: center; gap: 6px; height: 26px; padding: 0 11px; border-radius: 999px; font-size: 12.5px; font-weight: 600; white-space: nowrap; }
+.chip.review { background: var(--accent-tint); color: var(--accent-text); }
+.chip.planned { background: var(--surface-3); color: var(--ink-2); }
+.chip i { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+
+.page { max-width: 1240px; margin: 0 auto; display: grid; grid-template-columns: 232px minmax(0, 1fr); gap: 40px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 28px 96px; }
+.rail { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 84px); align-self: start; display: flex; flex-direction: column; gap: 4px; }
+.rail .h { font-size: 12px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--ink-3); padding: 0 12px 6px; }
+.rail a { display: flex; align-items: center; gap: 8px; padding: 7px 12px; border-radius: 12px; color: var(--ink-2); text-decoration: none; font-weight: 500; font-size: 14px; }
+.rail a:hover { background: var(--surface-3); color: var(--ink); }
+.rail a.sub { padding-left: 26px; font-size: 13.5px; }
+.rail a .n { margin-left: auto; }
+.rail .sep { height: 1px; background: var(--line); margin: 10px 12px; }
+.rail a.off { color: var(--ink-3); }
+main { min-width: 0; display: flex; flex-direction: column; gap: 56px; }
+
+.intro { display: flex; flex-direction: column; gap: 14px; max-width: 70ch; }
+.overline { font-size: 12px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--ink-3); }
+.intro h1 { font-size: 40px; line-height: 1.08; font-weight: 500; letter-spacing: -0.035em; }
+.lede { color: var(--ink-2); font-size: 17px; line-height: 1.6; }
+.facts { display: flex; flex-wrap: wrap; gap: 8px 22px; margin-top: 4px; color: var(--ink-2); font-size: 14px; }
+.facts b { color: var(--ink); font-weight: 600; font-variant-numeric: tabular-nums; }
+
+.set-head { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; padding-bottom: 14px; border-bottom: 1px solid var(--line); }
+.set-head h2 { font-size: 26px; letter-spacing: -0.02em; font-weight: 600; }
+.set-head p { flex-basis: 100%; color: var(--ink-2); max-width: 70ch; }
+
+.part { display: flex; flex-direction: column; gap: 16px; scroll-margin-top: 90px; }
+.part-head { display: flex; flex-direction: column; gap: 4px; }
+.part-head h3 { font-size: 21px; letter-spacing: -0.02em; display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+.part-head h3 code { font-size: 13px; font-weight: 500; color: var(--ink-3); }
+.part-head p { color: var(--ink-2); max-width: 70ch; }
+.stage { background: var(--surface-2); border: 1px solid var(--line); border-radius: 22px; overflow: hidden; min-height: 120px; }
+.stage .loading { padding: 28px; color: var(--ink-3); font-size: 14px; }
+.cols { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 20px; }
+.notes { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+.notes h4 { margin: 0; font-size: 13px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: var(--ink-3); }
+.notes ul { margin: 0; padding-left: 18px; list-style: disc; display: flex; flex-direction: column; gap: 6px; color: var(--ink); }
+.notes li::marker { color: var(--ink-3); }
+.notes li.dont::marker { content: "✕  "; color: var(--ink-3); font-size: 11px; }
+.code { position: relative; min-width: 0; background: var(--surface); border: 1px solid var(--line); border-radius: 16px; display: flex; flex-direction: column; }
+.code-top { display: flex; align-items: center; gap: 8px; padding: 8px 8px 8px 14px; border-bottom: 1px solid var(--line); }
+.code-top span { font-size: 12.5px; color: var(--ink-3); font-weight: 600; flex: 1; }
+.copy { font: 600 13px var(--font-sans); color: var(--accent-text); background: transparent; border: 0; border-radius: 999px; padding: 5px 12px; cursor: pointer; transition: background-color 150ms var(--ease); }
+.copy:hover { background: var(--accent-tint); }
+pre { margin: 0; padding: 14px; overflow-x: auto; font-family: var(--font-mono); font-size: 12.5px; line-height: 1.7; color: var(--ink); }
+pre .k { color: var(--accent-text); } pre .s { color: var(--ink-2); } pre .c { color: var(--ink-3); }
+
+.table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 16px; background: var(--surface); }
+table { border-collapse: collapse; width: 100%; min-width: 640px; font-size: 14px; }
+th { text-align: left; font-size: 12px; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; color: var(--ink-3); padding: 11px 16px; background: var(--surface-2); }
+td { padding: 12px 16px; border-top: 1px solid var(--line); vertical-align: top; }
+td:first-child { font-weight: 600; white-space: nowrap; }
+td .muted { color: var(--ink-2); }
+
+.how { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
+.how > div { background: var(--surface); border-radius: 18px; padding: 16px 18px; box-shadow: var(--shadow-card); display: flex; flex-direction: column; gap: 6px; }
+.how b { font-size: 15px; }
+.how p { color: var(--ink-2); font-size: 14px; }
+footer { color: var(--ink-3); font-size: 13px; border-top: 1px solid var(--line); padding-top: 18px; display: flex; flex-direction: column; gap: 4px; }
+
+@media (max-width: 960px) {
+  .page { grid-template-columns: minmax(0, 1fr); gap: 24px; }
+  .rail { position: static; flex-direction: row; overflow-x: auto; gap: 6px; padding-bottom: 4px; }
+  .rail .h, .rail .sep, .rail a.sub, .rail a.off { display: none; }
+  .rail a { background: var(--surface); border: 1px solid var(--line); border-radius: 999px; white-space: nowrap; }
+  .cols, .how { grid-template-columns: minmax(0, 1fr); }
+  .intro h1 { font-size: 32px; }
+}
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } .copy { transition: none; } }
+</style>
+
+<header class="bar">
+  <div class="bar-in">
+    <div class="word">Tether <span>Kit</span></div>
+    <span class="chip review"><i></i>Set 1 of 8 · In review</span>
+    <span class="chip palette" title="The palette this prototype uses. The product keeps its shipped colours."><i></i>Prototype palette · Jacaranda</span>
+    <span class="grow"></span>
+    <div class="theme" role="group" aria-label="Theme">
+      <button type="button" data-t="light" aria-pressed="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>Light</button>
+      <button type="button" data-t="dark" aria-pressed="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/></svg>Dark</button>
+      <button type="button" data-t="auto" aria-pressed="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4"/></svg>Auto</button>
+    </div>
+    <a class="ds" href="https://claude.ai/artifact/Sjv4zYDGJVMGDtCbHLfoQZ" target="_blank" rel="noopener">Tether Tide design system ↗</a>
+  </div>
+</header>
+
+<div class="page">
+  <nav class="rail" aria-label="Sets and parts">
+    <a href="#use">Using the kit</a>
+    <div class="sep"></div>
+    <div class="h">Set 1 · Actions and labels</div>
+    <a href="#button">Button</a>
+    <a class="sub" href="#button">ButtonLink</a>
+    <a href="#icon-button">IconButton</a>
+    <a href="#tags">Tag, StatusTag</a>
+    <a href="#surfaces">Card, Band</a>
+    <div class="sep"></div>
+    <a href="#next">Sets 2 to 8 <span class="n chip planned">Planned</span></a>
+    <a href="#references">References</a>
+  </nav>
+
+  <main>
+    <section class="intro">
+      <div class="overline">Component library · Tether</div>
+      <h1>One set of parts for every Tether screen</h1>
+      <p class="lede">The Tether Kit builds every Tether surface from the same parts, from the patient's phone to the reception desk. Behaviour comes from Base UI; the look is Tide. Each part sizes itself for patients or for the desk, so a patient and a receptionist at the same clinic see one product.</p>
+      <p class="lede">It is built one set at a time, and each set is reviewed before the next begins. Everything below is the real code, running live, dressed in Jacaranda, the palette chosen for prototyping the kit. The product keeps its shipped colours until the owner decides otherwise. Rows are examples, not patients.</p>
+      <div class="facts"><span><b>Set 1</b> in review</span><span><b>7</b> parts</span><span><b>2</b> densities</span><span><b>Light and dark</b> themes, switch above</span><span><b>Jacaranda</b> palette</span></div>
+    </section>
+
+    <section class="part" id="use" aria-labelledby="use-h" style="gap:14px">
+      <div class="part-head"><h3 id="use-h">Using the kit</h3></div>
+      <div class="how">
+        <div><b>Wrap the surface once</b><p><code>&lt;KitRoot&gt;</code> switches the Tide tokens on and sets the density for everything inside: <code>patient</code> by default, <code>desk</code> for reception, the clinic floor and the admin.</p></div>
+        <div><b>Pass intent, not colour</b><p>Parts take a <code>tone</code> and a <code>size</code>. They own every colour, radius and motion, so a screen cannot drift from Tide.</p></div>
+        <div><b>The rules travel with the parts</b><p>A disabled button says why, a status is an icon and a word, an icon-only button is named. Tests in the repo hold each rule.</p></div>
+      </div>
+    </section>
+
+    <section class="part" aria-labelledby="set1-h" style="gap:0">
+      <div class="set-head">
+        <h2 id="set1-h">Set 1 · Actions and labels</h2>
+        <span class="chip review"><i></i>In review</span>
+        <p>The parts on every screen: buttons, the tags that label things and carry state, and the two surfaces everything sits on.</p>
+      </div>
+    </section>
+
+    <section class="part" id="button" aria-labelledby="button-h">
+      <div class="part-head">
+        <h3 id="button-h">Button <code>Button · ButtonLink</code></h3>
+        <p>The pill that does something. <code>Button</code> acts, <code>ButtonLink</code> navigates. Press "Send reminder" to see the busy state: the spinner only takes over after 400 ms, so quick actions never flash.</p>
+      </div>
+      <div class="stage" data-demo="Button"><div class="loading">Loading the live parts…</div></div>
+      <div class="cols">
+        <div class="notes">
+          <h4>How to use it</h4>
+          <ul>
+            <li><b>primary</b> for the main action of a form or card. Navy in light, near-white in Navy.</li>
+            <li><b>accent</b> (lagoon) for the one thing to do now. One per screen region.</li>
+            <li><b>soft</b> and <b>outline</b> beside a main action; <b>quiet</b> for "Change" and "Add" in a row.</li>
+            <li><b>danger</b> only for Help and "Get help now".</li>
+            <li>Use <code>disabledReason</code>, never a bare disabled: the reason shows under the button and is read with it.</li>
+            <li class="dont">Two accent buttons in one region, or danger for delete.</li>
+          </ul>
+        </div>
+        <div class="code">
+          <div class="code-top"><span>Example</span><button class="copy" type="button">Copy</button></div>
+<pre><span class="k">import</span> { Button, ButtonLink } <span class="k">from</span> <span class="s">"@/components/tether-kit"</span>;
+
+&lt;Button tone=<span class="s">"accent"</span>&gt;Book a visit&lt;/Button&gt;
+&lt;Button busy={saving} onClick={save}&gt;Save reading&lt;/Button&gt;
+&lt;Button size=<span class="s">"m"</span> disabledReason=<span class="s">"Sign the discharge summary first."</span>&gt;
+  Discharge
+&lt;/Button&gt;
+&lt;ButtonLink href=<span class="s">"/visits"</span> tone=<span class="s">"outline"</span> size=<span class="s">"m"</span>&gt;See your visits&lt;/ButtonLink&gt;</pre>
+        </div>
+      </div>
+    </section>
+
+    <section class="part" id="icon-button" aria-labelledby="ib-h">
+      <div class="part-head">
+        <h3 id="ib-h">IconButton <code>IconButton</code></h3>
+        <p>A round button with only a glyph, for the few glyphs everyone reads: close, more and the steppers. Everything else is a Button with a word.</p>
+      </div>
+      <div class="stage" data-demo="IconButton"><div class="loading">Loading the live parts…</div></div>
+      <div class="cols">
+        <div class="notes">
+          <h4>How to use it</h4>
+          <ul>
+            <li><code>label</code> is required: it is read out and shown on hover.</li>
+            <li>Tones <b>soft</b> (default), <b>outline</b> or <b>quiet</b>. Never accent or danger.</li>
+            <li>48 px for patients, 36 px at the desk, from the surface's density.</li>
+            <li class="dont">An icon-only button for anything a person has to guess.</li>
+          </ul>
+        </div>
+        <div class="code">
+          <div class="code-top"><span>Example</span><button class="copy" type="button">Copy</button></div>
+<pre><span class="k">import</span> { IconButton, ICON } <span class="k">from</span> <span class="s">"@/components/tether-kit"</span>;
+<span class="k">import</span> { XIcon } <span class="k">from</span> <span class="s">"lucide-react"</span>;
+
+&lt;IconButton label=<span class="s">"Close"</span> icon={&lt;XIcon {...ICON} /&gt;} onClick={close} /&gt;</pre>
+        </div>
+      </div>
+    </section>
+
+    <section class="part" id="tags" aria-labelledby="tags-h">
+      <div class="part-head">
+        <h3 id="tags-h">Tag and StatusTag <code>Tag · StatusTag</code></h3>
+        <p><code>Tag</code> names a thing. <code>StatusTag</code> is the only part that carries state, always as an icon and a word, so state is never colour alone.</p>
+      </div>
+      <div class="stage" data-demo="Tag"><div class="loading">Loading the live parts…</div></div>
+      <div class="cols">
+        <div class="notes">
+          <h4>How to use it</h4>
+          <ul>
+            <li><code>area</code> adds the place dot (visits, readings, medicines, team, me). A dot beside the word, never a fill behind it.</li>
+            <li><b>stable</b>, <b>caution</b> and <b>critical</b> are health, owned by the Clinical Safety Officer: readings and emergencies only.</li>
+            <li><b>pending</b> for waiting, offline and loading; <b>info</b> for neutral notices.</li>
+            <li class="dont">Red, amber or green for a workflow state such as "Late".</li>
+          </ul>
+        </div>
+        <div class="code">
+          <div class="code-top"><span>Example</span><button class="copy" type="button">Copy</button></div>
+<pre><span class="k">import</span> { Tag, StatusTag } <span class="k">from</span> <span class="s">"@/components/tether-kit"</span>;
+
+&lt;Tag area=<span class="s">"visits"</span>&gt;Visits&lt;/Tag&gt;
+&lt;StatusTag tone=<span class="s">"caution"</span>&gt;Above your target&lt;/StatusTag&gt;
+&lt;StatusTag tone=<span class="s">"pending"</span>&gt;Waiting for the clinic&lt;/StatusTag&gt;</pre>
+        </div>
+      </div>
+    </section>
+
+    <section class="part" id="surfaces" aria-labelledby="surf-h">
+      <div class="part-head">
+        <h3 id="surf-h">Card and Band <code>Card · Band</code></h3>
+        <p>The two surfaces everything sits on. A Card is the white object on the grey ground; a Band is the navy header of a ticket or a patient's record.</p>
+      </div>
+      <div class="stage" data-demo="Card"><div class="loading">Loading the live parts…</div></div>
+      <div class="cols">
+        <div class="notes">
+          <h4>How to use it</h4>
+          <ul>
+            <li>Card: 22 px corners and 20 px padding for patients, 18 px and 16 px at the desk. <code>flat</code> for a card inside a card.</li>
+            <li>Band text uses on-band; its one lagoon word uses on-band-accent.</li>
+            <li>State shows through a StatusTag inside the surface.</li>
+            <li class="dont">A coloured left edge, a gradient, or a Band inside a Card.</li>
+          </ul>
+        </div>
+        <div class="code">
+          <div class="code-top"><span>Example</span><button class="copy" type="button">Copy</button></div>
+<pre><span class="k">import</span> { Card, Band, KitRoot } <span class="k">from</span> <span class="s">"@/components/tether-kit"</span>;
+
+&lt;KitRoot density=<span class="s">"desk"</span>&gt;
+  &lt;Band&gt;…the patient's header…&lt;/Band&gt;
+  &lt;Card&gt;…today's visits…&lt;/Card&gt;
+&lt;/KitRoot&gt;</pre>
+        </div>
+      </div>
+    </section>
+
+    <section class="part" id="next" aria-labelledby="next-h">
+      <div class="set-head">
+        <h2 id="next-h">Sets 2 to 8</h2>
+        <span class="chip planned"><i></i>Planned</span>
+        <p>Each set starts once the one before it is signed. A set can move earlier if a screen needs it sooner.</p>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Set</th><th>Parts</th><th>Behaviour from</th><th>Replaces</th></tr></thead>
+          <tbody>
+            <tr><td>2 · Typing</td><td>Field, Input, Textarea, NumberInput with a locked unit</td><td class="muted">Base UI Field, Input, NumberField</td><td class="muted">TextField, NumberField, desk inputs</td></tr>
+            <tr><td>3 · Choosing</td><td>Select, Segments, Tabs, Checkbox, Switch, RadioCards, ChipGroup</td><td class="muted">Base UI Select, Tabs, ToggleGroup, Checkbox, Switch, Radio</td><td class="muted">316 native selects, Segments, PillTabs, Chip</td></tr>
+            <tr><td>4 · Interrupting</td><td>Dialog, DangerDialog, Toast, Sheet (phone only)</td><td class="muted">Base UI Dialog, AlertDialog, Toast, Drawer</td><td class="muted">EditorDialog in Tether, the danger interrupt, Toast</td></tr>
+            <tr><td>5 · Menus and lookups</td><td>Combobox, Menu, Popover, Tooltip, OTPField, PhoneField</td><td class="muted">Base UI</td><td class="muted">desk menus, ⌘K, the sign-in code</td></tr>
+            <tr><td>6 · Date and time</td><td>DateField, TimeField, Calendar, quick picks</td><td class="muted">Base UI Popover and Tether's own grid</td><td class="muted">37 native date inputs</td></tr>
+            <tr><td>7 · Data</td><td>Table with sort, select and bulk actions; pager</td><td class="muted">Tether's own, on Base UI Checkbox</td><td class="muted">desk tables</td></tr>
+            <tr><td>8 · Tether's own</td><td>Ticket, PatientBand, StageBar, Cascade, EmptyState, Skeleton</td><td class="muted">none</td><td class="muted">the patient web's ticket, stages and cascade</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="part" id="references" aria-labelledby="ref-h">
+      <div class="set-head">
+        <h2 id="ref-h">References</h2>
+        <p>Seven libraries were reviewed. Base UI and Tide stay the foundation; a reference lends behaviour and craft only, re-expressed in Tide's tokens and its 150, 250 and 400 ms timings. No code, look or motion style is copied.</p>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Library</th><th>Tether takes</th><th>Tether turns down</th></tr></thead>
+          <tbody>
+            <tr><td>Astryx (Meta)</td><td>A busy button keeps its width and shows the spinner only after a delay; press scale on a mouse only (Set 1). Badge semantics and status-dot labels later.</td><td class="muted">StyleX, 8 px corners, opacity-only disabled.</td></tr>
+            <tr><td>BoardUI</td><td>A fast press with a slower release (Set 1). Stat cards and chips for desk dashboards (Set 7).</td><td class="muted">The gradient primary button, React Aria.</td></tr>
+            <tr><td>Transitions.dev</td><td>Open slower than close, a small scale from the trigger (Set 4). A reduced-motion guard on every motion.</td><td class="muted">Blur and overshoot.</td></tr>
+            <tr><td>Bencho</td><td>The toast stack's accessibility: a focusable region that expands, labelled dismiss (Set 4).</td><td class="muted">Springs and sounds.</td></tr>
+            <tr><td>ObsidianUI</td><td>Nothing yet.</td><td class="muted">Hover lift, spring taps.</td></tr>
+            <tr><td>Aceternity UI</td><td>Nothing.</td><td class="muted">Beams, glows, gradients: decorative motion.</td></tr>
+            <tr><td>HorizonX</td><td>Nothing.</td><td class="muted">Paid; could not be reviewed.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <footer>
+      <span>Source: <code>components/tether-kit</code> in justfadhul/medsync, branch <code>claude/epic-pascal-zg2var</code>. Plan: <code>docs/tether-kit/gate-a-proposal.md</code>.</span>
+      <span>Built from the repo with <code>node scripts/tether-kit/build-previews.mjs &lt;out&gt; --page</code>. Palette: <code>docs/tether-kit/palettes/jacaranda.json</code>.</span>
+    </footer>
+  </main>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.3.1/umd/react.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.3.1/umd/react-dom.production.min.js"></script>
+<script src="components/bundle.js"></script>
+<script>
+  (function () {
+    var root = document.documentElement, host = root.getAttribute("data-theme");
+    var buttons = document.querySelectorAll(".theme button");
+    function apply(t, save) {
+      if (t === "auto") { if (host) root.setAttribute("data-theme", host); else root.removeAttribute("data-theme"); }
+      else root.setAttribute("data-theme", t);
+      buttons.forEach(function (b) { b.setAttribute("aria-pressed", String(b.getAttribute("data-t") === t)); });
+      if (save) { try { localStorage.setItem("tether-kit-theme", t); } catch (e) {} }
+    }
+    var saved = "auto";
+    try { saved = localStorage.getItem("tether-kit-theme") || "auto"; } catch (e) {}
+    apply(saved, false);
+    buttons.forEach(function (b) { b.addEventListener("click", function () { apply(b.getAttribute("data-t"), true); }); });
+    document.querySelectorAll("[data-demo]").forEach(function (el) {
+      var name = el.getAttribute("data-demo");
+      if (!window.TetherKit || !window.ReactDOM) {
+        el.firstElementChild.textContent = "The live parts could not load. Check your connection and reload.";
+        return;
+      }
+      el.innerHTML = "";
+      ReactDOM.createRoot(el).render(React.createElement(TetherKit.demos[name]));
+    });
+    document.querySelectorAll(".copy").forEach(function (b) {
+      b.addEventListener("click", function () {
+        var pre = b.closest(".code").querySelector("pre");
+        var done = function () { b.textContent = "Copied"; setTimeout(function () { b.textContent = "Copy"; }, 1500); };
+        var select = function () { var r = document.createRange(); r.selectNodeContents(pre); var s = getSelection(); s.removeAllRanges(); s.addRange(r); b.textContent = "Selected"; };
+        try { navigator.clipboard.writeText(pre.innerText).then(done, select); } catch (e) { select(); }
+      });
+    });
+  })();
+</script>
