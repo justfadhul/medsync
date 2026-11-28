@@ -17,6 +17,7 @@ The owner (who is also the CSO) approved the "MedSync Chroma" design-system arti
 - Checks: 3,929 tests pass; the build passes against a dead-DB env; axe is clean on the pre-rendered pages.
 
 **How to apply:**
+
 - Merging into the main tree will conflict with the main tree's uncommitted `admin-shell.tsx` / `admin-sidebar-active.tsx` (tester-feedback work) and its `AGENTS.md` trim.
 - Mobile ships only via EAS builds (no OTA updates configured).
 - Workspaces were checked only via `/styleguide`; signed-in pages were never rendered (dead DB).

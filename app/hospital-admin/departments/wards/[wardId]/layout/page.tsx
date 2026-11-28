@@ -17,5 +17,10 @@ export default async function WardLayoutPage({ params }: { params: Promise<{ war
   if (!/^[0-9a-f-]{36}$/i.test(wardId)) notFound();
   const data = await loadLayoutEditor(scope.hospitalId, wardId);
   if (!data) notFound();
-  return <LayoutEditorClient key={wardId} data={{ ...data, euLive: euObservationLiveFor(scope.hospitalId) }} />;
+  return (
+    <LayoutEditorClient
+      key={wardId}
+      data={{ ...data, euLive: euObservationLiveFor(scope.hospitalId) }}
+    />
+  );
 }

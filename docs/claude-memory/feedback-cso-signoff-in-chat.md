@@ -15,6 +15,7 @@ Operational rules (order parameters, ward lists, other packs) are signed by the 
 **Why:** the owner finds the CSO gates and multi-signer flows exhausting and confusing, and has ADHD, so long flows and long messages cost them a lot.
 
 **How to apply:**
+
 - Never add an in-app CSO step.
 - Ask for sign-off in chat as one short yes/no question.
 - Keep app flows to the fewest taps.

@@ -4,10 +4,10 @@ import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import Link from "next/link";
 import { Suspense } from "react";
+import { feeText } from "@patient-core/fees";
 import { lastDays, monthDays, moodsFor, readingsFrom, yearMix } from "@patient-core/log";
 import { checkReading } from "@patient-core/readings";
 import { nextVisit } from "@patient-core/visits-calendar";
-import { feeText } from "@patient-core/fees";
 import {
   AlertCircleIcon,
   CalendarDaysIcon,
@@ -41,8 +41,8 @@ import { PATIENT_REASON_CODES } from "@/supabase/functions/_shared/sessions-sql"
 import { DoctorsView, QuietRow } from "./_components/doctors";
 import { MoodCard } from "./_components/mood-card";
 import { BookHub } from "./_components/today/book-hub";
-import { shownName } from "./_lib/names";
 import { ReadingButton } from "./_components/today/reading-button";
+import { shownName } from "./_lib/names";
 import { kampalaClock, loadToday } from "./care/_v2/data";
 import { TodayClient } from "./care/_v2/today";
 
@@ -50,9 +50,23 @@ export const metadata: Metadata = { title: "Today" };
 export const dynamic = "force-dynamic";
 
 const KAMPALA = "Africa/Kampala";
-const DATE = new Intl.DateTimeFormat("en-GB", { timeZone: KAMPALA, weekday: "long", day: "numeric", month: "long" });
-const SHORT = new Intl.DateTimeFormat("en-GB", { timeZone: KAMPALA, weekday: "short", day: "numeric", month: "short" });
-const HOUR = new Intl.DateTimeFormat("en-GB", { timeZone: KAMPALA, hour: "numeric", hourCycle: "h23" });
+const DATE = new Intl.DateTimeFormat("en-GB", {
+  timeZone: KAMPALA,
+  weekday: "long",
+  day: "numeric",
+  month: "long",
+});
+const SHORT = new Intl.DateTimeFormat("en-GB", {
+  timeZone: KAMPALA,
+  weekday: "short",
+  day: "numeric",
+  month: "short",
+});
+const HOUR = new Intl.DateTimeFormat("en-GB", {
+  timeZone: KAMPALA,
+  hour: "numeric",
+  hourCycle: "h23",
+});
 const initials = (s: string) =>
   s
     .split(/\s+/)
@@ -66,7 +80,8 @@ const MON = new Intl.DateTimeFormat("en-GB", { month: "short" });
 /** A "Your health" tile on the phone: tinted from its place's colour (`--c`), as the phone's places are. */
 const TILE =
   "rounded-[22px] flex min-h-[132px] min-w-0 flex-col gap-1.5 p-3.5 bg-[color-mix(in_srgb,var(--c)_13%,var(--pw-surface))] active:scale-[0.98] transition-[scale] duration-150";
-const TAG = "bg-pw-surface text-pw-ink-2 self-start rounded-[4px] px-1.5 py-0.5 text-[11px] leading-4 font-bold";
+const TAG =
+  "bg-pw-surface text-pw-ink-2 self-start rounded-[4px] px-1.5 py-0.5 text-[11px] leading-4 font-bold";
 
 /**
  * Today (the owner's three-page redesign, 22 Nov 2026; replaces Home, Book and the Care hub): the day's band with
@@ -74,7 +89,11 @@ const TAG = "bg-pw-surface text-pw-ink-2 self-start rounded-[4px] px-1.5 py-0.5 
  * books for; booking on the page; then readings, medicines, lab tests and the care team, and See a doctor. In
  * Care mode (`careModeOn()`, locked until Gate CG) the care plan comes before booking. Real rows only.
  */
-export default async function TodayPage({ searchParams }: { searchParams: Promise<{ r?: string }> }) {
+export default async function TodayPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ r?: string }>;
+}) {
   const scope = await requirePatientScope();
   const now = new Date();
   const q = await searchParams;
@@ -113,7 +132,11 @@ export default async function TodayPage({ searchParams }: { searchParams: Promis
   const waiting = labs.state === "ready" ? labs.notReady.length : 0;
   const who = [
     { id: null, label: name || "Me", rel: T.me },
-    ...household.map((m) => ({ id: m.provisionalPatientId, label: m.memberLabel, rel: m.relationship })),
+    ...household.map((m) => ({
+      id: m.provisionalPatientId,
+      label: m.memberLabel,
+      rel: m.relationship,
+    })),
   ];
 
   const moodProps = {
@@ -126,7 +149,9 @@ export default async function TodayPage({ searchParams }: { searchParams: Promis
     chat: false,
   };
   const last = week
-    ? ([...week.past].filter((v) => v.status === "completed").sort((a, b) => b.startsAtIso.localeCompare(a.startsAtIso))[0] ?? null)
+    ? ([...week.past]
+        .filter((v) => v.status === "completed")
+        .sort((a, b) => b.startsAtIso.localeCompare(a.startsAtIso))[0] ?? null)
     : null;
   const openDay = days?.days[0]?.key ?? null;
   const open = days?.days[0]?.sessions.find((s) => s.placesLeft > 0) ?? null;
@@ -152,7 +177,7 @@ export default async function TodayPage({ searchParams }: { searchParams: Promis
       key="bp"
       kind="bp"
       label={`${T.glance.bloodPressure}: ${bp && bp.input.kind === "bp" ? `${bp.input.top}/${bp.input.bottom}` : T.glance.noReading}. ${T.logReading}`}
-      className="flex min-w-0 flex-col items-start gap-0.5 rounded-[18px] bg-pw-band-glass p-4 text-left hover:opacity-90"
+      className="bg-pw-band-glass flex min-w-0 flex-col items-start gap-0.5 rounded-[18px] p-4 text-left hover:opacity-90"
     >
       <span className="text-pw-on-band-2 flex items-center gap-2 text-[12px] font-semibold">
         <HeartPulseIcon className="size-4" {...ICON} />
@@ -161,7 +186,9 @@ export default async function TodayPage({ searchParams }: { searchParams: Promis
       <span className="text-[22px] leading-[28px] font-bold tabular-nums">
         {bp && bp.input.kind === "bp" ? `${bp.input.top}/${bp.input.bottom}` : T.glance.noReading}
       </span>
-      <span className="text-pw-on-band-2 truncate text-[12px]">{bpCheck ? bpCheck.text : T.logReading}</span>
+      <span className="text-pw-on-band-2 truncate text-[12px]">
+        {bpCheck ? bpCheck.text : T.logReading}
+      </span>
     </ReadingButton>,
   ];
 
@@ -178,7 +205,10 @@ export default async function TodayPage({ searchParams }: { searchParams: Promis
             </span>
             <div className="min-w-0">
               <p className="text-pw-on-band-2 text-[14px] font-semibold">{DATE.format(now)}</p>
-              <h1 id="day-h" className="text-[36px] leading-[42px] font-semibold tracking-[-0.03em]">
+              <h1
+                id="day-h"
+                className="text-[36px] leading-[42px] font-semibold tracking-[-0.03em]"
+              >
                 {greeting}, {first}
               </h1>
             </div>
@@ -197,7 +227,7 @@ export default async function TodayPage({ searchParams }: { searchParams: Promis
                 <Link
                   key={m.provisionalPatientId}
                   href="#book"
-                  className="flex min-h-11 items-center gap-2 rounded-full bg-pw-band-glass py-1 pr-4 pl-1"
+                  className="bg-pw-band-glass flex min-h-11 items-center gap-2 rounded-full py-1 pr-4 pl-1"
                 >
                   <span className="bg-pw-accent-tint text-pw-accent-text grid size-9 place-items-center rounded-full text-[12px] font-bold">
                     {initials(m.memberLabel)}
@@ -210,7 +240,7 @@ export default async function TodayPage({ searchParams }: { searchParams: Promis
               ))}
               <Link
                 href="/patient/me/household"
-                className="flex min-h-11 items-center rounded-full border border-dashed border-pw-on-band/30 px-4 text-[14px] font-semibold"
+                className="border-pw-on-band/30 flex min-h-11 items-center rounded-full border border-dashed px-4 text-[14px] font-semibold"
               >
                 + {T.addSomeone}
               </Link>
@@ -238,7 +268,10 @@ export default async function TodayPage({ searchParams }: { searchParams: Promis
 
         <MoodCard {...moodProps} tone="page" />
 
-        <section aria-labelledby="nv-h" className="bg-pw-band text-pw-on-band shadow-pw-float flex flex-col gap-3.5 rounded-[26px] p-4">
+        <section
+          aria-labelledby="nv-h"
+          className="bg-pw-band text-pw-on-band shadow-pw-float flex flex-col gap-3.5 rounded-[26px] p-4"
+        >
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
               <p className="text-pw-on-band-2 text-[12px] font-semibold">{T.glance.nextVisit}</p>
@@ -249,7 +282,9 @@ export default async function TodayPage({ searchParams }: { searchParams: Promis
             {last ? (
               <p className="text-pw-on-band-2 shrink-0 text-right text-[11px] leading-[15px]">
                 {T.lastVisit}
-                <b className="text-pw-on-band block text-[13px]">{SHORT.format(new Date(last.startsAtIso))}</b>
+                <b className="text-pw-on-band block text-[13px]">
+                  {SHORT.format(new Date(last.startsAtIso))}
+                </b>
                 {last.departmentName}
               </p>
             ) : null}
@@ -262,15 +297,25 @@ export default async function TodayPage({ searchParams }: { searchParams: Promis
             <>
               <div className="bg-pw-band-glass flex items-center gap-3 rounded-[18px] p-2.5">
                 <span className="bg-pw-on-band text-pw-band flex h-[62px] w-14 shrink-0 flex-col items-center justify-center rounded-[14px] leading-tight">
-                  <small className="text-[10px] font-bold uppercase">{WD.format(new Date(`${openDay}T12:00:00`))}</small>
-                  <b className="text-[22px] tabular-nums">{DAYNUM.format(new Date(`${openDay}T12:00:00`))}</b>
-                  <small className="text-[10px] font-bold uppercase">{MON.format(new Date(`${openDay}T12:00:00`))}</small>
+                  <small className="text-[10px] font-bold uppercase">
+                    {WD.format(new Date(`${openDay}T12:00:00`))}
+                  </small>
+                  <b className="text-[22px] tabular-nums">
+                    {DAYNUM.format(new Date(`${openDay}T12:00:00`))}
+                  </b>
+                  <small className="text-[10px] font-bold uppercase">
+                    {MON.format(new Date(`${openDay}T12:00:00`))}
+                  </small>
                 </span>
                 <span className="text-pw-on-band-2 flex min-w-0 flex-col text-[12px]">
                   <small className="text-[11px]">{T.nextOpenFor}</small>
                   <b className="text-pw-on-band text-[16px]">{open.clinicName}</b>
                   <span>
-                    {[open.doors ? D.doors(open.doors) : null, open.clinicianName ? shownName(open.clinicianName) : null, open.feeLabel ?? feeText(open.fee)]
+                    {[
+                      open.doors ? D.doors(open.doors) : null,
+                      open.clinicianName ? shownName(open.clinicianName) : null,
+                      open.feeLabel ?? feeText(open.fee),
+                    ]
                       .filter(Boolean)
                       .join(" · ")}
                   </span>
@@ -278,7 +323,10 @@ export default async function TodayPage({ searchParams }: { searchParams: Promis
               </div>
               <ol className="grid grid-cols-3 gap-1.5" aria-label={B.askDayTitle}>
                 {T.how.map((h, i) => (
-                  <li key={h} className="text-pw-on-band-2 flex flex-col gap-1.5 text-[11px] leading-[14px] font-semibold">
+                  <li
+                    key={h}
+                    className="text-pw-on-band-2 flex flex-col gap-1.5 text-[11px] leading-[14px] font-semibold"
+                  >
                     <span className="ring-pw-on-band/35 text-pw-on-band grid size-[22px] place-items-center rounded-full ring-1 ring-inset">
                       {i + 1}
                     </span>
@@ -289,8 +337,12 @@ export default async function TodayPage({ searchParams }: { searchParams: Promis
             </>
           ) : null}
           <div className="flex flex-wrap gap-1.5 text-[12px] font-semibold">
-            <span className="bg-pw-band-glass rounded-full px-2.5 py-1.5">{home?.name ?? T.yourHospital}</span>
-            <span className="bg-pw-band-glass rounded-full px-2.5 py-1.5">{VISIT_COPY.ticket.seenInTurn}</span>
+            <span className="bg-pw-band-glass rounded-full px-2.5 py-1.5">
+              {home?.name ?? T.yourHospital}
+            </span>
+            <span className="bg-pw-band-glass rounded-full px-2.5 py-1.5">
+              {VISIT_COPY.ticket.seenInTurn}
+            </span>
           </div>
           <div className="flex flex-wrap gap-2">
             <Link
@@ -313,11 +365,20 @@ export default async function TodayPage({ searchParams }: { searchParams: Promis
         <div className="-mt-3 grid grid-cols-2 gap-2">
           {(
             [
-              ["/patient/book/today", ClockIcon, B.comeTodayTitle, walkIns?.length ? T.walkInsOpen(walkIns.length) : B.noWalkIns],
+              [
+                "/patient/book/today",
+                ClockIcon,
+                B.comeTodayTitle,
+                walkIns?.length ? T.walkInsOpen(walkIns.length) : B.noWalkIns,
+              ],
               ["/patient/book/wrong", AlertCircleIcon, W.title, B.doorWrongSub],
             ] as const
           ).map(([href, Icon, title, line]) => (
-            <Link key={href} href={href} className="rounded-pw-card bg-pw-surface shadow-pw-card flex flex-col gap-2 p-3">
+            <Link
+              key={href}
+              href={href}
+              className="rounded-pw-card bg-pw-surface shadow-pw-card flex flex-col gap-2 p-3"
+            >
               <span className="bg-pw-surface-2 grid size-9 place-items-center rounded-xl">
                 <Icon className="size-[18px]" {...ICON} />
               </span>
@@ -335,15 +396,24 @@ export default async function TodayPage({ searchParams }: { searchParams: Promis
             <span className="text-pw-ink-3 text-[12px]">{T.onlyYouShort}</span>
           </div>
           <div className="grid grid-cols-2 gap-2">
-            <ReadingButton kind="bp" className={cn(TILE, "text-left [--c:var(--pw-area-readings)]")} label={`${T.glance.bloodPressure}. ${T.logReading}`}>
+            <ReadingButton
+              kind="bp"
+              className={cn(TILE, "text-left [--c:var(--pw-area-readings)]")}
+              label={`${T.glance.bloodPressure}. ${T.logReading}`}
+            >
               <TileHead Icon={HeartPulseIcon} k={T.glance.bloodPressure} />
               <span className="mt-auto text-[26px] leading-8 font-bold tracking-[-0.02em] tabular-nums">
                 {bp && bp.input.kind === "bp" ? `${bp.input.top}/${bp.input.bottom}` : "–"}
               </span>
-              <span className="text-pw-ink-2 text-[12px]">{bp ? SHORT.format(new Date(bp.at)) : T.glance.noReading}</span>
+              <span className="text-pw-ink-2 text-[12px]">
+                {bp ? SHORT.format(new Date(bp.at)) : T.glance.noReading}
+              </span>
               {bpCheck ? <span className={TAG}>{bpCheck.text}</span> : null}
             </ReadingButton>
-            <Link href="/patient/care/medicines" className={cn(TILE, "[--c:var(--pw-area-medicines)]")}>
+            <Link
+              href="/patient/care/medicines"
+              className={cn(TILE, "[--c:var(--pw-area-medicines)]")}
+            >
               <TileHead Icon={PillIcon} k={T.medicines} />
               {day && day.doses.length ? (
                 <>
@@ -358,27 +428,44 @@ export default async function TodayPage({ searchParams }: { searchParams: Promis
                 <span className="text-pw-ink-2 mt-auto text-[13px]">{C.addMedicine}</span>
               )}
             </Link>
-            <Link href={labs.state === "ready" && ready ? "/patient/care/labs" : "/patient/me/records"} className={cn(TILE, "[--c:var(--pw-area-visits)]")}>
+            <Link
+              href={labs.state === "ready" && ready ? "/patient/care/labs" : "/patient/me/records"}
+              className={cn(TILE, "[--c:var(--pw-area-visits)]")}
+            >
               <TileHead Icon={FlaskConicalIcon} k={T.labTests} />
               {labs.state === "ready" && ready + waiting > 0 ? (
                 <>
-                  <span className="mt-auto text-[26px] leading-8 font-bold tabular-nums">{ready + waiting}</span>
-                  <span className="text-pw-ink-2 text-[12px]">{T.glance.labsLine(ready, waiting)}</span>
+                  <span className="mt-auto text-[26px] leading-8 font-bold tabular-nums">
+                    {ready + waiting}
+                  </span>
+                  <span className="text-pw-ink-2 text-[12px]">
+                    {T.glance.labsLine(ready, waiting)}
+                  </span>
                 </>
               ) : (
                 <span className="text-pw-ink-2 mt-auto text-[12px]">{T.labsLater}</span>
               )}
             </Link>
-            <Link href={care ? "/patient/care/my-care" : "#book"} className={cn(TILE, "[--c:var(--pw-area-team)]")}>
+            <Link
+              href={care ? "/patient/care/my-care" : "#book"}
+              className={cn(TILE, "[--c:var(--pw-area-team)]")}
+            >
               <TileHead Icon={UsersRoundIcon} k={care ? T.myCare : T.careTeam} />
               <span className="text-pw-ink-2 mt-auto text-[12px]">{CARE_COPY.messages.notYet}</span>
             </Link>
-            <ReadingButton className={cn(TILE, "col-span-2 min-h-0 flex-row items-center justify-between text-left [--c:var(--pw-accent)]")}>
+            <ReadingButton
+              className={cn(
+                TILE,
+                "col-span-2 min-h-0 flex-row items-center justify-between text-left [--c:var(--pw-accent)]",
+              )}
+            >
               <span className="text-pw-ink-2 text-[12px]">
                 <b className="text-pw-ink block text-[14px]">{T.logReading}</b>
                 {T.logLine}
               </span>
-              <span className="bg-pw-surface rounded-full px-3 py-2 text-[12px] font-bold">{T.log}</span>
+              <span className="bg-pw-surface rounded-full px-3 py-2 text-[12px] font-bold">
+                {T.log}
+              </span>
             </ReadingButton>
           </div>
         </section>
@@ -429,12 +516,19 @@ export default async function TodayPage({ searchParams }: { searchParams: Promis
                 ? `${r.input.top}/${r.input.bottom}`
                 : String("value" in r.input ? r.input.value : "");
             return (
-              <div key={k} className="bg-pw-surface-2 rounded-pw-row flex items-center justify-between gap-2 px-3 py-2">
+              <div
+                key={k}
+                className="bg-pw-surface-2 rounded-pw-row flex items-center justify-between gap-2 px-3 py-2"
+              >
                 <span className="flex flex-col">
-                  <span className="text-pw-ink-3 text-[12px]">{CARE_V2_COPY.readings.titles[k]}</span>
+                  <span className="text-pw-ink-3 text-[12px]">
+                    {CARE_V2_COPY.readings.titles[k]}
+                  </span>
                   <span className="text-[17px] font-bold tabular-nums">{v}</span>
                 </span>
-                <span className="text-pw-ink-3 text-[12px]">{r ? SHORT.format(new Date(r.at)) : ""}</span>
+                <span className="text-pw-ink-3 text-[12px]">
+                  {r ? SHORT.format(new Date(r.at)) : ""}
+                </span>
               </div>
             );
           })}
@@ -475,7 +569,10 @@ export default async function TodayPage({ searchParams }: { searchParams: Promis
               </Link>
             ))
           ) : (
-            <Link href="/patient/care/medicines" className="text-pw-accent-text text-[15px] font-semibold">
+            <Link
+              href="/patient/care/medicines"
+              className="text-pw-accent-text text-[15px] font-semibold"
+            >
               {C.addMedicine}
             </Link>
           )}
@@ -511,7 +608,10 @@ export default async function TodayPage({ searchParams }: { searchParams: Promis
           ) : (
             <p className="text-pw-ink-2 text-[15px]">{T.labsLater}</p>
           )}
-          <Link href="/patient/me/records" className="text-pw-accent-text mt-auto text-[15px] font-semibold">
+          <Link
+            href="/patient/me/records"
+            className="text-pw-accent-text mt-auto text-[15px] font-semibold"
+          >
             {T.openRecords}
           </Link>
         </section>
@@ -521,12 +621,17 @@ export default async function TodayPage({ searchParams }: { searchParams: Promis
             {care ? CARE_V2_COPY.myCare.title : T.careTeam}
           </h2>
           {care ? (
-            <Link href="/patient/care/my-care" className="text-pw-accent-text text-[15px] font-semibold">
+            <Link
+              href="/patient/care/my-care"
+              className="text-pw-accent-text text-[15px] font-semibold"
+            >
               {CARE_V2_COPY.myCare.team} · {CARE_V2_COPY.myCare.checks} · {T.messages}
             </Link>
           ) : (
             <>
-              <p className="text-[15px]">{CARE_COPY.messages.notYet} {CARE_COPY.messages.instead}</p>
+              <p className="text-[15px]">
+                {CARE_COPY.messages.notYet} {CARE_COPY.messages.instead}
+              </p>
               <Link href="#book" className="text-pw-accent-text text-[15px] font-semibold">
                 {T.bookVisit}
               </Link>
@@ -569,7 +674,7 @@ function Glance(p: { icon: ReactNode; k: string; v: string; s: string; href: str
   return (
     <Link
       href={p.href}
-      className="flex min-w-0 flex-col gap-0.5 rounded-[18px] bg-pw-band-glass p-4 hover:opacity-90"
+      className="bg-pw-band-glass flex min-w-0 flex-col gap-0.5 rounded-[18px] p-4 hover:opacity-90"
     >
       <span className="text-pw-on-band-2 flex items-center gap-2 text-[12px] font-semibold">
         {p.icon}

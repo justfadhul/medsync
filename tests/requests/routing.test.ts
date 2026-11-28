@@ -1,8 +1,21 @@
+import type { Candidate, RouteCandidates } from "@/lib/requests/routing";
 import { describe, expect, it } from "vitest";
-import { route, type Candidate, type RouteCandidates } from "@/lib/requests/routing";
 
-const u = (userId: string, active = true, postId: string | null = null): Candidate => ({ userId, active, postId });
-const empty: RouteCandidates = { named: [], post: [], team: [], supervisor: [], heads: [], hospitalContacts: [] };
+import { route } from "@/lib/requests/routing";
+
+const u = (userId: string, active = true, postId: string | null = null): Candidate => ({
+  userId,
+  active,
+  postId,
+});
+const empty: RouteCandidates = {
+  named: [],
+  post: [],
+  team: [],
+  supervisor: [],
+  heads: [],
+  hospitalContacts: [],
+};
 
 describe("route", () => {
   it("named wins", () => {
@@ -25,8 +38,13 @@ describe("route", () => {
     expect(r.skipped).toHaveLength(2);
   });
   it("falls through to supervisor, then head, then hospital contacts", () => {
-    expect(route({ ...empty, supervisor: [u("S")], heads: [u("H")], hospitalContacts: [u("C")] }, "R").step).toBe("supervisor");
-    expect(route({ ...empty, team: [u("R")], heads: [u("H")], hospitalContacts: [u("C")] }, "R").step).toBe("department_head");
+    expect(
+      route({ ...empty, supervisor: [u("S")], heads: [u("H")], hospitalContacts: [u("C")] }, "R")
+        .step,
+    ).toBe("supervisor");
+    expect(
+      route({ ...empty, team: [u("R")], heads: [u("H")], hospitalContacts: [u("C")] }, "R").step,
+    ).toBe("department_head");
     expect(route({ ...empty, hospitalContacts: [u("C")] }, "R").step).toBe("hospital_contacts");
   });
   it("none when every list is empty", () => {

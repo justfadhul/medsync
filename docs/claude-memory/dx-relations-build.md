@@ -20,5 +20,6 @@ Phases: 1 data+terms (me), 2 migration+write/read (agent), 3 board UI + DnD (age
 - 2026-10-09: owner applied 0095 + 0096; v1.2 terms flipped coded:true; branch PUSHED (owner opens PR).
 
 **How to apply:** stop only for signatures; owner applies migrations. Related: [[ncd-dm-desk-build]] [[medsync-owner-rules]]
+
 - 2026-10-09 follow-up: feat/desk-instant-actions (84f5f72, from origin/main after dx-relations merged) PUSHED: optimistic board ops (components/emr/desk/optimistic.ts, useOptimistic in desk-client) + runEmrWrite `{ refresh: true }` (next/cache refresh(), one round trip); leading card, each linked dx and "Add a linked diagnosis" collapse. Owner opens PR.
 - 2026-10-10: 6e646e0 on same branch PUSHED: "Not yet explained" bucket targets co-existing + differential too (differential keeps the chip, pressed, toggles).

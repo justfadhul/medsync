@@ -70,7 +70,8 @@ const TABS = [
     href: "/patient",
     label: "Today",
     Icon: HouseIcon,
-    match: (p: string) => p === "/patient" || p.startsWith("/patient/book") || p.startsWith("/patient/care"),
+    match: (p: string) =>
+      p === "/patient" || p.startsWith("/patient/book") || p.startsWith("/patient/care"),
   },
   {
     href: "/patient/visits",

@@ -13,6 +13,7 @@ Stock › Receive a delivery from kit 6 (`docs/pharmacy/rework/RECEIVE.md`) is b
 **Why:** the owner asked to run every step of `PROMPT-RECEIVE.md` ("go through all gates"); the harmonised prototype was accepted by this kit. See [[receive-harmonized-prototype]].
 
 **How to apply:**
+
 - Migration 0276 is GATED and unapplied: `cd ~/Desktop/medsync-receive && npm run db:migrate`. The app needs it first, because the Main store reads it too.
 - Copy is draft. Open items are in `docs/pharmacy/HANDOFF.md`, section "Stock › Receive a delivery".
 - Screens were only checked on the fixture `/styleguide/pharmacy-receive` (`MEDSYNC_FIXTURES=1`); never run against a real database. Server paths are covered by `tests/emr-db/pharmacy-receive*`.

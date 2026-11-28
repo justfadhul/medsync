@@ -1,191 +1,810 @@
 <title>MedSync Fix Plan</title>
-<meta name="claude:viewport-fit-sides" content="cover">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@75..100,500..800&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<meta name="claude:viewport-fit-sides" content="cover" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link
+  rel="stylesheet"
+  href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@75..100,500..800&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap"
+/>
 <style>
-:root {
-  --bg: #f2f4f6; --surface: #ffffff; --sunk: #e7ebef; --fg: #15202a; --muted: #56636f; --line: #d3dae1;
-  --accent: #0f766e; --accent-soft: #d6efec; --on-accent: #ffffff;
-  --red: #b42318; --red-bg: #fde8e6; --orange: #c4560f; --orange-bg: #fdeedf;
-  --yellow: #8a6a00; --yellow-bg: #fbf3cf; --green: #23704a; --green-bg: #e1f3e8;
-  --ghost: #c3ccd5;
-  --font-display: "Archivo", "Helvetica Neue", Arial, sans-serif;
-  --font-body: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
-  --font-mono: "IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace;
-}
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) {
-    --bg: #0d1419; --surface: #141e26; --sunk: #1b2731; --fg: #e3e9ee; --muted: #9aa8b4; --line: #2a3843;
-    --accent: #3cc2b4; --accent-soft: #123532; --on-accent: #0d1419;
-    --red: #ff7b6e; --red-bg: #3a1714; --orange: #f39a55; --orange-bg: #3a2210;
-    --yellow: #e6c449; --yellow-bg: #332b0c; --green: #5fcf93; --green-bg: #12301f; --ghost: #33434f;
+  :root {
+    --bg: #f2f4f6;
+    --surface: #ffffff;
+    --sunk: #e7ebef;
+    --fg: #15202a;
+    --muted: #56636f;
+    --line: #d3dae1;
+    --accent: #0f766e;
+    --accent-soft: #d6efec;
+    --on-accent: #ffffff;
+    --red: #b42318;
+    --red-bg: #fde8e6;
+    --orange: #c4560f;
+    --orange-bg: #fdeedf;
+    --yellow: #8a6a00;
+    --yellow-bg: #fbf3cf;
+    --green: #23704a;
+    --green-bg: #e1f3e8;
+    --ghost: #c3ccd5;
+    --font-display: "Archivo", "Helvetica Neue", Arial, sans-serif;
+    --font-body: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+    --font-mono: "IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #0d1419;
+      --surface: #141e26;
+      --sunk: #1b2731;
+      --fg: #e3e9ee;
+      --muted: #9aa8b4;
+      --line: #2a3843;
+      --accent: #3cc2b4;
+      --accent-soft: #123532;
+      --on-accent: #0d1419;
+      --red: #ff7b6e;
+      --red-bg: #3a1714;
+      --orange: #f39a55;
+      --orange-bg: #3a2210;
+      --yellow: #e6c449;
+      --yellow-bg: #332b0c;
+      --green: #5fcf93;
+      --green-bg: #12301f;
+      --ghost: #33434f;
+      color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #0d1419;
+    --surface: #141e26;
+    --sunk: #1b2731;
+    --fg: #e3e9ee;
+    --muted: #9aa8b4;
+    --line: #2a3843;
+    --accent: #3cc2b4;
+    --accent-soft: #123532;
+    --on-accent: #0d1419;
+    --red: #ff7b6e;
+    --red-bg: #3a1714;
+    --orange: #f39a55;
+    --orange-bg: #3a2210;
+    --yellow: #e6c449;
+    --yellow-bg: #332b0c;
+    --green: #5fcf93;
+    --green-bg: #12301f;
+    --ghost: #33434f;
     color-scheme: dark;
   }
-}
-:root[data-theme="dark"] {
-  --bg: #0d1419; --surface: #141e26; --sunk: #1b2731; --fg: #e3e9ee; --muted: #9aa8b4; --line: #2a3843;
-  --accent: #3cc2b4; --accent-soft: #123532; --on-accent: #0d1419;
-  --red: #ff7b6e; --red-bg: #3a1714; --orange: #f39a55; --orange-bg: #3a2210;
-  --yellow: #e6c449; --yellow-bg: #332b0c; --green: #5fcf93; --green-bg: #12301f; --ghost: #33434f;
-  color-scheme: dark;
-}
-* { box-sizing: border-box; }
-body {
-  background: var(--bg); color: var(--fg); font-family: var(--font-body); font-size: 15.5px; line-height: 1.55; margin: 0;
-  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-bottom: 64px;
-}
-.wrap { max-width: 1180px; margin: 0 auto; display: grid; gap: 48px; }
-h1, h2, h3 { font-family: var(--font-display); font-weight: 700; margin: 0; text-wrap: balance; letter-spacing: -0.01em; }
-h2 { font-size: 1.6rem; font-stretch: 85%; }
-h3 { font-size: 1.02rem; font-weight: 650; }
-p { margin: 0; }
-code { font-family: var(--font-mono); font-size: 0.85em; background: var(--sunk); padding: 1px 5px; border-radius: 4px; overflow-wrap: anywhere; }
-.eyebrow, .label { font-family: var(--font-mono); font-size: 0.72rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
-.section { display: grid; gap: 18px; min-width: 0; }
-.section > header { display: grid; gap: 6px; max-width: 72ch; }
-.section > header p { color: var(--muted); }
-:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  * {
+    box-sizing: border-box;
+  }
+  body {
+    background: var(--bg);
+    color: var(--fg);
+    font-family: var(--font-body);
+    font-size: 15.5px;
+    line-height: 1.55;
+    margin: 0;
+    padding-left: max(16px, env(safe-area-inset-left, 0px));
+    padding-right: max(16px, env(safe-area-inset-right, 0px));
+    padding-bottom: 64px;
+  }
+  .wrap {
+    max-width: 1180px;
+    margin: 0 auto;
+    display: grid;
+    gap: 48px;
+  }
+  h1,
+  h2,
+  h3 {
+    font-family: var(--font-display);
+    font-weight: 700;
+    margin: 0;
+    text-wrap: balance;
+    letter-spacing: -0.01em;
+  }
+  h2 {
+    font-size: 1.6rem;
+    font-stretch: 85%;
+  }
+  h3 {
+    font-size: 1.02rem;
+    font-weight: 650;
+  }
+  p {
+    margin: 0;
+  }
+  code {
+    font-family: var(--font-mono);
+    font-size: 0.85em;
+    background: var(--sunk);
+    padding: 1px 5px;
+    border-radius: 4px;
+    overflow-wrap: anywhere;
+  }
+  .eyebrow,
+  .label {
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .section {
+    display: grid;
+    gap: 18px;
+    min-width: 0;
+  }
+  .section > header {
+    display: grid;
+    gap: 6px;
+    max-width: 72ch;
+  }
+  .section > header p {
+    color: var(--muted);
+  }
+  :focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
 
-.hero { padding-top: 44px; display: grid; gap: 14px; max-width: 76ch; }
-.hero h1 { font-size: clamp(2rem, 5vw, 3.2rem); font-stretch: 80%; font-weight: 800; line-height: 1.04; }
-.note { font-size: 0.86rem; color: var(--muted); border-left: 0; background: var(--sunk); border-radius: 6px; padding: 10px 14px; }
+  .hero {
+    padding-top: 44px;
+    display: grid;
+    gap: 14px;
+    max-width: 76ch;
+  }
+  .hero h1 {
+    font-size: clamp(2rem, 5vw, 3.2rem);
+    font-stretch: 80%;
+    font-weight: 800;
+    line-height: 1.04;
+  }
+  .note {
+    font-size: 0.86rem;
+    color: var(--muted);
+    border-left: 0;
+    background: var(--sunk);
+    border-radius: 6px;
+    padding: 10px 14px;
+  }
 
-/* Sticky console */
-.console { position: sticky; top: 0; z-index: 5; background: var(--bg); padding: 12px 0; border-bottom: 1px solid var(--line); display: grid; gap: 10px; }
-.presets { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
-.presets button { font: inherit; font-size: 0.86rem; padding: 6px 14px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface); color: var(--fg); cursor: pointer; }
-.presets button[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
-.stats { display: grid; grid-template-columns: minmax(0, 1.6fr) repeat(5, minmax(0, 1fr)); gap: 8px; }
-.stat { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 8px 12px; display: grid; gap: 0; min-width: 0; }
-.stat strong { font-family: var(--font-display); font-size: 1.45rem; font-weight: 700; font-variant-numeric: tabular-nums; line-height: 1.15; }
-.stat small { font-family: var(--font-mono); font-size: 0.68rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; }
-.stat.verdict strong { font-size: 1.05rem; line-height: 1.3; }
-.stat.verdict.no strong { color: var(--red); }
-.stat.verdict.pilot strong { color: var(--orange); }
-.stat.verdict.yes strong { color: var(--green); }
-.stat .was { font-size: 0.75rem; color: var(--muted); font-family: var(--font-mono); }
-.c strong { color: var(--red); } .h strong { color: var(--orange); } .m strong { color: var(--yellow); } .l strong { color: var(--green); }
+  /* Sticky console */
+  .console {
+    position: sticky;
+    top: 0;
+    z-index: 5;
+    background: var(--bg);
+    padding: 12px 0;
+    border-bottom: 1px solid var(--line);
+    display: grid;
+    gap: 10px;
+  }
+  .presets {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    align-items: center;
+  }
+  .presets button {
+    font: inherit;
+    font-size: 0.86rem;
+    padding: 6px 14px;
+    border-radius: 999px;
+    border: 1px solid var(--line);
+    background: var(--surface);
+    color: var(--fg);
+    cursor: pointer;
+  }
+  .presets button[aria-pressed="true"] {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: var(--on-accent);
+  }
+  .stats {
+    display: grid;
+    grid-template-columns: minmax(0, 1.6fr) repeat(5, minmax(0, 1fr));
+    gap: 8px;
+  }
+  .stat {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 8px 12px;
+    display: grid;
+    gap: 0;
+    min-width: 0;
+  }
+  .stat strong {
+    font-family: var(--font-display);
+    font-size: 1.45rem;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    line-height: 1.15;
+  }
+  .stat small {
+    font-family: var(--font-mono);
+    font-size: 0.68rem;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+  .stat.verdict strong {
+    font-size: 1.05rem;
+    line-height: 1.3;
+  }
+  .stat.verdict.no strong {
+    color: var(--red);
+  }
+  .stat.verdict.pilot strong {
+    color: var(--orange);
+  }
+  .stat.verdict.yes strong {
+    color: var(--green);
+  }
+  .stat .was {
+    font-size: 0.75rem;
+    color: var(--muted);
+    font-family: var(--font-mono);
+  }
+  .c strong {
+    color: var(--red);
+  }
+  .h strong {
+    color: var(--orange);
+  }
+  .m strong {
+    color: var(--yellow);
+  }
+  .l strong {
+    color: var(--green);
+  }
 
-/* Main grid */
-.main { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: 24px; align-items: start; }
-.pkgs { display: grid; gap: 10px; }
-.pkg { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; overflow: hidden; transition: border-color 150ms cubic-bezier(0.16, 1, 0.3, 1); }
-.pkg.on { border-color: var(--accent); }
-.pkg-head { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 12px; padding: 14px 16px; align-items: start; }
-.pkg-head input { width: 20px; height: 20px; margin: 2px 0 0; accent-color: var(--accent); cursor: pointer; }
-.pkg-head label { cursor: pointer; display: grid; gap: 4px; min-width: 0; }
-.pkg-head .n { font-family: var(--font-mono); font-size: 0.74rem; color: var(--muted); }
-.pkg-head .closes { display: flex; flex-wrap: wrap; gap: 4px; }
-.fid { font-family: var(--font-mono); font-size: 0.7rem; padding: 0 5px; border-radius: 3px; }
-.fid.C { color: var(--red); background: var(--red-bg); } .fid.H { color: var(--orange); background: var(--orange-bg); }
-.fid.M { color: var(--yellow); background: var(--yellow-bg); } .fid.L { color: var(--green); background: var(--green-bg); }
-.fid.done { text-decoration: line-through; color: var(--muted); background: var(--sunk); }
-.fid.done::before { content: "✓ "; display: inline-block; margin-right: 2px; }
-.log { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
-.log li { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 10px 14px; display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 12px; align-items: baseline; font-size: 0.88rem; }
-.log .k { font-family: var(--font-mono); font-size: 0.78rem; font-weight: 500; }
-.log .h { font-family: var(--font-mono); font-size: 0.72rem; color: var(--muted); }
-@media (max-width: 520px) { .log li { grid-template-columns: minmax(0, 1fr); gap: 2px; } }
-.side { display: grid; justify-items: end; gap: 4px; }
-.when { font-family: var(--font-mono); font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); white-space: nowrap; }
-.days { font-family: var(--font-mono); font-size: 0.74rem; border: 1px solid var(--line); border-radius: 3px; padding: 0 6px; white-space: nowrap; }
-.pkg details { border-top: 1px solid var(--line); }
-.pkg summary { cursor: pointer; padding: 8px 16px; font-size: 0.84rem; color: var(--muted); list-style: none; }
-.pkg summary::-webkit-details-marker { display: none; }
-.pkg summary::before { content: "+ "; font-family: var(--font-mono); }
-.pkg details[open] summary::before { content: "− "; }
-.pkg .body { padding: 0 16px 16px; display: grid; gap: 10px; font-size: 0.88rem; }
-.pkg ul { margin: 0; padding-left: 18px; display: grid; gap: 4px; }
-.diff { font-family: var(--font-mono); font-size: 0.76rem; line-height: 1.5; background: var(--sunk); border-radius: 6px; padding: 10px 12px; overflow-x: auto; white-space: pre; margin: 0; }
-.diff .del { color: var(--red); } .diff .add { color: var(--green); } .diff .cm { color: var(--muted); }
-.gain { display: flex; flex-wrap: wrap; gap: 6px; }
-.gain span { font-family: var(--font-mono); font-size: 0.72rem; background: var(--accent-soft); color: var(--fg); padding: 1px 6px; border-radius: 3px; }
+  /* Main grid */
+  .main {
+    display: grid;
+    grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr);
+    gap: 24px;
+    align-items: start;
+  }
+  .pkgs {
+    display: grid;
+    gap: 10px;
+  }
+  .pkg {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    overflow: hidden;
+    transition: border-color 150ms cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .pkg.on {
+    border-color: var(--accent);
+  }
+  .pkg-head {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    gap: 12px;
+    padding: 14px 16px;
+    align-items: start;
+  }
+  .pkg-head input {
+    width: 20px;
+    height: 20px;
+    margin: 2px 0 0;
+    accent-color: var(--accent);
+    cursor: pointer;
+  }
+  .pkg-head label {
+    cursor: pointer;
+    display: grid;
+    gap: 4px;
+    min-width: 0;
+  }
+  .pkg-head .n {
+    font-family: var(--font-mono);
+    font-size: 0.74rem;
+    color: var(--muted);
+  }
+  .pkg-head .closes {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+  }
+  .fid {
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    padding: 0 5px;
+    border-radius: 3px;
+  }
+  .fid.C {
+    color: var(--red);
+    background: var(--red-bg);
+  }
+  .fid.H {
+    color: var(--orange);
+    background: var(--orange-bg);
+  }
+  .fid.M {
+    color: var(--yellow);
+    background: var(--yellow-bg);
+  }
+  .fid.L {
+    color: var(--green);
+    background: var(--green-bg);
+  }
+  .fid.done {
+    text-decoration: line-through;
+    color: var(--muted);
+    background: var(--sunk);
+  }
+  .fid.done::before {
+    content: "✓ ";
+    display: inline-block;
+    margin-right: 2px;
+  }
+  .log {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    gap: 8px;
+  }
+  .log li {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 10px 14px;
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    gap: 12px;
+    align-items: baseline;
+    font-size: 0.88rem;
+  }
+  .log .k {
+    font-family: var(--font-mono);
+    font-size: 0.78rem;
+    font-weight: 500;
+  }
+  .log .h {
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    color: var(--muted);
+  }
+  @media (max-width: 520px) {
+    .log li {
+      grid-template-columns: minmax(0, 1fr);
+      gap: 2px;
+    }
+  }
+  .side {
+    display: grid;
+    justify-items: end;
+    gap: 4px;
+  }
+  .when {
+    font-family: var(--font-mono);
+    font-size: 0.68rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--muted);
+    white-space: nowrap;
+  }
+  .days {
+    font-family: var(--font-mono);
+    font-size: 0.74rem;
+    border: 1px solid var(--line);
+    border-radius: 3px;
+    padding: 0 6px;
+    white-space: nowrap;
+  }
+  .pkg details {
+    border-top: 1px solid var(--line);
+  }
+  .pkg summary {
+    cursor: pointer;
+    padding: 8px 16px;
+    font-size: 0.84rem;
+    color: var(--muted);
+    list-style: none;
+  }
+  .pkg summary::-webkit-details-marker {
+    display: none;
+  }
+  .pkg summary::before {
+    content: "+ ";
+    font-family: var(--font-mono);
+  }
+  .pkg details[open] summary::before {
+    content: "− ";
+  }
+  .pkg .body {
+    padding: 0 16px 16px;
+    display: grid;
+    gap: 10px;
+    font-size: 0.88rem;
+  }
+  .pkg ul {
+    margin: 0;
+    padding-left: 18px;
+    display: grid;
+    gap: 4px;
+  }
+  .diff {
+    font-family: var(--font-mono);
+    font-size: 0.76rem;
+    line-height: 1.5;
+    background: var(--sunk);
+    border-radius: 6px;
+    padding: 10px 12px;
+    overflow-x: auto;
+    white-space: pre;
+    margin: 0;
+  }
+  .diff .del {
+    color: var(--red);
+  }
+  .diff .add {
+    color: var(--green);
+  }
+  .diff .cm {
+    color: var(--muted);
+  }
+  .gain {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  .gain span {
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    background: var(--accent-soft);
+    color: var(--fg);
+    padding: 1px 6px;
+    border-radius: 3px;
+  }
 
-/* Scorecard */
-.board { position: sticky; top: 150px; display: grid; gap: 16px; }
-.score { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 8px 16px; }
-.row { display: grid; grid-template-columns: 128px minmax(0, 1fr) 70px; gap: 10px; align-items: center; padding: 9px 0; border-bottom: 1px solid var(--line); }
-.row:last-child { border-bottom: 0; }
-.row .nm { font-size: 0.86rem; font-weight: 600; }
-.track { position: relative; height: 14px; background: var(--sunk); border-radius: 2px;
-  background-image: repeating-linear-gradient(90deg, transparent 0 calc(10% - 1px), var(--line) calc(10% - 1px) 10%); }
-.track .now, .track .base { position: absolute; top: 0; bottom: 0; left: 0; border-radius: 2px; }
-.track .now { transition: width 400ms cubic-bezier(0.16, 1, 0.3, 1), background-color 250ms cubic-bezier(0.16, 1, 0.3, 1); }
-.track .base { background: transparent; border-right: 2px solid var(--fg); z-index: 1; }
-.now.lo { background: var(--red); } .now.mid { background: var(--orange); } .now.ok { background: var(--yellow); } .now.good { background: var(--green); }
-.val { text-align: right; font-family: var(--font-display); font-weight: 700; font-variant-numeric: tabular-nums; }
-.val small { font-family: var(--font-mono); font-weight: 400; font-size: 0.7rem; color: var(--muted); display: block; line-height: 1; }
-.key { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 0.76rem; color: var(--muted); padding: 8px 0 4px; }
-.key i { display: inline-block; width: 2px; height: 12px; background: var(--fg); vertical-align: -2px; margin-right: 4px; }
-.avg { display: flex; justify-content: space-between; align-items: baseline; padding: 10px 0 4px; border-top: 1px solid var(--line); margin-top: 4px; }
-.avg strong { font-family: var(--font-display); font-size: 1.5rem; }
+  /* Scorecard */
+  .board {
+    position: sticky;
+    top: 150px;
+    display: grid;
+    gap: 16px;
+  }
+  .score {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 8px 16px;
+  }
+  .row {
+    display: grid;
+    grid-template-columns: 128px minmax(0, 1fr) 70px;
+    gap: 10px;
+    align-items: center;
+    padding: 9px 0;
+    border-bottom: 1px solid var(--line);
+  }
+  .row:last-child {
+    border-bottom: 0;
+  }
+  .row .nm {
+    font-size: 0.86rem;
+    font-weight: 600;
+  }
+  .track {
+    position: relative;
+    height: 14px;
+    background: var(--sunk);
+    border-radius: 2px;
+    background-image: repeating-linear-gradient(
+      90deg,
+      transparent 0 calc(10% - 1px),
+      var(--line) calc(10% - 1px) 10%
+    );
+  }
+  .track .now,
+  .track .base {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    border-radius: 2px;
+  }
+  .track .now {
+    transition:
+      width 400ms cubic-bezier(0.16, 1, 0.3, 1),
+      background-color 250ms cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .track .base {
+    background: transparent;
+    border-right: 2px solid var(--fg);
+    z-index: 1;
+  }
+  .now.lo {
+    background: var(--red);
+  }
+  .now.mid {
+    background: var(--orange);
+  }
+  .now.ok {
+    background: var(--yellow);
+  }
+  .now.good {
+    background: var(--green);
+  }
+  .val {
+    text-align: right;
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+  }
+  .val small {
+    font-family: var(--font-mono);
+    font-weight: 400;
+    font-size: 0.7rem;
+    color: var(--muted);
+    display: block;
+    line-height: 1;
+  }
+  .key {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 14px;
+    font-size: 0.76rem;
+    color: var(--muted);
+    padding: 8px 0 4px;
+  }
+  .key i {
+    display: inline-block;
+    width: 2px;
+    height: 12px;
+    background: var(--fg);
+    vertical-align: -2px;
+    margin-right: 4px;
+  }
+  .avg {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    padding: 10px 0 4px;
+    border-top: 1px solid var(--line);
+    margin-top: 4px;
+  }
+  .avg strong {
+    font-family: var(--font-display);
+    font-size: 1.5rem;
+  }
 
-/* Attack paths */
-.paths { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
-.path { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 16px; display: grid; gap: 10px; align-content: start; }
-.path .hd { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
-.state { font-family: var(--font-mono); font-size: 0.7rem; letter-spacing: 0.06em; text-transform: uppercase; padding: 2px 8px; border-radius: 3px; }
-.state.open { color: var(--red); background: var(--red-bg); }
-.state.shut { color: var(--green); background: var(--green-bg); }
-.path ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
-.path li { display: grid; grid-template-columns: 22px minmax(0, 1fr); gap: 8px; font-size: 0.84rem; padding: 6px 8px; border-radius: 6px; background: var(--sunk); transition: opacity 250ms cubic-bezier(0.16, 1, 0.3, 1); }
-.path li .i { font-family: var(--font-mono); font-size: 0.72rem; color: var(--muted); }
-.path li.block { background: var(--green-bg); }
-.path li.block .i { color: var(--green); }
-.path li.block .stop { display: block; font-family: var(--font-mono); font-size: 0.7rem; color: var(--green); margin-top: 2px; }
-.path li.after { opacity: 0.35; text-decoration: line-through; }
-.path li.prize { background: var(--red-bg); }
-.path li.prize.after { background: var(--sunk); }
+  /* Attack paths */
+  .paths {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px;
+  }
+  .path {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 16px;
+    display: grid;
+    gap: 10px;
+    align-content: start;
+  }
+  .path .hd {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+  .state {
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    padding: 2px 8px;
+    border-radius: 3px;
+  }
+  .state.open {
+    color: var(--red);
+    background: var(--red-bg);
+  }
+  .state.shut {
+    color: var(--green);
+    background: var(--green-bg);
+  }
+  .path ol {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    gap: 4px;
+  }
+  .path li {
+    display: grid;
+    grid-template-columns: 22px minmax(0, 1fr);
+    gap: 8px;
+    font-size: 0.84rem;
+    padding: 6px 8px;
+    border-radius: 6px;
+    background: var(--sunk);
+    transition: opacity 250ms cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .path li .i {
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    color: var(--muted);
+  }
+  .path li.block {
+    background: var(--green-bg);
+  }
+  .path li.block .i {
+    color: var(--green);
+  }
+  .path li.block .stop {
+    display: block;
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    color: var(--green);
+    margin-top: 2px;
+  }
+  .path li.after {
+    opacity: 0.35;
+    text-decoration: line-through;
+  }
+  .path li.prize {
+    background: var(--red-bg);
+  }
+  .path li.prize.after {
+    background: var(--sunk);
+  }
 
-/* Before/after table */
-.ba { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; overflow-x: auto; }
-.ba table { width: 100%; border-collapse: collapse; font-size: 0.86rem; min-width: 680px; }
-.ba th, .ba td { text-align: left; padding: 10px 14px; border-top: 1px solid var(--line); vertical-align: top; }
-.ba thead th { border-top: 0; font-family: var(--font-mono); font-size: 0.7rem; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); font-weight: 500; }
-.ba td:first-child { font-weight: 600; white-space: nowrap; }
-.ba .x { color: var(--muted); }
+  /* Before/after table */
+  .ba {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    overflow-x: auto;
+  }
+  .ba table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.86rem;
+    min-width: 680px;
+  }
+  .ba th,
+  .ba td {
+    text-align: left;
+    padding: 10px 14px;
+    border-top: 1px solid var(--line);
+    vertical-align: top;
+  }
+  .ba thead th {
+    border-top: 0;
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--muted);
+    font-weight: 500;
+  }
+  .ba td:first-child {
+    font-weight: 600;
+    white-space: nowrap;
+  }
+  .ba .x {
+    color: var(--muted);
+  }
 
-.left { display: grid; gap: 10px; }
-.left li { font-size: 0.88rem; }
-.rest { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
-.rest li { background: var(--surface); border: 1px dashed var(--line); border-radius: 8px; padding: 10px 14px; font-size: 0.88rem; }
-.rest li b { display: block; }
+  .left {
+    display: grid;
+    gap: 10px;
+  }
+  .left li {
+    font-size: 0.88rem;
+  }
+  .rest {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    gap: 8px;
+  }
+  .rest li {
+    background: var(--surface);
+    border: 1px dashed var(--line);
+    border-radius: 8px;
+    padding: 10px 14px;
+    font-size: 0.88rem;
+  }
+  .rest li b {
+    display: block;
+  }
 
-footer { color: var(--muted); font-size: 0.82rem; border-top: 1px solid var(--line); padding-top: 16px; display: grid; gap: 6px; }
+  footer {
+    color: var(--muted);
+    font-size: 0.82rem;
+    border-top: 1px solid var(--line);
+    padding-top: 16px;
+    display: grid;
+    gap: 6px;
+  }
 
-@media (max-width: 960px) {
-  .main { grid-template-columns: minmax(0, 1fr); }
-  .board { position: static; order: -1; }
-  .stats { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-  .stat.verdict { grid-column: 1 / -1; }
-  .paths { grid-template-columns: minmax(0, 1fr); }
-}
-@media (max-width: 520px) {
-  .console { position: static; }
-  .row { grid-template-columns: 96px minmax(0, 1fr) 58px; }
-  .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-}
-@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+  @media (max-width: 960px) {
+    .main {
+      grid-template-columns: minmax(0, 1fr);
+    }
+    .board {
+      position: static;
+      order: -1;
+    }
+    .stats {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+    .stat.verdict {
+      grid-column: 1 / -1;
+    }
+    .paths {
+      grid-template-columns: minmax(0, 1fr);
+    }
+  }
+  @media (max-width: 520px) {
+    .console {
+      position: static;
+    }
+    .row {
+      grid-template-columns: 96px minmax(0, 1fr) 58px;
+    }
+    .stats {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    * {
+      transition: none !important;
+    }
+  }
 </style>
 
 <div class="wrap">
   <section class="hero">
     <div class="eyebrow">Fix plan · follows the 11 Nov 2026 review</div>
     <h1>What it takes to turn the NO into a yes, and then into a 9</h1>
-    <p>Fourteen fix packages cover every one of the 63 findings. Fixing findings alone stops at about 7 to 8. Nine more packages raise the ceiling: outside testing, a second person, operations, a clinical pilot and deeper tests. Tick a package, or pick a stage, and the scorecard, the open findings and the four attack paths update.</p>
-    <p class="note">The scores are projections: my judgement of where each area would land once a package is done and re-checked. They are not measurements. Day counts assume one engineer who knows the codebase. The code sketches show the shape of each change, not finished patches.</p>
+    <p>
+      Fourteen fix packages cover every one of the 63 findings. Fixing findings alone stops at about
+      7 to 8. Nine more packages raise the ceiling: outside testing, a second person, operations, a
+      clinical pilot and deeper tests. Tick a package, or pick a stage, and the scorecard, the open
+      findings and the four attack paths update.
+    </p>
+    <p class="note">
+      The scores are projections: my judgement of where each area would land once a package is done
+      and re-checked. They are not measurements. Day counts assume one engineer who knows the
+      codebase. The code sketches show the shape of each change, not finished patches.
+    </p>
   </section>
 
   <div class="console" aria-live="polite">
     <div class="presets" role="group" aria-label="Stage" id="presets"></div>
     <div class="stats">
-      <div class="stat verdict" id="verdict"><small>Verdict</small><strong></strong><span class="was"></span></div>
-      <div class="stat c"><small>Critical open</small><strong id="oc"></strong><span class="was">was 4</span></div>
-      <div class="stat h"><small>High open</small><strong id="oh"></strong><span class="was">was 21</span></div>
-      <div class="stat m"><small>Medium open</small><strong id="om"></strong><span class="was">was 26</span></div>
-      <div class="stat l"><small>Low open</small><strong id="ol"></strong><span class="was">was 12</span></div>
-      <div class="stat"><small>Work</small><strong id="days"></strong><span class="was" id="dayslabel">engineer-days, estimate</span></div>
+      <div class="stat verdict" id="verdict">
+        <small>Verdict</small><strong></strong><span class="was"></span>
+      </div>
+      <div class="stat c">
+        <small>Critical open</small><strong id="oc"></strong><span class="was">was 4</span>
+      </div>
+      <div class="stat h">
+        <small>High open</small><strong id="oh"></strong><span class="was">was 21</span>
+      </div>
+      <div class="stat m">
+        <small>Medium open</small><strong id="om"></strong><span class="was">was 26</span>
+      </div>
+      <div class="stat l">
+        <small>Low open</small><strong id="ol"></strong><span class="was">was 12</span>
+      </div>
+      <div class="stat">
+        <small>Work</small><strong id="days"></strong
+        ><span class="was" id="dayslabel">engineer-days, estimate</span>
+      </div>
     </div>
   </div>
 
@@ -202,15 +821,24 @@ footer { color: var(--muted); font-size: 0.82rem; border-top: 1px solid var(--li
     <header>
       <div class="eyebrow">The packages</div>
       <h2 id="pk">Twenty-three packages, in the order to do them</h2>
-      <p>Open any package for what changes and a sketch of the code. Packages 1 to 14 close findings; 15 to 23 close none, they raise the ceiling. Each one ends by re-running the check that proves it.</p>
+      <p>
+        Open any package for what changes and a sketch of the code. Packages 1 to 14 close findings;
+        15 to 23 close none, they raise the ceiling. Each one ends by re-running the check that
+        proves it.
+      </p>
     </header>
     <div class="main">
       <div class="pkgs" id="pkgs"></div>
       <aside class="board" aria-label="Projected scorecard">
         <div class="score">
-          <div class="key"><span><i></i>score today</span><span>bar: projected score</span></div>
+          <div class="key">
+            <span><i></i>score today</span><span>bar: projected score</span>
+          </div>
           <div id="score"></div>
-          <div class="avg"><span class="label">Average</span><span><strong id="avg"></strong> <span class="label" id="avgwas"></span></span></div>
+          <div class="avg">
+            <span class="label">Average</span
+            ><span><strong id="avg"></strong> <span class="label" id="avgwas"></span></span>
+          </div>
         </div>
       </aside>
     </div>
@@ -220,7 +848,10 @@ footer { color: var(--muted); font-size: 0.82rem; border-top: 1px solid var(--li
     <header>
       <div class="eyebrow">The four critical paths, revisited</div>
       <h2 id="ap">Where each attack now stops</h2>
-      <p>The green step is the first one the selected fixes block. Everything after it can no longer happen.</p>
+      <p>
+        The green step is the first one the selected fixes block. Everything after it can no longer
+        happen.
+      </p>
     </header>
     <div class="paths" id="paths"></div>
   </section>
@@ -230,273 +861,739 @@ footer { color: var(--muted); font-size: 0.82rem; border-top: 1px solid var(--li
       <div class="eyebrow">Before and after</div>
       <h2 id="ba">The same events, after the full plan</h2>
     </header>
-    <div class="ba"><table>
-      <thead><tr><th>Event</th><th>Today</th><th>After the plan</th></tr></thead>
-      <tbody id="batable"></tbody>
-    </table></div>
+    <div class="ba">
+      <table>
+        <thead>
+          <tr>
+            <th>Event</th>
+            <th>Today</th>
+            <th>After the plan</th>
+          </tr>
+        </thead>
+        <tbody id="batable"></tbody>
+      </table>
+    </div>
   </section>
 
   <section class="section" aria-labelledby="nl">
     <header>
       <div class="eyebrow">The ceiling</div>
       <h2 id="nl">Why the maximum is 9.5, not 10</h2>
-      <p>A 10 would mean there is nothing left to find. No honest reviewer gives that to a live clinical system. The page caps every area at 9.5, and these are the conditions that keep a high score true.</p>
+      <p>
+        A 10 would mean there is nothing left to find. No honest reviewer gives that to a live
+        clinical system. The page caps every area at 9.5, and these are the conditions that keep a
+        high score true.
+      </p>
     </header>
     <ul class="rest" id="rest"></ul>
   </section>
 
   <footer>
-    <span>Source: <code>REVIEW/senior-review-2026-11-11.md</code> and <code>REVIEW/readiness-review.html</code>. Nothing in the repository was changed to make this page.</span>
-    <span>Every package maps to finding IDs from the review. Each finding is in exactly one package, so the open counts are exact; the scores are not.</span>
+    <span
+      >Source: <code>REVIEW/senior-review-2026-11-11.md</code> and
+      <code>REVIEW/readiness-review.html</code>. Nothing in the repository was changed to make this
+      page.</span
+    >
+    <span
+      >Every package maps to finding IDs from the review. Each finding is in exactly one package, so
+      the open counts are exact; the scores are not.</span
+    >
   </footer>
 </div>
 
 <script>
-const $ = (id) => document.getElementById(id);
-const esc = (s) => s.replace(/[&<>]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" })[c]);
-const code = (s) => esc(s).replace(/`([^`]+)`/g, "<code>$1</code>");
+  const $ = (id) => document.getElementById(id);
+  const esc = (s) => s.replace(/[&<>]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" })[c]);
+  const code = (s) => esc(s).replace(/`([^`]+)`/g, "<code>$1</code>");
 
-const AREAS = [
-  ["safety", "Patient safety", 4], ["security", "Security & privacy", 2], ["arch", "Architecture", 5],
-  ["data", "Data model", 6], ["quality", "Code quality", 5], ["testing", "Testing", 4],
-  ["frontend", "Frontend", 6], ["mobile", "Mobile", 5], ["dx", "Developer experience", 3], ["prod", "Production readiness", 2],
-];
+  const AREAS = [
+    ["safety", "Patient safety", 4],
+    ["security", "Security & privacy", 2],
+    ["arch", "Architecture", 5],
+    ["data", "Data model", 6],
+    ["quality", "Code quality", 5],
+    ["testing", "Testing", 4],
+    ["frontend", "Frontend", 6],
+    ["mobile", "Mobile", 5],
+    ["dx", "Developer experience", 3],
+    ["prod", "Production readiness", 2],
+  ];
 
-// stage: 1 = next two weeks, 2 = next quarter, 3 = after the quarter
-const PKGS = [
-  { id: 1, stage: 1, days: 1, title: "One shared affiliation check for every staff scope",
-    closes: ["C-1", "H-14", "L-4"], gain: { security: 1, arch: 0.5 },
-    what: ["Add `state IN ('active','approved')` to the reception scope today: a one-line fix.", "Move the affiliation query into one `activeAffiliation(userId, cadre)` used by all 11 scopes, which also checks the hospital is live and `users.state` is active.", "One test: a pending, rejected, suspended or offboarded affiliation is refused by every scope."],
-    diff: `<span class="cm">// lib/reception/scope.ts:76</span>
+  // stage: 1 = next two weeks, 2 = next quarter, 3 = after the quarter
+  const PKGS = [
+    {
+      id: 1,
+      stage: 1,
+      days: 1,
+      title: "One shared affiliation check for every staff scope",
+      closes: ["C-1", "H-14", "L-4"],
+      gain: { security: 1, arch: 0.5 },
+      what: [
+        "Add `state IN ('active','approved')` to the reception scope today: a one-line fix.",
+        "Move the affiliation query into one `activeAffiliation(userId, cadre)` used by all 11 scopes, which also checks the hospital is live and `users.state` is active.",
+        "One test: a pending, rejected, suspended or offboarded affiliation is refused by every scope.",
+      ],
+      diff: `<span class="cm">// lib/reception/scope.ts:76</span>
 <span class="del">- .where(and(eq(staffAffiliations.userId, state.user.id), eq(cadres.code, RECEPTION_CADRE_CODE)))</span>
 <span class="add">+ .where(and(</span>
 <span class="add">+   eq(staffAffiliations.userId, state.user.id),</span>
 <span class="add">+   eq(cadres.code, RECEPTION_CADRE_CODE),</span>
 <span class="add">+   inArray(staffAffiliations.state, ["active", "approved"]),</span>
 <span class="add">+ ))</span>
-<span class="cm">// then: every scope calls activeAffiliation(), which adds hospitals.state and users.state</span>` },
-  { id: 2, stage: 1, days: 2, title: "Lock down who can edit user and profile rows",
-    closes: ["C-4", "M-1", "M-2", "M-3", "L-2"], gain: { security: 1, data: 0.5 },
-    what: ["`REVOKE UPDATE ON users FROM authenticated`, then grant back only the columns a person may change (display name, phone, language).", "Same for `patient_profiles`: sex, date of birth, patient code and known conditions become staff-only.", "`sa-suspend-user` also bans the auth user and signs out every session.", "`user_roles` writes go through the service role only."],
-    diff: `<span class="cm">-- new migration (columns illustrative)</span>
+<span class="cm">// then: every scope calls activeAffiliation(), which adds hospitals.state and users.state</span>`,
+    },
+    {
+      id: 2,
+      stage: 1,
+      days: 2,
+      title: "Lock down who can edit user and profile rows",
+      closes: ["C-4", "M-1", "M-2", "M-3", "L-2"],
+      gain: { security: 1, data: 0.5 },
+      what: [
+        "`REVOKE UPDATE ON users FROM authenticated`, then grant back only the columns a person may change (display name, phone, language).",
+        "Same for `patient_profiles`: sex, date of birth, patient code and known conditions become staff-only.",
+        "`sa-suspend-user` also bans the auth user and signs out every session.",
+        "`user_roles` writes go through the service role only.",
+      ],
+      diff: `<span class="cm">-- new migration (columns illustrative)</span>
 <span class="add">+ REVOKE UPDATE ON public.users FROM authenticated;</span>
 <span class="add">+ GRANT UPDATE (display_name, phone, preferred_language) ON public.users TO authenticated;</span>
 <span class="add">+ REVOKE INSERT, UPDATE, DELETE ON public.user_roles FROM authenticated;</span>
 <span class="cm">// sa-suspend-user</span>
 <span class="add">+ await sb.auth.admin.updateUserById(userId, { ban_duration: "876000h" });</span>
-<span class="add">+ await sb.auth.admin.signOut(userId, "global");</span>` },
-  { id: 3, stage: 1, days: 1, title: "Upgrade Next, Sentry and Zod; audit in CI",
-    closes: ["H-1", "L-12"], gain: { prod: 1, security: 0.5 },
-    what: ["next 16.2.6 → 16.4.6 or later, @sentry/nextjs → 10.75.2 or later, zod → 4.6.6 or later.", "Add `npm audit --omit=dev --audit-level=high` to CI so a new critical fails the build.", "Allow the install scripts npm 12 blocked (sharp, esbuild, Sentry CLI) explicitly."],
-    diff: `<span class="cm"># .github/workflows/ci.yml</span>
-<span class="add">+ - run: npm audit --omit=dev --audit-level=high</span>` },
-  { id: 4, stage: 1, days: 3, title: "Require MFA below the web pages too",
-    closes: ["C-2", "M-15", "M-16", "L-1", "L-3"], gain: { security: 1, prod: 0.5 },
-    what: ["A RESTRICTIVE RLS policy on staff and superadmin arms: the token must be `aal2`.", "`getCaller` reads the token's `aal` claim; staff and superadmin functions call `requireAal2`.", "Catalogue review checks AAL2 and validates with Zod; scan attach authenticates before it downloads.", "Constant-time secret compares; CORS limited to the real origins."],
-    diff: `<span class="cm">// supabase/functions/_shared/auth.ts:42</span>
+<span class="add">+ await sb.auth.admin.signOut(userId, "global");</span>`,
+    },
+    {
+      id: 3,
+      stage: 1,
+      days: 1,
+      title: "Upgrade Next, Sentry and Zod; audit in CI",
+      closes: ["H-1", "L-12"],
+      gain: { prod: 1, security: 0.5 },
+      what: [
+        "next 16.2.6 → 16.4.6 or later, @sentry/nextjs → 10.75.2 or later, zod → 4.6.6 or later.",
+        "Add `npm audit --omit=dev --audit-level=high` to CI so a new critical fails the build.",
+        "Allow the install scripts npm 12 blocked (sharp, esbuild, Sentry CLI) explicitly.",
+      ],
+      diff: `<span class="cm"># .github/workflows/ci.yml</span>
+<span class="add">+ - run: npm audit --omit=dev --audit-level=high</span>`,
+    },
+    {
+      id: 4,
+      stage: 1,
+      days: 3,
+      title: "Require MFA below the web pages too",
+      closes: ["C-2", "M-15", "M-16", "L-1", "L-3"],
+      gain: { security: 1, prod: 0.5 },
+      what: [
+        "A RESTRICTIVE RLS policy on staff and superadmin arms: the token must be `aal2`.",
+        "`getCaller` reads the token's `aal` claim; staff and superadmin functions call `requireAal2`.",
+        "Catalogue review checks AAL2 and validates with Zod; scan attach authenticates before it downloads.",
+        "Constant-time secret compares; CORS limited to the real origins.",
+      ],
+      diff: `<span class="cm">// supabase/functions/_shared/auth.ts:42</span>
   const { data, error } = await client.auth.getUser();
   if (error || !data.user) return null;
 <span class="add">+ const aal = decodeJwt(authHeader.slice(7)).aal;</span>
 <span class="add">+ return { ...data.user, aal };</span>
 <span class="cm">-- every staff policy</span>
 <span class="add">+ CREATE POLICY staff_need_aal2 ON ... AS RESTRICTIVE</span>
-<span class="add">+   USING (NOT is_staff() OR (auth.jwt() ->> 'aal') = 'aal2');</span>` },
-  { id: 5, stage: 1, days: 3, title: "Take away the superadmin's direct view of patient data",
-    closes: ["C-3", "H-11", "M-4"], gain: { security: 1 },
-    what: ["Drop the superadmin arms on `audit_log`, `patient_profiles` and the EMR tables. Reading PHI goes through break-glass, which is logged and time-limited.", "The audit log stores changed column names and a hash, not whole rows.", "The avatars bucket: owner, plus staff with a current clinical relationship.", "A booking alone no longer counts as a clinical relationship; it needs an attendance, and expires."],
-    diff: `<span class="cm">-- new migration</span>
+<span class="add">+   USING (NOT is_staff() OR (auth.jwt() ->> 'aal') = 'aal2');</span>`,
+    },
+    {
+      id: 5,
+      stage: 1,
+      days: 3,
+      title: "Take away the superadmin's direct view of patient data",
+      closes: ["C-3", "H-11", "M-4"],
+      gain: { security: 1 },
+      what: [
+        "Drop the superadmin arms on `audit_log`, `patient_profiles` and the EMR tables. Reading PHI goes through break-glass, which is logged and time-limited.",
+        "The audit log stores changed column names and a hash, not whole rows.",
+        "The avatars bucket: owner, plus staff with a current clinical relationship.",
+        "A booking alone no longer counts as a clinical relationship; it needs an attendance, and expires.",
+      ],
+      diff: `<span class="cm">-- new migration</span>
 <span class="del">- superadmin SELECT on audit_log  (0002_rls.sql:149)</span>
 <span class="add">+ DROP POLICY ... ON public.audit_log;  -- read through sa-open-break-glass only</span>
 <span class="del">- USING (bucket_id = 'avatars')</span>
-<span class="add">+ USING (bucket_id = 'avatars' AND (owner = auth.uid() OR has_clinical_relationship(owner)))</span>` },
-  { id: 6, stage: 1, days: 3, title: "Clinical fixes: high-alert, triage alerts, dose times, glucose, stale values",
-    closes: ["H-2", "H-3", "H-4", "H-5", "H-21", "M-5"], gain: { safety: 2 },
-    what: ["High-alert is read from the prescription on the server, never from the form. Only clinical cadres write MAR rows.", "If a Red or Orange alert reaches nobody, the nurse sees: No one was alerted. Call for help now. It falls back to the in-charge.", "Dose slots are built in Africa/Kampala with Intl, as booking already does.", "Glucose above about 35 mmol/L asks: Did you mean mg/dL? The unit is stored with the reading.", "Weight and glucose show their date; each prescribing check has a maximum age.", "NEWS2 bands become half-open so 90.5 and 91.5 score."],
-    diff: `<span class="cm">// lib/triage/notify.ts:75, the result is no longer thrown away</span>
+<span class="add">+ USING (bucket_id = 'avatars' AND (owner = auth.uid() OR has_clinical_relationship(owner)))</span>`,
+    },
+    {
+      id: 6,
+      stage: 1,
+      days: 3,
+      title: "Clinical fixes: high-alert, triage alerts, dose times, glucose, stale values",
+      closes: ["H-2", "H-3", "H-4", "H-5", "H-21", "M-5"],
+      gain: { safety: 2 },
+      what: [
+        "High-alert is read from the prescription on the server, never from the form. Only clinical cadres write MAR rows.",
+        "If a Red or Orange alert reaches nobody, the nurse sees: No one was alerted. Call for help now. It falls back to the in-charge.",
+        "Dose slots are built in Africa/Kampala with Intl, as booking already does.",
+        "Glucose above about 35 mmol/L asks: Did you mean mg/dL? The unit is stored with the reading.",
+        "Weight and glucose show their date; each prescribing check has a maximum age.",
+        "NEWS2 bands become half-open so 90.5 and 91.5 score.",
+      ],
+      diff: `<span class="cm">// lib/triage/notify.ts:75, the result is no longer thrown away</span>
 <span class="del">- if (recipients.length === 0) return { notified: 0 };</span>
 <span class="add">+ if (recipients.length === 0) return { notified: 0, fallback: await alertInCharge(args) };</span>
 <span class="cm">// the triage action</span>
 <span class="add">+ if (result.notified === 0) showBanner("No one was alerted. Call for help now.");</span>
 <span class="cm">// lib/patient/doses.ts:163</span>
 <span class="del">- const dayStart = startOfLocalDay(input.day);</span>
-<span class="add">+ const dayStart = startOfDayIn(input.day, "Africa/Kampala");</span>` },
-  { id: 7, stage: 2, days: 6, title: "Run the database and RLS tests in CI; prove the schema",
-    closes: ["H-18", "H-19"], gain: { testing: 2.5, prod: 1.5, dx: 0.5 },
-    what: ["PGlite becomes a devDependency, so the EMR lane runs on any machine, not through a laptop symlink.", "A disposable Supabase test project (or local stack) gives CI the 16 live-RLS suites.", "Mobile jest runs in CI. One test calls a real server action with a forged scope.", "The migration runner stores sha256 per file and refuses out-of-order runs; a nightly job diffs production's schema against main.", "Branch protection: CI must pass to merge."],
-    diff: `<span class="cm"># .github/workflows/ci.yml</span>
+<span class="add">+ const dayStart = startOfDayIn(input.day, "Africa/Kampala");</span>`,
+    },
+    {
+      id: 7,
+      stage: 2,
+      days: 6,
+      title: "Run the database and RLS tests in CI; prove the schema",
+      closes: ["H-18", "H-19"],
+      gain: { testing: 2.5, prod: 1.5, dx: 0.5 },
+      what: [
+        "PGlite becomes a devDependency, so the EMR lane runs on any machine, not through a laptop symlink.",
+        "A disposable Supabase test project (or local stack) gives CI the 16 live-RLS suites.",
+        "Mobile jest runs in CI. One test calls a real server action with a forged scope.",
+        "The migration runner stores sha256 per file and refuses out-of-order runs; a nightly job diffs production's schema against main.",
+        "Branch protection: CI must pass to merge.",
+      ],
+      diff: `<span class="cm"># .github/workflows/ci.yml</span>
 <span class="add">+ - run: EMR_PGLITE=1 npm run test:emr-db</span>
 <span class="add">+ - run: npx supabase start && npm run test:rls</span>
-<span class="add">+ - run: npm --prefix mobile test -- --ci</span>` },
-  { id: 8, stage: 2, days: 8, title: "A real audit trail",
-    closes: ["H-9", "H-10", "H-13", "M-8"], gain: { security: 0.5, data: 0.5, prod: 0.5 },
-    what: ["Every transaction sets an actor claim, so `actor_id` is never null.", "A TRUNCATE guard; audit tables live in a schema the app role does not own.", "Reads of PHI are logged in the shared read helpers, so pharmacy, lab, emergency and USSD are covered.", "Four-eyes: superadmin roles are service-role only, and a second person confirms.", "Demo data leaves production; its removal never disables triggers again."],
-    diff: `<span class="add">+ SET LOCAL medsync.actor_id = '&lt;caller uuid&gt;';   -- in every write transaction</span>
+<span class="add">+ - run: npm --prefix mobile test -- --ci</span>`,
+    },
+    {
+      id: 8,
+      stage: 2,
+      days: 8,
+      title: "A real audit trail",
+      closes: ["H-9", "H-10", "H-13", "M-8"],
+      gain: { security: 0.5, data: 0.5, prod: 0.5 },
+      what: [
+        "Every transaction sets an actor claim, so `actor_id` is never null.",
+        "A TRUNCATE guard; audit tables live in a schema the app role does not own.",
+        "Reads of PHI are logged in the shared read helpers, so pharmacy, lab, emergency and USSD are covered.",
+        "Four-eyes: superadmin roles are service-role only, and a second person confirms.",
+        "Demo data leaves production; its removal never disables triggers again.",
+      ],
+      diff: `<span class="add">+ SET LOCAL medsync.actor_id = '&lt;caller uuid&gt;';   -- in every write transaction</span>
 <span class="add">+ CREATE TRIGGER no_truncate BEFORE TRUNCATE ON audit.audit_log</span>
-<span class="add">+   EXECUTE FUNCTION audit.refuse();</span>` },
-  { id: 9, stage: 2, days: 8, title: "Privacy: make the notice true",
-    closes: ["H-7", "H-8", "M-18"], gain: { security: 0.5, mobile: 0.5 },
-    what: ["Name every processor (Anthropic, Vercel, Sentry, Google Maps and the rest) and ask consent before a photo goes to AI.", "Patient search becomes a POST; Sentry and Analytics scrub URLs.", "Patients get a display alias in `users` and auth metadata; the real name stays encrypted.", "Encryption keys get an id and a rotation path; the HMAC secret is its own key."],
-    diff: `<span class="del">- router.push(\`/reception/find?q=\${name}\`)</span>
-<span class="add">+ await findPatient({ query: name })   // server action, nothing in the URL</span>` },
-  { id: 10, stage: 2, days: 6, title: "Make clinical records hard to lose or corrupt",
-    closes: ["H-15", "H-16", "H-17", "M-9", "M-10", "M-11", "M-12", "L-5"], gain: { data: 1, safety: 0.5 },
-    what: ["53 clinical foreign keys to `auth.users` switch from CASCADE to RESTRICT.", "Closing an encounter becomes one SQL function, and only closes that patient's own assignments.", "Released lab results are frozen by a trigger.", "A partial unique index stops two encounters from one triage.", "SMS goes through an outbox, sent after commit."],
-    diff: `<span class="del">- REFERENCES auth.users(id) ON DELETE CASCADE</span>
+<span class="add">+   EXECUTE FUNCTION audit.refuse();</span>`,
+    },
+    {
+      id: 9,
+      stage: 2,
+      days: 8,
+      title: "Privacy: make the notice true",
+      closes: ["H-7", "H-8", "M-18"],
+      gain: { security: 0.5, mobile: 0.5 },
+      what: [
+        "Name every processor (Anthropic, Vercel, Sentry, Google Maps and the rest) and ask consent before a photo goes to AI.",
+        "Patient search becomes a POST; Sentry and Analytics scrub URLs.",
+        "Patients get a display alias in `users` and auth metadata; the real name stays encrypted.",
+        "Encryption keys get an id and a rotation path; the HMAC secret is its own key.",
+      ],
+      diff: `<span class="del">- router.push(\`/reception/find?q=\${name}\`)</span>
+<span class="add">+ await findPatient({ query: name })   // server action, nothing in the URL</span>`,
+    },
+    {
+      id: 10,
+      stage: 2,
+      days: 6,
+      title: "Make clinical records hard to lose or corrupt",
+      closes: ["H-15", "H-16", "H-17", "M-9", "M-10", "M-11", "M-12", "L-5"],
+      gain: { data: 1, safety: 0.5 },
+      what: [
+        "53 clinical foreign keys to `auth.users` switch from CASCADE to RESTRICT.",
+        "Closing an encounter becomes one SQL function, and only closes that patient's own assignments.",
+        "Released lab results are frozen by a trigger.",
+        "A partial unique index stops two encounters from one triage.",
+        "SMS goes through an outbox, sent after commit.",
+      ],
+      diff: `<span class="del">- REFERENCES auth.users(id) ON DELETE CASCADE</span>
 <span class="add">+ REFERENCES auth.users(id) ON DELETE RESTRICT</span>
 <span class="add">+ CREATE UNIQUE INDEX one_open_encounter_per_triage</span>
-<span class="add">+   ON encounters (triage_record_id) WHERE state &lt;&gt; 'closed';</span>` },
-  { id: 11, stage: 2, days: 5, title: "Safety rails in the interface",
-    closes: ["H-6", "H-12", "H-20", "M-6", "M-7", "M-17"], gain: { frontend: 1, safety: 1, security: 0.5, prod: 0.5 },
-    what: ["One `error.tsx` per workspace that keeps the shell and the Emergency pill.", "The CSO gate fails closed everywhere, and a test proves every SignedCopy is gated.", "Pre-alerts are limited by server-seen IP and per facility.", "Red stops marking stock-outs and rota gaps. The regulator is named Pharmacy Board of Uganda.", "One shared rate limiter, including sign-in and MFA."],
-    diff: `<span class="cm">// lib/workspace-access/flag.ts:23</span>
+<span class="add">+   ON encounters (triage_record_id) WHERE state &lt;&gt; 'closed';</span>`,
+    },
+    {
+      id: 11,
+      stage: 2,
+      days: 5,
+      title: "Safety rails in the interface",
+      closes: ["H-6", "H-12", "H-20", "M-6", "M-7", "M-17"],
+      gain: { frontend: 1, safety: 1, security: 0.5, prod: 0.5 },
+      what: [
+        "One `error.tsx` per workspace that keeps the shell and the Emergency pill.",
+        "The CSO gate fails closed everywhere, and a test proves every SignedCopy is gated.",
+        "Pre-alerts are limited by server-seen IP and per facility.",
+        "Red stops marking stock-outs and rota gaps. The regulator is named Pharmacy Board of Uganda.",
+        "One shared rate limiter, including sign-in and MFA.",
+      ],
+      diff: `<span class="cm">// lib/workspace-access/flag.ts:23</span>
 <span class="del">- if (process.env.VERCEL_ENV === "production" &amp;&amp; !signed) return false;</span>
-<span class="add">+ if (!signed &amp;&amp; process.env.MEDSYNC_ENV !== "dev") return false;</span>` },
-  { id: 12, stage: 3, days: 6, title: "Make the codebase easy to work on",
-    closes: ["M-20", "M-21", "M-22", "M-25", "M-26", "L-6", "L-7"], gain: { dx: 3, testing: 1, frontend: 0.5, quality: 0.5 },
-    what: ["Split the tsconfig so a typecheck fits in 4 GB and the pre-commit hook checks only staged files.", "A README a new engineer can follow in an hour.", "Lint fails on warnings; axe runs on the styleguide fixtures; /pw gets a size budget.", "AGENTS.md and DESIGN-medsync.md agree; one design system is named as current.", "A small Playwright smoke test: sign in, triage a patient, close an encounter."],
-    diff: `<span class="add">+ "lint": "eslint . --max-warnings=0"</span>
-<span class="add">+ tsconfig.app.json · tsconfig.functions.json · tsconfig.tests.json</span>` },
-  { id: 13, stage: 3, days: 15, title: "Fewer moving parts",
-    closes: ["M-13", "M-14", "M-23", "M-24", "L-8", "L-9"], gain: { arch: 2, quality: 1.5 },
-    what: ["Retire the older patient web and the older resus desk.", "Every flag gets a sunset date; flags past it fail CI.", "One explicit `MEDSYNC_ENV` replaces the many `VERCEL_ENV` checks.", "Shared Zod schemas give client and server the same form limits.", "The 2,000-line components split into hooks and parts."],
-    diff: `<span class="add">+ export const FLAGS = { RESUS_DESK_V2: { sunset: "2027-02-01" }, ... }</span>` },
-  { id: 14, stage: 3, days: 6, title: "Mobile: protect what is on the phone",
-    closes: ["M-19", "L-10", "L-11"], gain: { mobile: 2, prod: 0.5 },
-    what: ["Session tokens move from AsyncStorage to SecureStore.", "Cached diagnoses and medicines are encrypted and wiped on sign-out.", "Crash reporting, and Expo packages aligned with the SDK so expo-doctor passes.", "If the phone cannot dial, the emergency screen says so and shows the number."],
-    diff: `<span class="cm">// mobile/src/lib/supabase.ts:33</span>
+<span class="add">+ if (!signed &amp;&amp; process.env.MEDSYNC_ENV !== "dev") return false;</span>`,
+    },
+    {
+      id: 12,
+      stage: 3,
+      days: 6,
+      title: "Make the codebase easy to work on",
+      closes: ["M-20", "M-21", "M-22", "M-25", "M-26", "L-6", "L-7"],
+      gain: { dx: 3, testing: 1, frontend: 0.5, quality: 0.5 },
+      what: [
+        "Split the tsconfig so a typecheck fits in 4 GB and the pre-commit hook checks only staged files.",
+        "A README a new engineer can follow in an hour.",
+        "Lint fails on warnings; axe runs on the styleguide fixtures; /pw gets a size budget.",
+        "AGENTS.md and DESIGN-medsync.md agree; one design system is named as current.",
+        "A small Playwright smoke test: sign in, triage a patient, close an encounter.",
+      ],
+      diff: `<span class="add">+ "lint": "eslint . --max-warnings=0"</span>
+<span class="add">+ tsconfig.app.json · tsconfig.functions.json · tsconfig.tests.json</span>`,
+    },
+    {
+      id: 13,
+      stage: 3,
+      days: 15,
+      title: "Fewer moving parts",
+      closes: ["M-13", "M-14", "M-23", "M-24", "L-8", "L-9"],
+      gain: { arch: 2, quality: 1.5 },
+      what: [
+        "Retire the older patient web and the older resus desk.",
+        "Every flag gets a sunset date; flags past it fail CI.",
+        "One explicit `MEDSYNC_ENV` replaces the many `VERCEL_ENV` checks.",
+        "Shared Zod schemas give client and server the same form limits.",
+        "The 2,000-line components split into hooks and parts.",
+      ],
+      diff: `<span class="add">+ export const FLAGS = { RESUS_DESK_V2: { sunset: "2027-02-01" }, ... }</span>`,
+    },
+    {
+      id: 14,
+      stage: 3,
+      days: 6,
+      title: "Mobile: protect what is on the phone",
+      closes: ["M-19", "L-10", "L-11"],
+      gain: { mobile: 2, prod: 0.5 },
+      what: [
+        "Session tokens move from AsyncStorage to SecureStore.",
+        "Cached diagnoses and medicines are encrypted and wiped on sign-out.",
+        "Crash reporting, and Expo packages aligned with the SDK so expo-doctor passes.",
+        "If the phone cannot dial, the emergency screen says so and shows the number.",
+      ],
+      diff: `<span class="cm">// mobile/src/lib/supabase.ts:33</span>
 <span class="del">- storage: AsyncStorage,</span>
-<span class="add">+ storage: secureStoreAdapter,</span>` },
-  { id: 15, stage: 4, days: 10, title: "An outside security test, then fix what it finds",
-    closes: [], gain: { security: 1, prod: 0.5 }, needs: "An outside security firm, after packages 1 to 11.",
-    what: ["A written threat model for patients, staff, superadmin and the public emergency pages.", "A penetration test that starts from the four critical paths and the ten suspicions.", "Fix what it finds, and test again.", "A security.txt and a way for people to report a weakness."] },
-  { id: 16, stage: 4, days: 5, title: "A second person on every key",
-    closes: [], gain: { safety: 0.5, security: 0.5, quality: 0.5, prod: 0.5 }, needs: "A second engineer and a deputy CSO. This is hiring, not code.",
-    what: ["A second superadmin, so four-eyes means two people.", "A deputy CSO who can sign clinical content and review the hazard log.", "Required review on every change to scopes, RLS, migrations and clinical engines (CODEOWNERS).", "The founder no longer reads the audit log of their own actions."] },
-  { id: 17, stage: 4, days: 12, title: "Run it like a hospital system",
-    closes: [], gain: { prod: 2, safety: 0.5, data: 0.5 }, needs: "Someone on call, even if part-time.",
-    what: ["Point-in-time backups with a restore drill each quarter, timed and written down.", "Uptime and error alerts that page a person, including when a triage alert fails to send.", "Runbooks for the outages that matter: database down, SMS provider down, a leaked key.", "An incident and breach process that meets the 72-hour reporting duty.", "A staging environment with its own database."] },
-  { id: 18, stage: 4, days: 20, title: "Prove it on a ward before trusting it",
-    closes: [], gain: { safety: 1.5 }, needs: "A shadow pilot at one hospital, 4 to 8 weeks, with ward staff.",
-    what: ["Run triage and prescribing in shadow beside paper, and compare.", "Measure what matters: alerts that reached a clinician, time to see a Red patient, dose errors caught.", "A clinical safety case and a signed hazard log, kept current with each release.", "Every remaining draft clinical string signed or removed."] },
-  { id: 19, stage: 4, days: 15, title: "Tests that would catch a clinical bug",
-    closes: [], gain: { testing: 1.5, quality: 0.5 },
-    what: ["End-to-end tests for every critical workflow: triage, resus, prescribing, administering, closing an encounter.", "Property tests for NEWS2, dose times and unit conversion, over every boundary value.", "Mutation testing on the clinical engines, so a test that passes no matter what is found.", "Edge Functions get real tests: 76 functions, not 2 text searches.", "Coverage of 80% or more on clinical libraries, enforced in CI."],
-    diff: `<span class="add">+ fc.assert(fc.property(fc.float({ min: 25, max: 50 }), (t) =&gt; news2Temp(t) !== undefined))</span>` },
-  { id: 20, stage: 4, days: 20, title: "One way to reach the database",
-    closes: [], gain: { arch: 1.5, security: 0.5, quality: 0.5 },
-    what: ["Web server code stops connecting as the owner. Reads and writes go through roles that RLS applies to, as the EMR already does with `asClinicalReader`.", "Then the database, not 279 files, decides who sees what.", "The owner role is used only by migrations."],
-    diff: `<span class="del">- const rows = await db.select().from(patientProfiles)...</span>
-<span class="add">+ const rows = await asClinicalReader(scope, (tx) =&gt; tx.select().from(patientProfiles)...)</span>` },
-  { id: 21, stage: 4, days: 8, title: "Frontend that works on a ward phone",
-    closes: [], gain: { frontend: 1.5 },
-    what: ["A WCAG 2.2 AA audit, with ward staff using the main screens.", "Size budgets on every route, not only /patient.", "Testing on a slow 3G connection and a low-end Android phone.", "The clinical screens keep working briefly offline and say so."] },
-  { id: 22, stage: 4, days: 8, title: "A mobile app you can ship to app stores",
-    closes: [], gain: { mobile: 1.5 },
-    what: ["End-to-end tests on a real device (Maestro or Detox).", "Signed release builds and staged rollouts.", "Screen-reader and large-text support checked.", "Health data excluded from Android backup."] },
-  { id: 23, stage: 4, days: 5, title: "One command to a working copy",
-    closes: [], gain: { dx: 2 },
-    what: ["`npm run setup` starts a local database with migrations and safe seed data.", "A typecheck under two minutes.", "Docs written for a person joining the team, not for an AI session.", "Each preview deployment gets its own throwaway database."] },
-];
+<span class="add">+ storage: secureStoreAdapter,</span>`,
+    },
+    {
+      id: 15,
+      stage: 4,
+      days: 10,
+      title: "An outside security test, then fix what it finds",
+      closes: [],
+      gain: { security: 1, prod: 0.5 },
+      needs: "An outside security firm, after packages 1 to 11.",
+      what: [
+        "A written threat model for patients, staff, superadmin and the public emergency pages.",
+        "A penetration test that starts from the four critical paths and the ten suspicions.",
+        "Fix what it finds, and test again.",
+        "A security.txt and a way for people to report a weakness.",
+      ],
+    },
+    {
+      id: 16,
+      stage: 4,
+      days: 5,
+      title: "A second person on every key",
+      closes: [],
+      gain: { safety: 0.5, security: 0.5, quality: 0.5, prod: 0.5 },
+      needs: "A second engineer and a deputy CSO. This is hiring, not code.",
+      what: [
+        "A second superadmin, so four-eyes means two people.",
+        "A deputy CSO who can sign clinical content and review the hazard log.",
+        "Required review on every change to scopes, RLS, migrations and clinical engines (CODEOWNERS).",
+        "The founder no longer reads the audit log of their own actions.",
+      ],
+    },
+    {
+      id: 17,
+      stage: 4,
+      days: 12,
+      title: "Run it like a hospital system",
+      closes: [],
+      gain: { prod: 2, safety: 0.5, data: 0.5 },
+      needs: "Someone on call, even if part-time.",
+      what: [
+        "Point-in-time backups with a restore drill each quarter, timed and written down.",
+        "Uptime and error alerts that page a person, including when a triage alert fails to send.",
+        "Runbooks for the outages that matter: database down, SMS provider down, a leaked key.",
+        "An incident and breach process that meets the 72-hour reporting duty.",
+        "A staging environment with its own database.",
+      ],
+    },
+    {
+      id: 18,
+      stage: 4,
+      days: 20,
+      title: "Prove it on a ward before trusting it",
+      closes: [],
+      gain: { safety: 1.5 },
+      needs: "A shadow pilot at one hospital, 4 to 8 weeks, with ward staff.",
+      what: [
+        "Run triage and prescribing in shadow beside paper, and compare.",
+        "Measure what matters: alerts that reached a clinician, time to see a Red patient, dose errors caught.",
+        "A clinical safety case and a signed hazard log, kept current with each release.",
+        "Every remaining draft clinical string signed or removed.",
+      ],
+    },
+    {
+      id: 19,
+      stage: 4,
+      days: 15,
+      title: "Tests that would catch a clinical bug",
+      closes: [],
+      gain: { testing: 1.5, quality: 0.5 },
+      what: [
+        "End-to-end tests for every critical workflow: triage, resus, prescribing, administering, closing an encounter.",
+        "Property tests for NEWS2, dose times and unit conversion, over every boundary value.",
+        "Mutation testing on the clinical engines, so a test that passes no matter what is found.",
+        "Edge Functions get real tests: 76 functions, not 2 text searches.",
+        "Coverage of 80% or more on clinical libraries, enforced in CI.",
+      ],
+      diff: `<span class="add">+ fc.assert(fc.property(fc.float({ min: 25, max: 50 }), (t) =&gt; news2Temp(t) !== undefined))</span>`,
+    },
+    {
+      id: 20,
+      stage: 4,
+      days: 20,
+      title: "One way to reach the database",
+      closes: [],
+      gain: { arch: 1.5, security: 0.5, quality: 0.5 },
+      what: [
+        "Web server code stops connecting as the owner. Reads and writes go through roles that RLS applies to, as the EMR already does with `asClinicalReader`.",
+        "Then the database, not 279 files, decides who sees what.",
+        "The owner role is used only by migrations.",
+      ],
+      diff: `<span class="del">- const rows = await db.select().from(patientProfiles)...</span>
+<span class="add">+ const rows = await asClinicalReader(scope, (tx) =&gt; tx.select().from(patientProfiles)...)</span>`,
+    },
+    {
+      id: 21,
+      stage: 4,
+      days: 8,
+      title: "Frontend that works on a ward phone",
+      closes: [],
+      gain: { frontend: 1.5 },
+      what: [
+        "A WCAG 2.2 AA audit, with ward staff using the main screens.",
+        "Size budgets on every route, not only /patient.",
+        "Testing on a slow 3G connection and a low-end Android phone.",
+        "The clinical screens keep working briefly offline and say so.",
+      ],
+    },
+    {
+      id: 22,
+      stage: 4,
+      days: 8,
+      title: "A mobile app you can ship to app stores",
+      closes: [],
+      gain: { mobile: 1.5 },
+      what: [
+        "End-to-end tests on a real device (Maestro or Detox).",
+        "Signed release builds and staged rollouts.",
+        "Screen-reader and large-text support checked.",
+        "Health data excluded from Android backup.",
+      ],
+    },
+    {
+      id: 23,
+      stage: 4,
+      days: 5,
+      title: "One command to a working copy",
+      closes: [],
+      gain: { dx: 2 },
+      what: [
+        "`npm run setup` starts a local database with migrations and safe seed data.",
+        "A typecheck under two minutes.",
+        "Docs written for a person joining the team, not for an AI session.",
+        "Each preview deployment gets its own throwaway database.",
+      ],
+    },
+  ];
 
-const TOTALS = { C: 4, H: 21, M: 26, L: 12 };
+  const TOTALS = { C: 4, H: 21, M: 26, L: 12 };
 
-// What is actually fixed and committed. Only these move the "Done so far" scores.
-// A key with a colon is part of a finding: it can block an attack step but does not close the finding.
-const DONE = [
-  { key: "C-1", pkg: 1, commit: "b7f6d5f6", what: "Reception refuses pending, rejected and suspended affiliations." },
-  { key: "H-14", pkg: 1, commit: "b7f6d5f6", what: "All 13 staff scopes refuse a hospital that is offboarded, suspended or not yet approved." },
-  { key: "C-4:scopes", pkg: 1, commit: "b7f6d5f6", what: "Every staff scope refuses a suspended, deactivated or rejected person." },
-  { key: "C-4", pkg: 2, commit: "deb9c580", what: "Nobody can edit their own state or email. Suspending or deactivating someone bans their sign-in, and Edge Functions refuse them. Migration 0287 applied, functions redeployed (12 Nov)." },
-  { key: "M-1", pkg: 2, commit: "deb9c580", what: "Clinicians can no longer set their own verified_at, and applicants can no longer approve their own application. The old column revokes never worked, which PGlite confirmed. 0287 applied." },
-  { key: "M-2", pkg: 2, commit: "deb9c580", what: "A patient can change only their chosen hospital. Sex, date of birth, patient code and conditions are now staff-only. 0287 applied." },
-  { key: "M-3", pkg: 2, commit: "deb9c580", what: "Roles are granted only through the audited Edge Functions. 0287 applied." },
-  { key: "L-2", pkg: 2, commit: "deb9c580", what: "The patient-code counter is locked, with RLS on. 0287 applied." },
-  { key: "H-1", pkg: 3, commit: "09fa94f4", what: "Next 16.4.6, Sentry 10.78 and Zod 4.6.7. No high or critical advisories remain in production dependencies (there were 3 critical and 14 high). CI now fails on a new one. The build passes." },
-  { key: "L-12", pkg: 3, commit: "09fa94f4", what: "package.json lists which install scripts may run (esbuild, Sentry CLI, unrs-resolver), so a clean install works on npm 12." },
-  { key: "C-2", pkg: 4, commit: "7b83ea52", what: "A stolen password alone no longer reaches staff data. Every table and every Edge Function now requires a staff member to have passed MFA, using the same rule the web pages use. PGlite confirmed it. Migration 0288 applied, functions redeployed (12 Nov)." },
-  { key: "M-15", pkg: 4, commit: "7b83ea52", what: "Catalogue review now needs MFA, and its input is checked." },
-  { key: "M-16", pkg: 4, commit: "7b83ea52", what: "Attaching a scan checks the person and the referral before any file is downloaded." },
-  { key: "L-3", pkg: 4, commit: "7b83ea52", what: "Edge Function CORS no longer accepts any *.vercel.app site." },
-  { key: "L-1:cron", pkg: 4, commit: "7b83ea52", what: "All 8 cron routes compare their secret in constant time. Webhook secrets still travel in the URL, because moving them needs a change in Africa's Talking." },
-  { key: "C-3:arms", pkg: 5, commit: "df644bf7", what: "The superadmin can no longer read patient tables or the audit log directly: 42 tables lost that arm, every other arm kept. Break-glass is the only way in. Audit rows still hold whole records (readable only by the server). Migration 0289 applied, functions redeployed (12 Nov)." },
-  { key: "H-11", pkg: 5, commit: "df644bf7", what: "Photos: you see your own and active clinicians' photos, nobody else's. Staff see patients' photos through the server. 0289 applied." },
-  { key: "H-7:urls", pkg: 9, commit: "1253d2f6", what: "Vercel Analytics and Sentry no longer see patient ids, search words or tokens in any URL. Reception's name search is a POST, so a patient's name never goes in a URL." },
-  { key: "H-7:processors", pkg: 9, commit: "6b04a175", what: "The privacy notice names Supabase, Vercel, Africa's Talking, Expo and Sentry. You approved the wording on 12 Nov. Still to name, with the AI consent work: Anthropic, Google Maps, OpenStreetMap, Open Food Facts." },
-];
-const BRANCH = "fix/review-perimeter";
-// sanity: every finding sits in exactly one package
-(() => {
-  const all = PKGS.flatMap((p) => p.closes);
-  const n = { C: 0, H: 0, M: 0, L: 0 };
-  all.forEach((f) => n[f[0]]++);
-  if (new Set(all).size !== all.length || Object.keys(n).some((k) => n[k] !== TOTALS[k])) console.error("finding map mismatch", n);
-})();
+  // What is actually fixed and committed. Only these move the "Done so far" scores.
+  // A key with a colon is part of a finding: it can block an attack step but does not close the finding.
+  const DONE = [
+    {
+      key: "C-1",
+      pkg: 1,
+      commit: "b7f6d5f6",
+      what: "Reception refuses pending, rejected and suspended affiliations.",
+    },
+    {
+      key: "H-14",
+      pkg: 1,
+      commit: "b7f6d5f6",
+      what: "All 13 staff scopes refuse a hospital that is offboarded, suspended or not yet approved.",
+    },
+    {
+      key: "C-4:scopes",
+      pkg: 1,
+      commit: "b7f6d5f6",
+      what: "Every staff scope refuses a suspended, deactivated or rejected person.",
+    },
+    {
+      key: "C-4",
+      pkg: 2,
+      commit: "deb9c580",
+      what: "Nobody can edit their own state or email. Suspending or deactivating someone bans their sign-in, and Edge Functions refuse them. Migration 0287 applied, functions redeployed (12 Nov).",
+    },
+    {
+      key: "M-1",
+      pkg: 2,
+      commit: "deb9c580",
+      what: "Clinicians can no longer set their own verified_at, and applicants can no longer approve their own application. The old column revokes never worked, which PGlite confirmed. 0287 applied.",
+    },
+    {
+      key: "M-2",
+      pkg: 2,
+      commit: "deb9c580",
+      what: "A patient can change only their chosen hospital. Sex, date of birth, patient code and conditions are now staff-only. 0287 applied.",
+    },
+    {
+      key: "M-3",
+      pkg: 2,
+      commit: "deb9c580",
+      what: "Roles are granted only through the audited Edge Functions. 0287 applied.",
+    },
+    {
+      key: "L-2",
+      pkg: 2,
+      commit: "deb9c580",
+      what: "The patient-code counter is locked, with RLS on. 0287 applied.",
+    },
+    {
+      key: "H-1",
+      pkg: 3,
+      commit: "09fa94f4",
+      what: "Next 16.4.6, Sentry 10.78 and Zod 4.6.7. No high or critical advisories remain in production dependencies (there were 3 critical and 14 high). CI now fails on a new one. The build passes.",
+    },
+    {
+      key: "L-12",
+      pkg: 3,
+      commit: "09fa94f4",
+      what: "package.json lists which install scripts may run (esbuild, Sentry CLI, unrs-resolver), so a clean install works on npm 12.",
+    },
+    {
+      key: "C-2",
+      pkg: 4,
+      commit: "7b83ea52",
+      what: "A stolen password alone no longer reaches staff data. Every table and every Edge Function now requires a staff member to have passed MFA, using the same rule the web pages use. PGlite confirmed it. Migration 0288 applied, functions redeployed (12 Nov).",
+    },
+    {
+      key: "M-15",
+      pkg: 4,
+      commit: "7b83ea52",
+      what: "Catalogue review now needs MFA, and its input is checked.",
+    },
+    {
+      key: "M-16",
+      pkg: 4,
+      commit: "7b83ea52",
+      what: "Attaching a scan checks the person and the referral before any file is downloaded.",
+    },
+    {
+      key: "L-3",
+      pkg: 4,
+      commit: "7b83ea52",
+      what: "Edge Function CORS no longer accepts any *.vercel.app site.",
+    },
+    {
+      key: "L-1:cron",
+      pkg: 4,
+      commit: "7b83ea52",
+      what: "All 8 cron routes compare their secret in constant time. Webhook secrets still travel in the URL, because moving them needs a change in Africa's Talking.",
+    },
+    {
+      key: "C-3:arms",
+      pkg: 5,
+      commit: "df644bf7",
+      what: "The superadmin can no longer read patient tables or the audit log directly: 42 tables lost that arm, every other arm kept. Break-glass is the only way in. Audit rows still hold whole records (readable only by the server). Migration 0289 applied, functions redeployed (12 Nov).",
+    },
+    {
+      key: "H-11",
+      pkg: 5,
+      commit: "df644bf7",
+      what: "Photos: you see your own and active clinicians' photos, nobody else's. Staff see patients' photos through the server. 0289 applied.",
+    },
+    {
+      key: "H-7:urls",
+      pkg: 9,
+      commit: "1253d2f6",
+      what: "Vercel Analytics and Sentry no longer see patient ids, search words or tokens in any URL. Reception's name search is a POST, so a patient's name never goes in a URL.",
+    },
+    {
+      key: "H-7:processors",
+      pkg: 9,
+      commit: "6b04a175",
+      what: "The privacy notice names Supabase, Vercel, Africa's Talking, Expo and Sentry. You approved the wording on 12 Nov. Still to name, with the AI consent work: Anthropic, Google Maps, OpenStreetMap, Open Food Facts.",
+    },
+  ];
+  const BRANCH = "fix/review-perimeter";
+  // sanity: every finding sits in exactly one package
+  (() => {
+    const all = PKGS.flatMap((p) => p.closes);
+    const n = { C: 0, H: 0, M: 0, L: 0 };
+    all.forEach((f) => n[f[0]]++);
+    if (new Set(all).size !== all.length || Object.keys(n).some((k) => n[k] !== TOTALS[k]))
+      console.error("finding map mismatch", n);
+  })();
 
-const PATHS = [
-  { id: "C-1", title: "A stranger signs up as reception", steps: [
-    ["Sign up publicly as reception at a live hospital", null],
-    ["Affiliation saved as pending_approval", null],
-    ["Enrol their own authenticator", null],
-    ["Reception scope lets a pending affiliation through", 1, "C-1"],
-    ["Decrypt patient names at /reception/find", null]] },
-  { id: "C-2", title: "A stolen password skips MFA", steps: [
-    ["Reuse or phish a staff password", null],
-    ["Sign in with the password alone (aal1)", null],
-    ["Call an Edge Function or PostgREST directly", null],
-    ["Nothing checks aal below the pages", 4, "C-2"],
-    ["Superadmin and hospital-admin actions, patient tables", null]] },
-  { id: "C-3", title: "The superadmin reads everyone's history", steps: [
-    ["Sign in as superadmin", null],
-    ["Read audit_log over the API", 5, "C-3:arms"],
-    ["Rows hold whole before-and-after records", 5, "C-3"],
-    ["No grant, no log, no one notified", 8, "H-10"],
-    ["Names, vitals, diagnoses, home locations", null]] },
-  { id: "C-4", title: "A suspended employee keeps access", steps: [
-    ["Superadmin suspends the account", null],
-    ["Only users.state changes; sessions survive", 2, "C-4"],
-    ["No scope reads users.state", 1, "C-4:scopes"],
-    ["The user can PATCH their own row back", 2, "C-4"],
-    ["Access continues", null]] },
-];
+  const PATHS = [
+    {
+      id: "C-1",
+      title: "A stranger signs up as reception",
+      steps: [
+        ["Sign up publicly as reception at a live hospital", null],
+        ["Affiliation saved as pending_approval", null],
+        ["Enrol their own authenticator", null],
+        ["Reception scope lets a pending affiliation through", 1, "C-1"],
+        ["Decrypt patient names at /reception/find", null],
+      ],
+    },
+    {
+      id: "C-2",
+      title: "A stolen password skips MFA",
+      steps: [
+        ["Reuse or phish a staff password", null],
+        ["Sign in with the password alone (aal1)", null],
+        ["Call an Edge Function or PostgREST directly", null],
+        ["Nothing checks aal below the pages", 4, "C-2"],
+        ["Superadmin and hospital-admin actions, patient tables", null],
+      ],
+    },
+    {
+      id: "C-3",
+      title: "The superadmin reads everyone's history",
+      steps: [
+        ["Sign in as superadmin", null],
+        ["Read audit_log over the API", 5, "C-3:arms"],
+        ["Rows hold whole before-and-after records", 5, "C-3"],
+        ["No grant, no log, no one notified", 8, "H-10"],
+        ["Names, vitals, diagnoses, home locations", null],
+      ],
+    },
+    {
+      id: "C-4",
+      title: "A suspended employee keeps access",
+      steps: [
+        ["Superadmin suspends the account", null],
+        ["Only users.state changes; sessions survive", 2, "C-4"],
+        ["No scope reads users.state", 1, "C-4:scopes"],
+        ["The user can PATCH their own row back", 2, "C-4"],
+        ["Access continues", null],
+      ],
+    },
+  ];
 
-const BA = [
-  ["A stranger signs up as reception", "Reaches patient names after enrolling an authenticator", "Lands on the waiting-for-approval page; every scope refuses a pending affiliation"],
-  ["A staff password leaks", "Password alone opens Edge Functions and the API", "Every staff path needs the second factor"],
-  ["A Red patient is triaged and no clinician is on the list", "Nothing happens; the nurse is not told", "The in-charge is alerted and the nurse sees: No one was alerted. Call for help now"],
-  ["A patient's 08:00 dose", "Opens at 11:00 Kampala time", "Opens at 08:00 Kampala time"],
-  ["A patient's login is deleted", "Their encounters, prescriptions and MAR rows go with it", "Refused while clinical records exist"],
-  ["Someone runs TRUNCATE on the audit log", "It succeeds and nothing records it", "Refused, and the audit schema is not the app's to change"],
-  ["A pull request breaks an RLS policy", "CI is green; the tests skipped", "CI is red and the merge is blocked"],
-  ["A doctor's page throws an error", "A blank screen with no way back", "The workspace stays, with the Emergency pill and a retry"],
-];
+  const BA = [
+    [
+      "A stranger signs up as reception",
+      "Reaches patient names after enrolling an authenticator",
+      "Lands on the waiting-for-approval page; every scope refuses a pending affiliation",
+    ],
+    [
+      "A staff password leaks",
+      "Password alone opens Edge Functions and the API",
+      "Every staff path needs the second factor",
+    ],
+    [
+      "A Red patient is triaged and no clinician is on the list",
+      "Nothing happens; the nurse is not told",
+      "The in-charge is alerted and the nurse sees: No one was alerted. Call for help now",
+    ],
+    ["A patient's 08:00 dose", "Opens at 11:00 Kampala time", "Opens at 08:00 Kampala time"],
+    [
+      "A patient's login is deleted",
+      "Their encounters, prescriptions and MAR rows go with it",
+      "Refused while clinical records exist",
+    ],
+    [
+      "Someone runs TRUNCATE on the audit log",
+      "It succeeds and nothing records it",
+      "Refused, and the audit schema is not the app's to change",
+    ],
+    [
+      "A pull request breaks an RLS policy",
+      "CI is green; the tests skipped",
+      "CI is red and the merge is blocked",
+    ],
+    [
+      "A doctor's page throws an error",
+      "A blank screen with no way back",
+      "The workspace stays, with the Emergency pill and a retry",
+    ],
+  ];
 
-const REST = [
-  ["Scores are earned by re-checking, not by ticking", "Each package counts only once its check has been run again and passes. The review should be repeated after each stage."],
-  ["Scores fall when nothing is done", "New advisories, new code and new flags arrive every week. A 9 held for a year needs the CI gates and the second reviewer to stay in place."],
-  ["Legal questions", "Data-protection registration, the processor contracts and the cross-border transfer basis need a lawyer, not code."],
-  ["The suspicions list", "Ten items, like default grants and preview deployments sharing the production database, need checking against production first. Any that turn out true add findings."],
-  ["Real-world evidence", "Patient safety above 8 rests on the ward pilot's numbers, not on code. If the pilot shows alerts going unread, the score does not move."],
-];
+  const REST = [
+    [
+      "Scores are earned by re-checking, not by ticking",
+      "Each package counts only once its check has been run again and passes. The review should be repeated after each stage.",
+    ],
+    [
+      "Scores fall when nothing is done",
+      "New advisories, new code and new flags arrive every week. A 9 held for a year needs the CI gates and the second reviewer to stay in place.",
+    ],
+    [
+      "Legal questions",
+      "Data-protection registration, the processor contracts and the cross-border transfer basis need a lawyer, not code.",
+    ],
+    [
+      "The suspicions list",
+      "Ten items, like default grants and preview deployments sharing the production database, need checking against production first. Any that turn out true add findings.",
+    ],
+    [
+      "Real-world evidence",
+      "Patient safety above 8 rests on the ward pilot's numbers, not on code. If the pilot shows alerts going unread, the score does not move.",
+    ],
+  ];
 
-const PRESETS = [
-  ["Today", () => new Set()],
-  ["After two weeks", () => new Set(PKGS.filter((p) => p.stage === 1).map((p) => p.id))],
-  ["After the quarter", () => new Set(PKGS.filter((p) => p.stage <= 2).map((p) => p.id))],
-  ["All findings fixed", () => new Set(PKGS.filter((p) => p.stage <= 3).map((p) => p.id))],
-  ["Maximum", () => new Set(PKGS.map((p) => p.id))],
-];
-const STAGE = { 1: "Next two weeks", 2: "Next quarter", 3: "After the quarter", 4: "Raise the ceiling" };
+  const PRESETS = [
+    ["Today", () => new Set()],
+    ["After two weeks", () => new Set(PKGS.filter((p) => p.stage === 1).map((p) => p.id))],
+    ["After the quarter", () => new Set(PKGS.filter((p) => p.stage <= 2).map((p) => p.id))],
+    ["All findings fixed", () => new Set(PKGS.filter((p) => p.stage <= 3).map((p) => p.id))],
+    ["Maximum", () => new Set(PKGS.map((p) => p.id))],
+  ];
+  const STAGE = {
+    1: "Next two weeks",
+    2: "Next quarter",
+    3: "After the quarter",
+    4: "Raise the ceiling",
+  };
 
-const doneKeys = new Set(DONE.map((d) => d.key));
-const doneFindings = new Set(DONE.map((d) => d.key).filter((k) => !k.includes(":")));
-PRESETS.unshift(["Done so far", () => new Set(PKGS.filter((p) => DONE.some((d) => d.pkg === p.id)).map((p) => p.id))]);
-let mode = "done";
-let on = PRESETS[0][1]();
+  const doneKeys = new Set(DONE.map((d) => d.key));
+  const doneFindings = new Set(DONE.map((d) => d.key).filter((k) => !k.includes(":")));
+  PRESETS.unshift([
+    "Done so far",
+    () => new Set(PKGS.filter((p) => DONE.some((d) => d.pkg === p.id)).map((p) => p.id)),
+  ]);
+  let mode = "done";
+  let on = PRESETS[0][1]();
 
-$("presets").innerHTML = '<span class="label" style="margin-right:4px">Stage</span>' + PRESETS.map(([n], i) => `<button type="button" data-i="${i}">${n}</button>`).join("");
-$("presets").addEventListener("click", (e) => { const b = e.target.closest("button"); if (!b) return; mode = b.dataset.i === "0" ? "done" : "plan"; on = PRESETS[+b.dataset.i][1](); render(); });
+  $("presets").innerHTML =
+    '<span class="label" style="margin-right:4px">Stage</span>' +
+    PRESETS.map(([n], i) => `<button type="button" data-i="${i}">${n}</button>`).join("");
+  $("presets").addEventListener("click", (e) => {
+    const b = e.target.closest("button");
+    if (!b) return;
+    mode = b.dataset.i === "0" ? "done" : "plan";
+    on = PRESETS[+b.dataset.i][1]();
+    render();
+  });
 
-$("pkgs").innerHTML = PKGS.map((p) => `
+  $("pkgs").innerHTML = PKGS.map(
+    (p) => `
   <article class="pkg" id="pkg${p.id}">
     <div class="pkg-head">
       <input type="checkbox" id="cb${p.id}" data-id="${p.id}">
@@ -509,83 +1606,145 @@ $("pkgs").innerHTML = PKGS.map((p) => `
       ${p.needs ? `<span class="label">Needs</span><p>${esc(p.needs)}</p>` : ""}
       ${p.diff ? `<span class="label">Sketch</span><pre class="diff">${p.diff}</pre>` : ""}
       <span class="label">Projected gain</span>
-      <div class="gain">${Object.entries(p.gain).map(([k, v]) => `<span>${AREAS.find((a) => a[0] === k)[1]} +${v}</span>`).join("")}</div>
+      <div class="gain">${Object.entries(p.gain)
+        .map(([k, v]) => `<span>${AREAS.find((a) => a[0] === k)[1]} +${v}</span>`)
+        .join("")}</div>
     </div></details>
-  </article>`).join("");
-$("pkgs").addEventListener("change", (e) => {
-  const id = +e.target.dataset.id; if (!id) return;
-  if (mode === "done") { mode = "plan"; on = new Set(on); }
-  e.target.checked ? on.add(id) : on.delete(id); render();
-});
+  </article>`,
+  ).join("");
+  $("pkgs").addEventListener("change", (e) => {
+    const id = +e.target.dataset.id;
+    if (!id) return;
+    if (mode === "done") {
+      mode = "plan";
+      on = new Set(on);
+    }
+    e.target.checked ? on.add(id) : on.delete(id);
+    render();
+  });
 
-$("score").innerHTML = AREAS.map(([k, n, b]) => `
+  $("score").innerHTML = AREAS.map(
+    ([k, n, b]) => `
   <div class="row"><span class="nm">${n}</span>
     <div class="track" role="img" id="tr-${k}"><div class="now" id="bar-${k}"></div><div class="base" style="width:${b * 10}%"></div></div>
-    <span class="val"><span id="v-${k}"></span><small id="d-${k}"></small></span></div>`).join("");
+    <span class="val"><span id="v-${k}"></span><small id="d-${k}"></small></span></div>`,
+  ).join("");
 
-$("pgnote").innerHTML = `Committed on <code>${BRANCH}</code>. The database changes and Edge Functions are live (12 Nov); the web app is not deployed yet. "Done so far" scores only these; a package earns the share of its gain that matches the share of its findings fixed.`;
-$("log").innerHTML = DONE.map((d) => `<li><span class="k">${esc(d.key.replace(":scopes", " (part)"))}</span><span>${esc(d.what)}</span><span class="h">${d.commit} · pkg ${d.pkg}</span></li>`).join("");
-$("batable").innerHTML = BA.map(([e, a, b]) => `<tr><td>${esc(e)}</td><td class="x">${esc(a)}</td><td>${esc(b)}</td></tr>`).join("");
-$("rest").innerHTML = REST.map(([b, t]) => `<li><b>${esc(b)}</b>${esc(t)}</li>`).join("");
+  $("pgnote").innerHTML =
+    `Committed on <code>${BRANCH}</code>. The database changes and Edge Functions are live (12 Nov); the web app is not deployed yet. "Done so far" scores only these; a package earns the share of its gain that matches the share of its findings fixed.`;
+  $("log").innerHTML = DONE.map(
+    (d) =>
+      `<li><span class="k">${esc(d.key.replace(":scopes", " (part)"))}</span><span>${esc(d.what)}</span><span class="h">${d.commit} · pkg ${d.pkg}</span></li>`,
+  ).join("");
+  $("batable").innerHTML = BA.map(
+    ([e, a, b]) => `<tr><td>${esc(e)}</td><td class="x">${esc(a)}</td><td>${esc(b)}</td></tr>`,
+  ).join("");
+  $("rest").innerHTML = REST.map(([b, t]) => `<li><b>${esc(b)}</b>${esc(t)}</li>`).join("");
 
-const fmt = (x) => (Number.isInteger(x) ? String(x) : x.toFixed(1));
-const tone = (s) => (s < 4 ? "lo" : s < 6 ? "mid" : s < 7.5 ? "ok" : "good");
+  const fmt = (x) => (Number.isInteger(x) ? String(x) : x.toFixed(1));
+  const tone = (s) => (s < 4 ? "lo" : s < 6 ? "mid" : s < 7.5 ? "ok" : "good");
 
-function render() {
-  document.querySelectorAll("#presets button").forEach((b) => {
-    const want = PRESETS[+b.dataset.i][1]();
-    const same = want.size === on.size && [...want].every((x) => on.has(x));
-    b.setAttribute("aria-pressed", String(b.dataset.i === "0" ? mode === "done" : mode === "plan" && same));
-  });
-  PKGS.forEach((p) => { $("cb" + p.id).checked = on.has(p.id); $("pkg" + p.id).classList.toggle("on", on.has(p.id)); });
+  function render() {
+    document.querySelectorAll("#presets button").forEach((b) => {
+      const want = PRESETS[+b.dataset.i][1]();
+      const same = want.size === on.size && [...want].every((x) => on.has(x));
+      b.setAttribute(
+        "aria-pressed",
+        String(b.dataset.i === "0" ? mode === "done" : mode === "plan" && same),
+      );
+    });
+    PKGS.forEach((p) => {
+      $("cb" + p.id).checked = on.has(p.id);
+      $("pkg" + p.id).classList.toggle("on", on.has(p.id));
+    });
 
-  const active = PKGS.filter((p) => on.has(p.id));
-  const closed = mode === "done" ? doneFindings : new Set(active.flatMap((p) => p.closes));
-  // In "done" mode a package earns the share of its gain that matches the share of its findings fixed.
-  const share = (p) => (mode === "done" ? (p.closes.length ? p.closes.filter((f) => doneFindings.has(f)).length / p.closes.length : 0) : 1);
-  document.querySelectorAll(".fid").forEach((el) => el.classList.toggle("done", closed.has(el.textContent)));
-  const open = { C: TOTALS.C, H: TOTALS.H, M: TOTALS.M, L: TOTALS.L };
-  closed.forEach((f) => open[f[0]]--);
-  $("oc").textContent = open.C; $("oh").textContent = open.H; $("om").textContent = open.M; $("ol").textContent = open.L;
-  $("days").textContent = mode === "done" ? doneFindings.size : active.reduce((s, p) => s + p.days, 0);
-  $("dayslabel").textContent = mode === "done" ? "findings fixed of 63" : "engineer-days, estimate";
+    const active = PKGS.filter((p) => on.has(p.id));
+    const closed = mode === "done" ? doneFindings : new Set(active.flatMap((p) => p.closes));
+    // In "done" mode a package earns the share of its gain that matches the share of its findings fixed.
+    const share = (p) =>
+      mode === "done"
+        ? p.closes.length
+          ? p.closes.filter((f) => doneFindings.has(f)).length / p.closes.length
+          : 0
+        : 1;
+    document
+      .querySelectorAll(".fid")
+      .forEach((el) => el.classList.toggle("done", closed.has(el.textContent)));
+    const open = { C: TOTALS.C, H: TOTALS.H, M: TOTALS.M, L: TOTALS.L };
+    closed.forEach((f) => open[f[0]]--);
+    $("oc").textContent = open.C;
+    $("oh").textContent = open.H;
+    $("om").textContent = open.M;
+    $("ol").textContent = open.L;
+    $("days").textContent =
+      mode === "done" ? doneFindings.size : active.reduce((s, p) => s + p.days, 0);
+    $("dayslabel").textContent =
+      mode === "done" ? "findings fixed of 63" : "engineer-days, estimate";
 
-  let sum = 0;
-  AREAS.forEach(([k, n, b]) => {
-    const s = Math.min(9.5, b + active.reduce((t, p) => t + (p.gain[k] || 0) * share(p), 0));
-    sum += s;
-    const bar = $("bar-" + k);
-    bar.style.width = s * 10 + "%";
-    bar.className = "now " + tone(s);
-    $("v-" + k).textContent = fmt(s);
-    $("d-" + k).textContent = s > b ? `was ${b}` : "";
-    $("tr-" + k).setAttribute("aria-label", `${n}: ${fmt(s)} out of 10, today ${b}`);
-  });
-  $("avg").textContent = (sum / AREAS.length).toFixed(1);
-  $("avgwas").textContent = "was " + (AREAS.reduce((s, a) => s + a[2], 0) / AREAS.length).toFixed(1);
+    let sum = 0;
+    AREAS.forEach(([k, n, b]) => {
+      const s = Math.min(9.5, b + active.reduce((t, p) => t + (p.gain[k] || 0) * share(p), 0));
+      sum += s;
+      const bar = $("bar-" + k);
+      bar.style.width = s * 10 + "%";
+      bar.className = "now " + tone(s);
+      $("v-" + k).textContent = fmt(s);
+      $("d-" + k).textContent = s > b ? `was ${b}` : "";
+      $("tr-" + k).setAttribute("aria-label", `${n}: ${fmt(s)} out of 10, today ${b}`);
+    });
+    $("avg").textContent = (sum / AREAS.length).toFixed(1);
+    $("avgwas").textContent =
+      "was " + (AREAS.reduce((s, a) => s + a[2], 0) / AREAS.length).toFixed(1);
 
-  const v = $("verdict");
-  const highClinical = ["H-1", "H-2", "H-3", "H-4", "H-5"].every((f) => closed.has(f));
-  let cls, word, why;
-  if (open.C > 0) { cls = "no"; word = "No"; why = `${open.C} critical path${open.C > 1 ? "s" : ""} still open`; }
-  else if (!highClinical) { cls = "no"; word = "No"; why = "criticals closed; clinical and upgrade highs still open"; }
-  else if (open.H > 0) { cls = "pilot"; word = "Supervised pilot, one hospital"; why = `${open.H} high still open`; }
-  else if (!PKGS.filter((p) => p.stage === 4).every((p) => on.has(p.id))) { cls = "yes"; word = "Yes, at pilot scale"; why = "once a penetration test confirms it"; }
-  else { cls = "yes"; word = "Yes, ready to grow past the pilot"; why = "if a second reviewer agrees; see below"; }
-  v.className = "stat verdict " + cls;
-  v.querySelector("strong").textContent = word;
-  v.querySelector(".was").textContent = why;
+    const v = $("verdict");
+    const highClinical = ["H-1", "H-2", "H-3", "H-4", "H-5"].every((f) => closed.has(f));
+    let cls, word, why;
+    if (open.C > 0) {
+      cls = "no";
+      word = "No";
+      why = `${open.C} critical path${open.C > 1 ? "s" : ""} still open`;
+    } else if (!highClinical) {
+      cls = "no";
+      word = "No";
+      why = "criticals closed; clinical and upgrade highs still open";
+    } else if (open.H > 0) {
+      cls = "pilot";
+      word = "Supervised pilot, one hospital";
+      why = `${open.H} high still open`;
+    } else if (!PKGS.filter((p) => p.stage === 4).every((p) => on.has(p.id))) {
+      cls = "yes";
+      word = "Yes, at pilot scale";
+      why = "once a penetration test confirms it";
+    } else {
+      cls = "yes";
+      word = "Yes, ready to grow past the pilot";
+      why = "if a second reviewer agrees; see below";
+    }
+    v.className = "stat verdict " + cls;
+    v.querySelector("strong").textContent = word;
+    v.querySelector(".was").textContent = why;
 
-  $("paths").innerHTML = PATHS.map((p) => {
-    const at = p.steps.findIndex(([, pkg, key]) => pkg && (mode === "done" ? doneKeys.has(key) : on.has(pkg)));
-    const shut = at >= 0;
-    return `<article class="path"><div class="hd"><span class="state ${shut ? "shut" : "open"}">${shut ? "Blocked" : "Open"}</span><h3>${p.id}: ${esc(p.title)}</h3></div>
-      <ol>${p.steps.map(([s, pkg], i) => {
-        const c = [i === p.steps.length - 1 ? "prize" : "", shut && i === at ? "block" : "", shut && i > at ? "after" : ""].join(" ");
-        const stop = shut && i === at ? `<span class="stop">${mode === "done" ? "Fixed: " : ""}Stopped by package ${pkg}</span>` : "";
-        return `<li class="${c}"><span class="i">${i + 1}</span><span>${esc(s)}${stop}</span></li>`;
-      }).join("")}</ol></article>`;
-  }).join("");
-}
-render();
+    $("paths").innerHTML = PATHS.map((p) => {
+      const at = p.steps.findIndex(
+        ([, pkg, key]) => pkg && (mode === "done" ? doneKeys.has(key) : on.has(pkg)),
+      );
+      const shut = at >= 0;
+      return `<article class="path"><div class="hd"><span class="state ${shut ? "shut" : "open"}">${shut ? "Blocked" : "Open"}</span><h3>${p.id}: ${esc(p.title)}</h3></div>
+      <ol>${p.steps
+        .map(([s, pkg], i) => {
+          const c = [
+            i === p.steps.length - 1 ? "prize" : "",
+            shut && i === at ? "block" : "",
+            shut && i > at ? "after" : "",
+          ].join(" ");
+          const stop =
+            shut && i === at
+              ? `<span class="stop">${mode === "done" ? "Fixed: " : ""}Stopped by package ${pkg}</span>`
+              : "";
+          return `<li class="${c}"><span class="i">${i + 1}</span><span>${esc(s)}${stop}</span></li>`;
+        })
+        .join("")}</ol></article>`;
+    }).join("");
+  }
+  render();
 </script>

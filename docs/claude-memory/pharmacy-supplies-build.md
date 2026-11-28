@@ -11,6 +11,7 @@ metadata:
 5 Nov 2026: SUPPLIES.md built on `feat/pharmacy-supplies` (worktree `~/Desktop/medsync-supplies`, cut from local `feat/pharmacy-receive`), pushed, no PR. Migrations 0277 (GATED) and 0278 (1,914 items): owner said applied on 5 Nov 2026 (not checked by Claude; a read of the database was refused by the permission check). Copy draft; rules group `sup` unsigned. Handoff section at the end of `docs/pharmacy/HANDOFF.md`.
 
 Non-obvious:
+
 - No Playwright in the repo: §H is covered by Vitest, the PGlite lane, axe, and a browser-pane pass at 1440 and 390 px. A real axe run in the pane works via a jsdelivr script tag.
 - Worktrees with a symlinked `node_modules` fail Turbopack: use `next build --webpack`. The lint-staged hook doesn't format in this worktree, so run prettier by hand.
 - `tests/emr-db/pharmacy-stores-data.test.ts` "a saved order's lines change only by closing" fails on the Receive branch too. `pharmacy-store-actions` can flake in a crowded parallel run.

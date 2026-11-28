@@ -57,26 +57,26 @@
 
 ## Files
 
-| File | Responsibility |
-| --- | --- |
-| `supabase/functions/_shared/ward-layout.ts` | + `chair`/`resus` types, EU checks, EU needs, `isArriving()` (pure, no imports) |
-| `lib/wards/presets.ts` | + "Emergency unit" template |
-| `lib/wards/feature.ts` | + `euObservationLiveFor()` |
-| `lib/eu/clock.ts` | clocks, duration words, over-limit (pure) |
-| `lib/eu/limit.ts` | the hospital's stay limit (server read) |
-| `lib/eu/level-words.ts` | triage level in the hospital's words (pure) |
-| `lib/eu/board.ts` | tracking rows, status words, needs attention (pure) |
-| `lib/eu/load.ts` | `loadEuBoard()` + PHI reveal audit (server-only) |
-| `lib/eu/cover.ts` | `euDoctorOnDuty()` (rota seam, returns null) |
-| `lib/eu/report.ts`, `lib/eu/report-load.ts` | MoH indicators (pure) and their counts-only read |
-| `content/eu/words.ts` | every new string, DRAFT |
-| `db/schema/eu.ts` | `euStays` |
-| `supabase/functions/ha-eu-stay/index.ts` | start a stay (doctor at close; triage nurse to resus) |
-| `components/emr/desk/eu-fields.tsx` | the close dialog's EU picker |
-| `components/wards/board/eu-list.tsx` | the tracking list and Needs attention |
-| `app/doctor/eu/page.tsx` | the doctor view |
-| migrations `0310_eu_space_types.sql`, `0311_eu_stays.sql`, `0312_eu_boarding.sql`, `0313_eu_links.sql` | GATED |
-| ADRs `0539`–`0544` | as listed per phase |
+| File                                                                                                   | Responsibility                                                                  |
+| ------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------- |
+| `supabase/functions/_shared/ward-layout.ts`                                                            | + `chair`/`resus` types, EU checks, EU needs, `isArriving()` (pure, no imports) |
+| `lib/wards/presets.ts`                                                                                 | + "Emergency unit" template                                                     |
+| `lib/wards/feature.ts`                                                                                 | + `euObservationLiveFor()`                                                      |
+| `lib/eu/clock.ts`                                                                                      | clocks, duration words, over-limit (pure)                                       |
+| `lib/eu/limit.ts`                                                                                      | the hospital's stay limit (server read)                                         |
+| `lib/eu/level-words.ts`                                                                                | triage level in the hospital's words (pure)                                     |
+| `lib/eu/board.ts`                                                                                      | tracking rows, status words, needs attention (pure)                             |
+| `lib/eu/load.ts`                                                                                       | `loadEuBoard()` + PHI reveal audit (server-only)                                |
+| `lib/eu/cover.ts`                                                                                      | `euDoctorOnDuty()` (rota seam, returns null)                                    |
+| `lib/eu/report.ts`, `lib/eu/report-load.ts`                                                            | MoH indicators (pure) and their counts-only read                                |
+| `content/eu/words.ts`                                                                                  | every new string, DRAFT                                                         |
+| `db/schema/eu.ts`                                                                                      | `euStays`                                                                       |
+| `supabase/functions/ha-eu-stay/index.ts`                                                               | start a stay (doctor at close; triage nurse to resus)                           |
+| `components/emr/desk/eu-fields.tsx`                                                                    | the close dialog's EU picker                                                    |
+| `components/wards/board/eu-list.tsx`                                                                   | the tracking list and Needs attention                                           |
+| `app/doctor/eu/page.tsx`                                                                               | the doctor view                                                                 |
+| migrations `0310_eu_space_types.sql`, `0311_eu_stays.sql`, `0312_eu_boarding.sql`, `0313_eu_links.sql` | GATED                                                                           |
+| ADRs `0539`–`0544`                                                                                     | as listed per phase                                                             |
 
 ---
 
@@ -93,19 +93,28 @@ Ends with: chair and resus spaces in the builder, EU checks, the "Emergency unit
 ### Task 1: Chair and resus space types (+ migration 0310)
 
 **Files:**
+
 - Modify: `supabase/functions/_shared/ward-layout.ts:27-32` (`BED_TYPES`)
 - Create: `supabase/migrations/0310_eu_space_types.sql`
 - Modify: `db/schema/services-hub.ts:96-99` (bed type check), `db/schema/hospital-wards.ts` (`parentWardId`)
 - Test: `tests/wards/eu-space-types.test.ts`, `tests/emr-db/eu-space-types.test.ts`
 
 **Interfaces:**
+
 - Produces: `BedType` gains `"chair" | "resus"`; `EU_WARD_TYPE = "emergency_observation"`; `EU_BED_TYPES: readonly BedType[] = ["chair", "resus"]` (all in `ward-layout.ts`); column `hospital_wards.parent_ward_id` (Drizzle `parentWardId`).
 
 - [ ] **Step 1: Write the failing pure test**
 
 ```ts
 // tests/wards/eu-space-types.test.ts
-import { asBedType, bedSize, BED_TYPE_CODES, EU_BED_TYPES, EU_WARD_TYPE } from "@/supabase/functions/_shared/ward-layout";
+import {
+  asBedType,
+  BED_TYPE_CODES,
+  bedSize,
+  EU_BED_TYPES,
+  EU_WARD_TYPE,
+} from "@/supabase/functions/_shared/ward-layout";
+
 it("chair is 2×2 and resus is 3×4, with their words", () => {
   expect(bedSize("chair")).toMatchObject({ label: "Chair", w: 2, h: 2 });
   expect(bedSize("resus")).toMatchObject({ label: "Resus space", short: "Resus", w: 3, h: 4 });
@@ -129,14 +138,17 @@ it("the register's resus and chair are kept, an unknown type still falls back", 
 ### Task 2: EU layout checks
 
 **Files:**
+
 - Modify: `supabase/functions/_shared/ward-layout.ts:747-914` (`CheckCode`, `layoutChecks`)
 - Modify: `components/wards/editor/ward-editor.tsx:648`, `supabase/functions/ha-services-hub/ops-wards.ts:99-115,367` (`WardRow` + `loadWard` select `age_group`)
 - Test: `tests/wards/eu-checks.test.ts`
 
 **Interfaces:**
+
 - Produces: `layoutChecks(d: WardLayout, wardType: string | null, ageGroup: string | null = null): LayoutCheck[]`; `CheckCode` gains `"resus_services" | "resus_trolley_reach" | "eu_isolation" | "children_apart"`; `RESUS_TROLLEY_REACH_CELLS = 10` (5 m, proposed).
 
 Rules (EU wards only, i.e. `wardType === EU_WARD_TYPE`; all `blocking: false`; run in the order listed, after `resus_trolley`):
+
 - `resus_services` (only when an in-service `resus` space exists): resus spaces lacking any of `o2`, `suction`, `monitor`. Words: `"Resus spaces without oxygen, suction or a monitor: R2"` / `"Every resus space has oxygen, suction and a monitor"`. This is the spec's "monitor check for resus spaces only"; the generic `monitor` check does **not** run for EU wards.
 - `resus_trolley_reach` (only when a resus space exists): each in-service resus space's rect centre within `RESUS_TROLLEY_REACH_CELLS` (Euclidean, cells) of some `resus_trolley` fixture centre. `"Resus spaces more than 5 m from a resus trolley: R2"` / `"Every resus space has a resus trolley within 5 m"`.
 - `eu_isolation`: at least one room of kind `isolation`. `"No isolation room on the plan"` / `"An isolation room is on the plan"`.
@@ -145,25 +157,56 @@ Rules (EU wards only, i.e. `wardType === EU_WARD_TYPE`; all `blocking: false`; r
 - [ ] **Step 1: Write the failing test** (`ward()`/`bed()` helpers copied from `tests/wards/checks.test.ts:10-35`):
 
 ```ts
-const R = (k: string, over: Partial<LayoutBed> = {}) => bed(k, `R${k.slice(1)}`, { type: "resus", services: ["o2", "suction", "monitor", "call"], ...over });
+const R = (k: string, over: Partial<LayoutBed> = {}) =>
+  bed(k, `R${k.slice(1)}`, {
+    type: "resus",
+    services: ["o2", "suction", "monitor", "call"],
+    ...over,
+  });
 it("EU: resus services, trolley reach and isolation, in that order, never blocking", () => {
-  const c = layoutChecks(ward([R("b1"), R("b2", { services: ["o2", "call"] })]), "emergency_observation");
+  const c = layoutChecks(
+    ward([R("b1"), R("b2", { services: ["o2", "call"] })]),
+    "emergency_observation",
+  );
   const codes = c.map((x) => x.code);
   expect(codes).not.toContain("monitor");
-  expect(codes.slice(codes.indexOf("resus_trolley") + 1, codes.indexOf("resus_trolley") + 4))
-    .toEqual(["resus_services", "resus_trolley_reach", "eu_isolation"]);
-  expect(c.find((x) => x.code === "resus_services")).toMatchObject({ ok: false, text: "Resus spaces without oxygen, suction or a monitor: R2", blocking: false });
-  expect(c.find((x) => x.code === "eu_isolation")).toMatchObject({ ok: false, text: "No isolation room on the plan" });
+  expect(
+    codes.slice(codes.indexOf("resus_trolley") + 1, codes.indexOf("resus_trolley") + 4),
+  ).toEqual(["resus_services", "resus_trolley_reach", "eu_isolation"]);
+  expect(c.find((x) => x.code === "resus_services")).toMatchObject({
+    ok: false,
+    text: "Resus spaces without oxygen, suction or a monitor: R2",
+    blocking: false,
+  });
+  expect(c.find((x) => x.code === "eu_isolation")).toMatchObject({
+    ok: false,
+    text: "No isolation room on the plan",
+  });
 });
-it("a resus space 10 cells from the trolley is in reach; 11 is not", () => { /* place trolley centre and R centre 10 then 11 cells apart; assert ok true then text "Resus spaces more than 5 m from a resus trolley: R1" */ });
+it("a resus space 10 cells from the trolley is in reach; 11 is not", () => {
+  /* place trolley centre and R centre 10 then 11 cells apart; assert ok true then text "Resus spaces more than 5 m from a resus trolley: R1" */
+});
 it("children apart only for an all-ages EU with cots", () => {
   const d = ward([bed("b1", "C1", { type: "cot" })]);
-  expect(layoutChecks(d, "emergency_observation", "adult").map((x) => x.code)).not.toContain("children_apart");
-  expect(layoutChecks(d, "emergency_observation", "all").find((x) => x.code === "children_apart")).toMatchObject({ ok: false, text: "Cots in the open floor beside adults: C1" });
+  expect(layoutChecks(d, "emergency_observation", "adult").map((x) => x.code)).not.toContain(
+    "children_apart",
+  );
+  expect(
+    layoutChecks(d, "emergency_observation", "all").find((x) => x.code === "children_apart"),
+  ).toMatchObject({ ok: false, text: "Cots in the open floor beside adults: C1" });
 });
 it("a general or HDU ward gets exactly the checks it got before", () => {
   const d = ward([bed("b1", "B1")]);
-  expect(layoutChecks(d, "general").map((x) => x.code)).toEqual(["nurse_call", "oxygen", "station", "resus_trolley", "bed_overlap", "overlap", "piped_at_wall", "duplicate_numbers"]);
+  expect(layoutChecks(d, "general").map((x) => x.code)).toEqual([
+    "nurse_call",
+    "oxygen",
+    "station",
+    "resus_trolley",
+    "bed_overlap",
+    "overlap",
+    "piped_at_wall",
+    "duplicate_numbers",
+  ]);
   expect(layoutChecks(d, "hdu").map((x) => x.code)).toContain("monitor");
 });
 ```
@@ -176,10 +219,12 @@ it("a general or HDU ward gets exactly the checks it got before", () => {
 ### Task 3: The flag, the "Emergency unit" template and the palette
 
 **Files:**
+
 - Modify: `lib/wards/feature.ts`, `lib/wards/presets.ts`, `components/wards/editor/palette.tsx:221`, `components/wards/editor/inspector.tsx:447`, `components/wards/editor/ward-editor.tsx`, the editor page that loads `LayoutEditorData` (`app/hospital-admin/departments/wards/[wardId]/` layout page; pass `euLive`)
 - Test: `tests/eu/feature.test.ts`, `tests/wards/presets.test.ts` (extend)
 
 **Interfaces:**
+
 - Produces: `euObservationLiveFor(hospitalId: string): boolean`; `PresetId` gains `"eu"`; `presetsFor(floor: Floor, opts: { eu?: boolean } = {}): Preset[]` (the `eu` preset first when `opts.eu`); `emergencyUnit(floor: Floor): WardLayout`; `EU_RESUS_SERVICES: ServiceCode[] = ["o2","suction","air","monitor","call","power","pump","iv_pole"]`.
 
 Template content (labels fixed): a room kind `bay` named "Resus" holding `R1`, `R2` (`resus`, `EU_RESUS_SERVICES`); a bay "Trolleys" with `T1`–`T4` (`couch`, no services, ADR 0193); a row `C1`–`C4` (`chair`); a room kind `isolation` named "Isolation" with `features.sink = true` holding `I1` (`couch`); station, a resus trolley within 5 m of both resus spaces, a sink. On floors narrower than 30 cells, two trolleys and two chairs.
@@ -191,13 +236,19 @@ it("the EU template is offered only when asked, first", () => {
   expect(presetsFor({ w: 42, h: 32 }).map((p) => p.id)).toEqual(["open", "bays", "hdu", "empty"]);
   expect(presetsFor({ w: 42, h: 32 }, { eu: true })[0]!.id).toBe("eu");
 });
-it.each([{ w: 42, h: 32 }, { w: 60, h: 40 }])("the EU template passes its own EU checks on $w × $h", (floor) => {
+it.each([
+  { w: 42, h: 32 },
+  { w: 60, h: 40 },
+])("the EU template passes its own EU checks on $w × $h", (floor) => {
   const doc = presetsFor(floor, { eu: true })[0]!.build();
   const c = layoutChecks(doc, "emergency_observation");
-  for (const code of ["resus_services", "resus_trolley_reach", "eu_isolation"]) expect(c.find((x) => x.code === code)?.ok).toBe(true);
+  for (const code of ["resus_services", "resus_trolley_reach", "eu_isolation"])
+    expect(c.find((x) => x.code === code)?.ok).toBe(true);
 });
 ```
+
 and run the existing `describe.each(FLOORS)` validity block over `presetsFor(floor, { eu: true })` too.
+
 - [ ] **Step 2:** Run `npx vitest run tests/eu/feature.test.ts tests/wards/presets.test.ts`. Expected: FAIL.
 - [ ] **Step 3:** Implement. The editor shows the `eu` preset and the `chair`/`resus` palette entries and inspector options only when `euLive && ward.wardType === EU_WARD_TYPE`; otherwise filter out `EU_BED_TYPES` (an existing chair/resus bed in a draft still shows its own type in the inspector).
 - [ ] **Step 4:** Run `npx vitest run tests/eu tests/wards`. Expected: PASS.
@@ -206,10 +257,12 @@ and run the existing `describe.each(FLOORS)` validity block over `presetsFor(flo
 ### Task 4: EU wards leave Admit
 
 **Files:**
+
 - Modify: `lib/emr/read/close.ts:144-163` (`admittingWards`)
 - Test: `tests/eu/admitting-wards.test.ts`
 
 **Interfaces:**
+
 - Produces: `admitsHere(wardType: string | null, euLive: boolean): boolean` (exported from `lib/emr/read/close.ts`); `admittingWards()` selects `wardType` and keeps rows where `admitsHere(r.wardType, euObservationLiveFor(hospitalId))`. The Plan's ward chips (`lib/emr/read/plan.ts:147`) follow automatically.
 
 - [ ] **Step 1: Failing test:** `admitsHere("emergency_observation", true) === false`; `admitsHere("emergency_observation", false) === true` (flag off: as today); `admitsHere(null, true) === true`; `admitsHere("general", true) === true`.
@@ -219,10 +272,12 @@ and run the existing `describe.each(FLOORS)` validity block over `presetsFor(flo
 ### Task 5: Attached-to ward, and the ward-type guard
 
 **Files:**
+
 - Modify: `supabase/functions/ha-services-hub/ops-structure.ts:98-123,808-880` (`upsert_ward`), `app/hospital-admin/departments/wards/_components/ward-dialogs.tsx`, `app/hospital-admin/departments/wards/_lib/model.ts` (+ `parentWardId`), the wards page loader that builds `WardItem`
 - Test: `tests/eu/upsert-ward.test.ts` (source-level, the `tests/functions/encounter-lifecycle.test.ts` style)
 
 **Interfaces:**
+
 - Produces: `upsert_ward` accepts `parent_ward_id: uuid.nullable().optional()`.
 
 Rules in `upsertWard`: (a) `parent_ward_id` set and `ward_type !== "emergency_observation"` → `HubError("Only an emergency unit is attached to a ward.", 400)`; (b) parent must be a ward of this hospital, not archived, not itself, not an EU → `HubError("Attach it to an ordinary ward of this hospital.", 400)`; (c) editing a ward whose stored `ward_type` and the new one differ on `=== "emergency_observation"`, while `occupiedBedCount(ctx, { wardIds: [i.id] }) > 0` → `HubError("Move the patients out before changing whether this ward is an emergency unit.", 409)`. The dialog shows "Attached to (for display)" (select of non-EU wards) only when the type is Emergency observation and `euLive`.
@@ -249,11 +304,13 @@ Ends with: "Send to EU" from the close dialog (prefilled from the Plan), the sta
 ### Task 7: `eu_stays`, its guard, RLS, and `bed_assignments.eu_stay_id` (migration 0311, part 1)
 
 **Files:**
+
 - Create: `supabase/migrations/0311_eu_stays.sql`, `db/schema/eu.ts`
 - Modify: `db/schema/index.ts` (export after `./admissions`), `db/schema/ward-builder.ts:95-132` (`euStayId`)
 - Test: `tests/emr-db/eu-stays.test.ts`
 
 **Interfaces:**
+
 - Produces table `public.eu_stays` / Drizzle `euStays`:
   `id`, `hospital_id` (→hospitals, cascade), `patient_user_id` (→auth.users, cascade), `encounter_id` (→encounters, null), `intake_id` (→patient_intakes, null), `ward_id` (→hospital_wards, not null), `started_by_kind text` CHECK `IN ('doctor','triage_nurse')`, `decided_by uuid not null`, `decided_at timestamptz default now()`, `responsible_user_id uuid not null`, `status text default 'awaiting_space'` CHECK `IN ('awaiting_space','in_space','ended')`, `space_wait_reason` CHECK `IS NULL OR IN ('no_free_bed','extra_bed','floor','other')`, `space_wait_note_ciphertext text`, `arrived_at`, `arrived_by`, `ended_at`, `ended_by`, `end_kind` CHECK `IS NULL OR IN ('admitted','home','referred_out','transferred','theatre','died','left_before_completion','left_against_advice')`, `admission_id` (→admissions, null), `created_at`, `updated_at`.
   Constraints: `eu_stays_who_check` (`encounter_id IS NOT NULL OR (started_by_kind = 'triage_nurse' AND intake_id IS NOT NULL)`); `eu_stays_arrival_check` (pair); `eu_stays_end_check` (`(status = 'ended') = (ended_at IS NOT NULL)` and `ended_at`, `ended_by`, `end_kind` all null or all set); `eu_stays_wait_note_check` (`'other'` needs the note).
@@ -269,18 +326,36 @@ Ends with: "Send to EU" from the close dialog (prefilled from the Plan), the sta
 ```ts
 it("a stay starts open, ends once, and is never deleted", async () => {
   const s = await insertStay({ status: "in_space" });
-  await expect(pg.query(`UPDATE public.eu_stays SET status='ended', ended_at=now(), ended_by=$2, end_kind='home' WHERE id=$1`, [s, doctor])).resolves.toBeTruthy();
-  await expect(pg.query(`UPDATE public.eu_stays SET end_kind='died' WHERE id=$1`, [s])).rejects.toThrow(/ended stay/);
-  await expect(pg.query(`DELETE FROM public.eu_stays WHERE id=$1`, [s])).rejects.toThrow(/kept for good/);
+  await expect(
+    pg.query(
+      `UPDATE public.eu_stays SET status='ended', ended_at=now(), ended_by=$2, end_kind='home' WHERE id=$1`,
+      [s, doctor],
+    ),
+  ).resolves.toBeTruthy();
+  await expect(
+    pg.query(`UPDATE public.eu_stays SET end_kind='died' WHERE id=$1`, [s]),
+  ).rejects.toThrow(/ended stay/);
+  await expect(pg.query(`DELETE FROM public.eu_stays WHERE id=$1`, [s])).rejects.toThrow(
+    /kept for good/,
+  );
 });
-it("one open stay per patient", async () => { /* second insert for the same patient rejects /eu_stays_one_open_per_patient/ */ });
-it("a triage stay needs an intake; a doctor's stay needs an encounter", async () => { /* rejects /eu_stays_who_check/ */ });
-it("decided_by and decided_at never change; encounter_id is stamped once", async () => { /* rejects /^Only an EU stay/ then /stamped once/ */ });
-it("an assignment is for an admission or a stay, never both", async () => { /* rejects /bed_assignments_one_purpose_check/ */ });
+it("one open stay per patient", async () => {
+  /* second insert for the same patient rejects /eu_stays_one_open_per_patient/ */
+});
+it("a triage stay needs an intake; a doctor's stay needs an encounter", async () => {
+  /* rejects /eu_stays_who_check/ */
+});
+it("decided_by and decided_at never change; encounter_id is stamped once", async () => {
+  /* rejects /^Only an EU stay/ then /stamped once/ */
+});
+it("an assignment is for an admission or a stay, never both", async () => {
+  /* rejects /bed_assignments_one_purpose_check/ */
+});
 it("RLS: clinical staff read stays; a patient and an outsider read none; nobody writes", async () => {
   // probe() as in encounter-closure.test.ts:368: staff → 1 row; the patient → 0; another hospital's staff → 0; INSERT as authenticated rejects /permission denied/
 });
 ```
+
 - [ ] **Step 2:** Run `EMR_PGLITE=1 npx vitest run tests/emr-db/eu-stays.test.ts`. Expected: FAIL (`relation "public.eu_stays" does not exist`).
 - [ ] **Step 3:** Write sections 1–4 of `0311_eu_stays.sql` (GATED header listing all of 0311's sections, ADR 0541) and the Drizzle mirror (`db/schema/eu.ts` with the CHECKs and the unique index; `euStayId: uuid("eu_stay_id")` in `bedAssignments`, FK in SQL).
 - [ ] **Step 4:** Run `EMR_PGLITE=1 npx vitest run tests/emr-db/eu-stays.test.ts tests/emr-db/encounter-closure.test.ts tests/emr-db/ward-builder.test.ts tests/emr-db/drizzle-parity.test.ts`. Expected: PASS (0090/0091 behaviour unchanged).
@@ -291,6 +366,7 @@ it("RLS: clinical staff read stays; a patient and an outsider read none; nobody 
 **Files:** Modify `supabase/migrations/0311_eu_stays.sql`; test `tests/emr-db/eu-stays.test.ts`.
 
 **Interfaces:**
+
 - Produces `public.observe_in_eu(p jsonb) RETURNS jsonb`. Payload: `encounter_id`, `actor`, `ward_id`, `bed_id?`, `space_wait_reason?`, `space_wait_note_ciphertext?`. Returns `{ stay_id, assignment_id, ward, bed, patient_user_id, hospital_id, intake_id, adopted }`.
   Order: lock the encounter (`EU404 Visit not found.`); `state = 'in_progress'` else `EU409 This visit is not in progress.`; the ward is this hospital's, active, open, unarchived, `ward_type = 'emergency_observation'` else `EU409 That is not an emergency unit at this hospital.`; no bed and no reason → `EU400 Choose a space, or say why the patient waits for one.`; `'other'` without the note → `EU400 Say why the patient waits.`; an open admission → `EU409 This patient has an open admission.`; an open stay with `encounter_id` set → `EU409 This patient is already in the EU.`; an open stay with `encounter_id IS NULL` (a triage stay) → **adopt**: stamp `encounter_id`, and when a different space was chosen, move as `move_eu_space` does; else `admission_free_bed(h, ward, bed)` (0091:172; its `AD409` words pass through) and any open assignment of the patient → `EU409 This patient is already in a bed. The ward releases it first.`; insert the stay (`started_by_kind 'doctor'`, `decided_by = responsible_user_id = actor`, `status = in_space` with a bed else `awaiting_space`, `intake_id = coalesce(enc.visit_id, (SELECT intake_id FROM triage_records WHERE id = enc.triage_record_id))`); insert the assignment (`eu_stay_id`, `encounter_id`, `started_by = actor`, not arrived → Arriving); insert `encounter_events (kind 'disposition', label 'Sent to <ward>, <bed label>' or 'Sent to <ward>, waiting for a space' + ' (the visit stays open)')`. **The encounter is not closed.**
 - `public.confirm_bed_arrival(p)` redefined: 0091's body, with the first refusal widened to `(v_asg.admission_id IS NULL AND v_asg.eu_stay_id IS NULL)`; when `v_asg.eu_stay_id IS NOT NULL`: stamp the assignment's `arrived_at/by`, stamp the stay's `arrived_at/by` if null, set `status = 'in_space'`, return `{ stay_id, eu: true }` (no encounter, no nursing change). The admission branch is unchanged. The existing `confirm_arrival` op (`ops-wards.ts:693`) therefore serves both.
@@ -301,22 +377,52 @@ it("RLS: clinical staff read stays; a patient and an outsider read none; nobody 
 ```ts
 it("sends to the EU with a space: a stay, an Arriving space, the visit stays open", async () => {
   const { p, e } = await visit();
-  const r = await call("observe_in_eu", { encounter_id: e, actor: doctor, ward_id: eu, bed_id: euBeds["T1"] });
-  expect(await row(`SELECT status, started_by_kind, responsible_user_id FROM public.eu_stays WHERE id=$1`, [r.stay_id])).toMatchObject({ status: "in_space", started_by_kind: "doctor", responsible_user_id: doctor });
-  expect(await row(`SELECT eu_stay_id, arrived_at FROM public.bed_assignments WHERE id=$1`, [r.assignment_id])).toMatchObject({ eu_stay_id: r.stay_id, arrived_at: null });
-  expect((await row(`SELECT state FROM public.encounters WHERE id=$1`, [e])).state).toBe("in_progress");
-  expect((await row(`SELECT label FROM public.encounter_events WHERE encounter_id=$1 AND kind='disposition'`, [e])).label).toMatch(/^Sent to .*, T1 \(the visit stays open\)$/);
+  const r = await call("observe_in_eu", {
+    encounter_id: e,
+    actor: doctor,
+    ward_id: eu,
+    bed_id: euBeds["T1"],
+  });
+  expect(
+    await row(
+      `SELECT status, started_by_kind, responsible_user_id FROM public.eu_stays WHERE id=$1`,
+      [r.stay_id],
+    ),
+  ).toMatchObject({ status: "in_space", started_by_kind: "doctor", responsible_user_id: doctor });
+  expect(
+    await row(`SELECT eu_stay_id, arrived_at FROM public.bed_assignments WHERE id=$1`, [
+      r.assignment_id,
+    ]),
+  ).toMatchObject({ eu_stay_id: r.stay_id, arrived_at: null });
+  expect((await row(`SELECT state FROM public.encounters WHERE id=$1`, [e])).state).toBe(
+    "in_progress",
+  );
+  expect(
+    (
+      await row(
+        `SELECT label FROM public.encounter_events WHERE encounter_id=$1 AND kind='disposition'`,
+        [e],
+      )
+    ).label,
+  ).toMatch(/^Sent to .*, T1 \(the visit stays open\)$/);
 });
 it("refuses: not in progress, not an EU, space taken, already in the EU, no space and no reason", async () => {
   // each refusal() matches its exact words above; nothing written for the refused call (count stays)
 });
-it("waits for a space with a reason", async () => { /* status awaiting_space, no assignment */ });
-it("adopts a triage stay and moves it to the chosen space", async () => { /* insert a triage_nurse stay with intake; observe_in_eu → adopted true, encounter_id stamped, one open assignment on the new space */ });
+it("waits for a space with a reason", async () => {
+  /* status awaiting_space, no assignment */
+});
+it("adopts a triage stay and moves it to the chosen space", async () => {
+  /* insert a triage_nurse stay with intake; observe_in_eu → adopted true, encounter_id stamped, one open assignment on the new space */
+});
 it("Arrived in the EU: Occupied, the stay arrived, no inpatient encounter", async () => {
   // confirm_bed_arrival on the EU assignment → assignment arrived_at set; stay arrived_at set; encounters of type inpatient for p: 0
 });
-it("only the service role runs observe_in_eu", async () => { /* probe as authenticated → /permission denied/ */ });
+it("only the service role runs observe_in_eu", async () => {
+  /* probe as authenticated → /permission denied/ */
+});
 ```
+
 - [ ] **Step 2:** Run the file → FAIL. **Step 3:** Write section 5 of 0311. **Step 4:** Run `EMR_PGLITE=1 npx vitest run tests/emr-db/eu-stays.test.ts tests/emr-db/encounter-closure.test.ts` → PASS.
 - [ ] **Step 5: Commit** — `feat(eu): observe_in_eu, and Arrived works for an EU space (0311, part 2)`.
 
@@ -325,6 +431,7 @@ it("only the service role runs observe_in_eu", async () => { /* probe as authent
 **Files:** Modify `supabase/migrations/0311_eu_stays.sql`; test `tests/emr-db/eu-stays.test.ts`.
 
 **Interfaces:**
+
 - `public.move_eu_space(p jsonb) RETURNS jsonb`. Payload: `hospital_id`, `stay_id`, `actor`, `ward_id?` (another EU of this hospital; default the stay's), `bed_id?`, `space_wait_reason?`, `space_wait_note_ciphertext?`. Lock the stay (`EU404 That stay is not at this hospital.`; ended → `EU409 This stay has ended.`); a target ward that is not an EU → the `observe_in_eu` words; no bed and no reason → its words; end the open EU assignment with reason `'Moved to <label>'` or `'Moved out of a space'`; with a bed: `admission_free_bed`, insert the new assignment with `eu_stay_id`, and **stamp `arrived_at/by = now()/actor` at insert when the stay had arrived or was `awaiting_space`** (staff placing a waiting patient means the patient is here; one tap), else Arriving; stamp `stay.arrived_at` if null in that case; set `status`, `ward_id`, wait reason. Returns `{ stay_id, assignment_id, bed }`.
 - `public.end_eu_stay(p jsonb) RETURNS jsonb`. Payload: `encounter_id`, `actor`, `end_kind` (not `admitted`), `disposition` (the stored form: `'deceased'` for died, as `ha-complete-encounter` stores it), `disposition_detail?` (object), `follow_up?` (object), `completion_reason?`. Lock the encounter (`in_progress` else `EU409 This visit is not in progress.`). Find the patient's open stay **that this encounter may end**: `encounter_id = enc.id OR encounter_id IS NULL OR admission_id IN (SELECT id FROM public.admissions WHERE inpatient_encounter_id = enc.id)`. **None → return `{ ended: false }` and write nothing.** Otherwise, in one transaction: end the stay's open assignment(s) (reason `'Left the EU'`), end the stay (`ended_at`, `ended_by`, `end_kind`, stamp `encounter_id` if null), close the encounter exactly as `ha-complete-encounter` does for a clinical close (`state 'completed'`, `ended_at`, `completed_by`, `closure_kind 'clinical'`, `disposition`, `disposition_detail || {eu_stay_id, eu_ward}`, `follow_up`, `completion_reason` default `'ended_by_clinician'`), and insert the `'disposition'` event `'Visit completed: <disposition>, left <ward>'`. Returns `{ ended: true, stay_id }`.
 - Audit verbs appended (section 7): `'send_to_eu', 'move_eu_space', 'end_eu_stay'`. Grants as Task 8.
@@ -336,11 +443,13 @@ it("only the service role runs observe_in_eu", async () => { /* probe as authent
 ### Task 10: Clocks, the limit and one Arriving rule (pure)
 
 **Files:**
+
 - Create: `lib/eu/clock.ts`, `lib/eu/limit.ts`
 - Modify: `supabase/functions/_shared/ward-layout.ts` (`isArriving`), `lib/wards/board.ts:241`, `lib/emr/read/close.ts:123`, `lib/wards/data.ts:132` (`openAssignments` selects `euStayId`), `lib/emr/read/close.ts:72-99` (counts query selects `euStayId`), `supabase/functions/_shared/services-hub.ts` (`CAPABILITY_KEYS`)
 - Test: `tests/eu/clock.test.ts`, `tests/wards/editor-board.test.ts` (extend)
 
 **Interfaces:**
+
 - `isArriving(a: { admissionId: string | null; euStayId?: string | null; arrivedAt: unknown }): boolean` (ward-layout.ts) = `(admissionId != null || euStayId != null) && arrivedAt == null`; both callers use it.
 - `lib/eu/clock.ts`: `EU_STAY_LIMIT_DEFAULT_HOURS = 24`; `interface EuClocks { inHospitalMs: number | null; inEuMs: number; inSpaceMs: number | null; boardingMs: number | null }`; `euClocks(i: { nowMs: number; hospitalArrivedAt: string | null; decidedAt: string; spaceStartedAt: string | null; admissionDecidedAt: string | null }): EuClocks`; `durationWords(ms: number): string` → `"0 min"`, `"45 min"`, `"3 h 10 min"`, `"26 h 5 min"` (floor minutes; never days); `overLimit(inEuMs: number, limitHours: number): boolean` = **strictly greater** than `limitHours` hours.
 - `lib/eu/limit.ts` (server-only): `euStayLimitHours(hospitalId: string): Promise<number>` reads `capability_values` key `eu_stay_limit_hours` (`value` as an integer); a value below 1 or missing → 24.
@@ -361,8 +470,19 @@ it("words: minutes, then hours and minutes, never days", () => {
   expect(durationWords((26 * 60 + 5) * 60_000)).toBe("26 h 5 min");
 });
 it("four clocks from recorded times; across a DST change the count is still elapsed time", () => {
-  const c = euClocks({ nowMs: Date.parse("2026-03-29T03:00:00Z"), hospitalArrivedAt: "2026-03-29T00:30:00Z", decidedAt: "2026-03-29T01:30:00Z", spaceStartedAt: null, admissionDecidedAt: null });
-  expect(c).toEqual({ inHospitalMs: 2.5 * 3_600_000, inEuMs: 1.5 * 3_600_000, inSpaceMs: null, boardingMs: null });
+  const c = euClocks({
+    nowMs: Date.parse("2026-03-29T03:00:00Z"),
+    hospitalArrivedAt: "2026-03-29T00:30:00Z",
+    decidedAt: "2026-03-29T01:30:00Z",
+    spaceStartedAt: null,
+    admissionDecidedAt: null,
+  });
+  expect(c).toEqual({
+    inHospitalMs: 2.5 * 3_600_000,
+    inEuMs: 1.5 * 3_600_000,
+    inSpaceMs: null,
+    boardingMs: null,
+  });
 });
 it("an EU space not yet arrived is Arriving; arrived is Occupied", () => {
   expect(isArriving({ admissionId: null, euStayId: "s", arrivedAt: null })).toBe(true);
@@ -370,6 +490,7 @@ it("an EU space not yet arrived is Arriving; arrived is Occupied", () => {
   expect(isArriving({ admissionId: null, euStayId: null, arrivedAt: null })).toBe(false);
 });
 ```
+
 - [ ] **Step 2:** Run `npx vitest run tests/eu/clock.test.ts tests/wards/editor-board.test.ts` → FAIL. **Step 3:** Implement and switch both callers to `isArriving`. **Step 4:** Run `npx vitest run tests/eu tests/wards tests/hospital-services tests/hospital-admin/departments-emergency.test.ts` → PASS (if `tests/hospital-services/__snapshots__/profile.test.ts.snap` changes only by the new key, update it with `-u` and say so in the commit).
 - [ ] **Step 5: Commit** — `feat(eu): the stay's clocks, the 24 h limit setting, one Arriving rule`.
 
@@ -378,6 +499,7 @@ it("an EU space not yet arrived is Arriving; arrived is Occupied", () => {
 **Files:** Modify `lib/emr/closure.ts`, `lib/clerking/plan/draft.ts:51-54` (comment only: `ward`/`wardId` are the place for Admit **and** Observe in EU); test `tests/emr/closure.test.ts` (extend).
 
 **Interfaces:**
+
 - `PlanStart` gains `euWardId: string | null`, `euWardName: string | null`; for `observe_eu`, `planStart` sets them from `d.wardId`/`d.ward` and `said = "Observe in EU · <ward>"` when a ward is named.
 - `interface EuDraft { wardId: string | null; bedId: string | null; waitReason: WaitReason | null; waitNote: string }`; `euStart(start: PlanStart): EuDraft`; `euBlocker(e: EuDraft): string | null` → `"Choose the emergency unit."`, `"Choose a space, or say why the patient waits for one."`, `"Say why the patient waits."`, else `null`.
 - `closeBlocker` unchanged.
@@ -389,11 +511,13 @@ it("an EU space not yet arrived is Arriving; arrived is Occupied", () => {
 ### Task 12: `ha-eu-stay`, and the close ends a stay
 
 **Files:**
+
 - Create: `supabase/functions/ha-eu-stay/index.ts`
 - Modify: `supabase/functions/ha-complete-encounter/index.ts` (after the auth block, before step 1a; error mapping)
 - Test: `tests/functions/eu-stay.test.ts` (source-level, the `tests/functions/encounter-lifecycle.test.ts` helpers)
 
 **Interfaces:**
+
 - `ha-eu-stay` POST body (Zod discriminated union on `op`): `{ op: "send_to_eu", encounter_id, ward_id, bed_id?, space_wait_reason?, space_wait_note_ciphertext?, reason (≥ 8) }` (refine: exactly one of `bed_id` / `space_wait_reason`; `'other'` needs the note). Auth exactly as `ha-complete-encounter` (the encounter's clinician, a scoped hospital admin, or superadmin). Order: read the encounter → auth → `recordSaAudit({ action: "send_to_eu", targetKind: "encounter", ... })` → `sb.rpc("observe_in_eu", { p: {...} })` → map `/^(?:AD|EU)(400|404|409) (.*)$/s` to `badRequest(m[2])`. Returns `ok({ stay: data })`.
 - `ha-complete-encounter`:
   - Select the open stay this encounter may end: `eu_stays` `id` where `patient_user_id`, `hospital_id`, `status <> 'ended'`, and `encounter_id.eq.<enc.id>,encounter_id.is.null` (Phase 3 adds the boarder arm). A missing table (`42P01`) means no stay, so the function deploys before 0311.
@@ -410,6 +534,7 @@ it("an EU space not yet arrived is Arriving; arrived is Occupied", () => {
 **Files:** Modify `supabase/functions/ha-services-hub/ops-wards.ts` (schema, `WARD_STAFF_OPS`, `WARD_OPS`, `releaseBed`), `app/nurse/beds/actions.ts`, `app/hospital-admin/departments/wards/[wardId]/actions.ts`; test `tests/eu/ward-ops.test.ts` (source-level).
 
 **Interfaces:**
+
 - Op `{ op: "move_eu_space", stay_id: uuid, ward_id?: uuid, bed_id?: uuid, space_wait_reason?: enum, space_wait_note_ciphertext?: string, reason }`, in `WARD_STAFF_OPS`; handler `moveEuSpace` loads the stay, `assertWardWorker(ctx, stay.ward_id)` (and the target ward when it differs), audit `move_eu_space`, `apply: () => rpc(ctx, "move_eu_space", {...})`.
 - `releaseBed` selects `eu_stay_id`; when set → `HubError("Use Move to change the space; the stay ends when the visit closes.", 409)`.
 - Server actions: `nurseMoveEuSpace(_wardId: string, stayId: string, target: { wardId?: string; bedId?: string; waitReason?: WaitReason; waitNote?: string }): Promise<SimpleResult>` (and the admin twin `adminMoveEuSpace`), encrypting `waitNote` with `encrypt` (`lib/encryption`); `nurseAssignBed` and the admin assign refuse an EU ward when `euObservationLiveFor` (`"In an emergency unit, send the patient from their visit (Send to EU)."`), reading the ward type with one select.
@@ -420,11 +545,13 @@ it("an EU space not yet arrived is Arriving; arrived is Occupied", () => {
 ### Task 14: Send to EU in the Plan and the close dialog
 
 **Files:**
+
 - Modify: `lib/emr/read/close.ts` (`euWards`, `openStay`, `CloseContext.eu`), `lib/emr/read/plan.ts:147,198,313`, `lib/clerking/plan/payload.ts:23` (`euWards`), `components/clerking/plan/plan-step.tsx:148-195`, `lib/emr/actions/close.ts` (`sendToEu`), `components/emr/desk/close-visit.tsx` (`REAL`, `CloseStep`), `app/styleguide/encounter-closure/[screen]/fixture.tsx`
 - Create: `components/emr/desk/eu-fields.tsx`, `content/eu/words.ts`
 - Test: `tests/emr/ui/eu-close.test.tsx` (the `tests/emr/ui` render style), `tests/eu/privacy.test.ts`
 
 **Interfaces:**
+
 - `interface EuWardOption { id: string; name: string; where: string | null; counts: WardCounts | null }` (`where` = place name, then `"attached to <parent>"`); `euWards(tx: EmrTx, hospitalId: string): Promise<EuWardOption[]>` (active, open, unarchived EU wards; counts via `wardBedCounts`); empty when the flag is off.
 - `interface OpenStayView { stayId: string; wardName: string; bedLabel: string | null; status: "awaiting_space" | "in_space"; arriving: boolean; since: string; boarding: boolean }`; `CloseContext.eu: { live: boolean; wards: EuWardOption[]; stay: OpenStayView | null }`.
 - `PlanPayload.euWards: { id: string; name: string; counts: string | null }[]`; the Plan's "Observe in EU" shows these as `Toggle` chips (as Admit's) setting `disposition: { kind: "observe_eu", ward, wardId }`.
@@ -441,6 +568,7 @@ it("an EU space not yet arrived is Arriving; arrived is Occupied", () => {
 **Files:** Modify `lib/wards/board.ts` (`BoardBed.euStayId`, `type`), `components/wards/board/bed-board.tsx` (`BoardActions.moveEu`), `app/nurse/beds/board-client.tsx`, `app/hospital-admin/departments/wards/[wardId]/board/board-client.tsx`; test `tests/wards/editor-board.test.ts` (extend), `tests/eu/board-move.test.tsx`.
 
 **Interfaces:**
+
 - `BoardBed` gains `euStayId: string | null` and `type: BedType` (from the layout doc's bed).
 - `BoardActions` gains optional `moveEu?: (wardId: string, stayId: string, target: { bedId?: string; waitReason?: WaitReason; waitNote?: string }) => Promise<SimpleResult>`.
 - An Arriving EU space shows the existing **Arrived** action (it calls `confirm_arrival`); an Occupied or Arriving EU space shows **Move** (an `EditorDialog` listing this EU's free spaces as chips and the wait reasons) instead of **Release**.
@@ -466,24 +594,34 @@ Ends with: a patient in the EU may be admitted, holding their EU space (Occupied
 **Files:** Create `supabase/migrations/0312_eu_boarding.sql`; modify `db/schema/ward-builder.ts:127-129`; test `tests/emr-db/eu-boarding-index.test.ts`.
 
 **Interfaces:**
+
 - Create first, then drop the old: `bed_assignments_one_occupied_per_patient` UNIQUE `(patient_user_id) WHERE ended_at IS NULL AND (arrived_at IS NOT NULL OR (admission_id IS NULL AND eu_stay_id IS NULL))`; `bed_assignments_one_arriving_per_patient` UNIQUE `(patient_user_id) WHERE ended_at IS NULL AND arrived_at IS NULL AND (admission_id IS NOT NULL OR eu_stay_id IS NOT NULL)`; then `DROP INDEX IF EXISTS bed_assignments_one_open_per_patient`. Drizzle mirrors the two.
 
 - [ ] **Step 1: Failing migration-safety test** (its own instance; `BOOT_MS` as other lane files):
 
 ```ts
-beforeAll(async () => { pg = await bootEmpty(); await migrate(pg, { upTo: "0311_zzz" }); /* seed */ }, BOOT_MS);
+beforeAll(async () => {
+  pg = await bootEmpty();
+  await migrate(pg, { upTo: "0311_zzz" }); /* seed */
+}, BOOT_MS);
 it("0312 applies over live rows and changes none", async () => {
   // seeded before 0312: P1 Occupied (direct, no admission); P2 Arriving (admission, 0091 admit_from_encounter);
   // P3 ended; P4 in an arrived EU space (observe_in_eu + confirm_bed_arrival). Snapshot SELECT * FROM bed_assignments ORDER BY id.
   await migrate(pg, { from: "0312", upTo: "0312_zzz" });
   expect(await snapshot()).toEqual(before);
-  expect(await indexNames("bed_assignments")).toEqual(expect.arrayContaining(["bed_assignments_one_occupied_per_patient", "bed_assignments_one_arriving_per_patient"]));
+  expect(await indexNames("bed_assignments")).toEqual(
+    expect.arrayContaining([
+      "bed_assignments_one_occupied_per_patient",
+      "bed_assignments_one_arriving_per_patient",
+    ]),
+  );
   expect(await indexNames("bed_assignments")).not.toContain("bed_assignments_one_open_per_patient");
 });
 it("still one Occupied and one Arriving per patient", async () => {
   // a second direct (Occupied) assignment for P1 rejects /one_occupied_per_patient/; a second Arriving for P2 rejects /one_arriving_per_patient/
 });
 ```
+
 - [ ] **Step 2:** Run `EMR_PGLITE=1 npx vitest run tests/emr-db/eu-boarding-index.test.ts` → FAIL. **Step 3:** Write section 1 of 0312 (GATED header covering all of 0312, ADR 0542; "changes live indexes on a table in production use; proven over live-shaped rows on the PGlite lane"). **Step 4:** Run → PASS, then `EMR_PGLITE=1 npx vitest run tests/emr-db/encounter-closure.test.ts tests/emr-db/ward-builder.test.ts` → PASS.
 - [ ] **Step 5: Commit** — `feat(eu): one Occupied and one Arriving place per patient (migration 0312, GATED, part 1)`.
 
@@ -492,6 +630,7 @@ it("still one Occupied and one Arriving per patient", async () => {
 **Files:** Modify `supabase/migrations/0312_eu_boarding.sql`; test `tests/emr-db/eu-boarding.test.ts`.
 
 **Interfaces (each redefinition copies the latest body verbatim, then changes only what is listed):**
+
 - `admit_from_encounter(p)` (0091:206): refuse a target ward of type EU → `AD409 An emergency unit is not a ward to admit to.`; the "already in a bed" refusal (0091:243-246) now allows exactly one open assignment that has `eu_stay_id` and belongs to the patient's open stay; if that EU assignment is not arrived and a ward bed is chosen → `AD409 Mark the patient as arrived in the EU first.`; when the patient has an open stay (a **boarder**): insert the inpatient encounter now (as `confirm_bed_arrival` does: `state 'in_progress'`, `encounter_type 'inpatient'`, the ward's department, clinician = actor) and the admission with `inpatient_encounter_id` set; stamp `eu_stays.admission_id`. Non-boarders unchanged (no encounter until arrival).
 - `admissions_guard()` (0091:66): an INSERT may carry `inpatient_encounter_id` only when the patient has an open stay; on UPDATE, `inpatient_encounter_id` is stamped once (null → value only with `arrived`, or never changes when set at insert); same-status updates stay refused.
 - `confirm_bed_arrival(p)` (0311's body): for an admission, **first** end the patient's open EU assignment (`reason 'Arrived on <ward>'`) and the stay (`end_kind 'admitted'`, `ended_by` actor), **then** stamp the ward arrival (the order matters for the Occupied index); reuse `v_adm.inpatient_encounter_id` when set instead of inserting one.
@@ -526,6 +665,7 @@ Ends with: the EU list view with four clocks and Needs attention for EU staff (n
 **Files:** Create `lib/eu/board.ts`, `lib/eu/level-words.ts`; modify `supabase/functions/_shared/ward-layout.ts` (`EU_NEEDS`, `freeByNeed` opts), `content/eu/words.ts`; test `tests/eu/board.test.ts`, `tests/eu/level-words.test.ts`.
 
 **Interfaces:**
+
 - `EU_NEEDS = [{ code: "resus", label: "A resus space" }, { code: "chair", label: "A chair" }] as const`; `freeByNeed(beds, opts: { eu?: boolean } = {})` appends them by bed `type`; `BoardBedLite.type?: BedType`. Existing output unchanged without `opts.eu`.
 - `levelWords(system: string | null, level: AcuityLevel): string` (DRAFT for the CSO): `sats` → `Red | Orange | Yellow | Green | Green` for L1–L5; `etat` → `Emergency | Priority | Priority | Queue | Queue`; otherwise MedSync's own `"L<n> · <colour>"` (as `levelTxt`). The SATS/ETAT forms append `" (L<n>)"`. Read `system` from `capability_values` key `triage_system`.
 - `lib/eu/board.ts`:
@@ -541,13 +681,25 @@ Ends with: the EU list view with four clocks and Needs attention for EU staff (n
 it("over the limit is a flag, never a move: listed with words", () => {
   const { rows, needsAttention } = euTracking([stay({ decidedAt: iso(-25 * H) })], NOW, 24);
   expect(rows[0]!.overLimit).toBe(true);
-  expect(needsAttention).toContainEqual({ stayId: "s1", code: "over_limit", words: "In the EU over 24 h" });
+  expect(needsAttention).toContainEqual({
+    stayId: "s1",
+    code: "over_limit",
+    words: "In the EU over 24 h",
+  });
 });
-it("Arriving over 1 h, boarding over 12 h, obs overdue, waiting for a space", () => { /* one stay per code; exactly 1 h Arriving is not listed, 1 h + 1 min is */ });
-it("hourly obs: due an hour after the last; continuous has no due time", () => { /* nextObsDueAt */ });
-it("status words", () => { /* each of the five words */ });
+it("Arriving over 1 h, boarding over 12 h, obs overdue, waiting for a space", () => {
+  /* one stay per code; exactly 1 h Arriving is not listed, 1 h + 1 min is */
+});
+it("hourly obs: due an hour after the last; continuous has no due time", () => {
+  /* nextObsDueAt */
+});
+it("status words", () => {
+  /* each of the five words */
+});
 ```
+
 `tests/eu/level-words.test.ts`: `levelWords("sats", 2) === "Orange (L2)"`; `levelWords("etat", 1) === "Emergency (L1)"`; `levelWords(null, 3) === "L3 · Yellow"`; `it("level words never say Blue")`: for every system and L1–L5, `/blue/i` does not match. And `freeByNeed(beds, { eu: true })` lists `resus` and `chair` by type; without opts the existing five needs only.
+
 - [ ] **Step 2:** Run `npx vitest run tests/eu tests/wards/editor-board.test.ts` → FAIL. **Step 3:** Implement. **Step 4:** Run → PASS.
 - [ ] **Step 5: Commit** — `feat(eu): the tracking rows, their words and Needs attention`.
 
@@ -556,6 +708,7 @@ it("status words", () => { /* each of the five words */ });
 **Files:** Create `lib/eu/cover.ts`, `lib/eu/load.ts`; test `tests/eu/load.test.ts` (pure parts + source).
 
 **Interfaces:**
+
 - `lib/eu/cover.ts` (server-only): `euDoctorOnDuty(hospitalId: string, wardId: string, at: Date): Promise<string | null>` — **returns `null` in this plan**. Comment: "Seam for the duty rota (consults-rota spec, `whoCovers`). When the rota lands, this returns the person in the ward post at `at`, ward post only, no fallback; nothing else here changes."
 - `mayReadEuNames(who: { admin: boolean; inChargeWardIds: readonly string[]; assignedWardIds: readonly string[]; onDutyDoctor: boolean }, wardId: string): boolean` = `mayWorkBeds(who, wardId) || who.onDutyDoctor` (D10).
 - `interface EuBoardData { board: BoardData; rows: EuTrackingRow[]; needsAttention: ReturnType<typeof euTracking>["needsAttention"]; limitHours: number; names: boolean }`.
@@ -570,6 +723,7 @@ it("status words", () => { /* each of the five words */ });
 **Files:** Create `components/wards/board/eu-list.tsx`, `app/doctor/eu/page.tsx`; modify `components/wards/board/bed-board.tsx` (optional `eu?: EuBoardData` adds a "Plan | List" segment), `app/nurse/beds/page.tsx`, `app/hospital-admin/departments/wards/[wardId]/board/page.tsx`, the doctor nav entry (only with the flag); styleguide fixtures in `tests/wards/fixtures.ts` + `app/styleguide/ward-builder/[screen]`; test `tests/eu/eu-list.test.tsx`.
 
 **Interfaces:**
+
 - `EuList({ data, nowMs, links }: { data: EuBoardData; nowMs: number; links: { resus: (episodeId: string) => string } })`: columns in the spec's order (space or "Waiting for a space"; patient name and MRN when `data.names`; level words; the four clocks as `durationWords`; responsible clinician name; next obs due; "Results back" when ready; status word; resus link). Over-limit shows `<Tag hue="slate">Over {limit} h</Tag>`. Needs attention is a section above the list, words only. Clocks tick from `nowMs` passed by the page's live refresh (`use-board-live.ts`); no colour on any clock.
 - Nurse page: for an EU ward and the flag, `loadEuBoard(..., { names: mayReadEuNames(...), surface: "nurse" })` (the nurse is on the ward by construction). Admin page: names per D10 on the **list** only; the plan view keeps `patients: "mrn"` (the invariant at `tests/wards/invariants.test.ts:200` stays green). Doctor page `/doctor/eu`: the EU wards as tabs; names and the list only when `euDoctorOnDuty(...) === viewer`; otherwise the plan with states and counts and the line `"The EU list shows to the EU doctor on duty, from the duty rota."`. Resus links: `/nurse/resus/<id>` for nurses, `/doctor/resus` for doctors.
 
@@ -582,6 +736,7 @@ it("status words", () => { /* each of the five words */ });
 **Files:** Create `supabase/migrations/0313_eu_links.sql`; modify `lib/clinic-floor/model.ts:65`, `content/clinic-floor/floor.ts:476-484` (`outcome.eu: "Observed in EU"`), `supabase/functions/ha-eu-stay/index.ts`; test `tests/clinic-floor/eu-outcome.test.ts`, `tests/emr-db/eu-links.test.ts`.
 
 **Interfaces:**
+
 - `Outcome` gains `"eu"`. The floor's Finish dialog does **not** offer it (D8: one place for the action); `finish.outs` keys stay the five.
 - 0313 section 1: `ALTER TABLE public.clinic_floor_events DROP CONSTRAINT IF EXISTS clinic_floor_events_detail_check` (the name Postgres gave 0295's inline column CHECK; confirm it on the lane) and re-add it under that name with 0295's list verbatim plus `'eu'`.
 - `ha-eu-stay`, after a successful start: when the stay has an `intake_id` and that intake has any `clinic_floor_events` row, insert `{ hospital_id, intake_id, department_id: <encounter or intake department>, kind: "finish", detail: "eu", client_id: crypto.randomUUID(), by_user_id: caller }` (non-fatal, logged; no name, room or note).
@@ -595,6 +750,7 @@ it("status words", () => { /* each of the five words */ });
 **Files:** Modify `supabase/migrations/0313_eu_links.sql`, `supabase/functions/ha-eu-stay/index.ts`, `app/clinic/actions.ts:120-180` (`SendSchema`, `triageOnFloorAction`), `lib/clinic-floor/load.ts` + `lib/clinic-floor/fixture.ts:72` (`FloorData.euResus`), `components/clinic-floor/triage-dialog.tsx:831` (Send to tab), `content/clinic-floor/triage-dialog.ts`; test `tests/emr-db/eu-links.test.ts`, `tests/clinic-floor/eu-resus.test.ts`.
 
 **Interfaces:**
+
 - `public.send_to_eu_resus(p jsonb) RETURNS jsonb`. Payload `hospital_id`, `intake_id`, `bed_id`, `actor`. Checks: the intake is at this hospital with status `arrived | awaiting_triage | triaged` (`EU404 That visit is not at this hospital.`); its latest `triage_records.assigned_level <= 2` (`EU409 Only a Level 1 or 2 patient goes straight to EU resus.`); the bed is `bed_type = 'resus'` in an active, open EU ward (`EU409 Choose a resus space.`); `admission_free_bed`; no open stay or assignment for the patient. Inserts a stay (`started_by_kind 'triage_nurse'`, `encounter_id NULL`, `intake_id`, `decided_by = responsible_user_id = actor`, `in_space`) and an Arriving assignment. Audit verb `'send_to_eu_resus'` appended. Service role only.
 - `ha-eu-stay` op `{ op: "send_to_eu_resus", hospital_id, intake_id, bed_id, reason }`: caller must hold an `active`/`approved` `staff_affiliations` row at the hospital (as `assertWardWorker`'s first query); audit; rpc; then the floor's `finish`/`eu` event (Task 24).
 - `FloorData.euResus: { bedId: string; label: string; wardName: string }[]` (free `resus` spaces of the hospital's EU wards via `loadBedBoard(..., { patients: "none" })`; empty when the flag is off).
@@ -610,6 +766,7 @@ it("status words", () => { /* each of the five words */ });
 **Files:** Modify `supabase/migrations/0313_eu_links.sql`, `db/schema/resus.ts:260-320`, `supabase/functions/ha-services-hub/ops-wards.ts` (two admin ops), `app/hospital-admin/departments/wards/_components/ward-panel.tsx` (a "Resus desk" section for EU wards, flag on), `lib/resus/desk-v2-loader.ts:185` (label); test `tests/emr-db/eu-links.test.ts`, `tests/eu/resus-links.test.ts`.
 
 **Interfaces:**
+
 - `resus_bay_profiles.bed_id uuid REFERENCES public.hospital_beds(id) ON DELETE SET NULL` + `UNIQUE (bed_id) WHERE bed_id IS NOT NULL`; `hospital_care_units.ward_id uuid REFERENCES public.hospital_wards(id) ON DELETE SET NULL`. Drizzle `bedId`, `wardId`. Audit verbs `'link_resus_bay', 'link_care_unit'` appended (0313 complete).
 - Ops (hospital admin only, not in `WARD_STAFF_OPS`): `{ op: "link_resus_bay", bay_profile_id: uuid, bed_id: uuid | null }` (the bed must be a `resus` space of an EU ward of this hospital, else `HubError("Choose a resus space of an emergency unit.")`); `{ op: "link_care_unit", care_unit_id: uuid, ward_id: uuid | null }` (a ward of this hospital).
 - Resus desk label: when `bed_id` is set, `"<ward> <space> · <device>"`, else as today. The EU list's resus link (Task 23) needs nothing more.
@@ -635,6 +792,7 @@ Ends with: the hospital admin's Reports page shows MoH deaths in the EU within 2
 **Files:** Create `lib/eu/report.ts`; test `tests/eu/report.test.ts`.
 
 **Interfaces:**
+
 - `interface EuReportStay { hospitalArrivedAt: string | null; decidedAt: string; endedAt: string | null; endKind: string | null; admissionDecidedAt: string | null }`.
 - `interface EuReport { stays: number; deaths: { within2h: number; within8h: number; within24h: number; noArrivalTime: number }; lengthOfStay: { medianMin: number | null; p90Min: number | null; n: number }; boarding: { medianMin: number | null; p90Min: number | null; n: number }; overLimit: Ratio }`.
 - `euReport(stays: EuReportStay[], window: ReportWindow, limitHours: number): EuReport`, reusing `ratio`, `ReportWindow`, `MIN_RATE_SAMPLE` from `lib/hospital-admin/reports.ts`. Deaths: `endKind === "died"`, counted **cumulatively and inclusively** (`endedAt − hospitalArrivedAt ≤ 2 h` counts in all three); a death with no arrival time counts in `noArrivalTime` only. Length of stay = `endedAt − decidedAt` over ended stays; boarding = `endedAt − admissionDecidedAt` over stays ended `admitted`; median/p90 `null` when `n < MIN_RATE_SAMPLE`.
@@ -648,6 +806,7 @@ Ends with: the hospital admin's Reports page shows MoH deaths in the EU within 2
 **Files:** Create `lib/eu/report-load.ts`; modify `app/hospital-admin/reports/page.tsx`, `app/hospital-admin/reports/_components/reports-view.tsx`; test `tests/eu/report-invariants.test.ts`.
 
 **Interfaces:**
+
 - `fetchEuReport(hospitalId: string, days: ReportDays): Promise<EuReport | null>` (null when the flag is off): selects only `patient_intakes.arrived_at`, `eu_stays.decided_at`, `ended_at`, `end_kind`, `admissions.decided_at` for stays decided in the window (`reportWindow`). The section prints each figure with its basis and window, "too few to report" for null medians, and states "Counts from recorded times; nothing here is a target."
 
 - [ ] **Step 1:** Failing static test in the style of `tests/hospital-admin/reports-invariants.test.ts`: `report-load.ts` selects no `fullName`, `phone`, `patientCode`, `patientUserId` or `bookingCode`; nothing in `lib/emr` or `app/doctor` imports it.

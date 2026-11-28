@@ -1,35 +1,142 @@
-<meta name="dash-one-writer">
+<meta name="dash-one-writer" />
 <style>
-  .bp { display: grid; gap: var(--cds-gap-xl); font-family: var(--font-anthropic-sans); color: var(--color-fg); }
-  .bp-head { display: grid; gap: var(--cds-gap-sm); }
-  .bp-title { margin: 0; font-family: var(--font-anthropic-serif); font-weight: 400; font-size: var(--cds-font-size-title); }
-  .bp-lede { margin: 0; color: var(--color-fg-muted); font-size: var(--cds-font-size-body); }
-  .bp-lede b { color: var(--color-fg); font-variant-numeric: tabular-nums; }
-  .bp-sec { display: grid; gap: var(--cds-gap-md); }
-  .bp-sec h2 { margin: 0; font-size: var(--cds-font-size-heading); font-weight: var(--cds-font-weight-medium); }
-  .bp-sec > p { margin: 0; color: var(--color-fg-muted); font-size: var(--cds-font-size-caption); }
-  .bp-wrap { overflow-x: auto; border: 1px solid var(--color-border-line); border-radius: var(--cds-radius); background: var(--color-panel); }
-  .bp-table { width: 100%; min-width: 40rem; border-collapse: collapse; font-size: var(--cds-font-size-body); }
-  .bp-table th { text-align: left; white-space: nowrap; font-weight: var(--cds-font-weight-medium); font-size: var(--cds-font-size-caption); color: var(--color-fg-muted); padding: var(--cds-pad-sm) var(--cds-pad-md); border-bottom: 1px solid var(--color-border-line); }
-  .bp-table td { vertical-align: top; padding: var(--cds-pad-sm) var(--cds-pad-md); border-bottom: 1px solid var(--color-border-line); }
-  .bp-table tbody tr:last-child td { border-bottom: 0; }
-  .bp-note { max-width: 28rem; color: var(--color-fg-muted); font-size: var(--cds-font-size-caption); }
-  .bp-code { font-family: ui-monospace, Menlo, monospace; font-size: var(--cds-font-size-caption); white-space: nowrap; }
-  .bp-chip { display: inline-block; white-space: nowrap; padding: 1px 8px; border-radius: 999px; border: 1px solid var(--color-border-line); color: var(--color-fg-muted); font-size: var(--cds-font-size-caption); }
-  .bp-chip[data-s="Running"] { color: var(--color-fg); border-color: var(--color-fg); }
-  .bp-chip[data-s="Done"] { color: var(--color-ok); border-color: currentColor; }
-  .bp-chip[data-s="Needs you"] { color: var(--color-warn); border-color: currentColor; }
-  .bp-chip[data-s="Blocked"] { color: var(--color-bad); border-color: currentColor; }
-  .bp-bar { display: flex; align-items: center; gap: var(--cds-gap-sm); white-space: nowrap; font-size: var(--cds-font-size-caption); font-variant-numeric: tabular-nums; }
-  .bp-track { width: 5rem; height: 6px; border-radius: 3px; overflow: hidden; background: var(--cds-chart-grid); }
-  .bp-fill { height: 100%; }
-  [data-dash-source-state=refreshing] { opacity: .5; }
+  .bp {
+    display: grid;
+    gap: var(--cds-gap-xl);
+    font-family: var(--font-anthropic-sans);
+    color: var(--color-fg);
+  }
+  .bp-head {
+    display: grid;
+    gap: var(--cds-gap-sm);
+  }
+  .bp-title {
+    margin: 0;
+    font-family: var(--font-anthropic-serif);
+    font-weight: 400;
+    font-size: var(--cds-font-size-title);
+  }
+  .bp-lede {
+    margin: 0;
+    color: var(--color-fg-muted);
+    font-size: var(--cds-font-size-body);
+  }
+  .bp-lede b {
+    color: var(--color-fg);
+    font-variant-numeric: tabular-nums;
+  }
+  .bp-sec {
+    display: grid;
+    gap: var(--cds-gap-md);
+  }
+  .bp-sec h2 {
+    margin: 0;
+    font-size: var(--cds-font-size-heading);
+    font-weight: var(--cds-font-weight-medium);
+  }
+  .bp-sec > p {
+    margin: 0;
+    color: var(--color-fg-muted);
+    font-size: var(--cds-font-size-caption);
+  }
+  .bp-wrap {
+    overflow-x: auto;
+    border: 1px solid var(--color-border-line);
+    border-radius: var(--cds-radius);
+    background: var(--color-panel);
+  }
+  .bp-table {
+    width: 100%;
+    min-width: 40rem;
+    border-collapse: collapse;
+    font-size: var(--cds-font-size-body);
+  }
+  .bp-table th {
+    text-align: left;
+    white-space: nowrap;
+    font-weight: var(--cds-font-weight-medium);
+    font-size: var(--cds-font-size-caption);
+    color: var(--color-fg-muted);
+    padding: var(--cds-pad-sm) var(--cds-pad-md);
+    border-bottom: 1px solid var(--color-border-line);
+  }
+  .bp-table td {
+    vertical-align: top;
+    padding: var(--cds-pad-sm) var(--cds-pad-md);
+    border-bottom: 1px solid var(--color-border-line);
+  }
+  .bp-table tbody tr:last-child td {
+    border-bottom: 0;
+  }
+  .bp-note {
+    max-width: 28rem;
+    color: var(--color-fg-muted);
+    font-size: var(--cds-font-size-caption);
+  }
+  .bp-code {
+    font-family: ui-monospace, Menlo, monospace;
+    font-size: var(--cds-font-size-caption);
+    white-space: nowrap;
+  }
+  .bp-chip {
+    display: inline-block;
+    white-space: nowrap;
+    padding: 1px 8px;
+    border-radius: 999px;
+    border: 1px solid var(--color-border-line);
+    color: var(--color-fg-muted);
+    font-size: var(--cds-font-size-caption);
+  }
+  .bp-chip[data-s="Running"] {
+    color: var(--color-fg);
+    border-color: var(--color-fg);
+  }
+  .bp-chip[data-s="Done"] {
+    color: var(--color-ok);
+    border-color: currentColor;
+  }
+  .bp-chip[data-s="Needs you"] {
+    color: var(--color-warn);
+    border-color: currentColor;
+  }
+  .bp-chip[data-s="Blocked"] {
+    color: var(--color-bad);
+    border-color: currentColor;
+  }
+  .bp-bar {
+    display: flex;
+    align-items: center;
+    gap: var(--cds-gap-sm);
+    white-space: nowrap;
+    font-size: var(--cds-font-size-caption);
+    font-variant-numeric: tabular-nums;
+  }
+  .bp-track {
+    width: 5rem;
+    height: 6px;
+    border-radius: 3px;
+    overflow: hidden;
+    background: var(--cds-chart-grid);
+  }
+  .bp-fill {
+    height: 100%;
+  }
+  [data-dash-source-state="refreshing"] {
+    opacity: 0.5;
+  }
 </style>
 
 <div class="bp">
   <header class="bp-head" id="summary">
     <h1 class="bp-title">Booking pilot</h1>
-    <p class="bp-lede"><b data-draw="done" data-source="summary" data-field="done" data-row="0">—</b> of <b data-draw="total" data-source="summary" data-field="total" data-row="0">—</b> tasks done. <b data-draw="running" data-source="summary" data-field="running" data-row="0">—</b> Claude sessions running, <b data-draw="waiting" data-source="summary" data-field="waiting" data-row="0">—</b> tasks waiting on you.</p>
+    <p class="bp-lede">
+      <b data-draw="done" data-source="summary" data-field="done" data-row="0">—</b> of
+      <b data-draw="total" data-source="summary" data-field="total" data-row="0">—</b> tasks done.
+      <b data-draw="running" data-source="summary" data-field="running" data-row="0">—</b> Claude
+      sessions running,
+      <b data-draw="waiting" data-source="summary" data-field="waiting" data-row="0">—</b> tasks
+      waiting on you.
+    </p>
   </header>
 
   <section class="bp-sec" id="claude">
@@ -37,7 +144,16 @@
     <p>Each task runs in its own session and reports to the main chat, which updates this board.</p>
     <div class="bp-wrap">
       <table class="bp-table" id="claude-table" data-source="tracks" data-row-key="id">
-        <thead><tr><th data-field="task">Task</th><th data-field="status">Status</th><th data-field="progress">Progress</th><th data-field="branch">Branch</th><th data-field="note">Where it stands</th><th data-field="updated">Updated</th></tr></thead>
+        <thead>
+          <tr>
+            <th data-field="task">Task</th>
+            <th data-field="status">Status</th>
+            <th data-field="progress">Progress</th>
+            <th data-field="branch">Branch</th>
+            <th data-field="note">Where it stands</th>
+            <th data-field="updated">Updated</th>
+          </tr>
+        </thead>
         <tbody data-draw="claude-rows"></tbody>
       </table>
     </div>
@@ -48,7 +164,13 @@
     <p>Things only you can do. Tell the main chat when one changes.</p>
     <div class="bp-wrap">
       <table class="bp-table" id="owner-table" data-source="tracks" data-row-key="id">
-        <thead><tr><th data-field="task">Task</th><th data-field="status">Status</th><th data-field="note">Note</th></tr></thead>
+        <thead>
+          <tr>
+            <th data-field="task">Task</th>
+            <th data-field="status">Status</th>
+            <th data-field="note">Note</th>
+          </tr>
+        </thead>
         <tbody data-draw="owner-rows"></tbody>
       </table>
     </div>
@@ -56,93 +178,101 @@
 </div>
 
 <script>
-  dash.calc('summary', {
-    inputs: ['tracks'],
-    title: 'Task counts',
-    description: 'How many tasks are done, how many sessions are running and how many tasks wait on the owner.',
+  dash.calc("summary", {
+    inputs: ["tracks"],
+    title: "Task counts",
+    description:
+      "How many tasks are done, how many sessions are running and how many tasks wait on the owner.",
     fn: (tracks) => {
       const count = (status) => tracks.filter((task) => task.status === status).length;
-      return [{ done: count('Done'), total: tracks.length, running: count('Running'), waiting: count('Needs you') }];
+      return [
+        {
+          done: count("Done"),
+          total: tracks.length,
+          running: count("Running"),
+          waiting: count("Needs you"),
+        },
+      ];
     },
   });
 
-  for (const field of ['done', 'total', 'running', 'waiting']) {
+  for (const field of ["done", "total", "running", "waiting"]) {
     dash.draw(field, (el) => {
-      const s = dash.data('summary');
-      el.textContent = s.status === 'ok' && s.data && s.data[0] ? String(s.data[0][field]) : '—';
+      const s = dash.data("summary");
+      el.textContent = s.status === "ok" && s.data && s.data[0] ? String(s.data[0][field]) : "—";
     });
   }
 
-  const parseDay = d3.utcParse('%Y-%m-%d');
-  const fmtDay = d3.utcFormat('%-d %b');
+  const parseDay = d3.utcParse("%Y-%m-%d");
+  const fmtDay = d3.utcFormat("%-d %b");
 
   function rowsFor(area) {
-    const t = dash.data('tracks');
-    return t.status === 'ok' ? t.data.filter((r) => r.area === area) : [];
+    const t = dash.data("tracks");
+    return t.status === "ok" ? t.data.filter((r) => r.area === area) : [];
   }
   function td(tr, text, cls) {
-    const c = document.createElement('td');
+    const c = document.createElement("td");
     if (cls) c.className = cls;
-    c.textContent = text == null || text === '' ? '—' : String(text);
+    c.textContent = text == null || text === "" ? "—" : String(text);
     tr.appendChild(c);
     return c;
   }
   function chip(tr, status) {
-    const c = document.createElement('td');
-    const s = document.createElement('span');
-    s.className = 'bp-chip';
+    const c = document.createElement("td");
+    const s = document.createElement("span");
+    s.className = "bp-chip";
     s.dataset.s = status;
     s.textContent = status;
     c.appendChild(s);
     tr.appendChild(c);
   }
   function progress(tr, value) {
-    const c = document.createElement('td');
+    const c = document.createElement("td");
     const pct = Math.max(0, Math.min(100, Number(value) || 0));
-    const bar = document.createElement('div');
-    bar.className = 'bp-bar';
-    const track = document.createElement('div');
-    track.className = 'bp-track';
-    const fill = document.createElement('div');
-    fill.className = 'bp-fill';
-    fill.style.width = pct + '%';
+    const bar = document.createElement("div");
+    bar.className = "bp-bar";
+    const track = document.createElement("div");
+    track.className = "bp-track";
+    const fill = document.createElement("div");
+    fill.className = "bp-fill";
+    fill.style.width = pct + "%";
     fill.style.background = dash.colors[0];
     track.appendChild(fill);
-    const label = document.createElement('span');
+    const label = document.createElement("span");
     label.textContent = String(pct);
-    bar.append(track, label, '%');
+    bar.append(track, label, "%");
     c.appendChild(bar);
     tr.appendChild(c);
   }
   function row(r) {
-    const tr = document.createElement('tr');
+    const tr = document.createElement("tr");
     tr.dataset.key = r.id;
     return tr;
   }
 
-  dash.draw('claude-rows', (tb) => {
+  dash.draw("claude-rows", (tb) => {
     tb.replaceChildren(
-      ...rowsFor('Claude').map((r) => {
+      ...rowsFor("Claude").map((r) => {
         const tr = row(r);
         td(tr, r.task);
         chip(tr, r.status);
         progress(tr, r.progress);
-        td(tr, r.branch, 'bp-code');
-        td(tr, r.note, 'bp-note');
+        td(tr, r.branch, "bp-code");
+        td(tr, r.note, "bp-note");
         const day = r.updated ? parseDay(r.updated) : null;
-        td(tr, day ? fmtDay(day) : r.updated, 'bp-note');
+        td(tr, day ? fmtDay(day) : r.updated, "bp-note");
         return tr;
       }),
     );
   });
 
-  dash.draw('owner-rows', (tb) => {
+  dash.draw("owner-rows", (tb) => {
     tb.replaceChildren(
-      ...rowsFor('You').map((r) => {
+      ...rowsFor("You").map((r) => {
         const tr = row(r);
         td(tr, r.task);
         chip(tr, r.status);
-        td(tr, r.note, 'bp-note');
+        td(tr, r.note, "bp-note");
         return tr;
       }),
     );

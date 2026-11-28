@@ -12,6 +12,6 @@ Public `/feedback` form for the co-founders (minus Dr. Usama Fadhul) + Dr. Ahabw
 - The files are still **uncommitted** in the main tree (on feat/booking-app).
 
 **Why:** the owner asked for a form colleagues could use to test the work so far.
-**How to apply:** commit the files when the owner asks, never `.env.example`. Production sign-ups are closed, so testers need the owner's sign-up override or a preview URL to reach /signup/*.
+**How to apply:** commit the files when the owner asks, never `.env.example`. Production sign-ups are closed, so testers need the owner's sign-up override or a preview URL to reach /signup/\*.
 
 Related: [[release-state]] [[medsync-owner-rules]]

@@ -1,6 +1,6 @@
 ---
 name: medsync-mod-build
-description: "Claude Code mod \"medsync\" (tools/medsync-mod + launch-medsync) lives only on branch feat/medsync-mod; DISABLED 2026-10-17 at the owner's request"
+description: 'Claude Code mod "medsync" (tools/medsync-mod + launch-medsync) lives only on branch feat/medsync-mod; DISABLED 2026-10-17 at the owner''s request'
 metadata:
   node_type: memory
   type: project
@@ -9,6 +9,7 @@ metadata:
 ---
 
 Built 2026-10-17; the owner then said it "didn't turn out how I wanted" and asked to disable it. State since 2026-10-17:
+
 - Code is kept only on `feat/medsync-mod` (pushed to origin, e2a34ab3; no PR opened, `gh` not installed). Not on main.
 - Uninstalled `medsync@medsync-local` and removed the `medsync-local` marketplace; `~/.local/bin/launch-medsync` link removed. The `export PATH="$HOME/.local/bin:$PATH"` lines added to `~/.zshrc` and a new `~/.bashrc` were left (harmless).
 - The main folder is back on main.
