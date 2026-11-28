@@ -1,6 +1,6 @@
 /**
- * The nursing care-plan library (ADR 0545 Phase 2). DRAFT for the CSO: problems, goals and care items are examples
- * written with the prototype and must be signed with the nursing lead before the flag is turned on. No doses.
+ * The nursing care-plan library (ADR 0545 Phase 2). Signed as written by Fadhul (owner) on 28 Nov 2026; any change to
+ * a problem, goal or care item needs a new sign-off. No doses.
  */
 export interface CareLibraryEntry {
   key: string;
@@ -12,7 +12,8 @@ export interface CareLibraryEntry {
   care: string[];
 }
 
-export const CARE_LIBRARY_STATUS = "pending_cso" as const;
+export const CARE_LIBRARY_STATUS = "signed" as const;
+export const CARE_LIBRARY_SIGNED = { by: "Fadhul (owner)", on: "2026-11-28" } as const;
 
 export const CARE_LIBRARY: readonly CareLibraryEntry[] = [
   {

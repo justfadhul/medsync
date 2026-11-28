@@ -39,7 +39,8 @@ Phase 1 adds no table: it reads what exists.
 
 - NEWS2 bands and the wording of "emergency review", "urgent review", "routine".
 - Vitals frequency by score and when a check counts as late.
-- The care-plan library (problems, goals, care items).
+- ~~The care-plan library (problems, goals, care items).~~ Signed as written by Fadhul (owner), 28 Nov 2026
+  (`content/nursing-care-library.ts`).
 - Who may co-sign which high-alert doses; enrolled-nurse limits.
 - Self-dose rules and what the nurse confirms.
 - Fluid balance targets and the low-urine alert.
