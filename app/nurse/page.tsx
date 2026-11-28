@@ -16,12 +16,15 @@ import {
 import { IncomingIntakesPanel } from "@/components/intake/incoming-panel";
 import { CautionNotice } from "@/components/medsync/caution-notice";
 import { StaffNotices } from "@/components/medsync/staff-notices";
+import { Kpis, NextUp, PatientRows } from "@/components/nurse-ward/screens";
+import { WardPage } from "@/components/nurse-ward/ui";
 import { NURSE_TASKS_COPY } from "@/content/nurse-tasks";
 import { WARDS } from "@/content/pharmacy-stores-wards";
 import { nurseTasksLiveFor } from "@/lib/emr/feature";
 import { fetchHospitalIncomingIntakes } from "@/lib/intake/queries";
 import { isTetherHost } from "@/lib/landing/feature";
 import { myNotices } from "@/lib/notices/read";
+import { loadDeskFrame } from "@/lib/nurse/desk-frame";
 import { nurseWardV2LiveFor } from "@/lib/nurse/feature";
 import { requireNurseScope } from "@/lib/nurse/scope";
 import { isWardNurse } from "@/lib/nurse/ward-desk";
@@ -46,6 +49,7 @@ export default async function NurseOverviewPage() {
     !(nurseWardV2LiveFor(scope.hospitalId) && (await isWardNurse(scope)))
   )
     redirect("/clinic");
+  if (nurseWardV2LiveFor(scope.hospitalId)) return <WardOverview />;
   const firstName = scope.fullName?.split(" ")[0];
 
   const incoming = await fetchHospitalIncomingIntakes({
@@ -286,5 +290,40 @@ function PlaceholderCard({
         <span className="text-[12px]">{subtitle}</span>
       </span>
     </div>
+  );
+}
+
+/** ADR 0546: prototype v82's Ward overview, the in-charge's home; any other nurse's home is My patients. */
+async function WardOverview() {
+  const f = await loadDeskFrame();
+  if (!f.inCharge) redirect("/nurse/patients");
+  const wards = await loadWardOverview(await requireNurseScope());
+  const now = new Date();
+  const w = wards[0];
+  const em = f.list.filter((p) => p.news.emergency);
+  return (
+    <WardPage
+      title={f.wardName}
+      now={now}
+      stats={[
+        [w?.beds ? `${w.beds.occupied}/${w.beds.usable}` : "—", "beds full"],
+        [f.overdue, "overdue"],
+        [em.length, "need emergency review"],
+        [w?.waitingForBed ?? "—", "waiting for a bed"],
+      ]}
+    >
+      {wards.map((x) => (
+        <Kpis key={x.wardId} f={x} />
+      ))}
+      <NextUp items={f.todo} now={now} />
+      <PatientRows
+        now={now}
+        empty="No patients on the ward list."
+        groups={[
+          ["Emergency review", "the signed emergency band", em],
+          ["Everyone else", "sickest first", f.list.filter((p) => !p.news.emergency)],
+        ]}
+      />
+    </WardPage>
   );
 }

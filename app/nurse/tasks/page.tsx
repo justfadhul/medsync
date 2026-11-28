@@ -5,6 +5,8 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { inArray } from "drizzle-orm";
 
+import { DueList, TodoBoard as WardTodoBoard } from "@/components/nurse-ward/screens";
+import { k, WardPage } from "@/components/nurse-ward/ui";
 import { fill } from "@/content/lab-workspace-v2";
 import { NURSE_TASKS_COPY as C } from "@/content/nurse-tasks";
 import { CHART_COPY as P } from "@/content/protocol-charts";
@@ -15,13 +17,12 @@ import { asClinicalReader } from "@/lib/emr/db";
 import { nurseTasksLiveFor, protocolsLiveFor } from "@/lib/emr/feature";
 import { loadNurseTasks } from "@/lib/emr/read/nursing";
 import { loadRunningCharts } from "@/lib/emr/read/protocol-charts";
+import { loadDeskFrame } from "@/lib/nurse/desk-frame";
 import { nurseWardV2LiveFor } from "@/lib/nurse/feature";
 import { requireNurseScope } from "@/lib/nurse/scope";
 import { bucketTodo } from "@/lib/nurse/todo";
-import { loadTodo } from "@/lib/nurse/todo-read";
 import { dur } from "@/lib/protocols/engine/kit";
 import { TaskList } from "./_components/task-list";
-import { TodoBoard } from "./_components/todo-board";
 
 export const metadata: Metadata = { title: "Tasks · Nurse · MedSync" };
 export const dynamic = "force-dynamic";
@@ -64,12 +65,18 @@ function resultOf(t: NurseTaskRow): string {
 const hoursSince = (at: Date) => dur(Date.now() - at.getTime());
 
 /** Nurse tasks (prescribing kit P2 (b), F5): what the prescriptions asked the nurses to do. */
-export default async function NurseTasksPage() {
+export default async function NurseTasksPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ view?: string }>;
+}) {
   const scope = await requireNurseScope();
+  const due = (await searchParams).view === "due";
   // ADR 0546 Phase 1: with the ward desk on, the page opens on the To do board even before nurse tasks are live.
   const desk = nurseWardV2LiveFor(scope.hospitalId);
   if (!nurseTasksLiveFor(scope.hospitalId) && !desk) notFound();
-  const board = desk ? bucketTodo(await loadTodo(scope), new Date()) : null;
+  const now = new Date();
+  const board = desk ? bucketTodo((await loadDeskFrame()).todo, now) : null;
   const { open, done, running } = await asClinicalReader(
     { userId: scope.userId, hospitalId: scope.hospitalId },
     async (tx) => ({
@@ -114,18 +121,8 @@ export default async function NurseTasksPage() {
         : null,
   });
 
-  return (
-    <div
-      className={`mx-auto flex w-full ${board ? "max-w-6xl" : "max-w-3xl"} flex-col gap-6 px-4 py-8 sm:px-6`}
-    >
-      <header className="flex flex-col gap-1.5">
-        <span className="text-muted-foreground font-mono text-[10px] tracking-[0.16em] uppercase">
-          {C.kicker}
-        </span>
-        <h1 className="font-display text-display-s text-foreground">{C.title}</h1>
-        <p className="text-muted-foreground text-body-s max-w-[60ch]">{C.sub}</p>
-      </header>
-      {board ? <TodoBoard cols={board} /> : null}
+  const runningCharts = (
+    <>
       {running ? (
         <section className="flex flex-col gap-2">
           <h2 className="text-heading-s text-foreground">{P.running}</h2>
@@ -153,6 +150,52 @@ export default async function NurseTasksPage() {
           )}
         </section>
       ) : null}
+    </>
+  );
+  if (board) {
+    const soon = [...board.overdue, ...board.nextHour];
+    return due ? (
+      <WardPage
+        title="Due now"
+        now={now}
+        stats={[
+          [soon.length, "late or in the next hour"],
+          [soon.filter((i) => i.kind === "Vitals").length, "vitals"],
+          [soon.filter((i) => i.kind === "Dose").length, "medicines"],
+          [soon.filter((i) => i.kind === "Sample").length, "samples"],
+        ]}
+      >
+        <DueList items={soon} now={now} />
+      </WardPage>
+    ) : (
+      <WardPage
+        title="To do"
+        now={now}
+        stats={[
+          [board.overdue.length, "overdue"],
+          [board.nextHour.length, "in the next hour"],
+          [board.later.length, "later"],
+          [board.done.length, "done"],
+        ]}
+      >
+        <WardTodoBoard cols={board} now={now} />
+        <div id="tasks" className={k("cf-card")} style={{ padding: 16, display: "grid", gap: 16 }}>
+          {runningCharts}
+          <TaskList open={open.map(view)} done={done.map(view)} />
+        </div>
+      </WardPage>
+    );
+  }
+  return (
+    <div className={`mx-auto flex w-full max-w-3xl flex-col gap-6 px-4 py-8 sm:px-6`}>
+      <header className="flex flex-col gap-1.5">
+        <span className="text-muted-foreground font-mono text-[10px] tracking-[0.16em] uppercase">
+          {C.kicker}
+        </span>
+        <h1 className="font-display text-display-s text-foreground">{C.title}</h1>
+        <p className="text-muted-foreground text-body-s max-w-[60ch]">{C.sub}</p>
+      </header>
+      {runningCharts}
       <TaskList open={open.map(view)} done={done.map(view)} />
     </div>
   );

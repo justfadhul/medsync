@@ -4,6 +4,10 @@ import Link from "next/link";
 import { UsersIcon } from "lucide-react";
 
 import { StatusWord } from "@/components/emr/status-word";
+import { NeedsYou, NextUp, PatientRows, ShowAs } from "@/components/nurse-ward/screens";
+import { k, WardPage } from "@/components/nurse-ward/ui";
+import { loadDeskFrame } from "@/lib/nurse/desk-frame";
+import { nurseWardV2LiveFor } from "@/lib/nurse/feature";
 import { bySickest } from "@/lib/nurse/news-summary";
 import { listNursePatientPanel } from "@/lib/nurse/patient-access";
 import { requireNurseScope } from "@/lib/nurse/scope";
@@ -22,10 +26,12 @@ const BASIS_LABEL: Record<string, string> = {
 export default async function NursePatientsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ view?: string }>;
+  searchParams: Promise<{ view?: string; q?: string }>;
 }) {
-  const cards = (await searchParams).view === "cards";
+  const sp = await searchParams;
+  const cards = sp.view === "cards";
   const scope = await requireNurseScope();
+  if (nurseWardV2LiveFor(scope.hospitalId)) return <MyPatients cards={cards} q={sp.q ?? ""} />;
   const rows = await listNursePatientPanel({
     nurseUserId: scope.userId,
     hospitalId: scope.hospitalId,
@@ -289,4 +295,48 @@ function formatRelative(iso: string): string {
   const diffD = Math.round(diffH / 24);
   if (diffD < 7) return `${diffD}d ago`;
   return new Date(iso).toLocaleDateString(undefined, { month: "short", day: "numeric" });
+}
+
+/** ADR 0546: prototype v82's My patients, sickest first, with the "Needs you" queue beside it. */
+async function MyPatients({ cards, q }: { cards: boolean; q: string }) {
+  const f = await loadDeskFrame();
+  const now = new Date();
+  const find = q.trim().toLowerCase();
+  const list = find ? f.list.filter((p) => p.patientCode.toLowerCase().includes(find)) : f.list;
+  const late = f.list.filter((p) => p.news.late).length;
+  return (
+    <div className={k(cards && "cards")} style={{ display: "contents" }}>
+      <WardPage
+        title="My patients"
+        now={now}
+        stats={[
+          [f.patients, "patients"],
+          [f.dueHour, "due in the next hour"],
+          [late, "vitals overdue"],
+        ]}
+        controls={
+          <ShowAs
+            cards={cards}
+            base={find ? `/nurse/patients?q=${encodeURIComponent(q)}` : "/nurse/patients"}
+          />
+        }
+        side={
+          f.inCharge ? undefined : (
+            <NeedsYou items={f.todo} now={now} who={f.userName.split(" ")[0] ?? ""} />
+          )
+        }
+      >
+        <NextUp items={f.todo} now={now} />
+        <PatientRows
+          now={now}
+          empty={
+            find
+              ? `No patient matches “${q}”.`
+              : "No patients on your list yet. The nurse in charge pairs you with patients for the shift."
+          }
+          groups={[["Sickest first", `${f.wardName} · today`, list]]}
+        />
+      </WardPage>
+    </div>
+  );
 }
