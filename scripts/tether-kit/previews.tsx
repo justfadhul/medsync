@@ -2,6 +2,7 @@
 
 import type { Density } from "@/components/tether-kit";
 import type { ReactNode } from "react";
+import { useState } from "react";
 import { CalendarPlusIcon, EllipsisIcon, SirenIcon, XIcon } from "lucide-react";
 
 import {
@@ -40,6 +41,23 @@ const Row = ({ children }: { children: ReactNode }) => (
   <div className="flex flex-wrap items-start gap-2">{children}</div>
 );
 
+/** Press it: the action takes 2 s, so the label gives way to the spinner after 400 ms. */
+function BusyDemo() {
+  const [busy, setBusy] = useState(false);
+  return (
+    <Button
+      size="m"
+      busy={busy}
+      onClick={() => {
+        setBusy(true);
+        setTimeout(() => setBusy(false), 2000);
+      }}
+    >
+      Send reminder
+    </Button>
+  );
+}
+
 function ButtonDemo() {
   return (
     <Pair>
@@ -66,9 +84,7 @@ function ButtonDemo() {
               <SirenIcon {...ICON} />
               Help
             </Button>
-            <Button size="m" busy>
-              Sending
-            </Button>
+            <BusyDemo />
           </Row>
           <Button size="m" disabledReason="Sign the discharge summary first.">
             Discharge

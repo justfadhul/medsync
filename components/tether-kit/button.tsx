@@ -56,7 +56,10 @@ type ButtonProps = Omit<ComponentProps<typeof BaseButton>, "disabled" | "classNa
   size?: ButtonSize;
   /** A disabled button always says why. The reason shows under it and is read with it. */
   disabledReason?: string;
-  /** Working: shows a spinner, keeps the label, blocks a second press. */
+  /**
+   * Working: blocks a second press at once. If it lasts past 400 ms the label fades out and a spinner takes its
+   * place, so a quick action never flashes and the button keeps its width.
+   */
   busy?: boolean;
   className?: string;
 };
@@ -83,10 +86,22 @@ export function Button({
       aria-describedby={off ? reasonId : rest["aria-describedby"]}
       className={cn(buttonClass(tone, size, off), busy && "cursor-progress", className)}
     >
+      <span
+        className={cn(
+          "ease-expo-out inline-flex items-center gap-2 transition-opacity duration-150 motion-reduce:transition-none",
+          busy && "opacity-0 delay-400 motion-reduce:delay-0",
+        )}
+      >
+        {children}
+      </span>
       {busy ? (
-        <LoaderCircleIcon {...ICON} className="animate-spin motion-reduce:animate-none" />
+        <span
+          aria-hidden
+          className="ease-expo-out absolute inset-0 grid place-items-center transition-opacity delay-400 duration-150 motion-reduce:transition-none starting:opacity-0"
+        >
+          <LoaderCircleIcon {...ICON} className="animate-spin motion-reduce:animate-none" />
+        </span>
       ) : null}
-      {children}
     </BaseButton>
   );
   if (!off) return button;

@@ -14,6 +14,13 @@ export const ICON = { strokeWidth: 1.8, "aria-hidden": true } as const;
 export const FOCUS =
   "outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-pw-focus";
 
-/** Presses and small state changes: 150 ms on the expo-out curve, none under reduced motion. */
-export const PRESS =
-  "transition-[scale,background-color,border-color,color,box-shadow] duration-150 ease-expo-out active:scale-[0.97] motion-reduce:transition-none motion-reduce:active:scale-100";
+/**
+ * Presses on the expo-out curve: in fast (150 ms) and back slower (250 ms), so a tap reads at once and the release
+ * settles. A mouse press scales to 0.97. A touch press darkens instead: a scale under a thumb reads as lag while
+ * scrolling (after Meta's Astryx). Nothing moves under reduced motion. References: docs/tether-kit/gate-a-proposal.md.
+ */
+export const PRESS = [
+  "transition-[scale,background-color,border-color,color,box-shadow,filter] duration-250 ease-expo-out active:duration-150",
+  "pointer-fine:active:scale-[0.97] pointer-coarse:active:brightness-95",
+  "motion-reduce:transition-none motion-reduce:pointer-fine:active:scale-100",
+].join(" ");
