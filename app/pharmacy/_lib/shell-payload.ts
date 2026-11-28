@@ -37,6 +37,8 @@ export async function shellPayload(): Promise<PharmacyShellPayload | null> {
       .map((w) => w[0]!.toUpperCase())
       .join("") || "·";
   return {
+    hospitalId: scope.hospitalId,
+    userId: scope.userId,
     hospitalName: scope.hospitalName,
     userName: name,
     initials,
