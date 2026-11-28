@@ -5,6 +5,12 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); version
 
 ## [Unreleased]
 
+### Changed — The head of pharmacy signs rule changes and clinical content alone ([ADR 0550](docs/adr/0550-head-of-pharmacy-signs-alone.md)) — 28 Nov 2026
+
+A rule change (Set-up › Rules, the Medicines rule dialog, roster rules) applies on the head of pharmacy's signature; a pharmacist, technician or dispenser still proposes, and only the head signs it. Rule groups are signed by the head alone. Clinical content goes into force on the head's one signature. Nobody signs as "second signer". Controlled-medicine witnesses and going live are unchanged. Wording is draft.
+
+**Owner steps:** migration 0320 (GATED) — applied by the owner on 28 Nov 2026, before this app change deployed.
+
 ### Added — The nurse ward desk, Phases 2–4 ([ADR 0546](docs/adr/0546-the-nurse-ward-desk.md)) — 28 Nov 2026
 
 Behind `NURSE_WARD_V2`. **Phase 2:** the nursing care plan on the nurse's chart (problem, nursing diagnosis, related to, as shown by, goal, care items to tick, shift evaluation Met/Progressing/Not met, resolve), started from a draft library pending the CSO; append-only (an untick is a new event). Samples to take join the To do board (urgent ones count from when they were asked). **Phase 3:** a withheld dose takes a standard reason (away from the ward, nil by mouth, refused, vomiting, not available, clinical reason, other), stored as the reason's opening words; "refused" uses the refused state. A Round and co-sign page shows today's doses across the nurse's patients by drug round, doses waiting for a co-sign, and the nurse's own co-sign rules from `resolveNursingCapabilities` (until now called nowhere). **Phase 4:** a ward and department Calendar (the in-charge adds and cancels, nurses ask to go, the in-charge decides), Leave requests (ask, withdraw; the department's in-charge approves or declines), an Incident log for falls, pressure injuries and medication incidents (counted in the in-charge's ward figures), and SBAR handover per patient with receipt at the bedside. All append-only and audited.

@@ -188,8 +188,10 @@ describe("Rules", () => {
     expect(R.canSecondSign(p, "c")).toBe(true);
     expect(R.canInChargeSign(p, "c")).toBe(false);
     expect(R.canInChargeSign({ proposedBy: "a", signedBy: [], roles: [] }, "a")).toBe(true);
+    // ADR 0550: the head of pharmacy's signature alone applies the change.
     expect(R.applies(["in_charge", "second"])).toBe(true);
-    expect(R.applies(["in_charge"])).toBe(false);
+    expect(R.applies(["in_charge"])).toBe(true);
+    expect(R.applies(["second"])).toBe(false);
     expect(R.applyProposal(90, { n: 120, applied: true })).toBe(120);
     expect(R.applyProposal(90, { n: 120, applied: false })).toBe(90);
   });

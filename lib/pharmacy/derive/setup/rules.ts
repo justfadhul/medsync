@@ -19,9 +19,8 @@ export const canSecondSign = (p: ProposalLite, actor: string) =>
 export const canInChargeSign = (p: ProposalLite, actor: string) =>
   !p.signedBy.includes(actor) && !p.roles.includes("in_charge");
 
-/** Both roles signed: the change applies (the database does it in the same transaction). */
-export const applies = (roles: readonly string[]) =>
-  roles.includes("in_charge") && roles.includes("second");
+/** The head of pharmacy signed: the change applies (ADR 0550; the database does it in the same transaction). */
+export const applies = (roles: readonly string[]) => roles.includes("in_charge");
 
 /** A signed number replaces the default; a proposal never changes the value until it applies. */
 export function applyProposal(current: number, p: { n: number | null; applied: boolean }) {

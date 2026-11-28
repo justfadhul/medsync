@@ -147,8 +147,7 @@ describe.skipIf(!laneOn)("Set-up tabs through the actions (0274, §I)", () => {
   it("§I.4 the handover rule's signed number moves the missed time", async () => {
     expect((await read.loadPlaces(db, chief, true))!.rules.missedMin).toBe(30);
     const p = await propose("ho", "missed", 45);
-    await ok(sign(p.id, chief, "in_charge"));
-    await ok(sign(p.id, other, "second"));
+    await ok(sign(p.id, chief, "in_charge")); // ADR 0550: the head signs alone
     expect((await read.loadPlaces(db, chief, true))!.rules.missedMin).toBe(45);
   });
 
@@ -248,16 +247,18 @@ describe.skipIf(!laneOn)("Set-up tabs through the actions (0274, §I)", () => {
     ).toBeTruthy();
     const p = await propose("cold", "expiry_warning", 120);
     expect(await refusal(sign(p.id, chief, "second"))).toBeTruthy();
+    expect(await refusal(sign(p.id, other, "second"))).toBeTruthy(); // ADR 0550: no second signer
     await ok(sign(p.id, chief, "in_charge"));
-    await ok(sign(p.id, other, "second"));
     const g = (await read.loadRulesView(db, chief, true))!.groups.find((x) => x.key === "cold")!;
     expect(g.rules.find((r) => r.key === "expiry_warning")!.n).toBe(120);
   });
 
   it("§I.9 rejecting needs a note and shows in the history", async () => {
     const p = await propose("cold", "near_limit", 1);
-    expect(await refusal(R.rejectProposal(other, { id: p.id, note: "" }))).toBeTruthy();
-    await ok(R.rejectProposal(other, { id: p.id, note: "Too wide for vaccines" }));
+    // ADR 0550: the head of pharmacy, the only signer, is the one who rejects.
+    expect(await refusal(R.rejectProposal(other, { id: p.id, note: "Too wide" }))).toBeTruthy();
+    expect(await refusal(R.rejectProposal(chief, { id: p.id, note: "" }))).toBeTruthy();
+    await ok(R.rejectProposal(chief, { id: p.id, note: "Too wide for vaccines" }));
     const h = (await read.loadRulesView(db, chief, true))!.history;
     expect(h.find((x) => x.kind === "rejected")?.rejectNote).toBe("Too wide for vaccines");
   });

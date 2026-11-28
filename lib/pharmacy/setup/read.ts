@@ -576,7 +576,8 @@ export async function loadRulesView(
       key: g.key,
       title: g.title,
       showsOn: g.showsOn,
-      signed: sig.length === 2,
+      // ADR 0550: the head's signature alone signs the group (two-signature groups from before stay signed).
+      signed: sig.some((s) => s.role === "in_charge"),
       signatures: sig.map((s) => ({ role: s.role, byName: s.who, at: iso(s.at)! })),
       rules: [
         ...g.rules.map((r) => {
@@ -591,7 +592,7 @@ export async function loadRulesView(
             n: v,
             source: row
               ? ("changed" as const)
-              : sig.length === 2
+              : sig.some((s) => s.role === "in_charge")
                 ? ("signed" as const)
                 : ("default" as const),
             changedAt: iso(row?.updated_at),
@@ -658,7 +659,7 @@ export async function loadRulesView(
         rejectedBy: x.rejecter,
       })),
       ...gsigs
-        .filter((s) => s.role === "second")
+        .filter((s) => s.role === "in_charge")
         .map((s) => ({
           at: iso(s.at)!,
           group: title(s.group_key),

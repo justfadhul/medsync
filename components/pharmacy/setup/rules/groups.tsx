@@ -226,12 +226,8 @@ function UnsignedBanner({
   const sign = (role: "in_charge" | "second") =>
     run(
       () => signGroupAction({ group: g.key, role }),
-      () =>
-        has(role === "in_charge" ? "second" : "in_charge")
-          ? R.groupSigned(g.title)
-          : role === "in_charge"
-            ? R.groupSignedOne
-            : R.groupSignedSecond,
+      // ADR 0550: the head's signature signs the group.
+      () => (role === "in_charge" ? R.groupSigned(g.title) : R.groupSignedSecond),
     );
   const btn = (role: "in_charge" | "second") =>
     has(role) ? (

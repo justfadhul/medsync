@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import { PHARMACY_REWORK_COPY } from "@/content/pharmacy-rework";
 import { pharmacyDevHospital } from "@/lib/pharmacy/access";
 import {
   pharmacyReactionsLiveFor,
@@ -46,12 +47,15 @@ describe("PHARMACY_WORKSPACE_V2 in production", () => {
 // The rework's tiers keep the same exemption: a test hospital is not sent to a 404 while the rework wording is draft.
 describe("the rework tiers in production", () => {
   afterEach(() => vi.unstubAllEnvs());
-  it("are off at a real hospital and on at a listed test hospital", () => {
+  it("are on at a real hospital once the CSO signed the rework wording (28 Nov 2026), and at a test hospital", () => {
     vi.stubEnv("VERCEL_ENV", "production");
     vi.stubEnv("PHARMACY_WORKSPACE", "1");
     vi.stubEnv("PHARMACY_DEV_HOSPITALS", "h-test");
-    expect(pharmacyTiersFor("h-real").core).toBe(false);
+    expect(PHARMACY_REWORK_COPY.status).toBe("signed");
+    expect(pharmacyTiersFor("h-real").core).toBe(true);
     expect(pharmacyTiersFor("h-test").core).toBe(true);
+    vi.stubEnv("PHARMACY_WORKSPACE", "h-other");
+    expect(pharmacyTiersFor("h-real").core).toBe(false);
   });
 
   it("every older area gate takes the same exemption, so a test hospital never meets a draft-wording 404", () => {

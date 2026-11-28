@@ -364,7 +364,7 @@ describe.skipIf(!laneOn)("Pharmacy set-up tabs: database invariants (0274)", () 
     expect(await n()).toBe(1);
   });
 
-  it("the proposer never second-signs; a rejection carries a note; a group needs two different people", async () => {
+  it("only the head of pharmacy signs, alone; a rejection carries a note (ADR 0550)", async () => {
     const p = await id(
       `INSERT INTO public.pharmacy_rule_proposals (hospital_id, rule_group, key, old_text, new_text, reason, proposed_by, params)
        VALUES ($1, 'cold', 'expiry_warning', 'Warn 90 days before expiry', 'Warn 120 days before expiry', 'Slow movers', $2, '{"n":120}')
@@ -375,10 +375,18 @@ describe.skipIf(!laneOn)("Pharmacy set-up tabs: database invariants (0274)", () 
       await hint(
         pg.query(
           `INSERT INTO public.pharmacy_rule_signatures (proposal_id, role, signed_by) VALUES ($1, 'second', $2)`,
+          [p, f.ms],
+        ),
+      ),
+    ).toMatch(/only the head of pharmacy signs/);
+    expect(
+      await hint(
+        pg.query(
+          `INSERT INTO public.pharmacy_rule_signatures (proposal_id, role, signed_by) VALUES ($1, 'in_charge', $2)`,
           [p, f.tech],
         ),
       ),
-    ).toMatch(/proposer cannot be the second signer/);
+    ).toMatch(/only the head of pharmacy signs/);
     expect(
       await hint(
         pg.query(
@@ -391,10 +399,6 @@ describe.skipIf(!laneOn)("Pharmacy set-up tabs: database invariants (0274)", () 
       `INSERT INTO public.pharmacy_rule_signatures (proposal_id, role, signed_by) VALUES ($1, 'in_charge', $2)`,
       [p, f.boss],
     );
-    await pg.query(
-      `INSERT INTO public.pharmacy_rule_signatures (proposal_id, role, signed_by) VALUES ($1, 'second', $2)`,
-      [p, f.ms],
-    );
     const n = await pg.query<{ n: string }>(
       `SELECT private.pharmacy_rule_n($1, 'cold', 'expiry_warning', 90)::text AS n`,
       [f.h],
@@ -405,9 +409,9 @@ describe.skipIf(!laneOn)("Pharmacy set-up tabs: database invariants (0274)", () 
         `INSERT INTO public.pharmacy_rule_group_signatures (hospital_id, group_key, role, signed_by) VALUES ($1, 'ord', $2, $3)`,
         [f.h, role, by],
       );
-    expect(await hint(g("in_charge", f.tech!))).toMatch(/only the in-charge/);
+    expect(await hint(g("in_charge", f.tech!))).toMatch(/only the head of pharmacy signs/);
     await g("in_charge", f.boss!);
-    expect(await hint(g("second", f.boss!))).toMatch(/two different people/);
+    expect(await hint(g("second", f.ms!))).toMatch(/only the head of pharmacy signs/);
   });
 
   it("SMS: never to an opted-out number, in quiet hours, past the weekly cap or the budget cap", async () => {

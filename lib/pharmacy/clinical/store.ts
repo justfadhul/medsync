@@ -4,6 +4,7 @@ import type { PharmacyCtx } from "@/lib/pharmacy/write";
 import { and, desc, eq, gte, sql } from "drizzle-orm";
 import { z } from "zod";
 
+import { HEAD_SIGNS_ALONE } from "@/content/pharmacy-clinical";
 import AWARE from "@/data/pharmacy/clinical/aware-candidates.json";
 import CANDIDATES from "@/data/pharmacy/clinical/interaction-candidates.json";
 import {
@@ -149,12 +150,20 @@ export async function signEntry(ctx: PharmacyCtx, input: z.infer<typeof SignInpu
     | { n: number }[]
     | { rows: { n: number }[] };
   const n = (Array.isArray(others) ? others : others.rows)[0]?.n ?? 0;
+  // ADR 0550: the head of pharmacy signs alone; 0210's check is met by the recorded ruling, as packs do (0122).
+  const headRows = (await ctx.tx.execute(sql`
+    SELECT private.pharmacy_can_user(${signer}::uuid, ${ctx.actor.hospitalId}::uuid, 'pharmacy.manage') AS head`)) as unknown as
+    | { head: boolean }[]
+    | { rows: { head: boolean }[] };
+  const head = !!(Array.isArray(headRows) ? headRows : headRows.rows)[0]?.head;
+  const exception = input.exception ?? (head ? HEAD_SIGNS_ALONE : null);
   const refusal = signRefusal({
     authorUserId: e.authorUserId,
     signerUserId: signer,
     alreadySigned: already.map((a) => a.who),
     otherEligibleSigners: n,
-    exception: input.exception,
+    exception,
+    head,
   });
   if (refusal) throw fail("forbidden", REFUSAL[refusal] ?? refusal);
   await ctx.tx.insert(pharmacyContentSignatures).values({
@@ -163,9 +172,9 @@ export async function signEntry(ctx: PharmacyCtx, input: z.infer<typeof SignInpu
     signerUserId: signer,
     role: input.role,
     attestationId: input.attestationId,
-    exceptionText: input.exception,
+    exceptionText: exception,
   });
-  const status = statusAfterSigning(already.length + 1, !!input.exception);
+  const status = statusAfterSigning(already.length + 1, !!exception);
   if (status === "in_force") {
     // The version in force before this one is replaced by it (5.2: the old stays in force until then).
     await ctx.tx
