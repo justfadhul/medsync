@@ -53,8 +53,8 @@ const globals = {
 };
 const entry = `import * as kit from "@/components/tether-kit";
 import { demos } from "./scripts/tether-kit/previews";
-import { ArrowRightIcon, CalendarPlusIcon, EllipsisIcon, PlusIcon, SendIcon, SirenIcon, XIcon } from "lucide-react";
-const icons = { ArrowRightIcon, CalendarPlusIcon, EllipsisIcon, PlusIcon, SendIcon, SirenIcon, XIcon };
+import { ArrowRightIcon, CalendarPlusIcon, EllipsisIcon, PlusIcon, SearchIcon, SendIcon, SirenIcon, XIcon } from "lucide-react";
+const icons = { ArrowRightIcon, CalendarPlusIcon, EllipsisIcon, PlusIcon, SearchIcon, SendIcon, SirenIcon, XIcon };
 window.TetherKit = { ...kit, demos, icons };`;
 const js = await build({
   stdin: { contents: entry, resolveDir: ROOT, loader: "tsx" },

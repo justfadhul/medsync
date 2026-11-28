@@ -48,3 +48,35 @@ export const INERT =
  * edge there, so every control keeps its shape; elsewhere it is invisible and costs nothing.
  */
 export const FORCED_EDGE = "border border-transparent";
+
+/**
+ * A field's frame (Set 2): the edge, the hover, the focus ring and the invalid, disabled and read-only looks, on
+ * a wrapper around the native control so prefixes, units and buttons sit inside the same edge. Focus anywhere
+ * inside shows the kit's one ring (2 px, 2 px gap) and a focus-coloured edge. An invalid field doubles its edge in
+ * ink without moving (an inset line), never red: the error's icon and word carry the meaning.
+ */
+export const FIELD_FRAME = [
+  "relative flex w-full min-w-0 items-stretch overflow-hidden border border-pw-line-strong bg-pw-surface text-pw-ink",
+  "transition-[border-color,box-shadow] duration-150 ease-expo-out motion-reduce:transition-none",
+  "pointer-fine:hover:not-focus-within:not-data-[invalid]:border-pw-ink-3",
+  "focus-within:border-pw-focus focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-pw-focus",
+  "data-[invalid]:border-pw-ink data-[invalid]:shadow-[inset_0_0_0_1px_var(--pw-ink)]",
+  "data-[disabled]:cursor-not-allowed data-[disabled]:bg-pw-surface-2 data-[disabled]:text-pw-ink-3 data-[disabled]:pointer-fine:hover:border-pw-line-strong",
+  "data-[readonly]:bg-pw-surface-2 data-[readonly]:border-pw-line data-[readonly]:pointer-fine:hover:border-pw-line",
+].join(" ");
+
+/**
+ * Field sizes: 48 px tall with 17 px type for patients (16 px or more, so a phone never zooms on focus), 40 px with
+ * 14 px at the desk. Minimum heights, in rem type, so a larger text setting grows the field instead of clipping it.
+ */
+export const FIELD_SIZE = [
+  "min-h-12 rounded-pw-field text-[1.0625rem]",
+  "in-data-[density=desk]:min-h-10 in-data-[density=desk]:rounded-[12px] in-data-[density=desk]:text-sm",
+].join(" ");
+
+/** The native control inside a frame: borderless, transparent, the frame does the rest. Autofill keeps the kit's colours. */
+export const FIELD_CONTROL = [
+  "min-w-0 flex-1 bg-transparent px-4 py-2.5 outline-none placeholder:text-pw-ink-4 disabled:cursor-not-allowed",
+  "in-data-[density=desk]:px-3 in-data-[density=desk]:py-2",
+  "autofill:shadow-[inset_0_0_0_100px_var(--pw-surface)] autofill:[-webkit-text-fill-color:var(--pw-ink)]",
+].join(" ");

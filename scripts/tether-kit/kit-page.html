@@ -73,6 +73,8 @@ body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-a
 .st { display: inline-flex; align-items: center; gap: 5px; height: 22px; padding: 0 8px; border-radius: 999px; font-size: 11.5px; font-weight: 600; white-space: nowrap; }
 .st.review { background: var(--accent-tint); color: var(--accent-text); }
 .st.planned { background: var(--surface-3); color: var(--ink-2); }
+.st.done { background: var(--band); color: var(--on-band); }
+.ex-form { display: flex; flex-direction: column; gap: 18px; width: 100%; max-width: 480px; margin: 0 auto; }
 
 .content { min-width: 0; display: grid; grid-template-columns: minmax(0, 1fr) 200px; gap: 48px; padding: 40px 0 96px 48px; }
 .content.wide { grid-template-columns: minmax(0, 1fr); }
@@ -274,7 +276,7 @@ td.muted { color: var(--ink-2); }
   <div class="bar-in">
     <button class="menu-btn" type="button" aria-expanded="false" aria-controls="side">Menu</button>
     <a class="brand" href="#overview">Tether<span>&nbsp;Kit</span></a>
-    <span class="ver">Prototype · Set 1.1</span>
+    <span class="ver">Prototype · Set 2</span>
     <span class="pal" title="The palette this prototype uses. The product keeps its shipped colours."><i></i>Jacaranda</span>
     <span class="grow"></span>
     <div class="seg" role="group" aria-label="Theme" id="theme">
@@ -420,6 +422,33 @@ td.muted { color: var(--ink-2); }
   }
   EX.cardPress = { code: '<CardLink href="/visits/k7m42q">\n  <Tag area="visits">Visits</Tag>\n  <h3>Outpatients · Morning</h3>\n  <p>Thu 4 Dec · Example clinic</p>\n</CardLink>\n\n<CardButton onClick={chooseDoctor}>…</CardButton>',
     render: function () { return col(pressCard("link", "Outpatients · Morning", "Thu 4 Dec · Example clinic"), pressCard("button", "Diabetes review", "Fri 5 Dec · Example clinic")); } };
+  /* ── Set 2 · Typing ── */
+  function F(props, control) { return h(K.Field, props, control); }
+  function form() { return h.apply(null, ["div", { className: "ex-form" }].concat([].slice.call(arguments))); }
+  EX.fieldAnatomy = { code: '<Field label="Phone number" hint="The 9 digits after +256.">\n  <Input prefix="+256" inputMode="tel" width="m" />\n</Field>',
+    render: function () { return form(F({ label: "Phone number", hint: "The 9 digits after +256." }, h(K.Input, { prefix: "+256", inputMode: "tel", width: "m", defaultValue: "772 123 456" }))); } };
+  EX.fieldError = { code: '<Field label="Weight" error="Enter a weight between 2 and 250 kg.">\n  <Input suffix="kg" width="s" inputMode="decimal" />\n</Field>',
+    render: function () { return form(F({ label: "Weight", error: "Enter a weight between 2 and 250 kg." }, h(K.Input, { suffix: "kg", width: "s", inputMode: "decimal", defaultValue: "300" }))); } };
+  EX.fieldAffix = { code: '<Field label="Amount paid"><Input prefix="UGX" width="m" inputMode="numeric" /></Field>\n<Field label="Search the queue"><Input icon={<SearchIcon {...ICON} />} type="search" /></Field>',
+    render: function () { return form(F({ label: "Amount paid" }, h(K.Input, { prefix: "UGX", width: "m", inputMode: "numeric", defaultValue: "25,000" })), F({ label: "Search the queue" }, h(K.Input, { icon: ic("SearchIcon"), type: "search", placeholder: "Name, phone or booking code" }))); } };
+  EX.fieldPassword = { code: '<Field label="Password">\n  <Input type="password" autoComplete="current-password" />\n</Field>',
+    render: function () { return form(F({ label: "Password" }, h(K.Input, { type: "password", defaultValue: "example-only", autoComplete: "off" }))); } };
+  EX.fieldWidths = { code: '<Field label="Booking code"><Input width="s" /></Field>\n<Field label="Full name"><Input width="m" /></Field>\n<Field label="Home address"><Input /></Field>',
+    render: function () { return form(F({ label: "Booking code" }, h(K.Input, { width: "s", defaultValue: "K7M-42Q" })), F({ label: "Full name" }, h(K.Input, { width: "m" })), F({ label: "Home address" }, h(K.Input, null))); } };
+  EX.fieldStates = { code: '<Field label="Middle name" optional><Input width="m" /></Field>\n<Field label="Hospital number" hint="Given by the clinic." disabled><Input width="m" /></Field>\n<Field label="Booking code"><Input width="s" value="K7M-42Q" readOnly /></Field>',
+    render: function () { return form(F({ label: "Middle name", optional: true }, h(K.Input, { width: "m" })), F({ label: "Hospital number", hint: "Given by the clinic.", disabled: true }, h(K.Input, { width: "m" })), F({ label: "Booking code" }, h(K.Input, { width: "s", value: "K7M-42Q", readOnly: true }))); } };
+  EX.textareaCount = { code: '<Field label="Note for the reception desk" hint="Anything the desk should know before you arrive." optional>\n  <Textarea maxLength={280} />\n</Field>',
+    render: function () { return form(F({ label: "Note for the reception desk", hint: "Anything the desk should know before you arrive.", optional: true }, h(K.Textarea, { maxLength: 280 }))); } };
+  EX.textareaGrow = { code: '<Field label="What happened?">\n  <Textarea />\n</Field>\n// Grows with what is typed, up to 60% of the screen.',
+    render: function () { return form(F({ label: "What happened?" }, h(K.Textarea, { defaultValue: "Type more lines here and the box grows with them.\nA second line.\nA third." }))); } };
+  EX.numWeight = { code: '<Field label="Weight" hint="Between 2 and 250 kg.">\n  <NumberInput unit="kg" min={2} max={250} step={0.5} defaultValue={64} />\n</Field>',
+    render: function () { return form(F({ label: "Weight", hint: "Between 2 and 250 kg." }, h(K.NumberInput, { unit: "kg", min: 2, max: 250, step: 0.5, defaultValue: 64 }))); } };
+  EX.numTemp = { code: '<Field label="Temperature" hint="Between 30 and 45 °C.">\n  <NumberInput unit="°C" min={30} max={45} step={0.1} defaultValue={36.8} />\n</Field>',
+    render: function () { return form(F({ label: "Temperature", hint: "Between 30 and 45 °C." }, h(K.NumberInput, { unit: "°C", min: 30, max: 45, step: 0.1, defaultValue: 36.8 }))); } };
+  EX.numCount = { code: '<Field label="How many people are with you?">\n  <NumberInput min={0} max={10} defaultValue={1} lessLabel="Fewer people" moreLabel="More people" />\n</Field>',
+    render: function () { return form(F({ label: "How many people are with you?" }, h(K.NumberInput, { min: 0, max: 10, defaultValue: 1, lessLabel: "Fewer people", moreLabel: "More people" }))); } };
+  EX.numStates = { code: '<Field label="Height" error="Enter a height between 40 and 250 cm.">\n  <NumberInput unit="cm" min={40} max={250} defaultValue={300} />\n</Field>\n<Field label="Last weight"><NumberInput unit="kg" value={64} readOnly /></Field>',
+    render: function () { return form(F({ label: "Height", error: "Enter a height between 40 and 250 cm." }, h(K.NumberInput, { unit: "cm", defaultValue: 300 })), F({ label: "Last weight" }, h(K.NumberInput, { unit: "kg", value: 64, readOnly: true }))); } };
   EX.ibAll = { code: '<IconButton label="Close" icon={<XIcon {...ICON} />} />\n<IconButton label="More" tone="outline" icon={<EllipsisIcon {...ICON} />} />\n<IconButton label="Add" tone="quiet" icon={<PlusIcon {...ICON} />} />',
     render: function () { return row(h(K.IconButton, { label: "Close", icon: ic("XIcon") }), h(K.IconButton, { label: "More", tone: "outline", icon: ic("EllipsisIcon") }), h(K.IconButton, { label: "Add", tone: "quiet", icon: ic("PlusIcon") })); } };
   EX.tagPlaces = { code: '<Tag area="visits">Visits</Tag>\n<Tag area="readings">Readings</Tag>\n<Tag area="medicines">Medicines</Tag>\n<Tag area="team">Care team</Tag>\n<Tag area="me">Me</Tag>',
@@ -447,6 +476,17 @@ td.muted { color: var(--ink-2); }
     dontPlaceFill: function () { return kit("patient", row(h("span", { className: "bg-pw-area-medicines text-pw-on-band", style: { borderRadius: 99, padding: "4px 12px", fontWeight: 600, fontSize: 13 } }, "Medicines"))); },
     doFlat: function () { return kit("patient", col(h(K.Card, null, h(K.Card, { flat: true }, h("span", { style: { fontWeight: 600 } }, "One card inside one card"))))); },
     dontEdge: function () { return kit("patient", col(h(K.Card, { style: { borderLeft: "4px solid var(--pw-accent-text)" } }, h("span", { style: { fontWeight: 600 } }, "A coloured left edge")))); },
+    miniField: function () { return kit("patient", form(F({ label: "Phone number", hint: "The 9 digits after +256." }, h(K.Input, { prefix: "+256", width: "m", defaultValue: "772 123 456" })))); },
+    miniTextarea: function () { return kit("patient", form(F({ label: "Note for the desk", optional: true }, h(K.Textarea, { maxLength: 280, rows: 2, defaultValue: "Arriving by boda." })))); },
+    miniNumber: function () { return kit("patient", form(F({ label: "Weight" }, h(K.NumberInput, { unit: "kg", defaultValue: 64 })))); },
+    doLabelAbove: function () { return kit("patient", form(F({ label: "Full name" }, h(K.Input, { width: "m" })))); },
+    dontPlaceholder: function () { return kit("patient", form(h(K.Input, { width: "m", placeholder: "Full name", "aria-label": "Full name" }))); },
+    doErrorFix: function () { return kit("patient", form(F({ label: "Phone number", error: "Enter the 9 digits after +256, for example 772 123 456." }, h(K.Input, { prefix: "+256", width: "m", defaultValue: "77212" })))); },
+    dontErrorVague: function () { return kit("patient", form(F({ label: "Phone number", error: "Invalid input." }, h(K.Input, { prefix: "+256", width: "m", defaultValue: "77212" })))); },
+    doWidth: function () { return kit("desk", form(F({ label: "Booking code" }, h(K.Input, { width: "s", defaultValue: "K7M-42Q" })))); },
+    dontWidth: function () { return kit("desk", form(F({ label: "Booking code" }, h(K.Input, { defaultValue: "K7M-42Q" })))); },
+    doUnit: function () { return kit("patient", form(F({ label: "Weight" }, h(K.NumberInput, { unit: "kg", defaultValue: 64 })))); },
+    dontUnit: function () { return kit("patient", form(F({ label: "Weight" }, h(K.Input, { width: "s", placeholder: "e.g. 64kg" })))); },
     stateRow: function () { return kit("patient", row(h(K.Button, { tone: "accent", size: "m" }, "Accent"), h(K.Button, { size: "m" }, "Primary"), h(K.Button, { tone: "soft", size: "m" }, "Soft"), h(K.Button, { tone: "outline", size: "m" }, "Outline"), h(K.Button, { tone: "quiet", size: "m" }, "Quiet"), h(K.Button, { tone: "danger", size: "m" }, "Help"))); },
     stateBand: function () { return kit("patient", col(h(K.Band, null, h("div", { className: "ex-row", style: { justifyContent: "flex-start" } }, h(K.Button, { size: "m" }, "Primary"), h(K.Button, { size: "m", tone: "soft" }, "Soft"), h(K.Button, { size: "m", tone: "outline" }, "Outline"), h(K.Button, { size: "m", tone: "quiet" }, "Quiet"))))); },
     stateCard: function () { return kit("patient", col(pressCard("button", "Hover or press this card", "The shadow lifts; the press deepens a faint layer"))); },
@@ -474,6 +514,11 @@ td.muted { color: var(--ink-2); }
 
   /* ── Playgrounds ───────────────────────────────────────────────────────── */
   var LABEL = { XIcon: "Close", EllipsisIcon: "More", PlusIcon: "Add" };
+  function fieldState(st, base) { var p = Object.assign({}, base); if (st === "hint") p.hint = "Shown under the label."; if (st === "error") p.error = "Say what to fix, as a sentence."; if (st === "optional") p.optional = true; if (st === "disabled") p.disabled = true; return p; }
+  function fieldCode(st, label, inner) {
+    var a = ['label="' + label + '"']; if (st === "hint") a.push('hint="Shown under the label."'); if (st === "error") a.push('error="Say what to fix, as a sentence."'); if (st === "optional") a.push("optional"); if (st === "disabled") a.push("disabled");
+    return "<Field " + a.join(" ") + ">\n  " + inner + "\n</Field>";
+  }
   var PLAY = {
     button: {
       controls: [
@@ -530,6 +575,53 @@ td.muted { color: var(--ink-2); }
         return "<Tag" + (a.length ? " " + a.join(" ") : "") + ">" + w + "</Tag>";
       }
     },
+    field: {
+      controls: [
+        { key: "type", label: "Type", options: ["text", "password"] },
+        { key: "prefix", label: "Prefix", options: ["none", "+256", "UGX"] },
+        { key: "suffix", label: "Suffix", options: ["none", "kg"] },
+        { key: "width", label: "Width", options: ["full", "m", "s"] },
+        { key: "state", label: "State", options: ["plain", "hint", "error", "optional", "disabled", "read-only"] },
+        { key: "density", label: "Density", options: ["patient", "desk"] },
+        { key: "label", label: "Label", text: true }
+      ],
+      init: { type: "text", prefix: "+256", suffix: "none", width: "m", state: "hint", density: "patient", label: "Phone number" },
+      render: function (s) {
+        var ip = { type: s.type, width: s.width }; if (s.prefix !== "none") ip.prefix = s.prefix; if (s.suffix !== "none") ip.suffix = s.suffix; if (s.state === "read-only") { ip.readOnly = true; ip.value = "772 123 456"; }
+        return kit(s.density, form(F(fieldState(s.state, { label: s.label || "Label" }), h(K.Input, ip))));
+      },
+      code: function (s) {
+        var a = []; if (s.type !== "text") a.push('type="' + s.type + '"'); if (s.prefix !== "none") a.push('prefix="' + s.prefix + '"'); if (s.suffix !== "none") a.push('suffix="' + s.suffix + '"'); if (s.width !== "full") a.push('width="' + s.width + '"'); if (s.state === "read-only") a.push('value="772 123 456" readOnly');
+        return (s.density === "desk" ? '// Inside <KitRoot density="desk">\n' : "") + fieldCode(s.state, s.label || "Label", "<Input" + (a.length ? " " + a.join(" ") : "") + " />");
+      }
+    },
+    textarea: {
+      controls: [
+        { key: "limit", label: "Limit", options: ["none", "140", "280"] },
+        { key: "state", label: "State", options: ["plain", "hint", "error", "optional", "disabled"] },
+        { key: "density", label: "Density", options: ["patient", "desk"] }
+      ],
+      init: { limit: "280", state: "optional", density: "patient" },
+      render: function (s) { var tp = {}; if (s.limit !== "none") tp.maxLength = +s.limit; return kit(s.density, form(F(fieldState(s.state, { label: "Note for the reception desk" }), h(K.Textarea, tp)))); },
+      code: function (s) { return fieldCode(s.state, "Note for the reception desk", "<Textarea" + (s.limit !== "none" ? " maxLength={" + s.limit + "}" : "") + " />"); }
+    },
+    number: {
+      controls: [
+        { key: "unit", label: "Unit", options: ["none", "kg", "°C", "mmHg"] },
+        { key: "step", label: "Step", options: ["1", "0.5", "0.1"] },
+        { key: "state", label: "State", options: ["plain", "hint", "error", "disabled", "read-only"] },
+        { key: "density", label: "Density", options: ["patient", "desk"] }
+      ],
+      init: { unit: "kg", step: "0.5", state: "hint", density: "patient" },
+      render: function (s) {
+        var np = { step: +s.step, defaultValue: 64 }; if (s.unit !== "none") np.unit = s.unit; if (s.state === "read-only") { np.readOnly = true; np.value = 64; delete np.defaultValue; }
+        return kit(s.density, form(F(fieldState(s.state, { label: "Weight" }), h(K.NumberInput, np))));
+      },
+      code: function (s) {
+        var a = []; if (s.unit !== "none") a.push('unit="' + s.unit + '"'); if (s.step !== "1") a.push("step={" + s.step + "}"); a.push(s.state === "read-only" ? "value={64} readOnly" : "defaultValue={64}");
+        return fieldCode(s.state, "Weight", "<NumberInput " + a.join(" ") + " />");
+      }
+    },
     card: {
       controls: [
         { key: "part", label: "Part", options: ["Card", "Card flat", "CardButton", "Band"] },
@@ -582,16 +674,17 @@ td.muted { color: var(--ink-2); }
   var NAV = [
     { h: null, items: [["overview", "Overview"], ["start", "Get started"]] },
     { h: "Foundations", items: [["colour", "Colour"], ["type", "Typography"], ["shape", "Space and shape"], ["motion", "Elevation and motion"], ["states", "Interaction states"]] },
-    { h: "Set 1 · Actions and labels", st: true, items: [["button", "Button"], ["icon-button", "Icon button"], ["tags", "Tag and status"], ["surfaces", "Card and band"]] },
+    { h: "Set 1 · Actions and labels", st: "done", items: [["button", "Button"], ["icon-button", "Icon button"], ["tags", "Tag and status"], ["surfaces", "Card and band"]] },
+    { h: "Set 2 · Typing", st: "review", items: [["field", "Field and input"], ["textarea", "Textarea"], ["number-input", "Number input"]] },
     { h: "Coming next", items: [["roadmap", "Sets 2 to 8"]] },
     { h: "About", items: [["references", "References"], ["changelog", "Changelog"]] }
   ];
   var ORDER = []; NAV.forEach(function (g) { g.items.forEach(function (i) { ORDER.push(i); }); });
   function titleOf(id) { var t = ORDER.filter(function (i) { return i[0] === id; })[0]; return t ? t[1] : id; }
-  var SETS = [["1 · Actions and labels", "Button, ButtonLink, IconButton, Tag, StatusTag, Card, CardLink, CardButton, Band", "Base UI Button", "In review"], ["2 · Typing", "Field, Input, Textarea, NumberInput", "Base UI Field, Input, NumberField", "Planned"], ["3 · Choosing", "Select, Segments, Tabs, Checkbox, Switch, RadioCards, ChipGroup", "Base UI Select, Tabs, ToggleGroup, Checkbox, Switch, Radio", "Planned"], ["4 · Interrupting", "Dialog, DangerDialog, Toast, Sheet (phone only)", "Base UI Dialog, AlertDialog, Toast, Drawer", "Planned"], ["5 · Menus and lookups", "Combobox, Menu, Popover, Tooltip, OTPField, PhoneField", "Base UI", "Planned"], ["6 · Date and time", "DateField, TimeField, Calendar", "Base UI Popover and Tether's grid", "Planned"], ["7 · Data", "Table with sort, select and bulk; stat cards", "Tether's own", "Planned"], ["8 · Tether's own", "Ticket, PatientBand, StageBar, EmptyState, Skeleton", "none", "Planned"]];
+  var SETS = [["1 · Actions and labels", "Button, ButtonLink, IconButton, Tag, StatusTag, Card, CardLink, CardButton, Band", "Base UI Button", "Signed"], ["2 · Typing", "Field, Input, Textarea, NumberInput", "Base UI Field, Input, NumberField", "In review"], ["3 · Choosing", "Select, Segments, Tabs, Checkbox, Switch, RadioCards, ChipGroup", "Base UI Select, Tabs, ToggleGroup, Checkbox, Switch, Radio", "Planned"], ["4 · Interrupting", "Dialog, DangerDialog, Toast, Sheet (phone only)", "Base UI Dialog, AlertDialog, Toast, Drawer", "Planned"], ["5 · Menus and lookups", "Combobox, Menu, Popover, Tooltip, OTPField, PhoneField", "Base UI", "Planned"], ["6 · Date and time", "DateField, TimeField, Calendar", "Base UI Popover and Tether's grid", "Planned"], ["7 · Data", "Table with sort, select and bulk; stat cards", "Tether's own", "Planned"], ["8 · Tether's own", "Ticket, PatientBand, StageBar, EmptyState, Skeleton", "none", "Planned"]];
   function setsTable(withFrom) {
     return '<div class="table-wrap"><table><thead><tr><th>Set</th><th>Parts</th>' + (withFrom ? "<th>Behaviour from</th>" : "") + "<th>Status</th></tr></thead><tbody>" +
-      SETS.map(function (s) { return "<tr><td>" + s[0] + "</td><td>" + s[1] + "</td>" + (withFrom ? '<td class="muted">' + s[2] + "</td>" : "") + '<td><span class="st ' + (s[3] === "In review" ? "review" : "planned") + '">' + s[3] + "</span></td></tr>"; }).join("") + "</tbody></table></div>";
+      SETS.map(function (s) { return "<tr><td>" + s[0] + "</td><td>" + s[1] + "</td>" + (withFrom ? '<td class="muted">' + s[2] + "</td>" : "") + '<td><span class="st ' + (s[3] === "In review" ? "review" : s[3] === "Signed" ? "done" : "planned") + '">' + s[3] + "</span></td></tr>"; }).join("") + "</tbody></table></div>";
   }
   function header(crumb, title, lede, meta) {
     return '<div class="page-h"><div class="crumbs">' + crumb + "</div><h1>" + title + '</h1><p class="lede">' + lede + "</p>" + (meta ? '<div class="meta">' + meta + "</div>" : "") + "</div>";
@@ -602,7 +695,7 @@ td.muted { color: var(--ink-2); }
       rows.map(function (r) { return "<tr><td><code>" + r[0] + "</code>" + (r[4] ? '<span class="req">Required</span>' : "") + "</td><td><code>" + esc(r[1]) + '</code></td><td class="muted">' + (r[2] ? "<code>" + esc(r[2]) + "</code>" : "—") + "</td><td>" + r[3] + "</td></tr>"; }).join("") + "</tbody></table></div>";
   }
   function a11y(items) { return '<ul class="a11y">' + items.map(function (i) { return "<li><b>" + i[0] + "</b><span>" + i[1] + "</span></li>"; }).join("") + "</ul>"; }
-  function srcMeta(file, beh) { return '<span class="st review">In review · Set 1</span><span>Source <code>components/tether-kit/' + file + "</code></span><span>Behaviour: " + beh + "</span>"; }
+  function srcMeta(file, beh, set) { var two = set === 2; return '<span class="st ' + (two ? "review" : "done") + '">' + (two ? "In review · Set 2" : "Signed · Set 1") + '</span><span>Source <code>components/tether-kit/' + file + "</code></span><span>Behaviour: " + beh + "</span>"; }
 
   var PAGES = {
     overview: {
@@ -612,15 +705,15 @@ td.muted { color: var(--ink-2); }
           '<p class="lede">The Tether Kit is the component library for everything Tether shows, from the patient\'s phone to the reception desk. Behaviour comes from Base UI; the look is Tide, here in the Jacaranda palette. Every part sizes itself for patients or for the desk, so a patient and a receptionist at the same clinic see one product.</p>' +
           '<div class="cta"><a class="p" href="#start">Get started</a><a class="s" href="#button">Browse components</a></div></div>' +
           '<div class="hero-art" aria-label="The Set 1 parts, live"><div data-live="heroKit"></div></div></div>' +
-          '<div class="stats"><div><b>9</b><span>parts in Set 1</span></div><div><b>1 of 8</b><span>sets built, in review</span></div><div><b>2</b><span>densities, patient and desk</span></div><div><b>2</b><span>themes, light and dark</span></div></div>' +
+          '<div class="stats"><div><b>13</b><span>parts in Sets 1 and 2</span></div><div><b>2 of 8</b><span>sets built; Set 2 in review</span></div><div><b>2</b><span>densities, patient and desk</span></div><div><b>2</b><span>themes, light and dark</span></div></div>' +
           block("principles", "Principles", "What every part holds to, so no screen has to remember.",
             '<div class="princ"><div><b>One thing at a time</b><span>One headline and one main action per screen. The bright accent marks what to do now, once per region.</span></div>' +
             "<div><b>Intent, not colour</b><span>Parts take a tone and a size. They own every colour, radius and motion, so a screen cannot drift.</span></div>" +
             "<div><b>The rules travel with the parts</b><span>A disabled button says why. A status is an icon and a word. An icon-only button is named. Tests hold each rule.</span></div>" +
             "<div><b>Health colours mean health</b><span>Red, amber and green appear only for health states, always with a word, never for workflow.</span></div></div>") +
-          block("components", "Components", "Set 1 is built and in review. Open a part for its playground, examples, rules and props.",
-            '<div class="cards">' + [["button", "Button", "Acts or navigates, in six tones and three sizes.", "miniButton"], ["icon-button", "Icon button", "A named round button for close, more and add.", "miniIcon"], ["tags", "Tag and status", "Labels for things, and the one part that carries state.", "miniTag"], ["surfaces", "Card and band", "The white card, the card you press, and the navy band.", "miniCard"]].map(function (c) {
-              return '<a class="ccard" href="#' + c[0] + '"><div class="stage center"><div data-live="' + c[3] + '"></div></div><div class="cbody"><div class="row"><b>' + c[1] + '</b><span class="st review">In review</span></div><span class="d">' + c[2] + "</span></div></a>";
+          block("components", "Components", "Set 1 is signed; Set 2 is in review. Open a part for its playground, examples, rules and props.",
+            '<div class="cards">' + [["button", "Button", "Acts or navigates, in six tones and three sizes.", "miniButton"], ["icon-button", "Icon button", "A named round button for close, more and add.", "miniIcon"], ["tags", "Tag and status", "Labels for things, and the one part that carries state.", "miniTag"], ["surfaces", "Card and band", "The white card, the card you press, and the navy band.", "miniCard"], ["field", "Field and input", "A label, a hint, an error that says what to fix, and the box.", "miniField", 2], ["textarea", "Textarea", "Longer answers that grow and count.", "miniTextarea", 2], ["number-input", "Number input", "A number with its unit and steppers.", "miniNumber", 2]].map(function (c) {
+              return '<a class="ccard" href="#' + c[0] + '"><div class="stage center"><div data-live="' + c[3] + '"></div></div><div class="cbody"><div class="row"><b>' + c[1] + "</b>" + (c[4] === 2 ? '<span class="st review">In review</span>' : '<span class="st done">Signed</span>') + '</div><span class="d">' + c[2] + "</span></div></a>";
             }).join("") + "</div>") +
           block("next", "Coming next", "Each set starts once the one before it is signed.", setsTable(false));
       }
@@ -753,6 +846,42 @@ td.muted { color: var(--ink-2); }
           block("props", "Props", "", '<h3 class="sub-h">Card</h3>' + props([["flat", "boolean", "false", "A hairline instead of a shadow, for a card inside a card."], ["…", "section props", "", "Content and <code>aria-*</code>."]]) + '<h3 class="sub-h">CardLink and CardButton</h3>' + props([["href", "string | UrlObject", "", "CardLink: where it goes.", true], ["onClick", "function", "", "CardButton: what it does."], ["…", "link or Base UI Button props", "", "One action per card: no second button inside."]]) + '<h3 class="sub-h">Band</h3>' + props([["…", "section props", "", "Marks itself <code>data-surface=\"band\"</code>; buttons inside take their band form."]]));
       }
     },
+    field: {
+      html: function () {
+        return header("Set 2 · Typing", "Field and input", "<code>Field</code> gives every control its label, hint and error; <code>Input</code> is the box. The error comes before the box and says what to fix, as an icon and a word, never red.", srcMeta("field.tsx", "Base UI Field and Input", 2)) +
+          block("playground", "Playground", "Change the props and the code follows.", playground("field")) +
+          block("examples", "Examples", "Each example switches between patient and desk density.",
+            frame("fieldAnatomy", "Label, hint and input") + frame("fieldError", "With an error") + frame("fieldAffix", "Prefix, suffix and search") + frame("fieldPassword", "Password: Show and Hide") + frame("fieldWidths", "Widths that hint at the answer") + frame("fieldStates", "Optional, disabled and read-only")) +
+          block("usage", "Usage", "One question per field. Ask for what you need in the order a person thinks of it. Fields are required unless marked optional.",
+            dd("doLabelAbove", "A label above the box, always visible.", "dontPlaceholder", "A placeholder as the label: it vanishes as soon as the person types.") +
+            dd("doErrorFix", "Say what to fix, with an example.", "dontErrorVague", "A vague error leaves the person guessing what is wrong.") +
+            dd("doWidth", "A short box for a short answer.", "dontWidth", "A full-width box for a seven-character code looks like it wants more.")) +
+          block("props", "Props", "", '<h3 class="sub-h">Field</h3>' + props([["label", "ReactNode", "", "What to enter, as a short noun phrase.", true], ["hint", "ReactNode", "", "Format, range, or why it is asked."], ["error", "string", "", "What to fix, as a sentence. Marks the field invalid."], ["optional", "boolean", "false", "Adds \"(optional)\" to the label."], ["disabled", "boolean", "false", "Disables the control inside."]]) +
+            '<h3 class="sub-h">Input</h3>' + props([["prefix", "string", "", "Fixed text before the value: <code>+256</code>, <code>UGX</code>. Say it in the hint too."], ["suffix", "string", "", "Fixed text after the value: <code>kg</code>."], ["icon", "ReactNode", "", "A leading icon, for search only."], ["width", '"full" | "m" | "s"', '"full"', "How long the answer is expected to be."], ["type", "string", '"text"', "<code>password</code> adds Show and Hide."], ["…", "Base UI Input props", "", "<code>inputMode</code>, <code>autoComplete</code>, <code>readOnly</code> and the rest."]])) +
+          block("a11y", "Accessibility", "", a11y([["Wired for screen readers", "The label names the box; the hint and the error are read with it; the error starts with \"Error:\"."], ["Before, not after", "The error sits above the box, so a phone keyboard never covers it and a screen reader meets it first."], ["No zoom on phones", "Patient fields use 17 px type, so a phone does not zoom when the box takes focus."], ["Contrast in this theme", 'Field edge <span class="ratio" data-r="line-strong|surface"></span> · placeholder <span class="ratio" data-r="ink-4|surface"></span> · focus ring <span class="ratio" data-r="focus|surface"></span>']]));
+      },
+      after: fillRatios, onTheme: function () { fillRatios(document.getElementById("main")); }
+    },
+    textarea: {
+      html: function () {
+        return header("Set 2 · Typing", "Textarea", "For answers longer than a line. It grows with what is typed and, with a limit, counts as the person types.", srcMeta("field.tsx", "Base UI Field", 2)) +
+          block("playground", "Playground", "", playground("textarea")) +
+          block("examples", "Examples", "", frame("textareaCount", "With a limit") + frame("textareaGrow", "Grows with the text")) +
+          block("props", "Props", "", props([["maxLength", "number", "", "Shows \"24 of 280 characters\" as a description, and speaks the count near the limit."], ["rows", "number", "3", "The starting height."], ["…", "textarea props", "", "<code>defaultValue</code>, <code>value</code>, <code>onChange</code>, <code>readOnly</code>."]])) +
+          block("a11y", "Accessibility", "", a11y([["The count is a description", "It is read with the box, so a person hears the limit before typing."], ["Quiet until it matters", "The count is spoken only near the limit, and only once typing has started."]]));
+      }
+    },
+    "number-input": {
+      html: function () {
+        return header("Set 2 · Typing", "Number input", "A number with its unit locked beside it and − and + steppers big enough for a thumb. The unit is part of the field, never typed.", srcMeta("field.tsx", "Base UI NumberField", 2)) +
+          block("playground", "Playground", "", playground("number")) +
+          block("examples", "Examples", "", frame("numWeight", "Weight") + frame("numTemp", "Temperature, in tenths") + frame("numCount", "A count, with named steppers") + frame("numStates", "An error, and read-only")) +
+          block("usage", "Usage", "Give the range in the hint. A number field is for amounts a person might nudge up or down; codes and phone numbers are text.",
+            dd("doUnit", "The unit sits beside the number, locked.", "dontUnit", "A free-text box invites \"64kg\", \"64 kgs\" and \"sixty-four\".")) +
+          block("props", "Props", "", props([["unit", "string", "", "Shown after the value."], ["min, max", "number", "", "The allowed range. Say it in the hint."], ["step", "number", "1", "Each press of a stepper; with Shift and an arrow key, ten."], ["lessLabel, moreLabel", "string", '"Less", "More"', "What the steppers are called aloud."], ["…", "Base UI NumberField props", "", "<code>defaultValue</code>, <code>value</code>, <code>onValueChange</code>, <code>format</code>."]])) +
+          block("a11y", "Accessibility", "", a11y([["Steppers are named", "Each is a button with a spoken name; on a patient screen each is 48 px wide."], ["Keyboard", "Arrow keys step; Shift steps by ten; the value stays tabular so digits line up."]]));
+      }
+    },
     roadmap: {
       html: function () { return header("Coming next", "Sets 2 to 8", "Built one set at a time. Each set is reviewed before the next begins; a set can move earlier if a screen needs it.") + block("sets", "The sets", "", setsTable(true)); }
     },
@@ -765,7 +894,7 @@ td.muted { color: var(--ink-2); }
     },
     changelog: {
       html: function () {
-        var C = [["28 Nov 2026", "Set 1.1: one state layer for hover and press; disabled parts no longer press; buttons on a navy band turn light with a light focus ring; labels and tags wrap; edges survive high-contrast mode; busy is spoken; type in rem; wide buttons; disabled and busy icon buttons; CardLink and CardButton. A new Interaction states page."], ["28 Nov 2026", "The kit site: overview, foundations, and a page per part with playground, examples, usage, props and accessibility."], ["28 Nov 2026", "Jacaranda becomes the prototype palette; a light, dark and auto switch."], ["28 Nov 2026", "Busy buttons wait 400 ms before the spinner; presses go in fast and come back slower."], ["28 Nov 2026", "Set 1 built: Button, ButtonLink, IconButton, Tag, StatusTag, Card, Band, KitRoot."]];
+        var C = [["28 Nov 2026", "Set 2 · Typing: Field, Input, Textarea and NumberInput. Errors come before the field as an icon and a word; optional is marked; prefixes and suffixes; widths that hint at the answer; a password field with Show; read-only, disabled and autofill looks; a textarea that grows and counts; number steppers on the state system. Set 1 signed."], ["28 Nov 2026", "Set 1.1: one state layer for hover and press; disabled parts no longer press; buttons on a navy band turn light with a light focus ring; labels and tags wrap; edges survive high-contrast mode; busy is spoken; type in rem; wide buttons; disabled and busy icon buttons; CardLink and CardButton. A new Interaction states page."], ["28 Nov 2026", "The kit site: overview, foundations, and a page per part with playground, examples, usage, props and accessibility."], ["28 Nov 2026", "Jacaranda becomes the prototype palette; a light, dark and auto switch."], ["28 Nov 2026", "Busy buttons wait 400 ms before the spinner; presses go in fast and come back slower."], ["28 Nov 2026", "Set 1 built: Button, ButtonLink, IconButton, Tag, StatusTag, Card, Band, KitRoot."]];
         return header("About", "Changelog", "What changed in the kit, newest first.") +
           block("changes", "Changes", "", '<div class="table-wrap"><table><thead><tr><th>Date</th><th>Change</th></tr></thead><tbody>' + C.map(function (c) { return '<tr><td class="muted">' + c[0] + "</td><td>" + c[1] + "</td></tr>"; }).join("") + "</tbody></table></div>");
       }
@@ -789,7 +918,7 @@ td.muted { color: var(--ink-2); }
     var html = NAV.map(function (g) {
       var items = g.items.filter(function (i) { return !q || i[1].toLowerCase().indexOf(q) >= 0 || (g.h || "").toLowerCase().indexOf(q) >= 0; });
       if (!items.length) return ""; any = true;
-      return '<div class="nav-group">' + (g.h ? '<div class="nav-h">' + g.h + (g.st ? ' <span class="st review">In review</span>' : "") + "</div>" : "") +
+      return '<div class="nav-group">' + (g.h ? '<div class="nav-h">' + g.h + (g.st === "done" ? ' <span class="st done">Signed</span>' : g.st === "review" ? ' <span class="st review">In review</span>' : "") + "</div>" : "") +
         items.map(function (i) { return '<a href="#' + i[0] + '"' + (current && current.id === i[0] ? ' aria-current="page"' : "") + ">" + i[1] + "</a>"; }).join("") + "</div>";
     }).join("");
     document.getElementById("nav").innerHTML = any ? html : '<div class="none">Nothing matches. Try "button" or "colour".</div>';

@@ -12,10 +12,14 @@ import {
   buttonClass,
   Card,
   CardButton,
+  Field,
   IconButton,
+  Input,
   KitRoot,
+  NumberInput,
   StatusTag,
   Tag,
+  Textarea,
 } from "@/components/tether-kit";
 
 /**
@@ -198,5 +202,69 @@ describe("Set 1.1: the state system and its fixes", () => {
     expect(out).toMatch(/^<button[^>]*type="button"/);
     expect(out).toContain("focus-visible:outline-2");
     expect(out).toContain("hover:shadow-pw-float");
+  });
+});
+
+describe("Set 2 · Typing: fields carry the laws", () => {
+  const html = (el: Parameters<typeof renderToStaticMarkup>[0]) => renderToStaticMarkup(el);
+  const field = (props: object, control: Parameters<typeof renderToStaticMarkup>[0]) =>
+    html(
+      createElement(Field, { label: "Weight", ...props } as ComponentProps<typeof Field>, control),
+    );
+
+  it("the label is wired to the control", () => {
+    const out = field({}, createElement(Input));
+    const forId = /<label[^>]*for="([^"]+)"/.exec(out)?.[1];
+    expect(forId).toBeTruthy();
+    expect(out).toContain(`id="${forId}"`);
+  });
+
+  it("the hint and the error are descriptions, and the error comes before the control", () => {
+    // Base UI joins their ids into the control's aria-describedby in the browser; the kit's browser probe checks it.
+    const out = field(
+      { hint: "Between 2 and 250 kg.", error: "Enter a weight between 2 and 250 kg." },
+      createElement(Input),
+    );
+    expect(out).toMatch(/<p[^>]*id="[^"]+"[^>]*>Between 2 and 250 kg\./);
+    expect(out).toContain('aria-invalid="true"');
+    expect(out.indexOf("Enter a weight")).toBeLessThan(out.indexOf("<input"));
+  });
+
+  it("an error is an icon and a word, says Error to a screen reader, and is never red", () => {
+    const out = field({ error: "Enter a weight." }, createElement(Input));
+    expect(out).toContain("<svg");
+    expect(out).toContain('<span class="sr-only">Error: </span>');
+    expect(out).toContain('data-invalid="true"');
+    expect(readFileSync("components/tether-kit/field.tsx", "utf8")).not.toMatch(
+      /pw-(?:critical|caution|stable|emergency)/,
+    );
+  });
+
+  it("optional is marked in words; required is the default", () =>
+    expect(field({ optional: true }, createElement(Input))).toContain("(optional)"));
+
+  it("patient fields use 16 px or more, so a phone never zooms on focus", () =>
+    expect(readFileSync("components/tether-kit/core.ts", "utf8")).toContain(
+      "min-h-12 rounded-pw-field text-[1.0625rem]",
+    ));
+
+  it("a password field offers Show as a word, and says what it does", () => {
+    const out = field({}, createElement(Input, { type: "password" }));
+    expect(out).toContain('aria-label="Show password"');
+    expect(out).toContain('aria-pressed="false"');
+    expect(out).toContain(">Show</button>");
+  });
+
+  it("a textarea with a limit counts as a description, and stays quiet until typing nears the limit", () => {
+    const out = field({}, createElement(Textarea, { maxLength: 9 }));
+    expect(out).toMatch(/<p[^>]*id="[^"]+"[^>]*>0 of 9 characters/);
+    expect(out).toContain('aria-live="polite"></span>');
+  });
+
+  it("a number field names its steppers and shows its unit", () => {
+    const out = field({}, createElement(NumberInput, { unit: "kg", defaultValue: 64 }));
+    expect(out).toContain('aria-label="Less"');
+    expect(out).toContain('aria-label="More"');
+    expect(out).toContain(">kg</span>");
   });
 });
