@@ -226,9 +226,13 @@ function SceneDemo() {
             <span className="text-pw-on-band-2 font-medium">{state}</span>
           </div>
         ))}
-        <div className="bg-pw-accent text-pw-on-accent rounded-pw-cascade -mt-8 flex justify-between px-5 py-3 text-sm font-semibold">
+        <div className="bg-pw-accent text-pw-on-accent rounded-pw-cascade -mt-8 flex justify-between px-5 pt-3 pb-10 text-sm font-semibold">
           <span>14:00 · Check your feet</span>
           <span>Now</span>
+        </div>
+        <div className="bg-pw-accent-soft rounded-pw-cascade -mt-8 flex justify-between px-5 py-3 text-sm font-semibold text-[#1b2540]">
+          <span>18:00 · Evening medicine</span>
+          <span className="font-medium">Next</span>
         </div>
       </div>
       <nav
