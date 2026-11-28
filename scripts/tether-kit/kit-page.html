@@ -171,7 +171,14 @@ td.muted { color: var(--ink-2); }
 .cta a.s { background: var(--surface); color: var(--ink); border: 1px solid var(--line-strong); }
 .cta a.s:hover { background: var(--surface-2); }
 .hero-art { border-radius: 30px; padding: 22px; background-color: var(--surface-2); background-image: radial-gradient(color-mix(in srgb, var(--ink) 9%, transparent) 1px, transparent 1px); background-size: 18px 18px; border: 1px solid var(--line); }
-.hero-art .phone { max-width: 360px; margin: 0 auto; border-radius: 32px; overflow: hidden; border: 6px solid var(--band); box-shadow: var(--shadow-float); }
+.spec { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.spec-cell { background: var(--surface); border: 1px solid var(--line); border-radius: 18px; padding: 14px; display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+.spec-cell.wide { grid-column: 1 / -1; }
+.spec-cell > span { font-size: 11.5px; font-weight: 600; letter-spacing: 0.07em; text-transform: uppercase; color: var(--ink-3); }
+.spec-cell [data-pw] { background: transparent; }
+.spec-cell .ex-row { justify-content: flex-start; }
+.spec-pair { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; align-items: end; }
+.spec-pair small { display: block; font-size: 12px; color: var(--ink-3); margin-top: 6px; }
 .stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin-top: 44px; }
 .stats div { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: 14px 16px; }
 .stats b { display: block; font-size: 26px; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
@@ -206,10 +213,6 @@ td.muted { color: var(--ink-2); }
 .story i { width: 30px; height: 30px; border-radius: 9px; flex: none; border: 1px solid var(--line); }
 .story b { font-size: 14px; display: block; }
 .story span { font-size: 13px; color: var(--ink-2); }
-.cascade { display: flex; flex-direction: column; max-width: 460px; margin-top: 22px; }
-.cascade div { border-radius: 26px; padding: 12px 20px 40px; margin-top: -30px; font-size: 13.5px; font-weight: 600; display: flex; justify-content: space-between; }
-.cascade div:first-child { margin-top: 0; }
-.cascade div:last-child { padding-bottom: 12px; }
 .type-row { display: grid; grid-template-columns: 130px minmax(0, 1fr) 170px; gap: 16px; align-items: baseline; padding: 14px 16px; border-top: 1px solid var(--line); }
 .type-row:first-child { border-top: 0; }
 .type-row .nm { font-size: 13px; font-weight: 600; font-family: var(--font-mono); }
@@ -425,7 +428,18 @@ td.muted { color: var(--ink-2); }
     dontPlaceFill: function () { return kit("patient", row(h("span", { className: "bg-pw-area-medicines text-pw-on-band", style: { borderRadius: 99, padding: "4px 12px", fontWeight: 600, fontSize: 13 } }, "Medicines"))); },
     doFlat: function () { return kit("patient", col(h(K.Card, null, h(K.Card, { flat: true }, h("span", { style: { fontWeight: 600 } }, "One card inside one card"))))); },
     dontEdge: function () { return kit("patient", col(h(K.Card, { style: { borderLeft: "4px solid var(--pw-accent-text)" } }, h("span", { style: { fontWeight: 600 } }, "A coloured left edge")))); },
-    heroScene: function () { return h(K.demos.Scene); },
+    heroKit: function () {
+      function cell(label, child, wide) { return h("div", { className: "spec-cell" + (wide ? " wide" : "") }, h("span", null, label), child); }
+      return h("div", { className: "spec" },
+        cell("Button", kit("patient", col(row(h(K.Button, { tone: "accent", size: "m" }, "Book a visit"), h(K.Button, { size: "m" }, "Save reading")), row(h(K.Button, { tone: "outline", size: "m" }, ic("CalendarPlusIcon"), "Add to calendar"), h(K.Button, { tone: "quiet", size: "m" }, "Change")))), true),
+        cell("Tag and status", kit("patient", col(row(h(K.Tag, { area: "visits" }, "Visits"), h(K.Tag, { tone: "navy" }, "Member")), row(h(K.StatusTag, { tone: "stable" }, "In your range")), row(h(K.StatusTag, { tone: "caution" }, "Above your target"))))),
+        cell("Icon button", kit("patient", row(h(K.IconButton, { label: "Close", icon: ic("XIcon") }), h(K.IconButton, { label: "More", tone: "outline", icon: ic("EllipsisIcon") }), h(K.IconButton, { label: "Add", tone: "quiet", icon: ic("PlusIcon") })))),
+        cell("One part, two densities", h("div", { className: "spec-pair" },
+          h("div", null, kit("patient", row(h(K.Button, { size: "l" }, "Check in"))), h("small", null, "Patient · 52 px")),
+          h("div", null, kit("desk", row(h(K.Button, { size: "l" }, "Check in"))), h("small", null, "Desk · 40 px"))), true),
+        cell("Card and band", kit("desk", col(h(K.Band, null, h("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, flexWrap: "wrap" } }, h("span", { style: { fontFamily: "var(--font-mono)", fontSize: 18, fontWeight: 600, letterSpacing: "0.08em" } }, "K7M-42Q"), h("span", { className: "text-pw-on-band-accent", style: { fontSize: 13, fontWeight: 600 } }, "Next in line"))))), true)
+      );
+    },
     miniButton: function () { return kit("patient", row(h(K.Button, { tone: "accent", size: "m" }, "Book a visit"), h(K.Button, { size: "m" }, "Save"))); },
     miniIcon: function () { return kit("patient", row(h(K.IconButton, { label: "Close", icon: ic("XIcon") }), h(K.IconButton, { label: "More", tone: "outline", icon: ic("EllipsisIcon") }))); },
     miniTag: function () { return kit("patient", row(h(K.Tag, { area: "visits" }, "Visits"), h(K.StatusTag, { tone: "stable" }, "In your range"))); },
@@ -552,7 +566,7 @@ td.muted { color: var(--ink-2); }
   ];
   var ORDER = []; NAV.forEach(function (g) { g.items.forEach(function (i) { ORDER.push(i); }); });
   function titleOf(id) { var t = ORDER.filter(function (i) { return i[0] === id; })[0]; return t ? t[1] : id; }
-  var SETS = [["1 · Actions and labels", "Button, ButtonLink, IconButton, Tag, StatusTag, Card, Band", "Base UI Button", "In review"], ["2 · Typing", "Field, Input, Textarea, NumberInput", "Base UI Field, Input, NumberField", "Planned"], ["3 · Choosing", "Select, Segments, Tabs, Checkbox, Switch, RadioCards, ChipGroup", "Base UI Select, Tabs, ToggleGroup, Checkbox, Switch, Radio", "Planned"], ["4 · Interrupting", "Dialog, DangerDialog, Toast, Sheet (phone only)", "Base UI Dialog, AlertDialog, Toast, Drawer", "Planned"], ["5 · Menus and lookups", "Combobox, Menu, Popover, Tooltip, OTPField, PhoneField", "Base UI", "Planned"], ["6 · Date and time", "DateField, TimeField, Calendar", "Base UI Popover and Tether's grid", "Planned"], ["7 · Data", "Table with sort, select and bulk; stat cards", "Tether's own", "Planned"], ["8 · Tether's own", "Ticket, PatientBand, StageBar, Cascade, EmptyState, Skeleton", "none", "Planned"]];
+  var SETS = [["1 · Actions and labels", "Button, ButtonLink, IconButton, Tag, StatusTag, Card, Band", "Base UI Button", "In review"], ["2 · Typing", "Field, Input, Textarea, NumberInput", "Base UI Field, Input, NumberField", "Planned"], ["3 · Choosing", "Select, Segments, Tabs, Checkbox, Switch, RadioCards, ChipGroup", "Base UI Select, Tabs, ToggleGroup, Checkbox, Switch, Radio", "Planned"], ["4 · Interrupting", "Dialog, DangerDialog, Toast, Sheet (phone only)", "Base UI Dialog, AlertDialog, Toast, Drawer", "Planned"], ["5 · Menus and lookups", "Combobox, Menu, Popover, Tooltip, OTPField, PhoneField", "Base UI", "Planned"], ["6 · Date and time", "DateField, TimeField, Calendar", "Base UI Popover and Tether's grid", "Planned"], ["7 · Data", "Table with sort, select and bulk; stat cards", "Tether's own", "Planned"], ["8 · Tether's own", "Ticket, PatientBand, StageBar, EmptyState, Skeleton", "none", "Planned"]];
   function setsTable(withFrom) {
     return '<div class="table-wrap"><table><thead><tr><th>Set</th><th>Parts</th>' + (withFrom ? "<th>Behaviour from</th>" : "") + "<th>Status</th></tr></thead><tbody>" +
       SETS.map(function (s) { return "<tr><td>" + s[0] + "</td><td>" + s[1] + "</td>" + (withFrom ? '<td class="muted">' + s[2] + "</td>" : "") + '<td><span class="st ' + (s[3] === "In review" ? "review" : "planned") + '">' + s[3] + "</span></td></tr>"; }).join("") + "</tbody></table></div>";
@@ -575,7 +589,7 @@ td.muted { color: var(--ink-2); }
         return '<div class="hero"><div><div class="crumbs">Tether Kit · Prototype</div><h1>Build every Tether screen from one set of parts</h1>' +
           '<p class="lede">The Tether Kit is the component library for everything Tether shows, from the patient\'s phone to the reception desk. Behaviour comes from Base UI; the look is Tide, here in the Jacaranda palette. Every part sizes itself for patients or for the desk, so a patient and a receptionist at the same clinic see one product.</p>' +
           '<div class="cta"><a class="p" href="#start">Get started</a><a class="s" href="#button">Browse components</a></div></div>' +
-          '<div class="hero-art"><div class="phone" data-live="heroScene"></div></div></div>' +
+          '<div class="hero-art" aria-label="The Set 1 parts, live"><div data-live="heroKit"></div></div></div>' +
           '<div class="stats"><div><b>7</b><span>parts in Set 1</span></div><div><b>1 of 8</b><span>sets built, in review</span></div><div><b>2</b><span>densities, patient and desk</span></div><div><b>2</b><span>themes, light and dark</span></div></div>' +
           block("principles", "Principles", "What every part holds to, so no screen has to remember.",
             '<div class="princ"><div><b>One thing at a time</b><span>One headline and one main action per screen. The bright accent marks what to do now, once per region.</span></div>' +
@@ -607,20 +621,18 @@ td.muted { color: var(--ink-2); }
         var GROUPS = [
           ["Ground", "Pages, cards, text and edges. Navy ink on a misty grey ground.", ["bg", "surface", "surface-2", "surface-3", "raised", "line", "line-strong", "ink", "ink-2", "ink-3", "ink-4"]],
           ["Action", "The main button is navy. The jacaranda marks what to do now, as a fill behind navy text only; its text shade is deeper and bluer.", ["act", "on-act", "act-off", "on-act-off", "accent", "accent-pressed", "on-accent", "accent-text", "accent-tint", "focus"]],
-          ["Order", "Bands, and the day's cascade deepening from night navy toward the bloom.", ["band", "on-band", "on-band-2", "on-band-accent", "cascade-1", "cascade-2", "cascade-3", "cascade-4", "accent-soft"]],
+          ["Bands", "The navy bands that hold a ticket or a patient's record, and the words on them.", ["band", "on-band", "on-band-2", "on-band-accent"]],
           ["Health", "Owned by the Clinical Safety Officer. Always with a word. Grey for waiting, never amber.", ["stable-tint", "stable-text", "caution-tint", "caution-text", "critical-tint", "critical-text", "pending-tint", "pending-text", "info-tint", "info-text", "emergency"]],
           ["Places", "Dots and icons only, never a fill behind text, never a button.", ["area-readings", "area-medicines", "area-visits", "area-team", "area-me"]]
         ];
         var USE = { bg: "The page.", surface: "Cards and fields.", "surface-2": "Quiet fills in a card.", "surface-3": "Tracks, pressed fills.", raised: "Floating things.", line: "Hairlines.", "line-strong": "Field and button edges.", ink: "Text.", "ink-2": "Supporting text.", "ink-3": "Tertiary text.", "ink-4": "Placeholders only.",
           act: "Main button.", "on-act": "Its label.", "act-off": "Disabled button.", "on-act-off": "Its label, still readable.", accent: "Now: a fill behind navy.", "accent-pressed": "Pressed accent.", "on-accent": "Navy on the accent.", "accent-text": "Links, marks on white.", "accent-tint": "Soft selected fills.", focus: "Focus rings.",
-          band: "Ticket and record bands.", "on-band": "Text on bands.", "on-band-2": "Supporting text on bands.", "on-band-accent": "The accent word on a band.", "cascade-1": "Night navy.", "cascade-2": "Deepening.", "cascade-3": "Deepening.", "cascade-4": "Last before now.", "accent-soft": "Next.",
-          "stable-tint": "In your range.", "stable-text": "Its word.", "caution-tint": "Above your target.", "caution-text": "Its word.", "critical-tint": "Danger.", "critical-text": "Its word.", "pending-tint": "Waiting.", "pending-text": "Its word.", "info-tint": "Neutral notice.", "info-text": "Its word.", emergency: "Help only.",
+          band: "Ticket and record bands.", "on-band": "Text on bands.", "on-band-2": "Supporting text on bands.", "on-band-accent": "The accent word on a band.",           "stable-tint": "In your range.", "stable-text": "Its word.", "caution-tint": "Above your target.", "caution-text": "Its word.", "critical-tint": "Danger.", "critical-text": "Its word.", "pending-tint": "Waiting.", "pending-text": "Its word.", "info-tint": "Neutral notice.", "info-text": "Its word.", emergency: "Help only.",
           "area-readings": "Readings.", "area-medicines": "Medicines.", "area-visits": "Visits.", "area-team": "Care team.", "area-me": "Me." };
         var M = PAL.meaning || {};
-        var story = '<div class="story"><div><i style="background:var(--band)"></i><p><b>Night lake</b><span>' + esc(M.navy || "") + '</span></p></div><div><i style="background:var(--bg)"></i><p><b>Morning mist</b><span>' + esc(M.bg || "") + '</span></p></div><div><i style="background:var(--accent)"></i><p><b>Jacaranda</b><span>' + esc(M.accent || "") + '</span></p></div><div><i style="background:var(--cascade-3)"></i><p><b>The day\'s water</b><span>' + esc(M.cascade || "") + "</span></p></div></div>";
-        var cas = '<div class="cascade"><div style="background:var(--cascade-1);color:var(--on-band)"><span>08:00 · Morning medicine</span><span>Done</span></div><div style="background:var(--cascade-2);color:var(--on-band)"><span>10:00 · Blood pressure</span><span>Done</span></div><div style="background:var(--cascade-3);color:var(--on-band)"><span>12:00 · Walk</span><span>Done</span></div><div style="background:var(--cascade-4);color:var(--on-band)"><span>13:00 · Midday medicine</span><span>Done</span></div><div style="background:var(--accent);color:var(--on-accent)"><span>14:00 · Check your feet</span><span>Now</span></div><div style="background:var(--accent-soft);color:var(--on-accent)"><span>18:00 · Evening medicine</span><span>Next</span></div></div>';
-        return header("Foundations", "Colour", "Jacaranda gives every colour one job and a meaning. Values are read live in the theme you are viewing; switch light and dark in the top bar.") +
-          block("story", "The palette's story", "", story + cas) +
+        var story = '<div class="story"><div><i style="background:var(--band)"></i><p><b>Night lake</b><span>' + esc(M.navy || "") + '</span></p></div><div><i style="background:var(--bg)"></i><p><b>Morning mist</b><span>' + esc(M.bg || "") + '</span></p></div><div><i style="background:var(--accent)"></i><p><b>Jacaranda</b><span>' + esc(M.accent || "") + "</span></p></div></div>";
+                return header("Foundations", "Colour", "Jacaranda gives every colour one job and a meaning. Values are read live in the theme you are viewing; switch light and dark in the top bar.") +
+          block("story", "The palette's story", "", story) +
           block("tokens", "Tokens", "Five jobs. Every colour belongs to one.", GROUPS.map(function (g) {
             return '<div class="swgroup"><h3>' + g[0] + "</h3><p>" + g[1] + '</p><div class="swatches">' + g[2].map(function (n) {
               return '<div class="sw"><div class="chip" style="background:var(--' + n + ')"></div><div class="info"><b>' + n + '</b><code data-val="' + n + '"></code><span>' + (USE[n] || "") + "</span></div></div>";
@@ -642,7 +654,7 @@ td.muted { color: var(--ink-2); }
     shape: {
       html: function () {
         var S = [[2, "0.5"], [4, "1"], [8, "2"], [12, "3"], [16, "4"], [20, "5"], [24, "6"], [32, "8"], [40, "10"]];
-        var R = [[10, "sm", "Tags"], [14, "md", "Toasts"], [16, "field", "Fields"], [20, "card", "Cards, phone"], [22, "card-lg", "Cards, web"], [28, "xl", "Cascade, bands"], [32, "sheet", "Dialogs"], [999, "pill", "Buttons, tags"]];
+        var R = [[10, "sm", "Tags"], [14, "md", "Toasts"], [16, "field", "Fields"], [20, "card", "Cards, phone"], [22, "card-lg", "Cards, web"], [28, "xl", "Bands"], [32, "sheet", "Dialogs"], [999, "pill", "Buttons, tags"]];
         return header("Foundations", "Space and shape", "A 4 px grid, generous corners, and pills for everything a thumb presses.") +
           block("space", "Spacing", "Page gutter 20 px, card padding 16 px, 24 px between sections.", '<div class="scale">' + S.map(function (s) { return '<div><span class="mono">space-' + s[1] + '</span><span class="ratio">' + s[0] + ' px</span><i style="width:' + s[0] * 6 + 'px"></i></div>'; }).join("") + "</div>") +
           block("radius", "Corners", "Large and soft, never square.", '<div class="radii">' + R.map(function (r) { return '<div><i style="border-top-left-radius:' + Math.min(r[0], 40) + 'px"></i><b>' + r[1] + (r[0] === 999 ? "" : " · " + r[0] + " px") + "</b><span>" + r[2] + "</span></div>"; }).join("") + "</div>") +
@@ -729,7 +741,7 @@ td.muted { color: var(--ink-2); }
 
   function fillColour(el) {
     el.querySelectorAll("[data-val]").forEach(function (c) { c.textContent = tok(c.dataset.val) || ""; });
-    var P = [["ink", "bg", 4.5, "Text on the page"], ["ink-2", "surface", 4.5, "Supporting text on a card"], ["ink-3", "surface-3", 4.5, "Tertiary text on a quiet fill"], ["ink-4", "surface", 4.5, "Placeholder"], ["on-act", "act", 4.5, "Main button label"], ["on-act-off", "act-off", 4.5, "Disabled label"], ["on-accent", "accent", 4.5, "Text on the accent"], ["accent-text", "surface", 4.5, "Links and marks"], ["on-band", "band", 4.5, "Text on a band"], ["on-band-accent", "band", 4.5, "Accent word on a band"], ["on-band", "cascade-4", 4.5, "Text on the fourth cascade step"], ["line-strong", "surface", 3, "Field and button edges"], ["focus", "surface", 3, "Focus ring"], ["caution-text", "caution-tint", 4.5, "Above your target"], ["on-emergency", "emergency", 4.5, "Help"]];
+    var P = [["ink", "bg", 4.5, "Text on the page"], ["ink-2", "surface", 4.5, "Supporting text on a card"], ["ink-3", "surface-3", 4.5, "Tertiary text on a quiet fill"], ["ink-4", "surface", 4.5, "Placeholder"], ["on-act", "act", 4.5, "Main button label"], ["on-act-off", "act-off", 4.5, "Disabled label"], ["on-accent", "accent", 4.5, "Text on the accent"], ["accent-text", "surface", 4.5, "Links and marks"], ["on-band", "band", 4.5, "Text on a band"], ["on-band-accent", "band", 4.5, "Accent word on a band"], ["line-strong", "surface", 3, "Field and button edges"], ["focus", "surface", 3, "Focus ring"], ["caution-text", "caution-tint", 4.5, "Above your target"], ["on-emergency", "emergency", 4.5, "Help"]];
     var rows = el.querySelector("#cr-rows"); if (!rows) return;
     rows.innerHTML = P.map(function (p) {
       var r = cr(tok(p[0]), tok(p[1])), pair = p[3] + " · <code>" + p[0] + "</code> on <code>" + p[1] + "</code>";

@@ -80,7 +80,9 @@ An audit of the shipped `pw-*` palette found six failing pairs: field edges 1.6:
 | 5 · Menus and lookups  | Combobox, Menu, Popover, Tooltip, OTPField, PhoneField              | Base UI                                                    | desk menus, ⌘K, the sign-in code                                                              |
 | 6 · Date and time      | DateField, TimeField, Calendar, quick picks                         | Base UI Popover + own grid                                 | 37 native date inputs                                                                         |
 | 7 · Data               | Table (sort, select, bulk), pager                                   | own, on Base UI Checkbox                                   | desk tables                                                                                   |
-| 8 · Tether's own       | Ticket, PatientBand, StageBar, Cascade, EmptyState, Skeleton        | none                                                       | `v2-ticket`, `v2-stages`, `cascade`, `EmptyState`                                             |
+| 8 · Tether's own       | Ticket, PatientBand, StageBar, EmptyState, Skeleton                 | none                                                       | `v2-ticket`, `v2-stages`, `EmptyState`                                                        |
+
+The day cascade is not part of the kit (owner, 28 Nov 2026): it was dropped from the design, so Set 8 does not build it and the prototype does not show it. The patient web's `day-cascade.tsx` and the phone's cascade are product code and are left as they are.
 
 ## Order of work
 

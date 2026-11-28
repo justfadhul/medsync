@@ -166,8 +166,8 @@ function SurfaceDemo() {
 
 /**
  * One patient screen in miniature, for comparing colour options: every role a palette has to serve (the ticket
- * band and its accent word, the main and accent actions, edges, a disabled action, tags, health states, the
- * cascade and a nav mark). The cascade and the nav row are drawn here only; they become kit parts in Set 8.
+ * band and its accent word, the main and accent actions, edges, a disabled action, tags, health states and a nav
+ * mark). The nav row is drawn here only. The day cascade is not part of the kit (owner, 28 Nov 2026).
  */
 function SceneDemo() {
   return (
@@ -209,32 +209,6 @@ function SceneDemo() {
           </Button>
         </div>
       </Card>
-      <div className="flex flex-col">
-        {(
-          [
-            ["bg-pw-cascade-1", "08:00 · Morning medicine", "Done"],
-            ["bg-pw-cascade-2", "10:00 · Blood pressure", "Done"],
-            ["bg-pw-cascade-3", "12:00 · Walk", "Done"],
-            ["bg-pw-cascade-4", "13:00 · Midday medicine", "Done"],
-          ] as const
-        ).map(([bg, what, state], i) => (
-          <div
-            key={what}
-            className={`${bg} text-pw-on-band rounded-pw-cascade flex justify-between px-5 pt-3 pb-10 text-sm font-semibold ${i ? "-mt-8" : ""}`}
-          >
-            <span>{what}</span>
-            <span className="text-pw-on-band-2 font-medium">{state}</span>
-          </div>
-        ))}
-        <div className="bg-pw-accent text-pw-on-accent rounded-pw-cascade -mt-8 flex justify-between px-5 pt-3 pb-10 text-sm font-semibold">
-          <span>14:00 · Check your feet</span>
-          <span>Now</span>
-        </div>
-        <div className="bg-pw-accent-soft rounded-pw-cascade -mt-8 flex justify-between px-5 py-3 text-sm font-semibold text-[#1b2540]">
-          <span>18:00 · Evening medicine</span>
-          <span className="font-medium">Next</span>
-        </div>
-      </div>
       <nav
         aria-label="Example navigation"
         className="bg-pw-raised shadow-pw-float flex justify-around rounded-full px-2 py-2"
