@@ -9,3 +9,5 @@ A round button with only a glyph, for the few glyphs everyone reads: close, more
 - `tone`: `soft` (default), `outline` or `quiet`. Never accent or danger.
 
 **Size.** 48 px for patients, 36 px at the desk, from the surface's density.
+
+**Disabled and busy (Set 1.1).** `disabledReason` disables it; the reason is read with it and shown on hover. `busy` blocks a press and, after 400 ms, swaps the glyph for a spinner; screen readers hear `busyLabel`.

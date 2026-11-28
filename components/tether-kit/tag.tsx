@@ -3,7 +3,7 @@ import type { ComponentProps } from "react";
 import { CheckIcon, ClockIcon, InfoIcon, SirenIcon, TriangleAlertIcon } from "lucide-react";
 
 import { cn } from "@/lib/utils";
-import { ICON } from "./core";
+import { FORCED_EDGE, ICON } from "./core";
 
 /**
  * Tags (inventory row 2). `Tag` labels a thing: a place, a count, a category. It never carries health.
@@ -12,8 +12,15 @@ import { ICON } from "./core";
  * the danger dialog.
  */
 
-const TAG_SIZE =
-  "inline-flex h-7 items-center gap-1.5 whitespace-nowrap rounded-full px-3 text-[13px] font-semibold leading-none in-data-[density=desk]:h-6 in-data-[density=desk]:px-2.5 in-data-[density=desk]:text-xs [&_svg]:size-3.5 in-data-[density=desk]:[&_svg]:size-3";
+// Minimum heights, so a long word wraps inside the pill instead of running out of its column: a tag never cuts
+// a word, least of all a health word. Type in rem follows the reader's text size. The transparent edge shows
+// in forced-colours mode.
+const TAG_SIZE = cn(
+  "inline-flex min-h-7 max-w-full items-center gap-1.5 rounded-full px-3 py-1 text-[0.8125rem] font-semibold leading-[1.2]",
+  "in-data-[density=desk]:min-h-6 in-data-[density=desk]:px-2.5 in-data-[density=desk]:py-0.5 in-data-[density=desk]:text-xs",
+  "[&_svg]:size-3.5 [&_svg]:shrink-0 in-data-[density=desk]:[&_svg]:size-3",
+  FORCED_EDGE,
+);
 
 export type TagTone = "plain" | "accent" | "navy" | "outline";
 export type Area = "readings" | "medicines" | "visits" | "team" | "me";
@@ -22,7 +29,7 @@ const TAG_TONE: Record<TagTone, string> = {
   plain: "bg-pw-surface-3 text-pw-ink-2",
   accent: "bg-pw-accent-tint text-pw-accent-text",
   navy: "bg-pw-band text-pw-on-band",
-  outline: "border border-pw-line-strong bg-transparent text-pw-ink",
+  outline: "border-pw-line-strong bg-transparent text-pw-ink",
 };
 
 const AREA_DOT: Record<Area, string> = {

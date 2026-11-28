@@ -6,7 +6,17 @@ import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 
-import { Button, IconButton, KitRoot, StatusTag, Tag } from "@/components/tether-kit";
+import {
+  Band,
+  Button,
+  buttonClass,
+  Card,
+  CardButton,
+  IconButton,
+  KitRoot,
+  StatusTag,
+  Tag,
+} from "@/components/tether-kit";
 
 /**
  * The Tether kit's guards (docs/tether-kit/gate-a-proposal.md, D-TK-05 and D-TK-07).
@@ -100,5 +110,93 @@ describe("Tether kit carries the laws", () => {
     const out = html(createElement(KitRoot, { density: "desk" }, "x"));
     expect(out).toContain('data-pw=""');
     expect(out).toContain('data-density="desk"');
+  });
+});
+
+describe("Set 1.1: the state system and its fixes", () => {
+  const html = (el: Parameters<typeof renderToStaticMarkup>[0]) => renderToStaticMarkup(el);
+  const tones = ["primary", "accent", "soft", "outline", "quiet", "danger"] as const;
+  const kitSrc = readdirSync("components/tether-kit")
+    .filter((n) => /\.tsx?$/.test(n))
+    .map((f) => readFileSync(join("components/tether-kit", f), "utf8"))
+    .join("\n");
+
+  it("a disabled button does not press: no scale, no state layer", () => {
+    const c = buttonClass("primary", "l", true);
+    expect(c).toContain("pointer-fine:active:scale-100");
+    expect(c).toContain("after:hidden");
+    expect(c).toContain("cursor-not-allowed");
+  });
+
+  it("every tone shares the state layer, so hover is visible in both themes (danger keeps a darker red)", () => {
+    for (const t of tones.filter((x) => x !== "danger")) {
+      const c = buttonClass(t);
+      expect(c, t).toContain("hover:after:opacity-[0.08]");
+      expect(c, t).toContain("active:after:opacity-[0.14]");
+      expect(c, t).not.toMatch(/hover:brightness/);
+    }
+    expect(buttonClass("danger")).toContain("hover:bg-pw-emergency-band");
+  });
+
+  it("on a navy band, the tokens point at their band forms, so buttons and the focus ring adapt", () => {
+    const out = html(createElement(Band, null, "x"));
+    expect(out).toContain('data-surface="band"');
+    for (const remap of [
+      "[--pw-act:var(--pw-on-band)]",
+      "[--pw-focus:var(--pw-on-band-accent)]",
+      "[--pw-surface-3:var(--pw-band-glass)]",
+    ])
+      expect(out, remap).toContain(remap);
+  });
+
+  it("long labels wrap instead of overflowing; nothing in the kit forbids wrapping", () => {
+    for (const t of tones) {
+      expect(buttonClass(t), t).toMatch(/min-h-/);
+      expect(buttonClass(t), t).not.toMatch(/(^|\s)h-\[?\d/);
+    }
+    expect(kitSrc).not.toMatch(/whitespace-nowrap/);
+  });
+
+  it("every control and surface keeps an edge in forced-colours mode", () => {
+    for (const t of tones) expect(buttonClass(t), t).toMatch(/(^|\s)border(\s|$)/);
+    expect(html(createElement(Card, null, "x"))).toMatch(/class="[^"]*\bborder\b/);
+    expect(html(createElement(Tag, null, "x"))).toMatch(/class="[^"]*\bborder\b/);
+  });
+
+  it("busy is spoken through a polite live region", () => {
+    const out = html(createElement(Button, { busy: true, busyLabel: "Saving" }, "Save"));
+    expect(out).toContain('aria-live="polite"');
+    expect(out).toContain("Saving");
+  });
+
+  it("type is in rem, so it follows the reader's text size", () =>
+    expect(kitSrc).not.toMatch(/text-\[\d+(\.\d+)?px\]/));
+
+  it("an icon button can be disabled with a reason, and busy", () => {
+    const off = html(
+      createElement(IconButton, {
+        label: "Add",
+        icon: createElement("svg"),
+        disabledReason: "Full.",
+      }),
+    );
+    const id = /<span id="([^"]+)" class="sr-only">Full\./.exec(off)?.[1];
+    expect(id).toBeTruthy();
+    expect(off).toContain(`aria-describedby="${id}"`);
+    expect(
+      html(createElement(IconButton, { label: "Add", icon: createElement("svg"), busy: true })),
+    ).toContain('aria-busy="true"');
+  });
+
+  it("a wide button fills its container", () =>
+    expect(html(createElement(Button, { wide: true }, "Book a visit"))).toMatch(
+      /class="[^"]*\bw-full\b/,
+    ));
+
+  it("a pressable card is one button with one focus ring", () => {
+    const out = html(createElement(CardButton, null, "Outpatients"));
+    expect(out).toMatch(/^<button[^>]*type="button"/);
+    expect(out).toContain("focus-visible:outline-2");
+    expect(out).toContain("hover:shadow-pw-float");
   });
 });

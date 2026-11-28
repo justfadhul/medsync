@@ -82,6 +82,8 @@ An audit of the shipped `pw-*` palette found six failing pairs: field edges 1.6:
 | 7 · Data               | Table (sort, select, bulk), pager                                   | own, on Base UI Checkbox                                   | desk tables                                                                                   |
 | 8 · Tether's own       | Ticket, PatientBand, StageBar, EmptyState, Skeleton                 | none                                                       | `v2-ticket`, `v2-stages`, `EmptyState`                                                        |
 
+**Set 1.1 (28 Nov 2026, owner asked for a senior review before Set 2).** A browser audit of Set 1 found five defects, now fixed and tested: a disabled button still pressed; the main button had no visible hover; a main button and its focus ring vanished on a navy band (1.0:1 and 2.3:1); long labels overflowed phone columns; five tones lost their shape in high-contrast mode. Added: one state layer for hover and press (`STATE`, 8% and 14% of the text colour), `INERT` for disabled and busy parts, a Band that re-points the colour tokens inside it, a spoken busy state (`busyLabel`), type in rem, `wide` buttons, disabled and busy icon buttons, and `CardLink` and `CardButton`. Later sets reuse the same state system.
+
 The day cascade is not part of the kit (owner, 28 Nov 2026): it was dropped from the design, so Set 8 does not build it and the prototype does not show it. The patient web's `day-cascade.tsx` and the phone's cascade are product code and are left as they are.
 
 ## Order of work

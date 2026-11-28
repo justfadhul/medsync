@@ -6,6 +6,10 @@ The two surfaces everything sits on.
 
 **Band** is the navy header band: the ticket, the health card, a patient's header at the desk. Text on it uses `on-band` and `on-band-2`; the one lagoon word on a band uses `on-band-accent`.
 
+**CardLink and CardButton (Set 1.1)** are cards the person presses: a visit, a doctor, a clinic. `CardLink` goes somewhere, `CardButton` acts. The whole card is one target with one focus ring; the shadow lifts on hover and a faint layer deepens on press, without movement. One action per card: no second button inside.
+
+**Inside a Band** the colour tokens point at their on-band forms, so any button, tag or focus ring placed on navy adapts by itself.
+
 **What you provide.** The content and its own headings. The surface adds no title, border colour or accent: state shows through a `StatusTag` inside, never a coloured edge.
 
 **Don't**

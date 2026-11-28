@@ -20,12 +20,13 @@ html { scroll-padding-top: calc(env(safe-area-inset-top, 0px) + var(--bar-h) + 2
 body { background: var(--bg); color: var(--ink); font-family: var(--font-sans); font-size: 15px; line-height: 1.6; -webkit-font-smoothing: antialiased; }
 h1, h2, h3, h4 { margin: 0; text-wrap: balance; font-weight: 600; color: var(--ink); }
 p { margin: 0; }
-a { color: var(--accent-text); text-underline-offset: 3px; }
+/* The site's own styles never reach the live kit parts (inside [data-pw]): unlayered page CSS would outrank them. */
+a:where(:not([data-pw] *)) { color: var(--accent-text); text-underline-offset: 3px; }
 code, .mono { font-family: var(--font-mono); font-size: 0.88em; }
 :not(pre) > code { background: var(--surface-3); color: var(--ink); padding: 1px 6px; border-radius: 6px; }
-:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+:where(:not([data-pw] *)):focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
 .ico { display: inline-block; width: 16px; height: 16px; flex: none; vertical-align: -3px; }
-button { font-family: inherit; }
+button:where(:not([data-pw] *)) { font-family: inherit; }
 
 /* ── Top bar ── */
 body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 40; background: var(--bg); }
@@ -273,7 +274,7 @@ td.muted { color: var(--ink-2); }
   <div class="bar-in">
     <button class="menu-btn" type="button" aria-expanded="false" aria-controls="side">Menu</button>
     <a class="brand" href="#overview">Tether<span>&nbsp;Kit</span></a>
-    <span class="ver">Prototype · Set 1</span>
+    <span class="ver">Prototype · Set 1.1</span>
     <span class="pal" title="The palette this prototype uses. The product keeps its shipped colours."><i></i>Jacaranda</span>
     <span class="grow"></span>
     <div class="seg" role="group" aria-label="Theme" id="theme">
@@ -401,6 +402,24 @@ td.muted { color: var(--ink-2); }
     render: function () { return row(h(K.Button, { size: "m", disabledReason: "Sign the discharge summary first." }, "Discharge")); } };
   EX.btnLink = { code: '<ButtonLink href="/visits" tone="outline">See your visits</ButtonLink>',
     render: function () { return row(h(K.ButtonLink, { href: "#start", tone: "outline", size: "m" }, "See your visits")); } };
+  function BusyIcon() {
+    var st = React.useState(false), busy = st[0], set = st[1];
+    return h(K.IconButton, { label: "Refresh", tone: "outline", icon: ic("PlusIcon"), busy: busy, busyLabel: "Adding", onClick: function () { set(true); setTimeout(function () { set(false); }, 2000); } });
+  }
+  EX.btnWide = { code: '<Button tone="accent" wide>Book a visit</Button>\n<ButtonLink href="/visits" tone="outline" wide>See your visits</ButtonLink>',
+    render: function () { return h("div", { style: { width: "100%", maxWidth: 360, display: "flex", flexDirection: "column", gap: 10 } }, h(K.Button, { tone: "accent", wide: true }, "Book a visit"), h(K.ButtonLink, { href: "#start", tone: "outline", wide: true }, "See your visits")); } };
+  EX.btnBand = { code: '<Band>\n  <Button>Show at desk</Button>\n  <Button tone="soft">Directions</Button>\n  <Button tone="outline">Move</Button>\n  <Button tone="quiet">Change</Button>\n</Band>\n// Inside a Band every tone takes its band form,\n// and the focus ring turns light.',
+    render: function () { return col(h(K.Band, null, h("div", { className: "ex-row", style: { justifyContent: "flex-start" } }, h(K.Button, { size: "m" }, "Show at desk"), h(K.Button, { size: "m", tone: "soft" }, "Directions"), h(K.Button, { size: "m", tone: "outline" }, "Move"), h(K.Button, { size: "m", tone: "quiet" }, "Change")))); } };
+  EX.btnLong = { code: '<Button>Move the visit and tell the patient by SMS</Button>\n// In a narrow column the label wraps onto a second line.',
+    render: function () { return h("div", { style: { width: 260, maxWidth: "100%", padding: 12, border: "1px dashed var(--line-strong)", borderRadius: 12 } }, h(K.Button, { size: "l", wide: true }, "Move the visit and tell the patient by SMS")); } };
+  EX.ibStates = { code: '<IconButton label="Add" icon={<PlusIcon {...ICON} />} disabledReason="The list is full." />\n<IconButton label="Add" icon={<PlusIcon {...ICON} />} busy={adding} busyLabel="Adding" />',
+    render: function () { return row(h(K.IconButton, { label: "Add", icon: ic("PlusIcon"), disabledReason: "The list is full." }), h(BusyIcon)); } };
+  function pressCard(kind, title, line) {
+    var inner = h("div", { style: { display: "flex", flexDirection: "column", gap: 4 } }, h(K.Tag, { area: "visits", style: { alignSelf: "flex-start" } }, "Visits"), h("span", { style: { marginTop: 6, fontWeight: 600, fontSize: 17 } }, title), h("span", { className: "text-pw-ink-2", style: { fontSize: 15 } }, line));
+    return kind === "link" ? h(K.CardLink, { href: "#surfaces" }, inner) : h(K.CardButton, { onClick: function () {} }, inner);
+  }
+  EX.cardPress = { code: '<CardLink href="/visits/k7m42q">\n  <Tag area="visits">Visits</Tag>\n  <h3>Outpatients · Morning</h3>\n  <p>Thu 4 Dec · Example clinic</p>\n</CardLink>\n\n<CardButton onClick={chooseDoctor}>…</CardButton>',
+    render: function () { return col(pressCard("link", "Outpatients · Morning", "Thu 4 Dec · Example clinic"), pressCard("button", "Diabetes review", "Fri 5 Dec · Example clinic")); } };
   EX.ibAll = { code: '<IconButton label="Close" icon={<XIcon {...ICON} />} />\n<IconButton label="More" tone="outline" icon={<EllipsisIcon {...ICON} />} />\n<IconButton label="Add" tone="quiet" icon={<PlusIcon {...ICON} />} />',
     render: function () { return row(h(K.IconButton, { label: "Close", icon: ic("XIcon") }), h(K.IconButton, { label: "More", tone: "outline", icon: ic("EllipsisIcon") }), h(K.IconButton, { label: "Add", tone: "quiet", icon: ic("PlusIcon") })); } };
   EX.tagPlaces = { code: '<Tag area="visits">Visits</Tag>\n<Tag area="readings">Readings</Tag>\n<Tag area="medicines">Medicines</Tag>\n<Tag area="team">Care team</Tag>\n<Tag area="me">Me</Tag>',
@@ -428,6 +447,9 @@ td.muted { color: var(--ink-2); }
     dontPlaceFill: function () { return kit("patient", row(h("span", { className: "bg-pw-area-medicines text-pw-on-band", style: { borderRadius: 99, padding: "4px 12px", fontWeight: 600, fontSize: 13 } }, "Medicines"))); },
     doFlat: function () { return kit("patient", col(h(K.Card, null, h(K.Card, { flat: true }, h("span", { style: { fontWeight: 600 } }, "One card inside one card"))))); },
     dontEdge: function () { return kit("patient", col(h(K.Card, { style: { borderLeft: "4px solid var(--pw-accent-text)" } }, h("span", { style: { fontWeight: 600 } }, "A coloured left edge")))); },
+    stateRow: function () { return kit("patient", row(h(K.Button, { tone: "accent", size: "m" }, "Accent"), h(K.Button, { size: "m" }, "Primary"), h(K.Button, { tone: "soft", size: "m" }, "Soft"), h(K.Button, { tone: "outline", size: "m" }, "Outline"), h(K.Button, { tone: "quiet", size: "m" }, "Quiet"), h(K.Button, { tone: "danger", size: "m" }, "Help"))); },
+    stateBand: function () { return kit("patient", col(h(K.Band, null, h("div", { className: "ex-row", style: { justifyContent: "flex-start" } }, h(K.Button, { size: "m" }, "Primary"), h(K.Button, { size: "m", tone: "soft" }, "Soft"), h(K.Button, { size: "m", tone: "outline" }, "Outline"), h(K.Button, { size: "m", tone: "quiet" }, "Quiet"))))); },
+    stateCard: function () { return kit("patient", col(pressCard("button", "Hover or press this card", "The shadow lifts; the press deepens a faint layer"))); },
     heroKit: function () {
       function cell(label, child, wide) { return h("div", { className: "spec-cell" + (wide ? " wide" : "") }, h("span", null, label), child); }
       return h("div", { className: "spec" },
@@ -510,12 +532,12 @@ td.muted { color: var(--ink-2); }
     },
     card: {
       controls: [
-        { key: "part", label: "Part", options: ["Card", "Card flat", "Band"] },
+        { key: "part", label: "Part", options: ["Card", "Card flat", "CardButton", "Band"] },
         { key: "density", label: "Density", options: ["patient", "desk"] }
       ],
       init: { part: "Card", density: "patient" },
-      render: function (s) { return kit(s.density, col(s.part === "Band" ? ticketBand() : visitCard(s.part === "Card flat"))); },
-      code: function (s) { return s.part === "Band" ? "<Band>…the ticket or the patient's header…</Band>" : "<Card" + (s.part === "Card flat" ? " flat" : "") + ">…</Card>"; }
+      render: function (s) { return kit(s.density, col(s.part === "Band" ? ticketBand() : s.part === "CardButton" ? pressCard("button", "Outpatients · Morning", "Thu 4 Dec · Example clinic") : visitCard(s.part === "Card flat"))); },
+      code: function (s) { return s.part === "Band" ? "<Band>…the ticket or the patient's header…</Band>" : s.part === "CardButton" ? "<CardButton onClick={open}>…</CardButton>" : "<Card" + (s.part === "Card flat" ? " flat" : "") + ">…</Card>"; }
     }
   };
   function playground(id) {
@@ -559,14 +581,14 @@ td.muted { color: var(--ink-2); }
   /* ── Pages ─────────────────────────────────────────────────────────────── */
   var NAV = [
     { h: null, items: [["overview", "Overview"], ["start", "Get started"]] },
-    { h: "Foundations", items: [["colour", "Colour"], ["type", "Typography"], ["shape", "Space and shape"], ["motion", "Elevation and motion"]] },
+    { h: "Foundations", items: [["colour", "Colour"], ["type", "Typography"], ["shape", "Space and shape"], ["motion", "Elevation and motion"], ["states", "Interaction states"]] },
     { h: "Set 1 · Actions and labels", st: true, items: [["button", "Button"], ["icon-button", "Icon button"], ["tags", "Tag and status"], ["surfaces", "Card and band"]] },
     { h: "Coming next", items: [["roadmap", "Sets 2 to 8"]] },
     { h: "About", items: [["references", "References"], ["changelog", "Changelog"]] }
   ];
   var ORDER = []; NAV.forEach(function (g) { g.items.forEach(function (i) { ORDER.push(i); }); });
   function titleOf(id) { var t = ORDER.filter(function (i) { return i[0] === id; })[0]; return t ? t[1] : id; }
-  var SETS = [["1 · Actions and labels", "Button, ButtonLink, IconButton, Tag, StatusTag, Card, Band", "Base UI Button", "In review"], ["2 · Typing", "Field, Input, Textarea, NumberInput", "Base UI Field, Input, NumberField", "Planned"], ["3 · Choosing", "Select, Segments, Tabs, Checkbox, Switch, RadioCards, ChipGroup", "Base UI Select, Tabs, ToggleGroup, Checkbox, Switch, Radio", "Planned"], ["4 · Interrupting", "Dialog, DangerDialog, Toast, Sheet (phone only)", "Base UI Dialog, AlertDialog, Toast, Drawer", "Planned"], ["5 · Menus and lookups", "Combobox, Menu, Popover, Tooltip, OTPField, PhoneField", "Base UI", "Planned"], ["6 · Date and time", "DateField, TimeField, Calendar", "Base UI Popover and Tether's grid", "Planned"], ["7 · Data", "Table with sort, select and bulk; stat cards", "Tether's own", "Planned"], ["8 · Tether's own", "Ticket, PatientBand, StageBar, EmptyState, Skeleton", "none", "Planned"]];
+  var SETS = [["1 · Actions and labels", "Button, ButtonLink, IconButton, Tag, StatusTag, Card, CardLink, CardButton, Band", "Base UI Button", "In review"], ["2 · Typing", "Field, Input, Textarea, NumberInput", "Base UI Field, Input, NumberField", "Planned"], ["3 · Choosing", "Select, Segments, Tabs, Checkbox, Switch, RadioCards, ChipGroup", "Base UI Select, Tabs, ToggleGroup, Checkbox, Switch, Radio", "Planned"], ["4 · Interrupting", "Dialog, DangerDialog, Toast, Sheet (phone only)", "Base UI Dialog, AlertDialog, Toast, Drawer", "Planned"], ["5 · Menus and lookups", "Combobox, Menu, Popover, Tooltip, OTPField, PhoneField", "Base UI", "Planned"], ["6 · Date and time", "DateField, TimeField, Calendar", "Base UI Popover and Tether's grid", "Planned"], ["7 · Data", "Table with sort, select and bulk; stat cards", "Tether's own", "Planned"], ["8 · Tether's own", "Ticket, PatientBand, StageBar, EmptyState, Skeleton", "none", "Planned"]];
   function setsTable(withFrom) {
     return '<div class="table-wrap"><table><thead><tr><th>Set</th><th>Parts</th>' + (withFrom ? "<th>Behaviour from</th>" : "") + "<th>Status</th></tr></thead><tbody>" +
       SETS.map(function (s) { return "<tr><td>" + s[0] + "</td><td>" + s[1] + "</td>" + (withFrom ? '<td class="muted">' + s[2] + "</td>" : "") + '<td><span class="st ' + (s[3] === "In review" ? "review" : "planned") + '">' + s[3] + "</span></td></tr>"; }).join("") + "</tbody></table></div>";
@@ -590,14 +612,14 @@ td.muted { color: var(--ink-2); }
           '<p class="lede">The Tether Kit is the component library for everything Tether shows, from the patient\'s phone to the reception desk. Behaviour comes from Base UI; the look is Tide, here in the Jacaranda palette. Every part sizes itself for patients or for the desk, so a patient and a receptionist at the same clinic see one product.</p>' +
           '<div class="cta"><a class="p" href="#start">Get started</a><a class="s" href="#button">Browse components</a></div></div>' +
           '<div class="hero-art" aria-label="The Set 1 parts, live"><div data-live="heroKit"></div></div></div>' +
-          '<div class="stats"><div><b>7</b><span>parts in Set 1</span></div><div><b>1 of 8</b><span>sets built, in review</span></div><div><b>2</b><span>densities, patient and desk</span></div><div><b>2</b><span>themes, light and dark</span></div></div>' +
+          '<div class="stats"><div><b>9</b><span>parts in Set 1</span></div><div><b>1 of 8</b><span>sets built, in review</span></div><div><b>2</b><span>densities, patient and desk</span></div><div><b>2</b><span>themes, light and dark</span></div></div>' +
           block("principles", "Principles", "What every part holds to, so no screen has to remember.",
             '<div class="princ"><div><b>One thing at a time</b><span>One headline and one main action per screen. The bright accent marks what to do now, once per region.</span></div>' +
             "<div><b>Intent, not colour</b><span>Parts take a tone and a size. They own every colour, radius and motion, so a screen cannot drift.</span></div>" +
             "<div><b>The rules travel with the parts</b><span>A disabled button says why. A status is an icon and a word. An icon-only button is named. Tests hold each rule.</span></div>" +
             "<div><b>Health colours mean health</b><span>Red, amber and green appear only for health states, always with a word, never for workflow.</span></div></div>") +
           block("components", "Components", "Set 1 is built and in review. Open a part for its playground, examples, rules and props.",
-            '<div class="cards">' + [["button", "Button", "Acts or navigates, in six tones and three sizes.", "miniButton"], ["icon-button", "Icon button", "A named round button for close, more and add.", "miniIcon"], ["tags", "Tag and status", "Labels for things, and the one part that carries state.", "miniTag"], ["surfaces", "Card and band", "The white card and the navy band everything sits on.", "miniCard"]].map(function (c) {
+            '<div class="cards">' + [["button", "Button", "Acts or navigates, in six tones and three sizes.", "miniButton"], ["icon-button", "Icon button", "A named round button for close, more and add.", "miniIcon"], ["tags", "Tag and status", "Labels for things, and the one part that carries state.", "miniTag"], ["surfaces", "Card and band", "The white card, the card you press, and the navy band.", "miniCard"]].map(function (c) {
               return '<a class="ccard" href="#' + c[0] + '"><div class="stage center"><div data-live="' + c[3] + '"></div></div><div class="cbody"><div class="row"><b>' + c[1] + '</b><span class="st review">In review</span></div><span class="d">' + c[2] + "</span></div></a>";
             }).join("") + "</div>") +
           block("next", "Coming next", "Each set starts once the one before it is signed.", setsTable(false));
@@ -672,18 +694,29 @@ td.muted { color: var(--ink-2); }
       },
       after: function (el) { var b = el.querySelector("#play-motion"); if (b) b.addEventListener("click", function () { el.querySelectorAll(".lane").forEach(function (l) { l.classList.toggle("go"); }); }); }
     },
+    states: {
+      html: function () {
+        return header("Foundations", "Interaction states", "Every pressable part answers a person the same way, in every tone and both themes. Hover over and press the parts below.") +
+          block("layer", "The state layer", "One overlay in the part's own text colour: 8% on hover, 14% on press. Navy darkens a light button and white lightens a navy one, so the change is always visible. Red keeps a darker red of its own, so its white word stays readable.", '<div class="frame"><div class="stage center"><div data-live="stateRow"></div></div></div>') +
+          block("table", "The states", "", '<div class="table-wrap"><table><thead><tr><th>State</th><th>What changes</th><th>Timing</th></tr></thead><tbody>' +
+            [["Rest", "The tone's fill, a transparent edge that turns visible in high-contrast mode.", "—"], ["Hover", "State layer at 8%. Only on devices that can hover, so a tap never sticks.", "250 ms"], ["Press", "State layer at 14%; with a mouse the part settles to 97%. No scale under a thumb.", "In 150 ms, back 250 ms"], ["Focus", "A 2 px ring with a 2 px gap in the focus shade, light on a navy band.", "Instant"], ["Disabled", "A quiet grey fill and readable label, the reason under it, no hover and no press.", "—"], ["Busy", "No second press; after 400 ms the label gives way to a spinner. Screen readers hear it.", "400 ms wait"], ["Reduced motion", "Colour changes only; nothing scales or slides.", "—"]].map(function (r) { return "<tr><td><b>" + r[0] + "</b></td><td>" + r[1] + '</td><td class="muted">' + r[2] + "</td></tr>"; }).join("") + "</tbody></table></div>") +
+          block("band", "On a navy band", "A main button on a ticket turns light so it never disappears into the navy; the focus ring turns light too.", '<div class="frame"><div class="stage"><div data-live="stateBand"></div></div></div>') +
+          block("cards", "Pressable cards", "A card the person presses lifts its shadow on hover and deepens a faint layer on press. It never moves.", '<div class="frame"><div class="stage"><div data-live="stateCard"></div></div></div>') +
+          block("access", "Accessibility", "", a11y([["High-contrast mode", "Every part keeps an edge when Windows paints colours away."], ["Text size", "Type is set in rem, so it follows the reader's text size; labels wrap rather than clip."], ["Touch", "48 px hit areas for patients, even where the pill looks smaller."], ["Spoken state", "A disabled part reads its reason; a busy part says so."]]));
+      }
+    },
     button: {
       html: function () {
         return header("Set 1 · Actions and labels", "Button", "The pill that does something. <code>Button</code> acts; <code>ButtonLink</code> navigates. Six tones and three sizes, with the rules built in: a disabled button says why, and a busy one never flashes.", srcMeta("button.tsx", "Base UI Button")) +
           block("playground", "Playground", "Change the props and the code follows.", playground("button")) +
           block("examples", "Examples", "Each example switches between patient and desk density.",
-            frame("btnTones", "Tones") + frame("btnSizes", "Sizes") + frame("btnIcons", "With an icon") + frame("btnBusy", "Busy: press it") + frame("btnDisabled", "Disabled, with its reason") + frame("btnLink", "ButtonLink")) +
+            frame("btnTones", "Tones") + frame("btnSizes", "Sizes") + frame("btnIcons", "With an icon") + frame("btnBusy", "Busy: press it") + frame("btnDisabled", "Disabled, with its reason") + frame("btnWide", "Wide") + frame("btnBand", "On a navy band", { center: false }) + frame("btnLong", "A long label wraps") + frame("btnLink", "ButtonLink")) +
           block("usage", "Usage", "<b>primary</b> for the main action of a form or card. <b>accent</b> for the one thing to do now. <b>soft</b> and <b>outline</b> beside a main action. <b>quiet</b> for Change and Add in a row. <b>danger</b> only for Help and Get help now.",
             dd("doOneAccent", "One accent per region, with a quieter choice beside it.", "dontTwoAccents", "Two accents compete; the patient cannot tell which to press.") +
             dd("doSayWhat", "Say exactly what happens.", "dontVague", "A vague verb leaves the receptionist guessing.")) +
-          block("props", "Props", "", props([["tone", '"primary" | "accent" | "soft" | "outline" | "quiet" | "danger"', '"primary"', "What the action is, not its colour."], ["size", '"l" | "m" | "s"', '"l"', "Resolves per density."], ["disabledReason", "string", "", "Disables the button and shows the reason under it, read with it."], ["busy", "boolean", "false", "Blocks a second press; a spinner replaces the label after 400 ms."], ["type", '"button" | "submit" | "reset"', '"button"', "Never submits by accident."], ["…", "Base UI Button props", "", "<code>onClick</code>, <code>aria-*</code> and the rest pass through."]]) +
-            '<h3 class="sub-h">ButtonLink</h3>' + props([["href", "string | UrlObject", "", "Where it goes.", true], ["tone, size", "as Button", "", "Looks the same as a Button."]])) +
-          block("a11y", "Accessibility", "", a11y([["Focusable when disabled", "Base UI keeps a disabled button in the tab order, so its reason is found and read."], ["Reason and work are announced", "<code>aria-describedby</code> points at the reason; <code>aria-busy</code> marks work in progress."], ["Contrast in this theme", 'Accent label <span class="ratio" data-r="on-accent|accent"></span> · primary label <span class="ratio" data-r="on-act|act"></span> · outline edge <span class="ratio" data-r="line-strong|surface"></span>'], ["Hit area and motion", "48 px hit area for patients. The press scales only under a mouse, and not at all under reduced motion."]]));
+          block("props", "Props", "", props([["tone", '"primary" | "accent" | "soft" | "outline" | "quiet" | "danger"', '"primary"', "What the action is, not its colour."], ["size", '"l" | "m" | "s"', '"l"', "Resolves per density."], ["disabledReason", "string", "", "Disables the button and shows the reason under it, read with it."], ["busy", "boolean", "false", "Blocks a second press; a spinner replaces the label after 400 ms."], ["busyLabel", "string", '"Working"', "What a screen reader hears while busy."], ["wide", "boolean", "false", "Fills its container: the main action at the foot of a phone screen."], ["type", '"button" | "submit" | "reset"', '"button"', "Never submits by accident."], ["…", "Base UI Button props", "", "<code>onClick</code>, <code>aria-*</code> and the rest pass through."]]) +
+            '<h3 class="sub-h">ButtonLink</h3>' + props([["href", "string | UrlObject", "", "Where it goes.", true], ["tone, size, wide", "as Button", "", "Looks the same as a Button."]])) +
+          block("a11y", "Accessibility", "", a11y([["Focusable when disabled", "Base UI keeps a disabled button in the tab order, so its reason is found and read."], ["Reason and work are announced", "<code>aria-describedby</code> points at the reason; <code>aria-busy</code> marks work in progress."], ["Contrast in this theme", 'Accent label <span class="ratio" data-r="on-accent|accent"></span> · primary label <span class="ratio" data-r="on-act|act"></span> · outline edge <span class="ratio" data-r="line-strong|surface"></span>'], ["Hit area and motion", "48 px hit area for patients. The press scales only under a mouse, and not at all under reduced motion."], ["Busy is spoken", "A polite live region says <code>busyLabel</code> when work starts."], ["High contrast and text size", "Keeps its edge in forced-colours mode; type in rem; a long label wraps instead of clipping."]]));
       },
       after: fillRatios, onTheme: function () { fillRatios(document.getElementById("main")); }
     },
@@ -691,8 +724,8 @@ td.muted { color: var(--ink-2); }
       html: function () {
         return header("Set 1 · Actions and labels", "Icon button", "A round button with only a glyph, for the few glyphs everyone reads: close, more and add. Everything else is a Button with a word, because in Tide every icon travels with its word.", srcMeta("button.tsx", "Base UI Button")) +
           block("playground", "Playground", "", playground("iconButton")) +
-          block("examples", "Examples", "", frame("ibAll", "Tones")) +
-          block("props", "Props", "", props([["label", "string", "", "Read out and shown on hover.", true], ["icon", "ReactNode", "", "One Lucide outline icon with <code>{...ICON}</code>.", true], ["tone", '"soft" | "outline" | "quiet"', '"soft"', "Never accent or danger."]])) +
+          block("examples", "Examples", "", frame("ibAll", "Tones") + frame("ibStates", "Disabled and busy: press the second")) +
+          block("props", "Props", "", props([["label", "string", "", "Read out and shown on hover.", true], ["icon", "ReactNode", "", "One Lucide outline icon with <code>{...ICON}</code>.", true], ["tone", '"soft" | "outline" | "quiet"', '"soft"', "Never accent or danger."], ["disabledReason", "string", "", "Disables it; the reason is read with it and shown on hover."], ["busy", "boolean", "false", "Blocks a press; a spinner takes the glyph's place after 400 ms."], ["busyLabel", "string", '"Working"', "What a screen reader hears while busy."]])) +
           block("a11y", "Accessibility", "", a11y([["Always named", "<code>label</code> is required and becomes the accessible name and the tooltip."], ["Size", "48 px for patients, 36 px at the desk."]]));
       }
     },
@@ -712,12 +745,12 @@ td.muted { color: var(--ink-2); }
     },
     surfaces: {
       html: function () {
-        return header("Set 1 · Actions and labels", "Card and band", "The two surfaces everything sits on. A Card is the white object on the grey ground; a Band is the navy header of a ticket or a patient's record.", srcMeta("surface.tsx", "static")) +
+        return header("Set 1 · Actions and labels", "Card and band", "The surfaces everything sits on. A Card is the white object on the grey ground; CardLink and CardButton are cards a person presses; a Band is the navy header of a ticket or a patient's record.", srcMeta("surface.tsx", "static")) +
           block("playground", "Playground", "", playground("card")) +
-          block("examples", "Examples", "", frame("cardBasic", "Card", { center: false }) + frame("cardFlat", "A card inside a card", { center: false }) + frame("band", "Band", { center: false })) +
+          block("examples", "Examples", "", frame("cardBasic", "Card", { center: false }) + frame("cardFlat", "A card inside a card", { center: false }) + frame("cardPress", "Pressable cards: hover and press", { center: false }) + frame("band", "Band", { center: false })) +
           block("usage", "Usage", "State shows through a StatusTag inside the surface, never through the surface's edge or fill.",
             dd("doFlat", "One card inside one card, the inner one flat.", "dontEdge", "A coloured left edge says nothing a word could not.")) +
-          block("props", "Props", "", '<h3 class="sub-h">Card</h3>' + props([["flat", "boolean", "false", "A hairline instead of a shadow, for a card inside a card."], ["…", "section props", "", "Content and <code>aria-*</code>."]]) + '<h3 class="sub-h">Band</h3>' + props([["…", "section props", "", "Text on it uses on-band and on-band-2."]]));
+          block("props", "Props", "", '<h3 class="sub-h">Card</h3>' + props([["flat", "boolean", "false", "A hairline instead of a shadow, for a card inside a card."], ["…", "section props", "", "Content and <code>aria-*</code>."]]) + '<h3 class="sub-h">CardLink and CardButton</h3>' + props([["href", "string | UrlObject", "", "CardLink: where it goes.", true], ["onClick", "function", "", "CardButton: what it does."], ["…", "link or Base UI Button props", "", "One action per card: no second button inside."]]) + '<h3 class="sub-h">Band</h3>' + props([["…", "section props", "", "Marks itself <code>data-surface=\"band\"</code>; buttons inside take their band form."]]));
       }
     },
     roadmap: {
@@ -732,7 +765,7 @@ td.muted { color: var(--ink-2); }
     },
     changelog: {
       html: function () {
-        var C = [["28 Nov 2026", "The kit site: overview, foundations, and a page per part with playground, examples, usage, props and accessibility."], ["28 Nov 2026", "Jacaranda becomes the prototype palette; a light, dark and auto switch."], ["28 Nov 2026", "Busy buttons wait 400 ms before the spinner; presses go in fast and come back slower."], ["28 Nov 2026", "Set 1 built: Button, ButtonLink, IconButton, Tag, StatusTag, Card, Band, KitRoot."]];
+        var C = [["28 Nov 2026", "Set 1.1: one state layer for hover and press; disabled parts no longer press; buttons on a navy band turn light with a light focus ring; labels and tags wrap; edges survive high-contrast mode; busy is spoken; type in rem; wide buttons; disabled and busy icon buttons; CardLink and CardButton. A new Interaction states page."], ["28 Nov 2026", "The kit site: overview, foundations, and a page per part with playground, examples, usage, props and accessibility."], ["28 Nov 2026", "Jacaranda becomes the prototype palette; a light, dark and auto switch."], ["28 Nov 2026", "Busy buttons wait 400 ms before the spinner; presses go in fast and come back slower."], ["28 Nov 2026", "Set 1 built: Button, ButtonLink, IconButton, Tag, StatusTag, Card, Band, KitRoot."]];
         return header("About", "Changelog", "What changed in the kit, newest first.") +
           block("changes", "Changes", "", '<div class="table-wrap"><table><thead><tr><th>Date</th><th>Change</th></tr></thead><tbody>' + C.map(function (c) { return '<tr><td class="muted">' + c[0] + "</td><td>" + c[1] + "</td></tr>"; }).join("") + "</tbody></table></div>");
       }
