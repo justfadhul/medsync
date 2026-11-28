@@ -12,6 +12,7 @@ import {
   buttonClass,
   Card,
   CardButton,
+  convertUnit,
   Field,
   IconButton,
   Input,
@@ -20,6 +21,7 @@ import {
   StatusTag,
   Tag,
   Textarea,
+  UNITS,
 } from "@/components/tether-kit";
 
 /**
@@ -266,5 +268,35 @@ describe("Set 2 · Typing: fields carry the laws", () => {
     expect(out).toContain('aria-label="Less"');
     expect(out).toContain('aria-label="More"');
     expect(out).toContain(">kg</span>");
+  });
+});
+
+describe("Set 2 · units: switching never changes what a number means", () => {
+  const [kg, g] = UNITS.weight;
+  const [c, f] = UNITS.temperature;
+  const [cm, m] = UNITS.length;
+  const [years, , , days] = UNITS.age;
+
+  it("exact conversions convert, at the new unit's precision", () => {
+    expect(convertUnit(64, kg, g)).toBe(64000);
+    expect(convertUnit(64350, g, kg)).toBe(64.4);
+    expect(convertUnit(37, c, f)).toBe(98.6);
+    expect(convertUnit(98.6, f, c)).toBe(37);
+    expect(convertUnit(170, cm, m)).toBe(1.7);
+  });
+
+  it("units with no exact conversion give null, so the field clears", () =>
+    expect(convertUnit(2, years, days)).toBeNull());
+
+  it("a switchable unit is a named button, not a silent label", () => {
+    const out = renderToStaticMarkup(
+      createElement(
+        Field,
+        { label: "Weight" } as ComponentProps<typeof Field>,
+        createElement(NumberInput, { units: UNITS.weight, defaultValue: 64 }),
+      ),
+    );
+    expect(out).toContain('aria-label="Unit: kilograms. Change the unit"');
+    expect(out).toContain('aria-live="polite"');
   });
 });

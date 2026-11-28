@@ -1,14 +1,18 @@
 "use client";
 
+import type { UnitOption } from "./units";
 import type { ChangeEvent, ComponentProps, ReactNode } from "react";
 import { createContext, useContext, useState } from "react";
 import { Field as BaseField } from "@base-ui/react/field";
 import { Input as BaseInput } from "@base-ui/react/input";
+import { Menu } from "@base-ui/react/menu";
 import { NumberField } from "@base-ui/react/number-field";
-import { CircleAlertIcon, MinusIcon, PlusIcon } from "lucide-react";
+import { CheckIcon, ChevronDownIcon, CircleAlertIcon, MinusIcon, PlusIcon } from "lucide-react";
 
 import { cn } from "@/lib/utils";
-import { FIELD_CONTROL, FIELD_FRAME, FIELD_SIZE, ICON, STATE } from "./core";
+import { FIELD_CONTROL, FIELD_FRAME, FIELD_SIZE, ICON, POPUP, POPUP_ROW, STATE } from "./core";
+import { useDensity } from "./root";
+import { convertUnit } from "./units";
 
 /**
  * Set 2 · Typing. Behaviour: Base UI Field, Input and NumberField, so the label, hint and error are wired to the
@@ -237,36 +241,92 @@ const STEP = cn(
 );
 
 /**
- * A number with a locked unit and − and + steppers (48 px for patients). The unit is part of the field, not typed.
- * Give the range in the Field's `hint` ("Between 30 and 45 °C"). Shift with an arrow key steps by ten.
+ * A number with its unit beside it and − and + steppers (48 px for patients). The unit is never typed. Give the
+ * range in the Field's `hint` ("Between 30 and 45 °C"). Shift with an arrow key steps by ten.
+ *
+ * With `units` the unit is a switch (kg or g, °C or °F, years or days). Switching never changes what the number
+ * means: an exact conversion converts it and says so; a unit with no exact conversion clears it (units.ts). `min`
+ * and `max` are then in the first (base) unit, and `onUnitChange` reports the new unit and the converted value.
  */
 export function NumberInput({
   unit,
+  units,
+  defaultUnit,
+  onUnitChange,
   lessLabel = "Less",
   moreLabel = "More",
   className,
   disabled,
   readOnly,
+  value,
+  defaultValue,
+  onValueChange,
+  min,
+  max,
+  step,
   ...rest
 }: Omit<ComponentProps<typeof NumberField.Root>, "className" | "children"> & {
-  /** The unit after the value: "kg", "°C", "mmHg". */
+  /** A fixed unit after the value: "kg", "°C", "mmHg". */
   unit?: string;
+  /** Units the person can switch between, e.g. `UNITS.weight`. The first is the base. */
+  units?: readonly UnitOption[];
+  /** The unit shown first (an id from `units`). */
+  defaultUnit?: string;
+  /** Called after a switch with the new unit's id and the converted value (null when cleared). */
+  onUnitChange?: (unitId: string, value: number | null) => void;
   /** Spoken names of the steppers. */
   lessLabel?: string;
   moreLabel?: string;
   className?: string;
 }) {
+  const density = useDensity();
+  const [unitId, setUnitId] = useState(defaultUnit ?? units?.[0]?.id);
+  const [inner, setInner] = useState<number | null>(defaultValue ?? null);
+  const [said, setSaid] = useState("");
+  const controlled = value !== undefined;
+  const current = controlled ? value : inner;
+  const u = units?.find((x) => x.id === unitId);
+  const base = units?.[0];
+  // Limits are in the base unit; show them in the current one.
+  const inUnit = (n: number | undefined) =>
+    n == null || !u || !base ? n : (convertUnit(n, base, u) ?? undefined);
+
+  function choose(next: string) {
+    const to = units?.find((x) => x.id === next);
+    if (!to || !u || next === unitId) return;
+    const converted = current == null ? null : convertUnit(current, u, to);
+    setUnitId(next);
+    if (!controlled) setInner(converted);
+    onUnitChange?.(next, converted);
+    setSaid(
+      current == null
+        ? `Unit: ${to.spoken}.`
+        : converted == null
+          ? `Unit: ${to.spoken}. Enter the number again.`
+          : `Unit: ${to.spoken}. ${converted.toLocaleString()} ${to.spoken}.`,
+    );
+  }
+
+  const label = u?.label ?? unit;
   return (
     <NumberField.Root
       {...rest}
+      value={current}
+      onValueChange={(v, d) => {
+        if (!controlled) setInner(v);
+        onValueChange?.(v, d);
+      }}
+      min={units ? inUnit(min) : min}
+      max={units ? inUnit(max) : max}
+      step={step ?? u?.step}
       disabled={disabled}
       readOnly={readOnly}
-      largeStep={10}
+      largeStep={10 * (typeof step === "number" ? step : (u?.step ?? 1))}
       className={cn("min-w-0", className)}
     >
       <NumberField.Group
         {...useFrameState(disabled, readOnly)}
-        className={cn(FIELD_FRAME, FIELD_SIZE, "max-w-[20rem]")}
+        className={cn(FIELD_FRAME, FIELD_SIZE, "max-w-[22rem]")}
       >
         {readOnly ? null : (
           <NumberField.Decrement
@@ -279,9 +339,54 @@ export function NumberInput({
         <NumberField.Input
           className={cn(FIELD_CONTROL, "text-center font-semibold tabular-nums")}
         />
-        {unit ? (
+        {units && u && !readOnly && !disabled ? (
+          <Menu.Root>
+            <Menu.Trigger
+              aria-label={`Unit: ${u.spoken}. Change the unit`}
+              className={cn(
+                AFFIX,
+                "relative cursor-pointer [grid-auto-flow:column] gap-1 border-l outline-none",
+                "focus-visible:outline-pw-focus focus-visible:outline-2 focus-visible:-outline-offset-4",
+                "[&_svg]:size-4 in-data-[density=desk]:[&_svg]:size-3.5",
+                STATE,
+              )}
+            >
+              {u.label}
+              <ChevronDownIcon {...ICON} />
+            </Menu.Trigger>
+            <Menu.Portal>
+              <Menu.Positioner
+                sideOffset={6}
+                align="end"
+                className="z-50 outline-none"
+                data-pw=""
+                data-density={density}
+              >
+                <Menu.Popup className={POPUP}>
+                  <Menu.RadioGroup value={unitId} onValueChange={(v) => choose(String(v))}>
+                    {units.map((o) => (
+                      <Menu.RadioItem key={o.id} value={o.id} closeOnClick className={POPUP_ROW}>
+                        <span className="flex min-w-0 flex-1 flex-col leading-tight">
+                          <span className="font-semibold">{o.label}</span>
+                          {o.spoken !== o.label ? (
+                            <span className="text-pw-ink-2 text-[0.8125rem] in-data-[density=desk]:text-xs">
+                              {o.spoken}
+                            </span>
+                          ) : null}
+                        </span>
+                        <Menu.RadioItemIndicator className="text-pw-accent-text">
+                          <CheckIcon {...ICON} strokeWidth={2.2} className="size-4" />
+                        </Menu.RadioItemIndicator>
+                      </Menu.RadioItem>
+                    ))}
+                  </Menu.RadioGroup>
+                </Menu.Popup>
+              </Menu.Positioner>
+            </Menu.Portal>
+          </Menu.Root>
+        ) : label ? (
           <span aria-hidden className={cn(AFFIX, "border-l")}>
-            {unit}
+            {label}
           </span>
         ) : null}
         {readOnly ? null : (
@@ -293,6 +398,11 @@ export function NumberInput({
           </NumberField.Increment>
         )}
       </NumberField.Group>
+      {units ? (
+        <span className="sr-only" aria-live="polite">
+          {said}
+        </span>
+      ) : null}
     </NumberField.Root>
   );
 }

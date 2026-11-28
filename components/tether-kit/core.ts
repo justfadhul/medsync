@@ -80,3 +80,18 @@ export const FIELD_CONTROL = [
   "in-data-[density=desk]:px-3 in-data-[density=desk]:py-2",
   "autofill:shadow-[inset_0_0_0_100px_var(--pw-surface)] autofill:[-webkit-text-fill-color:var(--pw-ink)]",
 ].join(" ");
+
+/** Floating surfaces (a unit list now; menus and select lists in later sets): raised, float shadow, a quick scale-in. */
+export const POPUP = [
+  "bg-pw-raised text-pw-ink border-pw-line shadow-pw-float font-pw min-w-[10rem] rounded-[14px] border p-1.5 outline-none",
+  "origin-[var(--transform-origin)] transition-[opacity,scale] duration-150 ease-expo-out",
+  "data-[starting-style]:scale-[0.97] data-[starting-style]:opacity-0 data-[ending-style]:opacity-0",
+  "motion-reduce:transition-opacity motion-reduce:data-[starting-style]:scale-100",
+].join(" ");
+
+/** A row in a floating list: 48 px for patients, 36 px at the desk; highlighted rows take the quiet fill. */
+export const POPUP_ROW = [
+  "text-pw-ink flex min-h-12 cursor-pointer select-none items-center gap-3 rounded-[10px] px-3 py-2 text-[1.0625rem] outline-none",
+  "in-data-[density=desk]:min-h-9 in-data-[density=desk]:text-sm",
+  "data-[highlighted]:bg-pw-surface-3 data-[disabled]:text-pw-ink-4 data-[disabled]:cursor-not-allowed",
+].join(" ");

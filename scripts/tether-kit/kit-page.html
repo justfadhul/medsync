@@ -445,6 +445,8 @@ td.muted { color: var(--ink-2); }
     render: function () { return form(F({ label: "Weight", hint: "Between 2 and 250 kg." }, h(K.NumberInput, { unit: "kg", min: 2, max: 250, step: 0.5, defaultValue: 64 }))); } };
   EX.numTemp = { code: '<Field label="Temperature" hint="Between 30 and 45 °C.">\n  <NumberInput unit="°C" min={30} max={45} step={0.1} defaultValue={36.8} />\n</Field>',
     render: function () { return form(F({ label: "Temperature", hint: "Between 30 and 45 °C." }, h(K.NumberInput, { unit: "°C", min: 30, max: 45, step: 0.1, defaultValue: 36.8 }))); } };
+  EX.numUnits = { code: '<Field label="Weight" hint="Between 0.5 and 250 kg.">\n  <NumberInput units={UNITS.weight} min={0.5} max={250} defaultValue={64} />\n</Field>\n<Field label="Temperature">\n  <NumberInput units={UNITS.temperature} defaultValue={37} />\n</Field>\n<Field label="Age">\n  <NumberInput units={UNITS.age} defaultValue={3} />\n</Field>\n// kg ⇄ g and °C ⇄ °F convert the number and say so.\n// Age has no exact conversion: switching clears the number.',
+    render: function () { return form(F({ label: "Weight", hint: "Between 0.5 and 250 kg." }, h(K.NumberInput, { units: K.UNITS.weight, min: 0.5, max: 250, defaultValue: 64 })), F({ label: "Temperature" }, h(K.NumberInput, { units: K.UNITS.temperature, defaultValue: 37 })), F({ label: "Age" }, h(K.NumberInput, { units: K.UNITS.age, defaultValue: 3 }))); } };
   EX.numCount = { code: '<Field label="How many people are with you?">\n  <NumberInput min={0} max={10} defaultValue={1} lessLabel="Fewer people" moreLabel="More people" />\n</Field>',
     render: function () { return form(F({ label: "How many people are with you?" }, h(K.NumberInput, { min: 0, max: 10, defaultValue: 1, lessLabel: "Fewer people", moreLabel: "More people" }))); } };
   EX.numStates = { code: '<Field label="Height" error="Enter a height between 40 and 250 cm.">\n  <NumberInput unit="cm" min={40} max={250} defaultValue={300} />\n</Field>\n<Field label="Last weight"><NumberInput unit="kg" value={64} readOnly /></Field>',
@@ -607,18 +609,18 @@ td.muted { color: var(--ink-2); }
     },
     number: {
       controls: [
-        { key: "unit", label: "Unit", options: ["none", "kg", "°C", "mmHg"] },
+        { key: "unit", label: "Unit", options: ["none", "kg", "°C", "mmHg", "switch: weight", "switch: age"] },
         { key: "step", label: "Step", options: ["1", "0.5", "0.1"] },
         { key: "state", label: "State", options: ["plain", "hint", "error", "disabled", "read-only"] },
         { key: "density", label: "Density", options: ["patient", "desk"] }
       ],
       init: { unit: "kg", step: "0.5", state: "hint", density: "patient" },
       render: function (s) {
-        var np = { step: +s.step, defaultValue: 64 }; if (s.unit !== "none") np.unit = s.unit; if (s.state === "read-only") { np.readOnly = true; np.value = 64; delete np.defaultValue; }
+        var np = { step: +s.step, defaultValue: 64 }; if (s.unit === "switch: weight") np.units = K.UNITS.weight; else if (s.unit === "switch: age") { np.units = K.UNITS.age; np.step = 1; np.defaultValue = 3; } else if (s.unit !== "none") np.unit = s.unit; if (s.state === "read-only") { np.readOnly = true; np.value = 64; delete np.defaultValue; }
         return kit(s.density, form(F(fieldState(s.state, { label: "Weight" }), h(K.NumberInput, np))));
       },
       code: function (s) {
-        var a = []; if (s.unit !== "none") a.push('unit="' + s.unit + '"'); if (s.step !== "1") a.push("step={" + s.step + "}"); a.push(s.state === "read-only" ? "value={64} readOnly" : "defaultValue={64}");
+        var a = []; if (s.unit === "switch: weight") a.push("units={UNITS.weight}"); else if (s.unit === "switch: age") a.push("units={UNITS.age}"); else if (s.unit !== "none") a.push('unit="' + s.unit + '"'); if (s.step !== "1" && s.unit !== "switch: age") a.push("step={" + s.step + "}"); a.push(s.state === "read-only" ? "value={64} readOnly" : s.unit === "switch: age" ? "defaultValue={3}" : "defaultValue={64}");
         return fieldCode(s.state, "Weight", "<NumberInput " + a.join(" ") + " />");
       }
     },
@@ -875,11 +877,11 @@ td.muted { color: var(--ink-2); }
       html: function () {
         return header("Set 2 · Typing", "Number input", "A number with its unit locked beside it and − and + steppers big enough for a thumb. The unit is part of the field, never typed.", srcMeta("field.tsx", "Base UI NumberField", 2)) +
           block("playground", "Playground", "", playground("number")) +
-          block("examples", "Examples", "", frame("numWeight", "Weight") + frame("numTemp", "Temperature, in tenths") + frame("numCount", "A count, with named steppers") + frame("numStates", "An error, and read-only")) +
-          block("usage", "Usage", "Give the range in the hint. A number field is for amounts a person might nudge up or down; codes and phone numbers are text.",
-            dd("doUnit", "The unit sits beside the number, locked.", "dontUnit", "A free-text box invites \"64kg\", \"64 kgs\" and \"sixty-four\".")) +
-          block("props", "Props", "", props([["unit", "string", "", "Shown after the value."], ["min, max", "number", "", "The allowed range. Say it in the hint."], ["step", "number", "1", "Each press of a stepper; with Shift and an arrow key, ten."], ["lessLabel, moreLabel", "string", '"Less", "More"', "What the steppers are called aloud."], ["…", "Base UI NumberField props", "", "<code>defaultValue</code>, <code>value</code>, <code>onValueChange</code>, <code>format</code>."]])) +
-          block("a11y", "Accessibility", "", a11y([["Steppers are named", "Each is a button with a spoken name; on a patient screen each is 48 px wide."], ["Keyboard", "Arrow keys step; Shift steps by ten; the value stays tabular so digits line up."]]));
+          block("examples", "Examples", "", frame("numWeight", "Weight") + frame("numUnits", "Switch the unit: open kg, °C or years") + frame("numTemp", "Temperature, in tenths") + frame("numCount", "A count, with named steppers") + frame("numStates", "An error, and read-only")) +
+          block("usage", "Usage", "Give the range in the hint. A number field is for amounts a person might nudge up or down; codes and phone numbers are text. Switching a unit never changes what the number means: an exact conversion converts it and says so aloud; a unit with no exact conversion (an age in years or in days) clears it, so it is entered again.",
+            dd("doUnit", "The unit sits beside the number. Where people use more than one (kg or g, °C or °F, years or days), it becomes a switch.", "dontUnit", "A free-text box invites \"64kg\", \"64 kgs\" and \"sixty-four\".")) +
+          block("props", "Props", "", props([["unit", "string", "", "A fixed unit shown after the value."], ["units", "UnitOption[]", "", "Units to switch between: <code>UNITS.weight</code>, <code>UNITS.temperature</code>, <code>UNITS.length</code>, <code>UNITS.age</code>, or your own. The first is the base."], ["defaultUnit", "string", "the first", "The unit shown first."], ["onUnitChange", "(unitId, value) => void", "", "After a switch: the new unit and the converted value, or null when cleared."], ["min, max", "number", "", "The allowed range, in the base unit when <code>units</code> is set. Say it in the hint."], ["step", "number", "1", "Each press of a stepper; with Shift and an arrow key, ten."], ["lessLabel, moreLabel", "string", '"Less", "More"', "What the steppers are called aloud."], ["…", "Base UI NumberField props", "", "<code>defaultValue</code>, <code>value</code>, <code>onValueChange</code>, <code>format</code>."]])) +
+          block("a11y", "Accessibility", "", a11y([["Steppers are named", "Each is a button with a spoken name; on a patient screen each is 48 px wide."], ["Keyboard", "Arrow keys step; Shift steps by ten; the value stays tabular so digits line up."], ["Switching is spoken", "The unit button says its unit (\"Unit: kilograms\"); after a switch a polite announcement gives the converted number, or asks for it again."]]));
       }
     },
     roadmap: {
@@ -894,7 +896,7 @@ td.muted { color: var(--ink-2); }
     },
     changelog: {
       html: function () {
-        var C = [["28 Nov 2026", "Set 2 · Typing: Field, Input, Textarea and NumberInput. Errors come before the field as an icon and a word; optional is marked; prefixes and suffixes; widths that hint at the answer; a password field with Show; read-only, disabled and autofill looks; a textarea that grows and counts; number steppers on the state system. Set 1 signed."], ["28 Nov 2026", "Set 1.1: one state layer for hover and press; disabled parts no longer press; buttons on a navy band turn light with a light focus ring; labels and tags wrap; edges survive high-contrast mode; busy is spoken; type in rem; wide buttons; disabled and busy icon buttons; CardLink and CardButton. A new Interaction states page."], ["28 Nov 2026", "The kit site: overview, foundations, and a page per part with playground, examples, usage, props and accessibility."], ["28 Nov 2026", "Jacaranda becomes the prototype palette; a light, dark and auto switch."], ["28 Nov 2026", "Busy buttons wait 400 ms before the spinner; presses go in fast and come back slower."], ["28 Nov 2026", "Set 1 built: Button, ButtonLink, IconButton, Tag, StatusTag, Card, Band, KitRoot."]];
+        var C = [["28 Nov 2026", "Number input: units can be a switch (kg or g, °C or °F, cm or m, years to days). An exact conversion converts the number and says so; a unit with no exact conversion clears it."], ["28 Nov 2026", "Set 2 · Typing: Field, Input, Textarea and NumberInput. Errors come before the field as an icon and a word; optional is marked; prefixes and suffixes; widths that hint at the answer; a password field with Show; read-only, disabled and autofill looks; a textarea that grows and counts; number steppers on the state system. Set 1 signed."], ["28 Nov 2026", "Set 1.1: one state layer for hover and press; disabled parts no longer press; buttons on a navy band turn light with a light focus ring; labels and tags wrap; edges survive high-contrast mode; busy is spoken; type in rem; wide buttons; disabled and busy icon buttons; CardLink and CardButton. A new Interaction states page."], ["28 Nov 2026", "The kit site: overview, foundations, and a page per part with playground, examples, usage, props and accessibility."], ["28 Nov 2026", "Jacaranda becomes the prototype palette; a light, dark and auto switch."], ["28 Nov 2026", "Busy buttons wait 400 ms before the spinner; presses go in fast and come back slower."], ["28 Nov 2026", "Set 1 built: Button, ButtonLink, IconButton, Tag, StatusTag, Card, Band, KitRoot."]];
         return header("About", "Changelog", "What changed in the kit, newest first.") +
           block("changes", "Changes", "", '<div class="table-wrap"><table><thead><tr><th>Date</th><th>Change</th></tr></thead><tbody>' + C.map(function (c) { return '<tr><td class="muted">' + c[0] + "</td><td>" + c[1] + "</td></tr>"; }).join("") + "</tbody></table></div>");
       }

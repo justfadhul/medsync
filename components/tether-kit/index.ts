@@ -17,3 +17,4 @@ export { Tag, StatusTag, type TagTone, type StatusTone, type Area } from "./tag"
 export { Card, Band } from "./surface";
 export { CardLink, CardButton } from "./card-action";
 export { Field, Input, Textarea, NumberInput } from "./field";
+export { UNITS, convertUnit, type UnitOption } from "./units";
