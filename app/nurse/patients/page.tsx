@@ -19,7 +19,12 @@ const BASIS_LABEL: Record<string, string> = {
   care_team: "Care team",
 };
 
-export default async function NursePatientsPage() {
+export default async function NursePatientsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ view?: string }>;
+}) {
+  const cards = (await searchParams).view === "cards";
   const scope = await requireNurseScope();
   const rows = await listNursePatientPanel({
     nurseUserId: scope.userId,
@@ -61,88 +66,151 @@ export default async function NursePatientsPage() {
         </h2>
       </div>
 
+      {rows.length > 0 ? (
+        <nav
+          aria-label="Show as"
+          className="bg-muted hidden w-max gap-0.5 rounded-full p-1 md:flex"
+        >
+          {[
+            ["Table", "/nurse/patients", !cards],
+            ["Cards", "/nurse/patients?view=cards", cards],
+          ].map(([label, href, on]) => (
+            <Link
+              key={String(label)}
+              href={String(href)}
+              aria-current={on ? "page" : undefined}
+              className={`rounded-full px-3 py-1 text-[12.5px] font-medium ${on ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}
+            >
+              {label}
+            </Link>
+          ))}
+        </nav>
+      ) : null}
+
       {rows.length === 0 ? (
         <EmptyPanel departmentName={scope.departmentName} isInCharge={scope.isInCharge} />
       ) : (
-        <div className="border-border bg-card overflow-hidden rounded-lg border">
-          <table className="w-full border-collapse text-left">
-            <thead className="border-border bg-muted/30 border-b">
-              <tr className="text-muted-foreground font-mono text-[10px] tracking-[0.14em] uppercase">
-                <th scope="col" className="px-4 py-2.5 font-normal">
-                  Patient code
-                </th>
-                {showNews ? (
-                  <>
-                    <th scope="col" className="px-4 py-2.5 font-normal">
-                      NEWS2
-                    </th>
-                    <th scope="col" className="px-4 py-2.5 font-normal">
-                      Next vitals
-                    </th>
-                  </>
-                ) : null}
-                <th scope="col" className="px-4 py-2.5 font-normal">
-                  Last activity
-                </th>
-                <th scope="col" className="px-4 py-2.5 font-normal">
-                  Basis
-                </th>
-                <th scope="col" className="px-4 py-2.5 font-normal" />
-              </tr>
-            </thead>
-            <tbody className="divide-border/60 divide-y">
-              {list.map((r) => (
-                <tr key={r.patientUserId} className="group hover:bg-ink-25 transition-colors">
-                  <td className="px-4 py-2.5">
-                    <Link
-                      href={`/nurse/patients/${r.patientUserId}`}
-                      className="text-foreground hover:text-brand-700 dark:hover:text-brand-300 font-mono text-[12.5px] font-medium tabular-nums transition-colors"
-                    >
+        <>
+          {/* Cards: always at phone width, by choice on a wider screen (ADR 0545). */}
+          <ul className={`grid gap-3 sm:grid-cols-2 lg:grid-cols-3 ${cards ? "" : "md:hidden"}`}>
+            {list.map((r) => (
+              <li key={r.patientUserId}>
+                <Link
+                  href={`/nurse/patients/${r.patientUserId}`}
+                  className="border-border bg-card hover:bg-muted/40 flex h-full flex-col gap-2 rounded-xl border p-4 transition-colors"
+                >
+                  <span className="flex items-baseline justify-between gap-2">
+                    <span className="text-foreground font-mono text-[13px] font-medium tabular-nums">
                       {r.patientCode}
-                    </Link>
-                  </td>
+                    </span>
+                    <span className="text-muted-foreground font-mono text-[10.5px] tracking-[0.06em] uppercase">
+                      {BASIS_LABEL[r.basis] ?? r.basis}
+                    </span>
+                  </span>
+                  {showNews ? (
+                    <span className="flex flex-col gap-1 text-[12.5px]">
+                      {r.news.total === null ? (
+                        <span className="text-muted-foreground">No score yet</span>
+                      ) : (
+                        <StatusWord tone={r.news.emergency ? "critical" : "neutral"}>
+                          <span className="tabular-nums">NEWS2 {r.news.total}</span>
+                          {r.news.bandLabel ? ` · ${r.news.bandLabel}` : ""}
+                        </StatusWord>
+                      )}
+                      <span className="text-foreground font-mono text-[11.5px]">
+                        Vitals: {dueWords(r.news)}
+                      </span>
+                    </span>
+                  ) : null}
+                  <span className="text-muted-foreground mt-auto font-mono text-[11px]">
+                    Last activity {r.lastSeenIso ? formatRelative(r.lastSeenIso) : "—"}
+                  </span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+          <div
+            className={`border-border bg-card overflow-hidden rounded-lg border ${cards ? "hidden" : "max-md:hidden"}`}
+          >
+            <table className="w-full border-collapse text-left">
+              <thead className="border-border bg-muted/30 border-b">
+                <tr className="text-muted-foreground font-mono text-[10px] tracking-[0.14em] uppercase">
+                  <th scope="col" className="px-4 py-2.5 font-normal">
+                    Patient code
+                  </th>
                   {showNews ? (
                     <>
-                      <td className="px-4 py-2.5 text-[12.5px]">
-                        {r.news.total === null ? (
-                          <span className="text-muted-foreground">No score yet</span>
-                        ) : (
-                          <StatusWord tone={r.news.emergency ? "critical" : "neutral"}>
-                            <span className="tabular-nums">{r.news.total}</span>
-                            {r.news.bandLabel ? ` · ${r.news.bandLabel}` : ""}
-                          </StatusWord>
-                        )}
-                      </td>
-                      <td className="text-foreground px-4 py-2.5 font-mono text-[11.5px] tabular-nums">
-                        {dueWords(r.news)}
-                      </td>
+                      <th scope="col" className="px-4 py-2.5 font-normal">
+                        NEWS2
+                      </th>
+                      <th scope="col" className="px-4 py-2.5 font-normal">
+                        Next vitals
+                      </th>
                     </>
                   ) : null}
-                  <td className="text-foreground px-4 py-2.5 font-mono text-[11.5px] tabular-nums">
-                    {r.lastSeenIso ? formatRelative(r.lastSeenIso) : "—"}
-                  </td>
-                  <td className="text-muted-foreground px-4 py-2.5 font-mono text-[10.5px] tracking-[0.06em] uppercase">
-                    {BASIS_LABEL[r.basis] ?? r.basis}
-                  </td>
-                  <td className="px-4 py-2.5 text-right">
-                    <Link
-                      href={`/nurse/patients/${r.patientUserId}`}
-                      className="text-muted-foreground hover:text-foreground inline-flex items-center gap-1 text-[11.5px] transition-colors"
-                    >
-                      Open
-                      <span
-                        aria-hidden
-                        className="inline-block transition-transform duration-200 group-hover:translate-x-0.5"
-                      >
-                        →
-                      </span>
-                    </Link>
-                  </td>
+                  <th scope="col" className="px-4 py-2.5 font-normal">
+                    Last activity
+                  </th>
+                  <th scope="col" className="px-4 py-2.5 font-normal">
+                    Basis
+                  </th>
+                  <th scope="col" className="px-4 py-2.5 font-normal" />
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody className="divide-border/60 divide-y">
+                {list.map((r) => (
+                  <tr key={r.patientUserId} className="group hover:bg-ink-25 transition-colors">
+                    <td className="px-4 py-2.5">
+                      <Link
+                        href={`/nurse/patients/${r.patientUserId}`}
+                        className="text-foreground hover:text-brand-700 dark:hover:text-brand-300 font-mono text-[12.5px] font-medium tabular-nums transition-colors"
+                      >
+                        {r.patientCode}
+                      </Link>
+                    </td>
+                    {showNews ? (
+                      <>
+                        <td className="px-4 py-2.5 text-[12.5px]">
+                          {r.news.total === null ? (
+                            <span className="text-muted-foreground">No score yet</span>
+                          ) : (
+                            <StatusWord tone={r.news.emergency ? "critical" : "neutral"}>
+                              <span className="tabular-nums">{r.news.total}</span>
+                              {r.news.bandLabel ? ` · ${r.news.bandLabel}` : ""}
+                            </StatusWord>
+                          )}
+                        </td>
+                        <td className="text-foreground px-4 py-2.5 font-mono text-[11.5px] tabular-nums">
+                          {dueWords(r.news)}
+                        </td>
+                      </>
+                    ) : null}
+                    <td className="text-foreground px-4 py-2.5 font-mono text-[11.5px] tabular-nums">
+                      {r.lastSeenIso ? formatRelative(r.lastSeenIso) : "—"}
+                    </td>
+                    <td className="text-muted-foreground px-4 py-2.5 font-mono text-[10.5px] tracking-[0.06em] uppercase">
+                      {BASIS_LABEL[r.basis] ?? r.basis}
+                    </td>
+                    <td className="px-4 py-2.5 text-right">
+                      <Link
+                        href={`/nurse/patients/${r.patientUserId}`}
+                        className="text-muted-foreground hover:text-foreground inline-flex items-center gap-1 text-[11.5px] transition-colors"
+                      >
+                        Open
+                        <span
+                          aria-hidden
+                          className="inline-block transition-transform duration-200 group-hover:translate-x-0.5"
+                        >
+                          →
+                        </span>
+                      </Link>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </>
       )}
 
       <p className="fade-in-slow text-muted-foreground/80 text-caption leading-relaxed">
