@@ -53,7 +53,9 @@ const globals = {
 };
 const entry = `import * as kit from "@/components/tether-kit";
 import { demos } from "./scripts/tether-kit/previews";
-window.TetherKit = { ...kit, demos };`;
+import { ArrowRightIcon, CalendarPlusIcon, EllipsisIcon, PlusIcon, SendIcon, SirenIcon, XIcon } from "lucide-react";
+const icons = { ArrowRightIcon, CalendarPlusIcon, EllipsisIcon, PlusIcon, SendIcon, SirenIcon, XIcon };
+window.TetherKit = { ...kit, demos, icons };`;
 const js = await build({
   stdin: { contents: entry, resolveDir: ROOT, loader: "tsx" },
   bundle: true,
@@ -136,10 +138,9 @@ if (process.argv.includes("--page")) {
     `@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { ${vars("dark")} color-scheme: dark; } }`,
     `:root[data-theme="dark"] { ${vars("dark")} color-scheme: dark; }`,
   ].join("\n");
-  const page = readFileSync(join(ROOT, "scripts/tether-kit/kit-page.html"), "utf8").replace(
-    "/*TOKENS*/",
-    tokens,
-  );
+  const page = readFileSync(join(ROOT, "scripts/tether-kit/kit-page.html"), "utf8")
+    .replace("/*TOKENS*/", tokens)
+    .replace("/*PALETTE*/", JSON.stringify(palette).replace(/</g, "\\u003c"));
   writeFileSync(join(OUT, "tether-kit.html"), page);
 }
 process.stdout.write(
