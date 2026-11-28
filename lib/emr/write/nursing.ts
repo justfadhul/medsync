@@ -10,7 +10,7 @@ import { fill } from "@/content/lab-workspace-v2";
 import { NURSE_TASKS_COPY as C } from "@/content/nurse-tasks";
 import { medicationAdministrationRecords, nurseTasks } from "@/db/schema/nurse-workspace";
 import { prescriptions } from "@/db/schema/prescribing";
-import { notGivenReason, notGivenReason } from "@/lib/nurse/not-given";
+import { notGivenReason } from "@/lib/nurse/not-given";
 import { drugById } from "@/lib/prescribing/formulary";
 import { EmrWriteError } from "./context";
 import { recordProcedure } from "./facts";

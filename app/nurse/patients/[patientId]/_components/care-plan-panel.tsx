@@ -290,7 +290,7 @@ function AddProblemDialog({
                 key={l.key}
                 type="button"
                 size="sm"
-                variant={key === l.key ? "default" : "secondary"}
+                variant={key === l.key ? "primary" : "secondary"}
                 onClick={() => pick(l)}
               >
                 {l.problem}
@@ -306,7 +306,7 @@ function AddProblemDialog({
                     key={g}
                     type="button"
                     size="sm"
-                    variant={goal === g ? "default" : "secondary"}
+                    variant={goal === g ? "primary" : "secondary"}
                     onClick={() => setGoal(g)}
                   >
                     {g}

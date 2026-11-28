@@ -220,7 +220,7 @@ export function ChartDoses({
                 size="sm"
                 role="radio"
                 aria-checked={code === c}
-                variant={code === c ? "default" : "secondary"}
+                variant={code === c ? "primary" : "secondary"}
                 onClick={() => setCode(code === c ? undefined : c)}
               >
                 {NOT_GIVEN[c]}

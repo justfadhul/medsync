@@ -88,14 +88,16 @@ export default async function NurseOverviewPage() {
       <WardFiguresPanel wards={wardFigures} />
       {nurseWardV2LiveFor(scope.hospitalId) ? (
         <nav aria-label="Ward desk" className="flex flex-wrap gap-2">
-          {[
-            ["/nurse/tasks", "To do"],
-            ["/nurse/cosign-queue", "Round and co-sign"],
-            ["/nurse/handover/sbar", "SBAR handover"],
-            ["/nurse/calendar", "Calendar"],
-            ["/nurse/leave", "Leave"],
-            ["/nurse/incidents", "Report an incident"],
-          ].map(([href, text]) => (
+          {(
+            [
+              ["/nurse/tasks", "To do"],
+              ["/nurse/cosign-queue", "Round and co-sign"],
+              ["/nurse/handover/sbar", "SBAR handover"],
+              ["/nurse/calendar", "Calendar"],
+              ["/nurse/leave", "Leave"],
+              ["/nurse/incidents", "Report an incident"],
+            ] as const
+          ).map(([href, text]) => (
             <Link
               key={href}
               href={href}
