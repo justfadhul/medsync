@@ -74,11 +74,13 @@ const TETHER_OPEN = [
 /**
  * ADR 0545: `TETHER_LAB` and `TETHER_PHARMACY` ("1" or a comma list of hospital ids) open the lab and the pharmacy
  * on the Tether domain. Any value opens the address; the workspace's layout then sends a hospital the flag does
- * not name to MedSync (`tetherWorkspaceLiveFor`, `tetherDesk`).
+ * not name to MedSync (`tetherWorkspaceLiveFor`, `tetherDesk`). ADR 0547: `NURSE_WARD_V2` opens the nurse ward desk the
+ * same way; `/nurse` itself decides who sees it.
  */
 const TETHER_WORKSPACES = {
   "/lab": () => process.env.TETHER_LAB,
   "/pharmacy": () => process.env.TETHER_PHARMACY,
+  "/nurse": () => process.env.NURSE_WARD_V2,
 } as const;
 export type TetherWorkspace = keyof typeof TETHER_WORKSPACES;
 
@@ -131,6 +133,12 @@ const TETHER_HOMES: Record<string, string> = {
   "/get-started": "/sign-in",
 };
 
-export function tetherHome(pathname: string): string | null {
-  return TETHER_HOMES[pathname.replace(/\/+$/, "") || "/"] ?? null;
+export function tetherHome(
+  pathname: string,
+  nurseWard: string | undefined = process.env.NURSE_WARD_V2,
+): string | null {
+  const path = pathname.replace(/\/+$/, "") || "/";
+  // ADR 0547: with the ward desk on, `/nurse` decides itself (ward nurses stay, floor nurses go to the clinic floor).
+  if (path === "/nurse" && nurseWard?.trim()) return null;
+  return TETHER_HOMES[path] ?? null;
 }

@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { isTetherHost, tetherClosed, tetherHome, tetherRewrite } from "@/lib/landing/feature";
 
@@ -68,6 +68,24 @@ describe("the Tether domain", () => {
 });
 
 /** ADR 0509: a nurse's or doctor's MedSync home is the clinic floor on Tether. */
+describe("the nurse ward desk on Tether (ADR 0547)", () => {
+  afterEach(() => vi.unstubAllEnvs());
+  it("opens /nurse and its pages only when NURSE_WARD_V2 is set", () => {
+    expect((vi.stubEnv("NURSE_WARD_V2", ""), tetherClosed("/nurse"))).toBe(true);
+    expect(tetherClosed("/nurse/mar")).toBe(true);
+    expect((vi.stubEnv("NURSE_WARD_V2", "1"), tetherClosed("/nurse"))).toBe(false);
+    expect((vi.stubEnv("NURSE_WARD_V2", "h1,h2"), tetherClosed("/nurse/mar"))).toBe(false);
+    expect(tetherClosed("/nursery")).toBe(true);
+    expect(tetherClosed("/doctor")).toBe(true);
+  });
+  it("lets /nurse decide its own home when the desk is on", () => {
+    expect(tetherHome("/nurse", "1")).toBeNull();
+    expect(tetherHome("/nurse/", "1")).toBeNull();
+    expect(tetherHome("/nurse", undefined)).toBe("/clinic");
+    expect(tetherHome("/nurse/triage", "1")).toBe("/clinic?view=triage");
+  });
+});
+
 describe("tetherHome", () => {
   it("sends the nurse and doctor homes to the floor", () => {
     expect(tetherHome("/nurse")).toBe("/clinic");
